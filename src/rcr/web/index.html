@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Remote Config Case Runner</title>
+<link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+<h1>Remote Config Case Runner</h1>
+<p class="sub">Doi gia tri Firebase Remote Config tu file testcase &mdash; khong can quyen admin, khong dung server.</p>
+
+<section class="row">
+  <label>Device
+    <select id="device"><option value="">-- dang tai --</option></select>
+  </label>
+  <label>App
+    <select id="package" disabled><option value="">-- chon device truoc --</option></select>
+  </label>
+  <button id="read" disabled>Doc baseline</button>
+</section>
+
+<div id="banner" class="banner hidden"></div>
+
+<section id="summary" class="hidden">
+  <h2>Baseline</h2>
+  <table id="sumTable"></table>
+  <h2>Key remote config</h2>
+  <label class="search">Tim key
+    <input id="q" type="search" placeholder="vd: splash_banner">
+  </label>
+  <p id="keyCount" class="sub"></p>
+  <table id="keyTable"></table>
+</section>
+
+<script src="/web/app.js"></script>
+</body>
+</html>

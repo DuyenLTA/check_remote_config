@@ -1,0 +1,36 @@
+[project]
+name = "rcr"
+version = "0.1.0"
+description = "Remote Config Case Runner - doi gia tri Firebase Remote Config tu file testcase, khong can quyen admin"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "openpyxl>=3.1",
+    "pyyaml>=6.0",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "httpx>=0.27"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Dong goi data/ va web/ vao package -> `pip install .` (khong -e) van chay.
+[tool.setuptools.package-data]
+rcr = ["data/*.yaml", "web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+# Test can device that bi skip mac dinh -> suite chay duoc khi khong cam may.
+# Chay rieng bang: pytest -m device
+addopts = "-m 'not device'"
+markers = [
+    "device: can device Android that (mac dinh skip)",
+]
