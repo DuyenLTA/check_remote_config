@@ -12,6 +12,10 @@ reuses: [~/projects/ui-spec-verifier (ui_dump.py, adb_client.py), ~/Downloads/To
 
 # Remote Config Case Runner
 
+> **Đây là bản plan duy nhất.** Nó sống trong repo, cùng lịch sử với code — mọi cập nhật
+> trạng thái phase đi vào commit. Không tạo bản sao ở `./plans/` hay ngoài repo: hai bản là
+> chắc chắn lệch, và bản người khác đọc lại là bản lạc hậu.
+
 Từ **file testcase XLSX** → đổi giá trị **Firebase Remote Config** trên máy thật (không cần
 quyền admin Firebase, không đụng server) → **action trên app** → chấm **PASS/FAIL** kèm
 actual result.
