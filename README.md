@@ -3,8 +3,8 @@
 Đổi giá trị **Firebase Remote Config** của app Android **từ file testcase** — không cần
 quyền admin Firebase, không đụng server thật, chỉ ảnh hưởng đúng một máy đang cắm.
 
-> **Trạng thái: phase 1/6.** Hiện đọc được baseline remote config của app.
-> Phần patch / chạy case / chấm PASS-FAIL ở các phase sau.
+> **Trạng thái: phase 2/6.** Hiện **đặt được giá trị remote config và xác nhận nó sống
+> qua lần mở app**. Phần đọc file testcase / chạy case / chấm PASS-FAIL ở các phase sau.
 
 ## Cần gì trước khi chạy
 
@@ -68,6 +68,32 @@ LAN. Có middleware chặn thêm trong code, không phụ thuộc cách khởi �
 | **Đường ghi** | `run-as` (app debuggable) hoặc `su` (máy root) |
 
 3. Ô **Tìm key** để đối chiếu tên key trong file testcase với key thật trên máy.
+
+### Đặt giá trị (API, chưa có nút trên UI)
+
+```bash
+S=<serial>; P=<package>
+curl -s -X POST "http://127.0.0.1:8000/api/baseline?serial=$S&package=$P"
+curl -s -X POST "http://127.0.0.1:8000/api/patch?serial=$S&package=$P" \
+     -H 'content-type: application/json' \
+     -d '{"splash_banner_change":"false","show_105_spl_n_native":"false"}'
+# -> tat HAN app roi mo lai, sau do:
+curl -s -X POST "http://127.0.0.1:8000/api/verify?serial=$S&package=$P" \
+     -H 'content-type: application/json' \
+     -d '{"splash_banner_change":"false","show_105_spl_n_native":"false"}'
+curl -s -X POST "http://127.0.0.1:8000/api/restore?serial=$S&package=$P"
+```
+
+| Endpoint | Việc |
+|---|---|
+| `POST /api/patch` | ghi giá trị: mirror → settings → `activate.json` (**sau cùng**) |
+| `POST /api/verify` | đọc lại sau khi mở app. Lệch → `verdict_hint: BLOCKED` |
+| `POST /api/restore` | trả nguyên trạng + **mốc fetch cũ** → app tự lấy lại config thật |
+
+**`verify` lệch nghĩa là `BLOCKED`, không phải `FAIL`.** Hai kết luận khác hẳn nhau:
+`FAIL` = app chạy sai so với expected; `BLOCKED` = chưa test được vì config không được giữ
+(thường do build dev đặt `minimumFetchInterval = 0` nên throttle vô hiệu). Không phân biệt là
+đẩy tester đi tìm bug không tồn tại.
 
 ## Cơ chế
 

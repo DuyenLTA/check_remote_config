@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import rc_baseline
+from . import rc_baseline, rc_patch, rc_verify
 from .adb_client import AdbClient
 from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
@@ -116,6 +116,47 @@ async def baseline_keys(serial: str, package: str, q: str = "", limit: int = 200
             for k in keys[:limit]
         ],
     }
+
+
+def _need_baseline(serial: str, package: str):
+    bl = _baselines.get((serial, package))
+    if bl is None:
+        raise HTTPException(400, "Chua doc baseline cho app nay. Bam 'Doc baseline' truoc.")
+    return bl
+
+
+@app.post("/api/patch")
+async def patch(serial: str, package: str, overrides: dict[str, str]) -> dict:
+    """Dat gia tri remote config. Ghi mirror -> settings -> activate (sau cung)."""
+    bl = _need_baseline(serial, package)
+    res = await rc_patch.patch(client(), bl, overrides)
+    return res.summary | {
+        "note": "Tat HAN app (recent apps -> swipe) roi mo lai de app doc config moi, "
+        "sau do bam 'Verify'.",
+    }
+
+
+@app.post("/api/verify")
+async def verify(serial: str, package: str, expected: dict[str, str]) -> dict:
+    """Doc lai config sau khi mo app. Lech -> BLOCKED, khong phai FAIL."""
+    bl = _need_baseline(serial, package)
+    res = await rc_verify.verify(client(), bl, expected)
+    out = res.summary
+    if not res.ok:
+        out["hint"] = (
+            "Config bi thay doi sau khi mo app. Thuong la build dev dat "
+            "minimumFetchInterval = 0 nen throttle vo hieu, app fetch that va de mat patch.\n"
+            "Day la BLOCKED (chua test duoc), KHONG phai FAIL (app sai)."
+        )
+    return out
+
+
+@app.post("/api/restore")
+async def restore(serial: str, package: str) -> dict:
+    """Tra app ve nguyen trang baseline, kem moc fetch cu (app tu lay lai config that)."""
+    bl = _need_baseline(serial, package)
+    res = await rc_patch.restore(client(), bl)
+    return res.summary
 
 
 @app.get("/")

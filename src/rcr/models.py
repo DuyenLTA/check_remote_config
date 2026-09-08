@@ -68,3 +68,56 @@ class RcBaseline:
             "template_version": self.template_version,
             "fetch_time_ms": self.fetch_time_ms,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class PatchResult:
+    """Ket qua 1 lan ghi config. `written` theo DUNG thu tu da ghi."""
+
+    applied: dict[str, str]
+    written: tuple[str, ...]
+    fetch_time_ms: int
+    restored: bool = False
+
+    @property
+    def summary(self) -> dict:
+        return {
+            "applied": self.applied,
+            "written": list(self.written),
+            "fetch_time_ms": self.fetch_time_ms,
+            "restored": self.restored,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Mismatch:
+    """1 key lech giua gia tri muon dat va gia tri thuc te tren may."""
+
+    key: str
+    want: str
+    got: str | None
+    where: str  # "activate" | ten file mirror
+
+    @property
+    def summary(self) -> dict:
+        return {"key": self.key, "want": self.want, "got": self.got, "where": self.where}
+
+
+@dataclass(frozen=True, slots=True)
+class VerifyResult:
+    mismatches: tuple[Mismatch, ...]
+    fetch_time_ms: int
+
+    @property
+    def ok(self) -> bool:
+        return not self.mismatches
+
+    @property
+    def summary(self) -> dict:
+        return {
+            "ok": self.ok,
+            "fetch_time_ms": self.fetch_time_ms,
+            "mismatches": [m.summary for m in self.mismatches],
+            # Lech -> BLOCKED, khong phai FAIL: chua test duoc, khong phai app sai.
+            "verdict_hint": "ok" if self.ok else "BLOCKED",
+        }

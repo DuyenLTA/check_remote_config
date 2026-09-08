@@ -8,6 +8,7 @@ khong phai schema tu tuong tuong ra.
 from __future__ import annotations
 
 import json
+import pathlib
 
 import pytest
 
@@ -115,6 +116,7 @@ class FakeAdb:
         self.fails = fails or {}
         self.debuggable = debuggable
         self.rooted = rooted
+        self.tmp: dict[str, str] = {}  # /data/local/tmp/... -> noi dung
         self.files = dict(files) if files is not None else {
             f"files/{ACTIVATE}": ACTIVATE_JSON,
             f"shared_prefs/{SETTINGS}": SETTINGS_XML,
@@ -124,7 +126,24 @@ class FakeAdb:
             "shared_prefs/vsl_widget_local_prefs.xml": WIDGET_LOCAL,
         }
 
-    # --- interface ma app_sandbox / rc_baseline dung --------------------------
+    # --- interface ma app_sandbox / rc_baseline / rc_write dung --------------
+
+    async def _run(self, *args, timeout=None):
+        """rc_write goi truc tiep de `adb push`."""
+        cmd = " ".join(args)
+        self.calls.append(cmd)
+        for needle, res in self.fails.items():
+            if needle in cmd:
+                return res
+        if "push" in args:
+            i = args.index("push")
+            local, remote = args[i + 1], args[i + 2]
+            self.tmp[remote] = pathlib.Path(local).read_text(encoding="utf-8")
+            return f"1 file pushed to {remote}\n", "", 0
+        if "shell" in args:
+            i = args.index("shell")
+            return self._dispatch(f"-s {args[1]} shell " + " ".join(args[i + 1:]))
+        return "", "", 0
 
     async def shell(self, serial, *args, timeout=None):
         return self._dispatch(f"-s {serial} shell " + " ".join(args))
@@ -152,6 +171,9 @@ class FakeAdb:
         for needle, res in self.fails.items():
             if needle in cmd:
                 return res
+        if " rm -f /data/local/tmp/" in cmd:
+            self.tmp.pop(cmd.rsplit(" ", 1)[1], None)
+            return "", "", 0
         if " run-as " in f" {cmd} " or cmd.endswith("run-as"):
             if not self.debuggable:
                 return "", f"run-as: package not debuggable: {PKG}", 1
@@ -179,6 +201,24 @@ class FakeAdb:
 
     def _as_app(self, cmd: str) -> tuple[str, str, int]:
         cmd = self._unquote(cmd)
+        if ">" in cmd and "cat " in cmd:
+            # `cat <tmp> > <dest>` (ca duong su, run-as, va duong stdin)
+            # Duong stdin co dang `cat <tmp> | run-as pkg sh -c cat > <dest>`
+            # -> nguon nam TRUOC dau pipe. May that thi `sh` lo viec nay.
+            head = cmd.split("|", 1)[0] if "|" in cmd else cmd
+            src = head.split("cat ", 1)[1].split(">")[0].strip()
+            dest = cmd.rsplit(">", 1)[1].strip()
+            if src.startswith("/data/local/tmp/"):
+                if src not in self.tmp:
+                    return "", f"cat: {src}: No such file or directory", 1
+                self.files[dest] = self.tmp[src]
+            else:
+                # duong stdin: noi dung den qua pipe -> lay tu tmp trong dong lenh
+                for k in self.tmp:
+                    if k in cmd:
+                        self.files[dest] = self.tmp[k]
+                        break
+            return "", "", 0
         if " id" in cmd and " ls " not in cmd and " cat " not in cmd:
             return ("uid=0(root)\n" if "su -c" in cmd else f"uid=10123({PKG})\n"), "", 0
         if " ls " in cmd:
