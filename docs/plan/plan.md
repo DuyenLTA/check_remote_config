@@ -1,6 +1,6 @@
 ---
 title: "Remote Config Case Runner"
-status: pending
+status: in-progress   # phase 1-3 done, tiep phase 4
 created: 2026-09-07
 source: docs/plan/reports/from-brainstorm-to-planner-rc-override-design-260904-1425-firebase-remote-config-testcase-runner-report.md
 target_repo: ~/projects/rc-case-runner
@@ -28,7 +28,7 @@ Brainstorm + thực nghiệm đã xong (GO). Bằng chứng & số đo: xem `sou
 |---|---|---|---|
 | 1 | [Skeleton + adb + baseline reader](phase-01-skeleton-adb-and-rc-baseline-reader.md) | ✅ **done** (2026-09-07) | chọn device+app → hiện số key RC, file mirror, kiểu từng key |
 | 2 | [rc_patch + rc_verify](phase-02-rc-patch-and-verify-survival.md) | ✅ **done** (2026-09-08) | ⭐ đặt 1 key → mở app → **verify giá trị sống** |
-| 3 | [tc_loader + rc_extract](phase-03-testcase-loader-and-rc-key-extract.md) | ⬜ pending | nạp file TC → bảng case + key/value đã parse |
+| 3 | [tc_loader + rc_extract](phase-03-testcase-loader-and-rc-key-extract.md) | ✅ **done** (2026-09-09) | nạp file TC → bảng case + key/value đã parse |
 | 4 | [device_reset + act_resolver](phase-04-device-reset-and-action-resolver.md) | ⬜ pending | chạy 1 case tới đúng màn cần chấm |
 | 5 | [assert_dump + verdict](phase-05-assert-dump-and-verdict.md) | ⬜ pending | ⭐ chấm được case RC, ra PASS/FAIL + actual result |
 | 6 | [report + web UI + e2e](phase-06-report-web-ui-and-e2e.md) | ⬜ pending | ⭐ **ship được cho tester** |

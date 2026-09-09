@@ -1,7 +1,7 @@
 ---
 phase: 3
 title: "tc_loader + rc_extract"
-status: pending
+status: completed
 priority: P1
 effort: "1d"
 dependencies: [1]
@@ -98,3 +98,56 @@ Không đoán. Ghi rõ ở report để tester tự set.
 - **File TC của AIP922 có thể khác cấu trúc cột** → đó là lý do map theo **tên cột**, không theo
   index. Cột lạ → lỗi rõ, không đoán.
 - `[TBD: spec chưa...]` xuất hiện trong Expected của file thật → phase 5 phải đánh `BLOCKED`.
+
+
+## Ket qua thuc te (2026-09-09)
+
+133 test xanh khi khong cam may. Module: `tc_loader.py` (154), `rc_extract.py` (~120),
+`routes.py` (154), `app_state.py` (48) - deu <200 LOC.
+
+Do tren file TC that `TC_IIP032_Moment_Explore_v7.5.0.xlsx` (59 case) voi whitelist la 7 key
+RC cua IIP032 - **khop dung so trong Facts**:
+
+| | Ket qua |
+|---|---|
+| Tong case doc duoc | **59** |
+| Case chay duoc | **12** (#6, #8, #10, #11, #12, #15, #16, #17, #28, #30, #31, #59) |
+| Runtime toggle bi chan | **3** (#7, #9, #29) |
+| Sua field JSON bi chan | **1** (#14 `restore.enable`) |
+| Param analytics bi loc | `source`, `category`, `style`, `click_area`, `feature_name`, `template_id` |
+| `moment_spotlight_banners = []` | giu `"[]"` |
+| `sort_features_moments = ""` | giu chuoi rong (khong bi coi la "khong co gia tri") |
+| Combo #17 | ra **2** key |
+| Ke thua `Feature` khi o trong | dung |
+
+### HAI SUA PHAT SINH khi chay tren file that
+
+**1. Regex key KHONG duoc doi dau `_`.** Ban dau doi key phai la snake_case >= 2 doan. Hau qua:
+`source = navigation` bao *"khong boc duoc cap key=value"* - SAI LY DO (boc duoc, chi la khong
+thuoc RC), va **bo sot key hop le**: config that co key `AppSettings` (camelCase, khong
+underscore). Sua: regex chi tim ung vien identifier bat ky, **whitelist moi la bo loc**.
+
+**2. Chan gia tri con la cho trong.** `template_id = <id template dang test>` va
+`feature_name = <gia tri tuong ung AI Album>` - neu key do nam trong whitelist thi tool se
+patch NGUYEN CHUOI MO TA vao config. Them `PLACEHOLDER_RE` -> `NEEDS_HUMAN`.
+
+### Modularization phat sinh
+
+`main.py` da 167 LOC, them route la sat 200 va phase 4-6 con them nua -> tach:
+- `main.py` (57) = app + middleware + error handler + static
+- `routes.py` (154) = toan bo route API
+- `app_state.py` (48) = client adb + baseline da doc (khuon `tsa/app_state.py`)
+
+### Test route bang TestClient thay vi curl
+
+Máy rút giua luc lam nen khong curl duoc `/api/testcases`. Viet `tests/test_routes.py` cam
+`FakeAdb` vao `app_state` - tot hon curl vi thanh test vinh vien. Gac ca: `Host` khac -> 403,
+loi tang duoi -> 400 (khong 500), file sai duoi / rong / chua doc baseline -> 400.
+
+Luu y: `TestClient` mac dinh gui `Host: testserver` nen bi middleware chan (403) - dung
+`TestClient(app, base_url="http://127.0.0.1")`.
+
+### Chua lam
+
+Route `/api/testcases` chua chay thu tren may that (may rut). Logic parse da do tren file TC
+that qua CLI; phan con lai (baseline tu device) da co test. Chay lai khi cam may.

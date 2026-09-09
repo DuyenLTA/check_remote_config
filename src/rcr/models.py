@@ -121,3 +121,47 @@ class VerifyResult:
             # Lech -> BLOCKED, khong phai FAIL: chua test duoc, khong phai app sai.
             "verdict_hint": "ok" if self.ok else "BLOCKED",
         }
+
+
+@dataclass(frozen=True, slots=True)
+class Case:
+    """1 dong case trong file testcase. `actions`/`expects` da split theo so."""
+
+    n: str
+    feature: str
+    description: str
+    sub_scenario: str
+    precondition: str
+    test_data: str
+    actions: tuple[str, ...] = ()
+    expects: tuple[str, ...] = ()
+
+    @property
+    def label(self) -> str:
+        return f"#{self.n} {self.sub_scenario or self.description}".strip()
+
+
+@dataclass(frozen=True, slots=True)
+class RcCaseData:
+    """Key/value boc duoc tu 1 case, sau khi loc bang whitelist.
+
+    `needs_human` != "" nghia la case nay tool khong tu chay - kem LY DO de
+    tester biet phai lam gi, thay vi im lang bo qua.
+    """
+
+    overrides: dict[str, str]
+    needs_human: str = ""
+    ignored: tuple[str, ...] = ()  # cap key=value bi loai vi khong thuoc RC
+
+    @property
+    def runnable(self) -> bool:
+        return bool(self.overrides) and not self.needs_human
+
+    @property
+    def summary(self) -> dict:
+        return {
+            "overrides": self.overrides,
+            "needs_human": self.needs_human,
+            "ignored": list(self.ignored),
+            "runnable": self.runnable,
+        }

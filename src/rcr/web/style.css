@@ -27,3 +27,7 @@ td.val { font-family: ui-monospace, Menlo, monospace; color: #345; word-break: b
 .hidden { display: none; }
 .search { margin-bottom: 8px; }
 .nodbg { color: #99a; }
+.tag.warn { background: #fdecec; color: #8d2020; }
+tr.dim td { color: #99a; }
+tr.dim td.val { color: #aab; }
+input[type=file] { min-width: 300px; }

@@ -3,8 +3,9 @@
 Đổi giá trị **Firebase Remote Config** của app Android **từ file testcase** — không cần
 quyền admin Firebase, không đụng server thật, chỉ ảnh hưởng đúng một máy đang cắm.
 
-> **Trạng thái: phase 2/6.** Hiện **đặt được giá trị remote config và xác nhận nó sống
-> qua lần mở app**. Phần đọc file testcase / chạy case / chấm PASS-FAIL ở các phase sau.
+> **Trạng thái: phase 3/6.** Hiện **nạp được file testcase, bóc ra key/value cần đặt, đặt
+> giá trị và xác nhận nó sống qua lần mở app**. Phần tự thao tác trên app và chấm PASS/FAIL
+> ở các phase sau.
 
 ## Cần gì trước khi chạy
 
@@ -68,8 +69,30 @@ LAN. Có middleware chặn thêm trong code, không phụ thuộc cách khởi �
 | **Đường ghi** | `run-as` (app debuggable) hoặc `su` (máy root) |
 
 3. Ô **Tìm key** để đối chiếu tên key trong file testcase với key thật trên máy.
+4. Chọn **file testcase** (`.xlsx`) → **Nạp file testcase**. Bảng hiện từng case kèm key/value
+   tool sẽ đặt, và case nào cần làm tay **kèm lý do**.
 
-### Đặt giá trị (API, chưa có nút trên UI)
+### Bảng case đọc thế nào
+
+| Cột | Nghĩa |
+|---|---|
+| **Key sẽ đặt** | cặp key/value bóc từ cột `Test Data`, đã lọc bằng key thật của app |
+| **bỏ qua: ...** | key có trong `Test Data` nhưng **không** thuộc remote config — thường là param analytics (`click_area`, `source`, `category`) |
+| **cần người** | tool không tự chạy case này, kèm lý do cụ thể |
+
+Bốn lý do `cần người`, đều là **cố tình không đoán**:
+
+| Lý do | Ví dụ trong file thật |
+|---|---|
+| runtime toggle | `enable_feature_aialbum: true → false → true` — app phải tự fetch lúc đang chạy, patch file + mở lại không tái hiện được |
+| sửa field trong JSON | `restore.enable = false` — câu không nêu key gốc, suy ra là đoán |
+| giá trị còn là chỗ trống | `template_id = <id template đang test>` — patch vào là ghi nguyên chuỗi mô tả vào config |
+| không key nào thuộc RC | `source = navigation` — param analytics, không phải remote config |
+
+Tool **đọc duy nhất cột `Test Data`**, không tự bóc key từ `Precondition`: cột đó là văn xuôi,
+bóc ra dễ sai.
+
+### Đặt giá trị (API — nút trên UI làm ở phase 6)
 
 ```bash
 S=<serial>; P=<package>
@@ -89,6 +112,7 @@ curl -s -X POST "http://127.0.0.1:8000/api/restore?serial=$S&package=$P"
 | `POST /api/patch` | ghi giá trị: mirror → settings → `activate.json` (**sau cùng**) |
 | `POST /api/verify` | đọc lại sau khi mở app. Lệch → `verdict_hint: BLOCKED` |
 | `POST /api/restore` | trả nguyên trạng + **mốc fetch cũ** → app tự lấy lại config thật |
+| `POST /api/testcases` | upload `.xlsx` → bảng case + key/value đã bóc |
 
 **`verify` lệch nghĩa là `BLOCKED`, không phải `FAIL`.** Hai kết luận khác hẳn nhau:
 `FAIL` = app chạy sai so với expected; `BLOCKED` = chưa test được vì config không được giữ

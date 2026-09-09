@@ -1,4 +1,4 @@
-// UI toi gian phase 1: chon device -> chon app -> doc baseline -> xem key.
+// UI: chon device -> chon app -> doc baseline -> nap file testcase.
 // App KHONG debuggable van hien trong danh sach (kem nhan) de tester hieu vi sao
 // khong chon duoc, thay vi app bien mat khong ro ly do.
 
@@ -128,7 +128,43 @@ function escapeHtml(s) {
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 }
 
+async function loadTestcases() {
+  const f = $('tcFile').files[0];
+  if (!f) return;
+  const form = new FormData();
+  form.append('file', f);
+  const qs = `serial=${encodeURIComponent(state.serial)}&package=${encodeURIComponent(state.package)}`;
+  $('loadTc').disabled = true;
+  $('loadTc').textContent = 'Dang nap...';
+  try {
+    const r = await api(`/api/testcases?${qs}`, { method: 'POST', body: form });
+    $('tcCount').textContent =
+      `${r.file}: ${r.total} case, ${r.runnable} case chay duoc ` +
+      `(loc bang ${r.whitelist_size} key that cua app)`;
+    $('tcTable').innerHTML =
+      '<tr><th>#</th><th>Case</th><th>Test Data</th><th>Key se dat</th><th>Ghi chu</th></tr>' +
+      r.cases.map((c) => {
+        const ov = Object.entries(c.overrides)
+          .map(([k, v]) => `<code>${escapeHtml(k)}</code>=<b>${escapeHtml(v)}</b>`).join('<br>');
+        const note = c.needs_human
+          ? `<span class="tag warn">can nguoi</span> ${escapeHtml(c.needs_human)}`
+          : (c.ignored.length ? `<span class="tag">bo qua: ${c.ignored.join(', ')}</span>` : '');
+        return `<tr class="${c.runnable ? '' : 'dim'}"><td>${c.n}</td>` +
+               `<td>${escapeHtml(c.label)}</td>` +
+               `<td class="val">${escapeHtml(c.test_data)}</td>` +
+               `<td>${ov || '—'}</td><td>${note}</td></tr>`;
+      }).join('');
+  } catch (e) {
+    banner(`Loi nap file testcase: ${e.message}`, 'error');
+  } finally {
+    $('loadTc').disabled = false;
+    $('loadTc').textContent = 'Nap file testcase';
+  }
+}
+
 let qTimer;
+$('tcFile').onchange = () => { $('loadTc').disabled = !$('tcFile').files.length; };
+$('loadTc').onclick = loadTestcases;
 $('device').onchange = onDevice;
 $('package').onchange = onPackage;
 $('read').onclick = readBaseline;
