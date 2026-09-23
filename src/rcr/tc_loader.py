@@ -9,6 +9,10 @@ de nhom, vd "Tab Moment (301) - Config / Feature Flag".
 
 O TRONG O `Feature`/`Test Description` KE THUA dong tren: file that de trong khi
 lap lai, chi ghi o dong dau cua nhom.
+
+CHON SHEET THEO HEADER, KHONG THEO TEN: bo TC dung chung cho moi app (moi ban
+SDK mot bo) dat ten sheet tuy y. Uu tien sheet 'Test Cases' neu co, khong thi
+lay sheet dau tien tim thay header.
 """
 
 from __future__ import annotations
@@ -36,11 +40,12 @@ REQUIRED = ("n", "test_data", "actions", "expects")
 
 # Buoc duoc danh so: "1. ...", "2) ...". Tach theo dau dong.
 STEP_SPLIT = re.compile(r"(?m)^\s*\d+\s*[.)]\s*")
+CASE_NO = re.compile(r"(\d+)(?:\.0+)?")
 HEADER_SCAN_ROWS = 12  # header cua file that nam o dong 2; quet du rong
 
 
 def load(path: str | Path) -> list[Case]:
-    """Doc sheet 'Test Cases'. Raise RcError kem thong bao doc duoc."""
+    """Doc sheet chua bang testcase. Raise RcError kem thong bao doc duoc."""
     import openpyxl
 
     p = Path(path)
@@ -51,15 +56,22 @@ def load(path: str | Path) -> list[Case]:
     except Exception as exc:  # noqa: BLE001 - openpyxl nem nhieu loai
         raise RcError(f"Khong doc duoc {p.name}: {exc}") from exc
     try:
-        if SHEET_NAME not in wb.sheetnames:
-            raise RcError(
-                f"{p.name} khong co sheet {SHEET_NAME!r}. "
-                f"Sheet co trong file: {', '.join(wb.sheetnames)}"
-            )
-        rows = [tuple(r) for r in wb[SHEET_NAME].iter_rows(values_only=True)]
+        names = sorted(wb.sheetnames, key=lambda n: n != SHEET_NAME)
+        sheets = [(n, [tuple(r) for r in wb[n].iter_rows(values_only=True)]) for n in names]
     finally:
         wb.close()
-    return parse_rows(rows, p.name)
+    first_err = None
+    for name, rows in sheets:
+        try:
+            _find_header(rows, name)
+        except RcError as exc:
+            first_err = first_err or exc  # giu chi tiet cot thieu cua sheet uu tien
+            continue
+        return parse_rows(rows, f"{p.name} / {name}")
+    raise RcError(
+        f"{p.name}: khong sheet nao co dong header testcase "
+        f"(sheet co trong file: {', '.join(wb.sheetnames)}).\n{first_err}"
+    )
 
 
 def parse_rows(rows: list[tuple], source: str = "") -> list[Case]:
@@ -69,8 +81,8 @@ def parse_rows(rows: list[tuple], source: str = "") -> list[Case]:
     inherit = {"feature": "", "description": ""}
     for row in rows[header_at + 1 :]:
         cells = [_text(c) for c in row]
-        n = _cell(cells, idx, "n")
-        if not n.isdigit():
+        n = _case_no(_cell(cells, idx, "n"))
+        if not n:
             continue  # dong nhom / dong trong / dong tong
         for key in ("feature", "description"):
             val = _cell(cells, idx, key)
@@ -120,7 +132,7 @@ def _find_header(rows: list[tuple], source: str) -> tuple[dict[str, int], int]:
     raise RcError(
         f"{source or 'File'}: khong tim thay dong header trong {HEADER_SCAN_ROWS} dong dau.\n"
         f"Can du cac cot: {', '.join(REQUIRED)}. Nhan ra duoc: {found}.\n"
-        "Kiem tra ten cot trong sheet 'Test Cases'."
+        "Kiem tra ten cot trong sheet testcase."
     )
 
 
@@ -135,6 +147,15 @@ def _match_header(row: tuple) -> dict[str, int]:
                 idx[key] = i
                 break
     return idx
+
+
+def _case_no(text: str) -> str:
+    """'7' / '7.0' -> '7'. Google Sheet export so thanh float nen N° ra '7.0'.
+
+    Khong phai so nguyen (dong nhom, 'TC-01', '1.5') -> ''.
+    """
+    m = CASE_NO.fullmatch(text)
+    return m.group(1) if m else ""
 
 
 def _norm(s: str) -> str:

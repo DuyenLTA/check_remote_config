@@ -118,3 +118,57 @@ def test_file_khong_ton_tai():
 
     with pytest.raises(RcError, match="Khong thay file"):
         load("/duong/dan/khong/ton/tai.xlsx")
+
+
+def test_so_thu_tu_dang_float_tu_google_sheet():
+    # Google Sheet export N° thanh 1.0, 2.0 - van phai la case
+    out = parse_rows(rows(
+        (1.0, "Splash", "y", "s", "", "k_a=false", "", "", ""),
+        ("2.0", "", "", "s", "", "k_b=false", "", "", ""),
+        (1.5, "", "", "s", "", "k_c=false", "", "", ""),  # khong nguyen -> bo
+    ))
+    assert [c.n for c in out] == ["1", "2"]
+
+
+def _xlsx(tmp_path, sheets):
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+    for name, data in sheets:
+        ws = wb.create_sheet(name)
+        for r in data:
+            ws.append(list(r))
+    p = tmp_path / "tc.xlsx"
+    wb.save(p)
+    return p
+
+
+def test_load_sheet_ten_tuy_y_lay_sheet_co_header(tmp_path):
+    from rcr.tc_loader import load
+
+    p = _xlsx(tmp_path, [
+        ("Ghi chu", [("chi la ghi chu",)]),
+        ("Trang tính1", rows((1.0, "Splash", "y", "s", "", "k_a=false", "1. Mo app", "1. Thay", ""))),
+    ])
+    out = load(p)
+    assert [c.n for c in out] == ["1"]
+    assert out[0].actions == ("Mo app",)
+
+
+def test_load_uu_tien_sheet_test_cases(tmp_path):
+    from rcr.tc_loader import load
+
+    p = _xlsx(tmp_path, [
+        ("Khac", rows(("9", "x", "y", "s", "", "k=false", "", "", ""))),
+        ("Test Cases", rows(("3", "x", "y", "s", "", "k=false", "", "", ""))),
+    ])
+    assert [c.n for c in load(p)] == ["3"]
+
+
+def test_load_khong_sheet_nao_co_header_thi_bao_loi(tmp_path):
+    from rcr.tc_loader import load
+
+    p = _xlsx(tmp_path, [("A", [("x",)]), ("B", [("y",)])])
+    with pytest.raises(RcError, match="khong sheet nao co dong header"):
+        load(p)

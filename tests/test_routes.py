@@ -169,7 +169,8 @@ def test_nap_file_thieu_sheet_thi_400(with_baseline, tmp_path):
     wb.save(p)
     r = upload(with_baseline, p)
     assert r.status_code == 400
-    assert "Test Cases" in r.json()["detail"]
+    assert "khong sheet nao co dong header" in r.json()["detail"]
+    assert "Sheet khac" in r.json()["detail"]
 
 
 def test_file_sai_duoi_thi_400(with_baseline, tmp_path):
