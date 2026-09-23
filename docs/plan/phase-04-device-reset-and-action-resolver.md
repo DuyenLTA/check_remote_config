@@ -106,12 +106,16 @@ Cache kết quả theo `(package, versionCode)` — pull APK ~50MB, không pull 
 4. `act_resolver.py`: 5 luật, thuần hàm trên `list[DeviceNode]` → test bằng fixture XML dump.
 5. `case_runner.py`: ghép prepare → resolve từng step → tap/wait → trả `CaseRun` (chuỗi bước
    đã làm + dump ở mỗi bước, để phase 5 chấm).
-6. **Tạo file TC mẫu cho app thay thế**: mở app trên máy, `uiautomator dump` để biết UI thật,
-   chọn 5-8 key RC thật của app (từ ~200 key baseline) mà đổi được thấy ngay trên UI
-   (ưu tiên nhóm `enable_*` điều khiển màn onboarding — nằm trong mirror nên test luôn cả
-   đường mirror). Viết đúng cấu trúc cột như file IIP032.
+6. ~~Tạo file TC mẫu cho app thay thế~~ — **bỏ** (2026-09-23): dùng bộ TC chung theo bản SDK
+   (quyết định 22). Thay bằng: đọc bản SDK từ `VslTemplate4FirstOpenSDK: Using version X`,
+   so với dòng `spec: SDK ...` đầu sheet, lệch → cảnh báo (quyết định 23).
 7. `dex_check.py`: pull APK + unzip dex + grep key, cache theo `(package, versionCode)`.
 8. Route `POST /api/run-case` chạy 1 case, trả log từng bước.
+9. **Trước mỗi case**: force-stop các app ads khác trên máy + `KEYCODE_HOME` (quyết định 24).
+   Đo 2026-09-23: `com.aiprofile...` chạy nền bung `AdActivity` đè splash → SDK FO đứng chờ.
+10. **Bước mạng** trong Precondition/Action (`Tắt wifi/data`, `Bật lại mạng khi đã qua Splash`)
+    → `svc wifi|data disable/enable`; "đã qua Splash" = chờ log `<Activity> is showing` của
+    màn kế. Luôn bật lại mạng trong `finally`.
 
 ## Success Criteria
 - [ ] Case có Precondition "chưa từng mở app" → có `pm clear`; case chỉ đổi flag → chỉ `force-stop`
@@ -121,7 +125,9 @@ Cache kết quả theo `(package, versionCode)` — pull APK ~50MB, không pull 
 - [ ] `Nhấn nút "See All" của hàng AI Album` → resolve được qua chuỗi trong ngoặc kép
 - [ ] `Nhấn thẳng vào 1 thẻ style bất kỳ trong hàng AI Video` → `NEEDS_HUMAN` (đúng kỳ vọng)
 - [ ] 2 node cùng khớp → `NEEDS_HUMAN`, không tap node đầu
-- [ ] Chạy được trọn 1 case trên `com.ai.videogenerator.photocreator.aiart` bằng file TC tự tạo
+- [ ] Chạy được trọn case 5-10 bộ TC chung (`SDK tutorial 3.0.2`) trên `com.ai.videogenerator.photocreator.aiart`
+- [ ] App đích SDK 3.2.0, sheet ghi 3.0.2 → report có cảnh báo lệch bản
+- [ ] Case 10 (tắt/bật mạng) chạy tự động, mạng được bật lại kể cả khi case lỗi
 - [ ] Reset mềm: lật `ARG_KEY_SHOW_ONBOARDING` → app vào `VslTemplate4OnboardingActivity`,
       login/ngôn ngữ **không mất**
 - [ ] `dex_check(songmaker, ['splash_banner_change'])` → `False` (đã verify tay)
@@ -134,5 +140,6 @@ Cache kết quả theo `(package, versionCode)` — pull APK ~50MB, không pull 
 - **Tap sai chỗ = bấm quảng cáo/mua hàng thật.** Nên resolver thà `NEEDS_HUMAN` còn hơn đoán.
 - **App chưa chạy xong splash** khi dump → node chưa có, resolver báo không tìm thấy oan.
   Poll `current_focus` == package + dump lại tối đa N lần trước khi kết luận.
-- **File TC tự tạo có thể không đại diện** cho file thật của AIP922 (cấu trúc cột, cách viết
-  Action). Rủi ro chấp nhận được ở round 1; phase 3 đã map theo tên cột nên đỡ được phần lớn.
+- **Bộ TC chung ghi key bắt buộc ở Precondition** (không ở Test Data) → case chạy thiếu key
+  (vd case 6 chỉ đặt `layout2`). Chờ chốt câu hỏi mở #4 trong `plan.md`.
+- **Tắt mạng trên máy tester** (case mạng): quên bật lại là hỏng các lượt sau → `finally`.

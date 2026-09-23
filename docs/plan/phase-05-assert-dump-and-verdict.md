@@ -57,6 +57,26 @@ assert_ads.judge(expect, log) -> Assertion
   case "show X"        -> can FOR_TESTER_SHOW_AD: <TYPE> - <unitId>
 ```
 
+> **Đo 2026-09-23 (SDK FO 3.2.0, `photocreator.aiart`)**: app đích **không in**
+> `FOR_TESTER_*` — dòng `FOR_TESTER_*` thấy lúc đó là của app khác cùng máy. **Luôn lọc theo
+> PID app đích** (quyết định 24). Tín hiệu thay thế: `NativeAdHelper: <Activity>:
+> adNativeState(Loading|Loaded|Fail)`, `AdEventLogger: trackAdRequest ... adType: <TYPE>`,
+> `FO_VslTemplate4FirstOpenSDK: Native splash impression`. Bản debug dùng ID test Google cho
+> mọi native → chấm "unit high vs thường" theo ID là `NOT_VERIFIABLE`.
+
+> **Chốt chặn ép ad (quyết định 27)**: case có ID bị ép → log request phải chứa đúng ID đó
+> (`D/TAG: loadInterstitialAd: <id> - <id>` hoặc `trackAdRequest ... adUnitId: *****<3 số cuối>`).
+> Không thấy → `BLOCKED` ("app không đọc key ID này"). Case có `X: loaded` không ép được → phải
+> thấy X `loaded`/`trackAdMatchedRequest`, không thì `BLOCKED`, không chấm FAIL.
+
+> **Nhận diện unit bằng checklist ID ads** (2026-09-23): sheet thông số kỹ thuật của workflow
+> `audit-fanout` (`~/android-ad-audit`, sheet `14XivZl9…`, 1 tab/app) khai **vị trí → ID**
+> (`show_105_spl_n_native_high → …/2009698815`). Dùng lại `checklist_source` để map ID trong
+> log request về vị trí → chấm được "unit HIGH hiển thị" thay vì `NOT_VERIFIABLE`. Chỉ áp cho
+> bản dùng ID thật; bản debug gắn ID test Google cho native thì vẫn không phân biệt được.
+> ID này **không** dùng để ép fail: trên AIP922 v3.2.0 các ID nằm cứng trong `classes*.dex`
+> (không có key `id_*` trong RC), trừ `splash_inter_*_id`.
+
 Tag dùng để chấm (đã đo thật): `FOR_TESTER_LOAD_AD` (`starting load` / `has loaded` /
 `has load error`), `FOR_TESTER_SHOW_AD: <TYPE> - <unitId>`,
 `BannerAdHelper|BannerAdLogHelper: <Activity>: adBannerState(None|Loading|Loaded)`.

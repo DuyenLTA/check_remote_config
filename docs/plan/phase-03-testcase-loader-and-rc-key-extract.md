@@ -15,8 +15,21 @@ cột Test Data, lọc bằng whitelist key thật từ `rc_baseline`.
 
 Không cần device — phase này thuần dữ liệu, test bằng file TC thật.
 
+> **Cập nhật 2026-09-23 — đọc bộ TC dùng chung** (quyết định 22 trong `plan.md`):
+> - Sheet chọn theo **header**, không theo tên: ưu tiên `Test Cases`, không có thì lấy sheet đầu
+>   tiên có header hợp lệ (bộ chung tên `Trang tính1`).
+> - Cột N° nhận `7.0` (Google Sheet export số thành float) → case `7`.
+> - Cặp `key=value` tách theo **dấu phẩy hoặc xuống dòng**; giá trị dừng ở cuối dòng (dòng sau
+>   là mô tả, vd `true\n New user`), trừ JSON `[`/`{` trải nhiều dòng.
+> - **Gộp Precondition + Test Data** (quyết định 25 `plan.md`): Precondition đánh số
+>   `1. a=true\n 2. b=false` tách đúng từng cặp; dấu chấm cuối câu (`= false.`) và ngoặc đóng
+>   thừa (`(..., k=true)`) bị bỏ; `RcCaseData.from_precondition` ghi key nào lấy từ
+>   Precondition, UI gắn tag `precondition`.
+> - Test mới: `test_so_thu_tu_dang_float_tu_google_sheet`, `test_load_sheet_ten_tuy_y_*`,
+>   `test_load_uu_tien_sheet_test_cases`, `test_moi_key_mot_dong_*`, `test_dong_mo_ta_sau_gia_tri_*`.
+
 ## Requirements
-- Functional: parse sheet `Test Cases`, split `Action`/`Expected Result` theo số `1. 2. 3.`
+- Functional: parse sheet testcase (tên tùy ý, chọn theo header), split `Action`/`Expected Result` theo số `1. 2. 3.`
 - Functional: bóc `key = value` khỏi Test Data; hỗ trợ bool, số, string có nháy, JSON,
   nhiều key trên 1 dòng, và **sửa field trong JSON** (`restore.enable = false`)
 - Functional: nhận diện **runtime toggle** (mũi tên `→`) → gắn cờ `needs_human`

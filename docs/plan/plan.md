@@ -1,6 +1,6 @@
 ---
 title: "Remote Config Case Runner"
-status: in-progress   # phase 1-3 done, tiep phase 4
+status: in-progress   # phase 1-3 done, tiep phase 4 (doi huong: bo TC chung theo ban SDK)
 created: 2026-09-07
 source: docs/plan/reports/from-brainstorm-to-planner-rc-override-design-260904-1425-firebase-remote-config-testcase-runner-report.md
 target_repo: ~/projects/rc-case-runner
@@ -83,6 +83,41 @@ Thứ tự thực thi tuần tự 1→6. Phase 2 là tim của tool — cơ ch�
 21. **Ép về first-open KHÔNG cần `pm clear`**: lật `ARG_KEY_SHOW_ONBOARDING` = `true` trong
     `vsl_template4_prefs.xml`. Giữ nguyên login/ngôn ngữ. Đây là **thao tác reset riêng**, khác
     hoàn toàn với patch config — `rc_patch` vẫn tuyệt đối không được ghi vào file này.
+22. **Bộ TC dùng chung cho mọi app, mỗi bản SDK một bộ** (chốt 2026-09-23). Logic key giống
+    nhau giữa các app, chỉ khác package. Tool **không** cần file TC riêng từng app: whitelist
+    từ `rc_baseline` + `dex_check` tự lọc key app không có (→ `KEY_NOT_USED`, không FAIL).
+23. **Đối chiếu bản SDK trước khi chạy**: đọc `VslTemplate4FirstOpenSDK: Using version X` từ
+    logcat lần mở app, so với dòng `spec: SDK visionlab:tutorial:X` ở đầu sheet. Lệch bản →
+    cảnh báo rõ trên report (không tự chặn — tester quyết có chạy tiếp hay không).
+24. **Log ads lọc theo PID app đích** (`Start proc <pid>:<pkg>`), không theo tag. App ads khác
+    chạy nền in cùng tag `FOR_TESTER_*` và có thể bung `AdActivity` đè lên splash app đích →
+    trước mỗi case: force-stop các app ads khác + `KEYCODE_HOME`.
+25. **Key lấy từ CẢ Precondition lẫn Test Data** (chốt 2026-09-23). Trùng key → Test Data thắng.
+    Dòng Precondition có mũi tên (`high=true -> load fail`) bị bỏ. Test Data ép trạng thái ad
+    (`105-...-high: fail`) → `NEEDS_HUMAN`; giá trị dạng lựa chọn (`layout1/2/3`) →
+    `NEEDS_HUMAN`. Bộ chung 3.0.2: **56/98** case chạy được trên `photocreator.aiart`
+    (54 `photoshoot`, 54 `aiartcreator`); 33 case chờ cách ép ad fail (câu hỏi mở #6).
+26. **Giá trị lựa chọn tự nhân ra từng lượt** (chốt 2026-09-23): `layout1/2/3`,
+    `layout1/layout2`, `layout1 / layout2` → mỗi giá trị 1 lượt; nhiều key lựa chọn → tích
+    Descartes (`RcCaseData.variants`, `.runs`). Quá 16 tổ hợp → `NEEDS_HUMAN`. Bộ chung 3.0.2:
+    **60/98** case, **77 lượt** mở app trên `photocreator.aiart`.
+
+27. **Ép fill/fail theo TỪNG unit bằng ID ads trong RC** (đo 2026-09-23, `ad_state.py`):
+    ký hiệu TC `102-spl-n-inter-high: fail` → key RC chứa ID → **ID sai** = chắc fail, **ID test
+    Google** cùng loại = chắc fill. Đo thật: high=ID sai → `onAdFailedToLoad` → fallback unit
+    thường (ID test) `loaded` → show. Không cần lắc máy / nguồn Meta.
+    **Ký hiệu → key lấy từ bảng ĐÃ ĐO** `src/rcr/data/ad_id_keys.yaml`, KHÔNG suy từ tên:
+    `id_102_spl_n_inter_high`, `id_201_lfo1_n_native*`, `id_101_spl_a_banner` có trong RC
+    nhưng FO 3.2.0 **không đọc** (đặt ID sai, request giữ nguyên). Hiện bảng có 2 cặp:
+    `102-spl-n-inter-high → splash_inter_high_n_id`, `102-spl-n-inter → splash_inter_n_id`.
+    `fail` không ép được → `NEEDS_HUMAN`. `loaded` không ép được → vẫn chạy (native bản debug
+    tự fill bằng ID test) nhưng **phase 5 phải thấy unit đó loaded trong log, không thì
+    BLOCKED** (inter dùng ID thật, thường no-fill). Ký hiệu viết tắt không đọc được
+    (`102-n-high/high1: fail`) → `NEEDS_HUMAN`, không bỏ qua im lặng.
+    **Private DNS chặn ads KHÔNG dùng được**: `dns.adguard-dns.com` đã validated mà native vẫn
+    fill. Bộ chung 3.0.2: **69/98 case, 86 lượt** trên `photocreator.aiart`.
+28. **Chạy xong → report publish thành artifact và tự mở link** (user dặn 2026-09-23). Report
+    HTML self-contained để publish thẳng.
 
 ## Facts đã verify — không cần verify lại
 
@@ -144,12 +179,46 @@ cơ chế**, 200 key, 91 key bị mirror qua 3/5 file `vsl_*`).
 **App test trên Android 12**: `com.aiphotogenearator.aivideogenerator.photogallery` (Pixel 4,
 195 key, 3 mirror — đã verified).
 
-**Lệch dữ liệu cần xử ở phase 4**: file TC mẫu là của IIP032 — **không khớp app thay thế**
-(khác key, khác UI). Phase 1-3 validate được bằng file IIP032; phase 4-6 cần một file TC nhỏ
-viết cho chính app thay thế (dùng key thật của nó). Việc tạo file đó nằm trong phase 4.
+**File TC cho phase 4-6**: dùng **bộ TC dùng chung** (quyết định 22), không tạo file riêng
+cho app thay thế nữa. Bộ đầu tiên: sheet `SDK visionlab:tutorial:3.0.2 — Ads Preload per Screen
+(Splash → OB5)` (Google Sheet `1KYsyRJ8qTR-FrkWFZ0zMHPv7-jveBeMgRGJz22ulVlE`, 98 case).
+Đọc được từ 2026-09-23: **50/98** case bóc ra key chạy được trên `photocreator.aiart`, 44 trên
+`photoshoot`, 43 trên `aiartcreator`.
+
+### Đo 2026-09-23 (Pixel 7, `com.ai.videogenerator.photocreator.aiart`, SDK FO 3.2.0)
+
+Chạy tay case 5-10 của bộ TC chung bằng module `rc_*` + script ghép tạm (phase 4 chưa có):
+
+- **Bug `is_debuggable` đã sửa**: `dumpsys` in `flags=0x0` (section khác) trước dòng
+  `flags=[ DEBUGGABLE ... ]` → mọi app bị báo không debuggable. Giờ chỉ đọc dòng dạng `[ ]`.
+- Verify sống qua lần mở app: **12/12 lượt** (reset mềm onboarding + patch).
+- **Native splash 105 chỉ phụ thuộc `show_105_spl_n_native`; `_high` không có tác dụng.**
+  Đối chứng 1 biến: (high,thường) = (T,T) có · (F,T) có · (T,F) **không** (3 lượt) · (F,F)
+  không. → case 6/7 (TC chỉ đặt `high=true`) FAIL. Chưa rõ bug app hay TC thiếu key.
+- Bản debug dùng **ID test Google** `ca-app-pub-3940256099942544/2247696110` cho mọi native →
+  không phân biệt unit high/thường qua ID; không ép được "high fail" (case 8 → `BLOCKED`).
+- App đích **không in `FOR_TESTER_*`**. Tín hiệu dùng được: `NativeAdHelper: <Activity>:
+  adNativeState(...)`, `AdEventLogger: trackAdRequest ... adType: NATIVE`,
+  `FO_VslTemplate4FirstOpenSDK: Native splash impression` / `<Activity> is showing`.
+- Native splash chỉ hiện **~0.1-0.5s** rồi sang màn Language → screenshot mốc cố định trượt;
+  phải chụp liên tục, và chấm hiển thị bằng log là chính.
+- Mọi layout native đều log `NullPointerException` khi populate (SDK bắt, không crash).
+- Case mạng (tắt mạng trước splash, bật lại sau) **tự động được**: `svc wifi/data
+  disable|enable` — không còn là `NEEDS_HUMAN`.
 
 ## Câu hỏi mở
 
-1. File testcase của AIP922 — chưa có. Cấu trúc cột có giống IIP032 không?
+1. ~~File testcase của AIP922~~ → dùng bộ TC chung theo bản SDK (quyết định 22).
 2. Bản debuggable AIP922 dùng chung Firebase project với production? Nếu không → whitelist khác.
 3. Round 2: app có log analytics ra logcat qua `setprop debug.firebase.analytics.app` không?
+4. ~~Precondition hay Test Data là nguồn key?~~ → gộp cả hai (quyết định 25).
+5. `_high` không có tác dụng (xem Đo 2026-09-23) — bug app hay TC thiếu `show_105_spl_n_native`?
+   Kiểm thêm trên `photoshoot` / `aiartcreator` để biết riêng app hay chung SDK 3.2.0.
+6. ~~Case "ép ad X fail"~~ → quyết định 27. Còn mở: đo thêm cặp ký hiệu → key cho high1,
+   `_o_` (old user), banner 101, native 105/201/202/30x (hiện app không đọc key ID nào của
+   chúng). Ghi chú cũ: tester làm tay bằng **lắc máy → Ad Inspector →
+   chọn nguồn Meta** → no fill. `shared_prefs/admob.xml` có `inspector_info`
+   (`"gesture":"SHAKE","networkExtras":"{}"`) → nhiều khả năng lựa chọn lưu ở `networkExtras`.
+   Đang đo: snapshot sandbox trước/sau khi tester chọn Meta, xem ghi lại được không.
+   Lưu ý: bản debug dùng **chung 1 ID test** cho mọi native → ép Meta có thể làm fail CẢ
+   high lẫn thường, không tách được "high fail, thường loaded".
