@@ -1,4 +1,4 @@
-"""Boc cap `key = value` remote config ra khoi cot Test Data cua 1 case.
+"""Boc cap `key = value` remote config ra khoi cot Precondition + Test Data cua 1 case.
 
 LOC BANG WHITELIST KEY DOC THAT TU MAY (rc_baseline). Cot Test Data KHONG chi
 chua RC key - file that con co param analytics (`source = navigation`,
@@ -12,14 +12,22 @@ BA DANG PHAI DANH `NEEDS_HUMAN`, KHONG DUOC DOAN:
   2. Sua field trong JSON: `restore.enable = false`. Cau do khong neu key goc;
      `restore` la `id` cua mot phan tu trong mang `moment_spotlight_banners`,
      suy ra la doan.
-  3. Test Data rong ma Precondition co ve co key: chi doc Test Data, khong tu
-     boc tu Precondition (van xuoi, de boc sai).
+  3. Ep trang thai load ad (`105-spl-n-native-high: fail`) ma vi tri CHUA co key
+     ID da do trong `data/ad_id_keys.yaml`. Co thi ad_state doi ID ad trong RC
+     (ID sai = fail, ID test = fill) va case chay binh thuong.
+
+GOP PRECONDITION + TEST DATA (chot 2026-09-23): bo TC dung chung ghi key bat buoc
+o Precondition, Test Data chi ghi key dang doi. Trung key -> Test Data thang.
+Precondition la van xuoi nen chi boc cap `key=value`, WHITELIST loc phan con lai;
+dong Precondition co mui ten (`high=true -> load fail`) la mo ta trang thai,
+khong phai gia tri -> bo ca dong.
 """
 
 from __future__ import annotations
 
 import re
 
+from . import ad_state, rc_variants
 from .models import Case, RcCaseData
 
 # Mui tien cac kieu tester hay dung cho runtime toggle.
@@ -29,24 +37,28 @@ ARROWS = ("→", "->", "=>", "⇒")
 # KHONG doi key phai co dau '_': config that co key khong underscore (vd
 # `AppSettings`) -> doi underscore la bo sot key hop le. WHITELIST moi la bo
 # loc; regex chi co viec tim ung vien.
+# Cap tach nhau bang dau phay HOAC xuong dong: sheet dung chung ghi moi key mot
+# dong (`a=true\n b=false`), Precondition con danh so (`1. a=true\n 2. b=false`)
+# - chi tach theo phay la dinh 2 cap thanh 1 gia tri.
 _KEY = r"[A-Za-z][A-Za-z0-9_]*"
 PAIR_RE = re.compile(
-    rf"(?P<key>{_KEY})\s*[:=]\s*(?P<val>.*?)(?=(?:,\s*{_KEY}\s*[:=])|$)",
+    rf"(?P<key>{_KEY})\s*[:=]\s*(?P<val>.*?)(?=(?:[,\n]\s*(?:\d+\s*[.)]\s*)?{_KEY}\s*[:=])|$)",
     re.DOTALL,
 )
 # Gia tri la cho trong chua dien: `<id template dang test>`, `<gia tri tuong ung>`
 PLACEHOLDER_RE = re.compile(r"<[^<>]*>")
 # Key co dau '.' -> sua field trong JSON (vd restore.enable)
 DOTTED_RE = re.compile(r"\b[A-Za-z][\w]*\.[A-Za-z][\w]*\s*[:=]")
+EMPTY = ("", "N/A", "NA", "-")
+
 
 
 def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
     """Tra ve cap key/value da loc, hoac ly do can nguoi lam tay."""
     raw = case.test_data.strip()
-    if not raw or raw.upper() in ("N/A", "NA", "-"):
-        return RcCaseData(overrides={}, needs_human="Test Data trong - khong co key nao de dat")
+    has_td = raw.upper() not in EMPTY
 
-    if any(a in raw for a in ARROWS):
+    if has_td and any(a in raw for a in ARROWS):
         return RcCaseData(
             overrides={},
             needs_human=(
@@ -55,7 +67,7 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
             ),
         )
 
-    if DOTTED_RE.search(raw):
+    if has_td and DOTTED_RE.search(raw):
         return RcCaseData(
             overrides={},
             needs_human=(
@@ -64,15 +76,37 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
             ),
         )
 
-    found = {m.group("key"): _clean(m.group("val")) for m in PAIR_RE.finditer(raw)}
-    if not found:
+    bad = ad_state.unreadable(raw) if has_td else []
+    if bad:
         return RcCaseData(
             overrides={},
-            needs_human=f"khong boc duoc cap key=value nao tu Test Data: {raw[:80]!r}",
+            needs_human=f"ky hieu trang thai ad khong doc duoc: {'; '.join(bad)} - viet day du vd `102-spl-n-inter-high: fail`",
+        )
+    # Trung vi tri -> Test Data thang, nhu cap key=value
+    markers = ad_state.find(case.precondition) | (ad_state.find(raw) if has_td else {})
+    forced, unresolved = ad_state.resolve(markers, whitelist)
+    if unresolved:
+        return RcCaseData(
+            overrides={},
+            needs_human=(
+                f"can ep trang thai load ad ({', '.join(f'{m}: {markers[m]}' for m in unresolved)}) - "
+                "vi tri nay chua co key ID ad da do la SDK doc (data/ad_id_keys.yaml), phai lam tay"
+            ),
         )
 
+    pre = _pairs(_precondition_lines(case.precondition))
+    # Ky hieu `102-...: fail` khop PAIR_RE thanh cap rac (`high: fail`) -> bo truoc khi boc
+    td = _pairs(ad_state.MARKER_RE.sub("", raw)) if has_td else {}
+    td |= forced
+    if not pre and not td:
+        why = (f"khong boc duoc cap key=value nao tu Test Data: {raw[:80]!r}" if has_td
+               else "Test Data trong va Precondition khong co key nao de dat")
+        return RcCaseData(overrides={}, needs_human=why)
+
+    found = pre | td  # trung key -> Test Data thang
     overrides = {k: v for k, v in found.items() if k in whitelist}
     ignored = tuple(sorted(k for k in found if k not in whitelist))
+    from_pre = tuple(sorted(k for k in overrides if k not in td))
 
     # Gia tri con la cho trong -> patch vao la ghi nguyen chuoi mo ta vao config.
     holes = sorted(k for k, v in overrides.items() if PLACEHOLDER_RE.search(v))
@@ -85,6 +119,12 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
                 "Tester dien gia tri that vao file testcase roi chay lai"
             ),
         )
+    overrides, variants, too_many = rc_variants.split(overrides)
+    if too_many:
+        return RcCaseData(overrides={}, ignored=ignored, needs_human=too_many)
+    if variants and not overrides:
+        return RcCaseData(overrides={}, ignored=ignored, variants=variants,
+                          from_precondition=from_pre)
     if not overrides:
         return RcCaseData(
             overrides={},
@@ -94,7 +134,17 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
                 f"bo qua: {', '.join(ignored)}. Co the la param analytics, khong phai RC key"
             ),
         )
-    return RcCaseData(overrides=overrides, ignored=ignored)
+    return RcCaseData(overrides=overrides, ignored=ignored, variants=variants,
+                      from_precondition=from_pre)
+
+
+def _pairs(text: str) -> dict[str, str]:
+    return {m.group("key"): _clean(m.group("val")) for m in PAIR_RE.finditer(text)}
+
+
+def _precondition_lines(text: str) -> str:
+    """Bo dong co mui ten (mo ta trang thai, vd `high=true -> load fail`)."""
+    return "\n".join(l for l in text.splitlines() if not any(a in l for a in ARROWS))
 
 
 def _clean(val: str) -> str:
@@ -104,6 +154,13 @@ def _clean(val: str) -> str:
     (khong duoc coi la 'khong co gia tri' roi bo qua).
     """
     v = val.strip()
+    # Gia tri dung o cuoi dong: dong sau la mo ta (`true\n New user`), khong phai
+    # gia tri. Tru JSON - mang/object co the trai nhieu dong.
+    if v[:1] not in "[{":
+        v = v.split("\n", 1)[0].strip()
+    # Ngoac dong thua cua cau bao quanh: `(da xong lfo, pass_lfo_criteria=true)` -> `true`
+    while v.endswith(")") and v.count(")") > v.count("("):
+        v = v[:-1].rstrip()
     # Bo phan chu thich trong ngoac don o cuoi: `false (mac dinh)` -> `false`
     v = re.sub(r"\s*\((?:[^()]*)\)\s*$", "", v).strip()
     if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'“”":
@@ -111,6 +168,9 @@ def _clean(val: str) -> str:
     if v.startswith("“") and v.endswith("”"):
         return v[1:-1]
     low = v.lower()
+    # Precondition ket thuc cau bang dau cham: `= false.` -> `false`
+    if re.fullmatch(r"(?:true|false|-?\d+)\.", low):
+        low = v = v[:-1]
     if low in ("true", "false"):
         return low
     return v

@@ -152,10 +152,20 @@ class RcCaseData:
     overrides: dict[str, str]
     needs_human: str = ""
     ignored: tuple[str, ...] = ()  # cap key=value bi loai vi khong thuoc RC
+    from_precondition: tuple[str, ...] = ()  # key trong overrides lay tu Precondition
+    # Gia tri lua chon (`layout1/2/3`) nhan ra: moi phan tu = 1 luot chay, gop voi overrides
+    variants: tuple[dict[str, str], ...] = ()
+
+    @property
+    def runs(self) -> tuple[dict[str, str], ...]:
+        """Cac bo config can dat, moi bo 1 luot mo app."""
+        if self.variants:
+            return tuple(self.overrides | v for v in self.variants)
+        return (self.overrides,) if self.overrides else ()
 
     @property
     def runnable(self) -> bool:
-        return bool(self.overrides) and not self.needs_human
+        return bool(self.runs) and not self.needs_human
 
     @property
     def summary(self) -> dict:
@@ -163,5 +173,7 @@ class RcCaseData:
             "overrides": self.overrides,
             "needs_human": self.needs_human,
             "ignored": list(self.ignored),
+            "from_precondition": list(self.from_precondition),
+            "variants": [dict(v) for v in self.variants],
             "runnable": self.runnable,
         }

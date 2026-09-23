@@ -145,7 +145,11 @@ async function loadTestcases() {
       '<tr><th>#</th><th>Case</th><th>Test Data</th><th>Key se dat</th><th>Ghi chu</th></tr>' +
       r.cases.map((c) => {
         const ov = Object.entries(c.overrides)
-          .map(([k, v]) => `<code>${escapeHtml(k)}</code>=<b>${escapeHtml(v)}</b>`).join('<br>');
+          .map(([k, v]) => `<code>${escapeHtml(k)}</code>=<b>${escapeHtml(v)}</b>` +
+            (c.from_precondition.includes(k) ? ' <span class="tag">precondition</span>' : ''))
+          .join('<br>') +
+          (c.variants.length ? `<br><span class="tag">${c.variants.length} luot: ` +
+            c.variants.map((v) => escapeHtml(Object.values(v).join(' + '))).join(' | ') + '</span>' : '');
         const note = c.needs_human
           ? `<span class="tag warn">can nguoi</span> ${escapeHtml(c.needs_human)}`
           : (c.ignored.length ? `<span class="tag">bo qua: ${c.ignored.join(', ')}</span>` : '');

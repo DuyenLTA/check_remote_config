@@ -1,0 +1,14 @@
+# Ky hieu vi tri ad trong file TC (`102-spl-n-inter-high: fail`) -> key RC chua ID ad
+# ma SDK THAT SU DUNG de request.
+#
+# CHI GHI CAP DA DO BANG LOG: dat key thanh ID sai -> log request doi theo.
+# KHONG suy tu ten: `id_102_spl_n_inter_high`, `id_201_lfo1_n_native*`,
+# `id_101_spl_a_banner` co trong RC nhung FO SDK 3.2.0 KHONG doc (do 2026-09-23,
+# photocreator.aiart: dat ID sai, request van giu ID cu). Patch key do = chay case
+# voi ad van fill -> ket qua sai ma khong ai biet.
+#
+# Do tren: com.ai.videogenerator.photocreator.aiart, VslTemplate4FirstOpenSDK 3.2.0
+# (log `D/TAG: loadInterstitialAd: <high_n> - <n>`).
+markers:
+  102-spl-n-inter-high: splash_inter_high_n_id
+  102-spl-n-inter: splash_inter_n_id

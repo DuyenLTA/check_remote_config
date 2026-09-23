@@ -164,13 +164,45 @@ def test_khong_boc_duoc_cap_nao():
     assert "khong boc duoc" in d.needs_human
 
 
-def test_khong_tu_boc_key_tu_precondition():
-    """Chi doc Test Data. Precondition la van xuoi -> de boc sai."""
-    c = Case(n="1", feature="", description="", sub_scenario="",
-             precondition="1. enable_feature_aialbum = false.", test_data="")
-    d = extract(c, WL)
-    assert d.overrides == {}
+def test_boc_key_tu_precondition_khi_test_data_trong():
+    """Bo TC chung ghi key bat buoc o Precondition. Dau cham cuoi cau bi bo."""
+    d = extract(case("", precondition="1. enable_feature_aialbum = false."), WL)
+    assert d.overrides == {"enable_feature_aialbum": "false"}
+    assert d.from_precondition == ("enable_feature_aialbum",)
+    assert d.runnable
+
+
+def test_gop_precondition_va_test_data_test_data_thang():
+    d = extract(case(
+        "enable_feature_aialbum = true\n sort_features_moments = x",
+        precondition="1. enable_feature_aialbum=false\n 2. enable_feature_aivoice=true\n 3. App first open",
+    ), WL)
+    assert d.overrides == {"enable_feature_aialbum": "true", "enable_feature_aivoice": "true",
+                           "sort_features_moments": "x"}
+    assert d.from_precondition == ("enable_feature_aivoice",)
+
+
+def test_dong_precondition_co_mui_ten_bi_bo():
+    # `-> load fail` la mo ta trang thai, khong phai gia tri de dat
+    d = extract(case("", precondition="1. enable_feature_aialbum=true ->  load fail\n"
+                                      " 2. enable_feature_aivoice=true"), WL)
+    assert d.overrides == {"enable_feature_aivoice": "true"}
+
+
+def test_precondition_khong_co_key_va_test_data_trong():
+    d = extract(case("", precondition="1. App first open\n 2. Internet on dinh"), WL)
     assert not d.runnable
+    assert "Precondition khong co key" in d.needs_human
+
+
+@pytest.mark.parametrize("data", [
+    "105-spl-n-native-high: fail\n 105-spl-n-native: loaded",
+    "101-spl-a-banner-high: FAIL",
+])
+def test_ep_trang_thai_ad_thi_can_nguoi(data):
+    d = extract(case(data, precondition="1. enable_feature_aialbum=true"), WL)
+    assert not d.runnable
+    assert "ep trang thai load ad" in d.needs_human
 
 
 def test_summary_co_du_thong_tin_cho_report():
@@ -178,5 +210,75 @@ def test_summary_co_du_thong_tin_cho_report():
     s = d.summary
     assert s["overrides"] == {"enable_feature_aialbum": "false"}
     assert s["ignored"] == ["click_area"]
+    assert s["from_precondition"] == []
     assert s["runnable"] is True
     assert s["needs_human"] == ""
+
+
+def test_moi_key_mot_dong_thi_tach_dung_tung_cap():
+    # Dang sheet dung chung: xuong dong kem dau cach, khong co dau phay
+    wl = {"splash_banner_change", "layout_native_ads_splash", "show_105_spl_n_native"}
+    c = Case(n="5", feature="", description="", sub_scenario="", precondition="",
+             test_data="splash_banner_change=true\n layout_native_ads_splash=layout1\n"
+                       "show_105_spl_n_native = false",
+             actions=(), expects=())
+    d = extract(c, wl)
+    assert d.overrides == {"splash_banner_change": "true",
+                           "layout_native_ads_splash": "layout1",
+                           "show_105_spl_n_native": "false"}
+
+
+def test_dong_mo_ta_sau_gia_tri_khong_dinh_vao_gia_tri():
+    wl = {"splash_inter_change", "banners"}
+    c = Case(n="11", feature="", description="", sub_scenario="", precondition="",
+             test_data="splash_inter_change=true\n New user", actions=(), expects=())
+    assert extract(c, wl).overrides == {"splash_inter_change": "true"}
+    c2 = Case(n="12", feature="", description="", sub_scenario="", precondition="",
+              test_data='banners = [\n {"id": 1}\n]', actions=(), expects=())
+    assert extract(c2, wl).overrides == {"banners": '[\n {"id": 1}\n]'}
+
+
+def test_ngoac_dong_thua_cua_cau_bao_quanh_bi_bo():
+    d = extract(case("", precondition="1. Old user (da xong, enable_feature_aialbum=true)"), WL)
+    assert d.overrides == {"enable_feature_aialbum": "true"}
+    # ngoac can bang thi giu (chu thich cuoi van bo nhu cu)
+    assert ex('sort_features_moments = "a(b)"').overrides == {"sort_features_moments": "a(b)"}
+
+
+@pytest.mark.parametrize("val, want", [
+    ("layout1/2/3", ["layout1", "layout2", "layout3"]),
+    ("layout1/layout2", ["layout1", "layout2"]),
+    ("layout1 / layout2 / layout3", ["layout1", "layout2", "layout3"]),
+])
+def test_gia_tri_lua_chon_nhan_ra_moi_gia_tri_mot_luot(val, want):
+    d = ex(f"enable_feature_aialbum = true\n sort_features_moments = {val}")
+    assert d.runnable
+    assert d.overrides == {"enable_feature_aialbum": "true"}
+    assert [r["sort_features_moments"] for r in d.runs] == want
+    assert all(r["enable_feature_aialbum"] == "true" for r in d.runs)
+
+
+def test_hai_key_lua_chon_thi_nhan_to_hop():
+    d = ex("sort_features_moments = layout1/2/3\n AppSettings = layout1/layout2")
+    assert len(d.runs) == 6
+    assert {"sort_features_moments": "layout3", "AppSettings": "layout2"} in d.runs
+
+
+def test_qua_nhieu_to_hop_thi_can_nguoi():
+    d = ex("sort_features_moments = a/b/c/d/e\n AppSettings = a/b/c/d")
+    assert not d.runnable
+    assert "to hop" in d.needs_human
+
+
+def test_case_thuong_chay_mot_luot():
+    assert ex("enable_feature_aialbum = false").runs == ({"enable_feature_aialbum": "false"},)
+
+
+def test_url_khong_bi_coi_la_lua_chon():
+    d = ex('sort_features_moments = "https://static.apero.vn/a/b.webp"')
+    assert d.overrides == {"sort_features_moments": "https://static.apero.vn/a/b.webp"}
+
+
+def test_id_admob_khong_bi_coi_la_lua_chon():
+    d = ex("sort_features_moments = ca-app-pub-3940256099942544/1033173712")
+    assert d.runs == ({"sort_features_moments": "ca-app-pub-3940256099942544/1033173712"},)
