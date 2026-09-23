@@ -20,6 +20,7 @@ from .adb_parsers import (
     AdbTransportError,
     Device,
     find_adb,
+    parse_debuggable,
     parse_devices,
     parse_packages,
 )
@@ -98,12 +99,9 @@ class AdbClient:
 
     async def is_debuggable(self, serial: str, package: str) -> bool:
         """Doc co DEBUGGABLE tu `dumpsys package`. Nguon su that ve run-as."""
-        out = await self._shell_checked(serial, "dumpsys", "package", package)
-        for line in out.splitlines():
-            s = line.strip()
-            if s.startswith(("flags=", "pkgFlags=")):
-                return "DEBUGGABLE" in s
-        return False
+        return parse_debuggable(
+            await self._shell_checked(serial, "dumpsys", "package", package)
+        )
 
     # ---- shell -------------------------------------------------------------
 

@@ -93,6 +93,19 @@ def parse_packages(output: str) -> list[str]:
     return sorted(out)
 
 
+def parse_debuggable(dumpsys: str) -> bool:
+    """Co DEBUGGABLE trong `dumpsys package`.
+
+    Chi doc dong dang `flags=[ ... ]` / `pkgFlags=[ ... ]`: truoc do dumpsys con
+    in `flags=0x0` cua section khac, doc nham dong do la bao sai app khong debuggable.
+    """
+    for line in dumpsys.splitlines():
+        s = line.strip()
+        if s.startswith(("flags=[", "pkgFlags=[")):
+            return "DEBUGGABLE" in s
+    return False
+
+
 def parse_ls(output: str) -> list[str]:
     """Parse `ls` tren device thanh list ten file. Bo dong loi cua run-as."""
     out = []

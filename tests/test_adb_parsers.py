@@ -6,7 +6,7 @@ from conftest import DEVICES_OUT, PACKAGES_OUT
 
 from rcr.adb_parsers import (
     PACKAGE_RE, SERIAL_RE, find_activate_file, output_error, parse_devices,
-    parse_ls, parse_packages,
+    parse_debuggable, parse_ls, parse_packages,
 )
 
 
@@ -64,3 +64,19 @@ def test_output_error_bat_loi_khi_exit_0():
 def test_parse_ls_bo_dong_loi():
     out = parse_ls("a.json\nb.xml\n")
     assert out == ["a.json", "b.xml"]
+
+
+def test_parse_debuggable_bo_qua_dong_flags_hex_in_truoc():
+    # Dump that tren Pixel 7: `flags=0x0` cua section khac nam truoc dong co app
+    out = (
+        "    flags=0x0\n"
+        "    flags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA TEST_ONLY ]\n"
+        "    pkgFlags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA TEST_ONLY ]\n"
+    )
+    assert parse_debuggable(out)
+
+
+def test_parse_debuggable_app_release():
+    out = "    flags=0x0\n    pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ALLOW_BACKUP ]\n"
+    assert not parse_debuggable(out)
+    assert not parse_debuggable("")
