@@ -25,10 +25,10 @@ def test_high_fail_thuong_loaded_thanh_id_sai_va_id_test():
     d = extract(case("102-spl-n-inter-high: fail\n 102-spl-n-inter: loaded",
                      precondition="1. splash_inter_change=true"), WL)
     assert d.runnable
+    # `loaded` KHONG ghi ID test: ban prod crash "Found test ad id on environment production"
     assert d.overrides == {
         "splash_inter_change": "true",
         "splash_inter_high_n_id": ad_state.INVALID_ID,
-        "splash_inter_n_id": ad_state.TEST_IDS["inter"],
     }
 
 

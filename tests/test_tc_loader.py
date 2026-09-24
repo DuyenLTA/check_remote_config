@@ -172,3 +172,20 @@ def test_load_khong_sheet_nao_co_header_thi_bao_loi(tmp_path):
     p = _xlsx(tmp_path, [("A", [("x",)]), ("B", [("y",)])])
     with pytest.raises(RcError, match="khong sheet nao co dong header"):
         load(p)
+
+
+def test_sheet_khong_co_cot_test_data_thi_doc_key_o_precondition():
+    # Bo TC tu SDK 3.2.0: N°, Feature, ..., Precondition, Action, Expected - khong co Test Data
+    header = ("N°", "Feature", "Test Description", "Sub-scenario", "Precondition",
+              "Action", "Expected Result", "Actual Result", "PASS/FAIL")
+    out = parse_rows([("spec",), header,
+                      (1.0, "OB4", "x", "s", "1. enable_onb4_screen=true", "1. Mo app", "1. Thay", "", "")])
+    assert out[0].n == "1"
+    assert out[0].test_data == ""
+    assert out[0].precondition == "1. enable_onb4_screen=true"
+
+
+def test_thieu_ca_test_data_lan_precondition_thi_bao_loi():
+    header = ("N°", "Feature", "Action", "Expected Result")
+    with pytest.raises(RcError, match="precondition"):
+        parse_rows([header, ("1", "x", "a", "b")])

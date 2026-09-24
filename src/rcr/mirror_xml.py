@@ -83,7 +83,9 @@ def coerce(kind: str, rc_value: str) -> str:
             return str(float(v))
         except ValueError:
             raise ValueError(f"kieu float nhung gia tri khong phai so: {rc_value!r}") from None
-    return v  # string: giu nguyen van
+    # string: giu NGUYEN VAN, ke ca khoang trang dau/cuoi - RC luu dung tung ky tu
+    # (JSON hong `{"image_url": ` co dau cach cuoi; strip la verify bao lech gia)
+    return rc_value
 
 
 def set_value(xml: str, node: MirrorNode, rc_value: str) -> str:

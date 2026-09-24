@@ -112,3 +112,11 @@ def test_set_long_khong_co_key_thi_raise():
 
 def test_read_long_khong_co_tra_none():
     assert read_long("<map></map>", "last_fetch_time_in_millis") is None
+
+
+
+def test_coerce_string_giu_nguyen_khoang_trang():
+    from rcr.mirror_xml import coerce
+
+    assert coerce("string", '{"type": "image", "image_url": ') == '{"type": "image", "image_url": '
+    assert coerce("boolean", " true ") == "true"

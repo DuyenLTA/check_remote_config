@@ -282,3 +282,15 @@ def test_url_khong_bi_coi_la_lua_chon():
 def test_id_admob_khong_bi_coi_la_lua_chon():
     d = ex("sort_features_moments = ca-app-pub-3940256099942544/1033173712")
     assert d.runs == ({"sort_features_moments": "ca-app-pub-3940256099942544/1033173712"},)
+
+
+def test_key_duoc_nhac_ma_khong_co_gia_tri_thi_can_nguoi():
+    d = extract(case("", precondition="1. sort_features_moments hợp lệ nhưng image_url rỗng.\n"
+                                      " 2. enable_feature_aialbum = true"), WL)
+    assert not d.runnable
+    assert "khong co gia tri cu the: sort_features_moments" in d.needs_human
+
+
+def test_sau_dau_phay_la_mo_ta_thi_bo():
+    d = extract(case("", precondition="2. enable_feature_aialbum = true, tất cả toggle ads khác bật"), WL)
+    assert d.overrides == {"enable_feature_aialbum": "true"}

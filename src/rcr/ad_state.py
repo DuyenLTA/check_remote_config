@@ -4,8 +4,11 @@ File TC ghi dieu kien kieu `102-spl-n-inter-high: fail`, `105-spl-n-native: load
 Tester lam tay bang Ad Inspector (lac may -> chon nguon Meta) - khong phai app nao
 cung co nguon Meta. Tool lam theo TUNG unit: dat key RC chua ID ad thanh
   - fail   -> ID sai: request chac chan loi
-  - loaded -> ID test Google cung loai ad: chac chan co fill
-Da do: high = ID sai -> onAdFailedToLoad -> fallback unit thuong (ID test) loaded.
+  - loaded -> KHONG ep: ban prod co chot `Found test ad id on environment production`
+    -> app CRASH khi gap ID test Google (do tren Piclux 2026-09-24). Chi ban dev
+    moi nhan ID test. `loaded` de ad tu fill; buoc cham phai thay unit do loaded
+    trong log, khong thi BLOCKED.
+Da do: high = ID sai -> onAdFailedToLoad -> fallback unit thuong loaded.
 
 Ky hieu -> key LAY TU BANG DA DO (`data/ad_id_keys.yaml`), khong suy tu ten: key
 `id_<vi_tri>` co trong RC chua chac SDK doc. Vi tri chua co trong bang -> tra ve
@@ -22,12 +25,6 @@ MARKER_RE = re.compile(r"\b(\d{3}(?:-[a-z0-9]+)+)\s*:\s*(fail|failed|loaded)\b",
 # Moi cho co trang thai - de bat ky hieu viet tat MARKER_RE khong doc duoc
 STATE_RE = re.compile(r":\s*(?:fail|failed|loaded)\b", re.I)
 INVALID_ID = "ca-app-pub-0000000000000000/0000000000"
-# ID test chinh thuc cua Google theo loai ad (developers.google.com/admob/android/test-ads)
-TEST_IDS = {
-    "inter": "ca-app-pub-3940256099942544/1033173712",
-    "native": "ca-app-pub-3940256099942544/2247696110",
-    "banner": "ca-app-pub-3940256099942544/9214589741",
-}
 DATA = Path(__file__).parent / "data" / "ad_id_keys.yaml"
 
 
@@ -56,22 +53,14 @@ def resolve(markers: dict[str, str], whitelist) -> tuple[dict[str, str], list[st
     unresolved: list[str] = []
     for marker, state in markers.items():
         key = table.get(marker)
-        kind = _kind(marker)
-        if not key or key not in whitelist or (state == "loaded" and not kind):
-            # `loaded` khong ep duoc van chay: ban debug dung ID test, ad tu fill.
-            # Phase cham phai thay unit do loaded trong log, khong thi BLOCKED.
-            if state == "fail":
-                unresolved.append(marker)
+        if state == "loaded":
+            continue  # khong ep fill (ban prod crash voi ID test) - de ad tu fill
+        if not key or key not in whitelist:
+            unresolved.append(marker)
             continue
-        overrides[key] = INVALID_ID if state == "fail" else TEST_IDS[kind]
+        overrides[key] = INVALID_ID
     return overrides, unresolved
 
-
-def _kind(marker: str) -> str:
-    for kind in TEST_IDS:
-        if kind in marker:
-            return kind
-    return ""
 
 
 @lru_cache(maxsize=1)

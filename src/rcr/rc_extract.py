@@ -27,24 +27,11 @@ from __future__ import annotations
 
 import re
 
-from . import ad_state, rc_variants
+from . import ad_state, rc_pairs, rc_variants
 from .models import Case, RcCaseData
 
-# Mui tien cac kieu tester hay dung cho runtime toggle.
-ARROWS = ("→", "->", "=>", "⇒")
+ARROWS = rc_pairs.ARROWS
 
-# Tim UNG VIEN key (identifier bat ky), roi `=`/`:`, roi gia tri.
-# KHONG doi key phai co dau '_': config that co key khong underscore (vd
-# `AppSettings`) -> doi underscore la bo sot key hop le. WHITELIST moi la bo
-# loc; regex chi co viec tim ung vien.
-# Cap tach nhau bang dau phay HOAC xuong dong: sheet dung chung ghi moi key mot
-# dong (`a=true\n b=false`), Precondition con danh so (`1. a=true\n 2. b=false`)
-# - chi tach theo phay la dinh 2 cap thanh 1 gia tri.
-_KEY = r"[A-Za-z][A-Za-z0-9_]*"
-PAIR_RE = re.compile(
-    rf"(?P<key>{_KEY})\s*[:=]\s*(?P<val>.*?)(?=(?:[,\n]\s*(?:\d+\s*[.)]\s*)?{_KEY}\s*[:=])|$)",
-    re.DOTALL,
-)
 # Gia tri la cho trong chua dien: `<id template dang test>`, `<gia tri tuong ung>`
 PLACEHOLDER_RE = re.compile(r"<[^<>]*>")
 # Key co dau '.' -> sua field trong JSON (vd restore.enable)
@@ -94,9 +81,9 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
             ),
         )
 
-    pre = _pairs(_precondition_lines(case.precondition))
+    pre = rc_pairs.pairs(rc_pairs.precondition_lines(case.precondition))
     # Ky hieu `102-...: fail` khop PAIR_RE thanh cap rac (`high: fail`) -> bo truoc khi boc
-    td = _pairs(ad_state.MARKER_RE.sub("", raw)) if has_td else {}
+    td = rc_pairs.pairs(ad_state.MARKER_RE.sub("", raw)) if has_td else {}
     td |= forced
     if not pre and not td:
         why = (f"khong boc duoc cap key=value nao tu Test Data: {raw[:80]!r}" if has_td
@@ -104,6 +91,18 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
         return RcCaseData(overrides={}, needs_human=why)
 
     found = pre | td  # trung key -> Test Data thang
+    # Key cua app duoc NHAC ma khong co gia tri (`splash_ui_config hop le nhung
+    # image_url rong`) -> chay voi config mac dinh la sai ma khong ai biet.
+    mentioned = _mentioned(rc_pairs.precondition_lines(case.precondition) + "\n" + raw, whitelist)
+    vague = sorted(mentioned - set(found) - set(forced))
+    if vague:
+        return RcCaseData(
+            overrides={},
+            needs_human=(
+                f"key duoc nhac nhung khong co gia tri cu the: {', '.join(vague)} - "
+                "ghi ro `key = gia tri` trong Precondition"
+            ),
+        )
     overrides = {k: v for k, v in found.items() if k in whitelist}
     ignored = tuple(sorted(k for k in found if k not in whitelist))
     from_pre = tuple(sorted(k for k in overrides if k not in td))
@@ -138,42 +137,10 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
                       from_precondition=from_pre)
 
 
-def _pairs(text: str) -> dict[str, str]:
-    return {m.group("key"): _clean(m.group("val")) for m in PAIR_RE.finditer(text)}
-
-
-def _precondition_lines(text: str) -> str:
-    """Bo dong co mui ten (mo ta trang thai, vd `high=true -> load fail`)."""
-    return "\n".join(l for l in text.splitlines() if not any(a in l for a in ARROWS))
-
-
-def _clean(val: str) -> str:
-    """Chuan hoa gia tri thanh dang RC luu (LUON la string).
-
-    Giu nguyen van JSON va chuoi rong: `[]` phai ra `"[]"`, `""` phai ra `""`
-    (khong duoc coi la 'khong co gia tri' roi bo qua).
-    """
-    v = val.strip()
-    # Gia tri dung o cuoi dong: dong sau la mo ta (`true\n New user`), khong phai
-    # gia tri. Tru JSON - mang/object co the trai nhieu dong.
-    if v[:1] not in "[{":
-        v = v.split("\n", 1)[0].strip()
-    # Ngoac dong thua cua cau bao quanh: `(da xong lfo, pass_lfo_criteria=true)` -> `true`
-    while v.endswith(")") and v.count(")") > v.count("("):
-        v = v[:-1].rstrip()
-    # Bo phan chu thich trong ngoac don o cuoi: `false (mac dinh)` -> `false`
-    v = re.sub(r"\s*\((?:[^()]*)\)\s*$", "", v).strip()
-    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'“”":
-        return v[1:-1]
-    if v.startswith("“") and v.endswith("”"):
-        return v[1:-1]
-    low = v.lower()
-    # Precondition ket thuc cau bang dau cham: `= false.` -> `false`
-    if re.fullmatch(r"(?:true|false|-?\d+)\.", low):
-        low = v = v[:-1]
-    if low in ("true", "false"):
-        return low
-    return v
+def _mentioned(text: str, whitelist) -> set[str]:
+    """Key cua app xuat hien nhu mot tu rieng trong van ban."""
+    words = set(re.findall(r"[A-Za-z][A-Za-z0-9_]*", text))
+    return words & set(whitelist)
 
 
 def whitelist_of(baseline) -> frozenset[str]:

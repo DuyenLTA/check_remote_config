@@ -36,7 +36,10 @@ COLUMNS = {
     "actions": ("action", "actions", "steps", "thao tac"),
     "expects": ("expected result", "expected", "ket qua mong doi"),
 }
-REQUIRED = ("n", "test_data", "actions", "expects")
+REQUIRED = ("n", "actions", "expects")
+# Key RC nam o Test Data HOAC Precondition (bo TC tu SDK 3.2.0 bo han cot Test Data,
+# ghi key trong Precondition) -> can it nhat mot trong hai.
+KEY_COLUMNS = ("test_data", "precondition")
 
 # Buoc duoc danh so: "1. ...", "2) ...". Tach theo dau dong.
 STEP_SPLIT = re.compile(r"(?m)^\s*\d+\s*[.)]\s*")
@@ -124,14 +127,15 @@ def _find_header(rows: list[tuple], source: str) -> tuple[dict[str, int], int]:
     best: tuple[dict[str, int], int] | None = None
     for i, row in enumerate(rows[:HEADER_SCAN_ROWS]):
         idx = _match_header(row)
-        if all(k in idx for k in REQUIRED):
+        if all(k in idx for k in REQUIRED) and any(k in idx for k in KEY_COLUMNS):
             return idx, i
         if idx and (best is None or len(idx) > len(best[0])):
             best = (idx, i)
     found = ", ".join(sorted(best[0])) if best else "(khong nhan ra cot nao)"
     raise RcError(
         f"{source or 'File'}: khong tim thay dong header trong {HEADER_SCAN_ROWS} dong dau.\n"
-        f"Can du cac cot: {', '.join(REQUIRED)}. Nhan ra duoc: {found}.\n"
+        f"Can du cac cot: {', '.join(REQUIRED)} + mot trong {' / '.join(KEY_COLUMNS)}. "
+        f"Nhan ra duoc: {found}.\n"
         "Kiem tra ten cot trong sheet testcase."
     )
 
