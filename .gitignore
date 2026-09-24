@@ -5,3 +5,6 @@ __pycache__/
 exports/
 .cache/
 *.egg-info/
+
+# Spec Confluence noi bo (repo public) - tai lai bang `python -m rcr.spec_sync`
+src/rcr/data/specs/

@@ -1,0 +1,135 @@
+# Luat SDK FO VisionLab dung de SOAT file TC truoc khi chay.
+# Moi luat ghi ro NGUON (user / spec / do) va DA DO tren may nao. Luat user noi ma
+# may do ra khac -> bao lai, khong tu sua cho khop.
+rules:
+  - id: key-thuong-la-cong-tac-tong
+    kind: master_switch
+    luat: >-
+      show_<vi_tri> (tier thuong, khong hau to) = false thi CA vi tri tat: khong
+      request tier nao, khong show, ke ca _high = true. _high chi quyet co request
+      tier high truoc hay khong.
+    nguon: user 2026-09-24
+    # CHI 105 (native splash) va 102 (inter splash) - user xac nhan 2026-09-24:
+    # "202 lam gi co quy tac day, 105 voi 102 thoi". Cac vi tri khac bat/tat tung tier.
+    vi_tri: ["105", "102"]
+    khong_ap:
+      "202": "Piclux FO 3.5.4-alpha02 (2026-09-24): high=T thuong=F van request high *****145; (T,T) 145+912, (F,T) 912, (F,F) khong. -> 202 bat/tat tung tier, TC 3.3.0 #44 dung."
+    do_that:
+      - "Hypix com.ai.videogenerator.photocreator.aiart, FO 3.2.0, vi tri 105 (2026-09-23)"
+      - "Piclux aiphotogenerator.photoshoot.aiart.aiimagegenerator, FO 3.5.4-alpha02, vi tri 105: (T,T) 067->191, (F,T) 191, (T,F) 0 request (2026-09-24)"
+      - "Piclux FO 3.5.4-alpha02, vi tri 102 inter: high=F high1=T thuong=F -> 0 request inter; thuong=T -> 528 (high1) -> 854 (2026-09-24). TC 6.4.0 #13 ky vong high1 load la SAI."
+  - id: nhan-ads-theo-ads-splash
+    kind: note  # luat UI de CHAM, tool chua tu soat duoc
+    luat: >-
+      Nhan "This action may contain ads" duoi progress splash CHI hien khi ads splash
+      dang bat (native 105 khi splash_banner_change=true, banner 101 khi =false).
+      Ads splash tat (ke ca do key thuong 105/101 = false mac dinh) -> nhan mat.
+    nguon: user 2026-09-24
+    do_that:
+      - "Piclux FO 3.5.4-alpha02 (2026-09-24): 105 bat -> co nhan; 101 bat -> co nhan; 105 tat / 101 tat -> khong nhan"
+  - id: old-user-vao-man-onb-old
+    kind: note
+    luat: >-
+      Old user (complete_lfo_flow + complete_ob_flow, pass_lfo_criteria = true) va
+      enable_ob1_old_screen = true -> sau splash vao man Question "onboarding old",
+      KHONG vao Home. Muon ve Home phai tat enable_ob1_old_screen.
+    nguon: spec "Tong hop SDK 3.2.0" (enable_ob1_old_screen - on/off man question old user)
+    do_that:
+      - "Piclux FO 3.5.4-alpha02 (2026-09-24): old user that (di het FO) -> VslTemplate4QuestionActivity, 10/10 luot"
+  - id: ban-prod-chan-id-test
+    kind: note
+    luat: >-
+      Ban prod crash "Found test ad id on environment production" khi gap ID test
+      Google -> tool KHONG duoc ep fill bang ID test; ep fill bang ID that cua unit khac.
+    nguon: do 2026-09-24
+    do_that:
+      - "Piclux 2.8.0: splash_inter_high_n_id = ca-app-pub-3940256099942544/1033173712 -> crash 10/10 luot"
+
+  # ---- Rut tu spec Confluence (python -m rcr.spec_sync; ban text o data/specs/, khong commit) ----
+  # Link: https://confluence.apero.vn/pages/viewpage.action?pageId=<id>
+  - id: splash-timeout-la-truong-trong-splash-ui-config
+    kind: key_sai
+    key: splash_timeout
+    thay_bang: "splash_ui_config.timeout (truong trong JSON splash_ui_config)"
+    luat: >-
+      Timeout splash KHONG phai key rieng: spec goi la splashConfig.timeout / splash_ui_config.timeout
+      ("hết timeout splash_ui_config.timeout (đếm từ lúc vào Splash)"). Case dat key `splash_timeout`
+      thi app khong doc -> ket qua vo nghia.
+    nguon: "spec 3.4.0 pageId=311066801 (Logic Loading, nhanh B); spec 3.6.0 pageId=316637186 (GĐ 95→100%)"
+    do_that:
+      - "Piclux FO 3.5.4-alpha02 (2026-09-24): khong co key splash_timeout trong RC lan DEX"
+  - id: splash-ui-config-340
+    kind: note
+    luat: >-
+      splash_ui_config default = false (UI cu icon app). Truong: type image|gif, image_url (rong -> nen mau + icon),
+      title default "", sub_title default "Sharpen Your Memories". Anh rong/loi/chua kip cache -> nen mau + icon,
+      progress van chay, khong man trang/den. Title/subtitle/nhan ads de tren anh, phai du tuong phan.
+      Vi du trong spec dung `media_url` nhung bang truong ghi `image_url` -> spec tu mau thuan.
+    nguon: "spec 3.4.0 pageId=311066801"
+  - id: splash-progress-340
+    kind: note
+    luat: >-
+      Progress khong chay theo timer co dinh ma theo trang thai load inter: (A) loaded -> fill 100% -> show inter;
+      (B) het timeout -> fill 100% -> bo qua inter; (C) fail/no fill/no internet/remote tat -> fill 100% -> bo qua.
+      Khong bao gio tut lui, khong dung o 100% lau, khong loading forever.
+    nguon: "spec 3.4.0 pageId=311066801"
+  - id: splash-progress-360
+    kind: note
+    tu_version: "3.6.0"
+    luat: >-
+      Tu 3.6.0: progress chay deu 0->95% trong 10s tinh tu luc splash hien. Inter ready bat ky luc nao -> show ngay;
+      no-fill -> sang LFO1. Toi 95% ma inter con loading -> giu 95% cho toi splash_ui_config.timeout.
+      Them dong loading_text ("Preparing your data..."), rong -> an dong. Truong splash_ui_config 3.6.0:
+      background_image, title, subtitle, loading_text, loading_text_color; thieu 1 truong -> chi truong do ve default.
+    nguon: "spec 3.6.0 pageId=316637186"
+  - id: vi-tri-progress-theo-toggle-ads-splash
+    kind: note
+    luat: >-
+      Vi tri progress + text quyet dinh boi toggle ads splash (show_105_spl_n_native / banner), KHONG theo fill:
+      ads bat -> neo tren vung ad (12-16dp), vung ad reserve co dinh ca luc loading/fail (anh nen xuyen qua,
+      khong placeholder rong), progress khong nhay; ads tat -> neo day man tren safe-area.
+    nguon: "spec 3.4.0 pageId=311066801"
+  - id: tat-tier-la-0-request
+    kind: note
+    luat: >-
+      Tat remote cua 1 tier (high1/high2...) thi SDK KHONG goi loadAd() cho unit do -> AdMob 0 request.
+      Con request = bug nang (spec liet ke 102-high1, 106-high1, 201/202/301/303-high1/high2).
+    nguon: "spec 3.5.0 pageId=312771265"
+  - id: onb-swipe-auto-button-x-350
+    kind: note
+    luat: >-
+      swipe_onb2 (default TRUE): native onb2 OFF -> icon SWIPE thay vung ad, 0 request; ON (fill hay no fill) -> SWIPE nho.
+      OB3 native full: auto_swipe_onb3 (default TRUE) + timer_auto_swipe (default 5s, <=0 -> 5) tu sang OB4, timer tinh tu
+      luc ad show, vuot tay thi huy timer (khong double navigate). ob3_show_button_skip (default FALSE) +
+      timer_button_x (default 5s, <0/khong phai so -> 5, =0 -> X hien ngay); reload ad moi -> reset countdown X.
+    nguon: "spec 3.5.0 pageId=312771265"
+  - id: question-va-onb-old-302
+    kind: note
+    luat: >-
+      Question (enable_question_screen default TRUE; false -> khong load/show ads va man): preload 305 native tu OB4,
+      306 inter tuan tu, bam Go to Home -> show 306 high -> thuong. Chua chon item -> khong co CTA.
+      Onboarding old (enable_ob1_old_screen default TRUE): lan 2 vao app Splash -> Inter -> Onboarding old -> Home;
+      preload 301_onb1_o_native high -> thuong tai Splash, 301_onb1_o_inter khi bam Start Now.
+      JSON question_screen_config/onboarding_old_config loi/thieu truong/style_id trung -> fallback TOAN BO default SDK.
+    nguon: "spec 3.0.2 pageId=304546738"
+  - id: ads-resume-301
+    kind: note
+    luat: >-
+      Ads resume: enable_resume_high/enable_resume (default TRUE), resume_type aoa|native_full|inter (default native_full),
+      load_ads_resume ms (default 1000, 0-2000). Preload tuan tu khi app vao background (501 aoa / 502 native / 503 inter,
+      high -> thuong). Khong show khi: dang show inter/native full/UMP/dang o splash, app bi kill mo lai, keo notification
+      roi dong, mat mang luc background. Lock/unlock hoac tap notification mo app khac roi quay lai -> van show.
+      Native full resume luon co nut Close.
+    nguon: "spec 3.0.1 pageId=301858924"
+  - id: language-330
+    kind: note
+    luat: >-
+      list_language: 3 vi tri dau luon Phap/Anh/India, sai format hoac them ngon ngu ngoai list -> default.
+      202 reload-after-show: tu lan 2 chon ngon ngu -> show 202 moi; spam click toi da 2 lan load/1 button, lan 3 khong load.
+      Chon nhanh hon luc 202 load xong -> SKIP show, khong chan user.
+    nguon: "spec 3.3.0 pageId=307102293"
+  - id: fix-202-o-301-302-353
+    kind: note
+    tu_version: "3.5.3"
+    luat: "3.5.3 sua loi SDK 3.2.0 show 202 o man 301, 302 (base 3.5.0)."
+    nguon: "spec 3.5.3 pageId=323392932"

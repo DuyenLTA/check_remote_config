@@ -144,6 +144,17 @@ shared_prefs/frc_<appId>_firebase_settings.xml  <- moc throttle fetch
 Giờ chỉ clear khi test case đòi reset trạng thái app — và phải clear **trước** rồi mới patch,
 vì `pm clear` xoá luôn file vừa ghi.
 
+## Spec SDK (Confluence)
+
+```bash
+source <(grep '^export CONFLUENCE' ~/.bashrc)   # CONFLUENCE_BASE_URL + CONFLUENCE_TOKEN (PAT)
+PYTHONPATH=src .venv/bin/python -m rcr.spec_sync          # tai trang moi / doi version
+PYTHONPATH=src .venv/bin/python -m rcr.spec_sync --check  # chi xem, khong tai
+```
+
+Tải 6.4.0 + mọi `visionlab:tutorial` ≥ 3.0.1 về `src/rcr/data/specs/` (gitignore — tài liệu nội bộ).
+Luật rút ra nằm ở `src/rcr/data/sdk_rules.yaml`, mỗi luật ghi `nguon` = pageId spec.
+
 ## Test
 
 ```bash

@@ -118,6 +118,11 @@ Thứ tự thực thi tuần tự 1→6. Phase 2 là tim của tool — cơ ch�
     fill. Bộ chung 3.0.2: **69/98 case, 86 lượt** trên `photocreator.aiart`.
 28. **Chạy xong → report publish thành artifact và tự mở link** (user dặn 2026-09-23). Report
     HTML self-contained để publish thẳng.
+29. **Luật SDK lấy từ spec Confluence, tự cập nhật** (user dặn 2026-09-24): theo dõi trang
+    "SDK Tutorial - Ver 6.4.0" + mọi `visionlab:tutorial:X.Y.Z` ≥ 3.0.1 dưới trang cha "SDK Tutorial"
+    (pageId 168689676), kể cả trang thêm sau. `python -m rcr.spec_sync` trước mỗi lượt chạy TC →
+    trang NEW/CHANGED thì đọc (bản cũ giữ ở `.prev.txt`) và cập nhật `data/sdk_rules.yaml` kèm pageId.
+    Text spec ở `data/specs/` **không commit** — repo public, spec là tài liệu nội bộ.
 
 ## Facts đã verify — không cần verify lại
 
