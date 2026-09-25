@@ -71,6 +71,10 @@ def clean(val: str) -> str:
             v = v[:-1].rstrip()
         # Chu thich trong ngoac don o cuoi: `false (mac dinh)`, `2 (default)`
         v = re.sub(r"\s*\([^()]*\)$", "", v).strip()
+        # Ngoac MO ma khong dong: chu thich bi cat giua chung khi tach dong/dau
+        # phay - `true (key tu SDK cu`. Khong cat la gia tri mang ca cau van xuoi.
+        if v.count("(") > v.count(")"):
+            v = v[:v.rindex("(")].rstrip()
     if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
         return v[1:-1]
     if v.startswith("“") and v.endswith("”"):

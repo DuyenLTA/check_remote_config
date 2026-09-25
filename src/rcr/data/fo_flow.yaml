@@ -1,0 +1,74 @@
+# Luong First Open cua SDK VisionLab, do that tren may - port tu tool
+# `ad-checklist-diff` (da chay hang tram luot, khong phai doan lai tu dau).
+#
+# Man hinh nhan bang TEN ACTIVITY dang focus, khong theo thu tu co dinh: user
+# cu va user moi di qua nhung man khac nhau, cung mot bo luat van chay duoc -
+# man nao khong xuat hien thi luat do khong bao gio khop.
+#
+# Moi man co danh sach BUOC theo thu tu; moi vong poll lam MOT buoc va nho da
+# lam toi dau, nen man can nhieu thao tac (chon ngon ngu, ROI bam xac nhan)
+# tien dan thay vi lap mai buoc dau.
+#
+# `repeat_from`: khi het buoc thi quay lai buoc thu may (man quang cao/paywall
+# phai thu dong nhieu lan, vi nut dong chi hien sau khi dem nguoc xong).
+# `system: true`: man cua package khac (hop thoai xin quyen) - khong duoc coi
+# la "app da thoat" roi mo lai app de len tren no.
+
+rules:
+  # Hop thoai xin quyen co the bung len tren BAT KY man nao -> de dau tien.
+  - match: GrantPermissionsActivity
+    system: true
+    repeat_from: 0
+    steps:
+      - tap: {resource_id: permission_allow_button}
+      - tap: {resource_id: permission_allow_foreground_button}
+      - tap: {text: Allow}
+
+  - match: Language
+    steps:
+      - language: English
+      # Nut xac nhan ten khac nhau tuy ban build - liet ke ca hai, tap vao node
+      # khong ton tai thi khong lam gi ca.
+      - tap: {resource_id: buttonLanguageNext}
+      - tap: {resource_id: imageButtonLanguageNext}
+
+  # OB1/2/3 sang man bang VUOT (man con hien chu "Swipe to Next" + icon tay).
+  # Nut Next co the co hoac khong tuy remote config (`swipe_onb2`) - chinh no la
+  # thu dang duoc test, nen khong duoc dua vao no de di.
+  - match: OnboardingActivity
+    repeat_from: 0
+    steps:
+      - wait: 2
+      - swipe: left
+      - wait: 2
+      - swipe: left
+      - wait: 2
+      - swipe: left
+      # Trang cuoi moi co nut ket thuc ("Get started"/"Next"), tim theo vi tri.
+      - tap_continue: true
+
+  - match: QuestionActivity
+    repeat_from: 1
+    steps:
+      - tap: {resource_id: ivQuestionImage}
+      # Nhan nut nay do remote config dat: "Go to Home", "Next", "Get Started"
+      # deu tung xuat hien. Tim theo VI TRI, khong theo chu.
+      - tap_continue: true
+
+  - match: AdActivity
+    repeat_from: 1
+    steps:
+      # De quang cao load va show that - do chinh la thu can quan sat - roi moi dong.
+      - wait: 9
+      - tap_close: true
+      - key: KEYCODE_BACK
+
+  - match: BillingActivity
+    repeat_from: 1
+    steps:
+      - wait: 3
+      - tap_close: true
+      - tap: {text: Continue with ads}
+      - key: KEYCODE_BACK
+
+home_match: MainActivity

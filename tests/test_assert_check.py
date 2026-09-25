@@ -240,3 +240,37 @@ def test_con_FAIL_thi_van_la_FAIL():
 def test_khong_dong_nao_do_duoc_thi_giu_nguyen_muc_xau_nhat():
     out = a.check_all(["Pop-up Add Widget hiển thị"], ADS_BANNER, NO_DRIVE, OK_CRASH)
     assert out["verdict"] == a.NEEDS_HUMAN and out["measured"] == 0
+
+
+# --- khong duoc doi PASS/FAIL khi khong quy duoc trach nhiem ----------------
+
+def test_cau_phu_dinh_co_chu_alternate_khong_phai_cau_ta_thu_tu_preload():
+    """"high1: Requests = 0 (OFF khong duoc goi ke ca trong alternate)" - la phu dinh."""
+    ads = {"units": {"native:*****394": dict(ADS_NO_FILL["units"]["native:*****394"])}}
+    out = check("303-onb3-n-native-high1: Requests = 0 (OFF không được gọi kể cả trong alternate)",
+                ads=ads)
+    assert out["verdict"] != a.FAIL
+    assert "không quy được cho vị trí" in out["reason"]
+
+
+def test_phu_dinh_ma_unit_map_duoc_ve_key_thi_moi_FAIL():
+    ads = {"units": {"interstitial:*****588": dict(
+        ADS_BANNER["units"]["interstitial:*****588"], rc_keys=["splash_inter_high_n_id"])}}
+    out = check("App KHÔNG request/load inter ad", ads=ads)
+    assert out["verdict"] == a.FAIL
+
+
+def test_phu_dinh_ma_khong_map_duoc_unit_thi_khong_ket_toi_app():
+    """Native cua man khac dang preload - khong phai native cua man trong cau."""
+    ads = {"units": {"native:*****394": dict(ADS_NO_FILL["units"]["native:*****394"], rc_keys=[])}}
+    out = check("App KHÔNG request/load native ad (AdMob Requests = 0)", ads=ads)
+    assert out["verdict"] == a.NOT_VERIFIABLE
+
+
+def test_da_lai_toi_dung_man_thi_cham_that_chu_khong_bao_can_nguoi():
+    """Case onboarding khong co buoc tap nao, nhung tool da lai toi dung man."""
+    drive = {"walked": True, "steps": [
+        {"n": 0, "action": {"kind": "walk"}, "activity": "OnboardingActivity",
+         "dump": "<node text='Swipe to Next'/>"}]}
+    out = check('Hiển thị chữ "Swipe to Next"', drive=drive)
+    assert out["verdict"] == a.PASS

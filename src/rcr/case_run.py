@@ -19,6 +19,8 @@ import logging
 
 from . import (
     ad_log,
+    fo_flow,
+    screencap,
     assert_check,
     crash_log,
     case_drive,
@@ -30,6 +32,7 @@ from . import (
     rc_snapshot,
     rc_verify,
     sdk_probe,
+    ui_dump,
 )
 from .models import RcBaseline
 
@@ -42,7 +45,7 @@ def _noop(_msg: str) -> None:
 
 async def apply_case(
     client, baseline: RcBaseline, overrides: dict[str, str], keep: bool, out_dir,
-    steps=(), expects=(), log_fn=_noop,
+    steps=(), expects=(), goto: str = "", log_fn=_noop,
 ) -> dict:
     """patch -> tat han app -> mo lai -> verify -> lai cac buoc -> restore.
 
@@ -67,10 +70,25 @@ async def apply_case(
         "verdict": "CONFIG_OK" if result.ok else "BLOCKED",
         "restored": False,
     }
+    # Case noi ve man khac splash -> lai toi do TRUOC khi cham, khong thi moi
+    # dong ta UI cua man ay deu ra "chua lai toi noi".
+    if goto and result.ok:
+        log_fn(f"    lai toi {goto}...")
+        out["walk"] = await fo_flow.walk_to(
+            client, baseline.serial, baseline.package, goto, log_fn=log_fn
+        )
+        log_fn(f"    {'da toi' if out['walk']['reached'] else 'KHONG toi duoc'} "
+               f"{out['walk']['activity'].split('.')[-1]}")
+        if out["walk"]["reached"]:
+            out["drive"] = await _snapshot(client, baseline, out["walk"]["activity"])
     if steps and result.ok:
-        out["drive"] = await case_drive.drive(
+        driven = await case_drive.drive(
             client, baseline.serial, baseline.package, steps, log_fn
         )
+        # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
+        driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]
+        driven["walked"] = bool((out.get("walk") or {}).get("reached"))
+        out["drive"] = driven
     # Cham case ads bang LOG, khong bang mat: inter load nhanh hon banner nen no
     # de len truoc khi kip nhin thay banner.
     out["ads"] = await _read_ads(client, baseline)
@@ -89,6 +107,18 @@ async def apply_case(
     return out
 
 
+async def _snapshot(client, baseline: RcBaseline, activity: str) -> dict:
+    """Chup man vua lai toi: cham can bang chung, du case khong co buoc Action."""
+    xml = await ui_dump.dump(client, baseline.serial)
+    shot = await screencap.capture(client, baseline.serial)
+    return {
+        "status": "DONE", "stopped_at": 0, "blocked_steps": [], "walked": True,
+        "steps": [{"n": 0, "step": f"lái tới {activity.split('.')[-1]}",
+                   "action": {"kind": "walk"}, "activity": activity, "dump": xml,
+                   "shot": shot["thumb"], "shot_warning": shot["warning"]}],
+    }
+
+
 async def _read_ads(client, baseline: RcBaseline) -> dict:
     pid = await sdk_probe.pid_of(client, baseline.serial, baseline.package)
     if not pid:
@@ -104,7 +134,7 @@ async def _read_ads(client, baseline: RcBaseline) -> dict:
 
 async def run_case(
     client, baseline: RcBaseline, runs, precondition: str = "", steps=(), expects=(),
-    *, keep=False, out_dir=".", dex=True, log_fn=_noop,
+    goto: str = "", *, keep=False, out_dir=".", dex=True, log_fn=_noop,
 ) -> tuple[dict, RcBaseline]:
     """Chay tron mot case. Tra (ket qua, baseline dang dung).
 
@@ -129,17 +159,19 @@ async def run_case(
         log_fn("  app da bi xoa data -> doc lai baseline")
         baseline = await rc_baseline.read(client, baseline.serial, baseline.package)
 
-    out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, log_fn)
+    out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto, log_fn)
     return out | {"reset": reset}, baseline
 
 
-async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, log_fn) -> dict:
+async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto, log_fn) -> dict:
     """Case co gia tri lua chon -> nhieu luot. Verdict case = luot xau nhat."""
     done: list[dict] = []
     for index, overrides in enumerate(runs, 1):
         head = f"  luot {index}/{len(runs)}: " if len(runs) > 1 else "  "
         log_fn(head + ", ".join(f"{k}={v}" for k, v in overrides.items()))
-        out = await apply_case(client, baseline, overrides, keep, out_dir, steps, expects, log_fn)
+        out = await apply_case(
+            client, baseline, overrides, keep, out_dir, steps, expects, goto, log_fn
+        )
         log_fn(f"    foreground sau {out['launch']['waited_s']}s · verify: "
                f"{'CONFIG_OK' if out['verify']['ok'] else 'BLOCKED'} · verdict: {out['verdict']}")
         done.append(out)

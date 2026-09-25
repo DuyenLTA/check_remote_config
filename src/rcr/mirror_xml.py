@@ -69,10 +69,7 @@ def coerce(kind: str, rc_value: str) -> str:
     """
     v = rc_value.strip()
     if kind == "boolean":
-        low = v.lower()
-        if low in ("true", "false"):
-            return low
-        raise ValueError(f"kieu boolean nhung gia tri khong phai true/false: {rc_value!r}")
+        return _as_boolean(v)
     if kind in ("long", "int"):
         try:
             return str(int(v))
@@ -86,6 +83,28 @@ def coerce(kind: str, rc_value: str) -> str:
     # string: giu NGUYEN VAN, ke ca khoang trang dau/cuoi - RC luu dung tung ky tu
     # (JSON hong `{"image_url": ` co dau cach cuoi; strip la verify bao lech gia)
     return rc_value
+
+
+# Luat doc boolean cua Firebase Remote Config (FirebaseRemoteConfigValue).
+# RC luu MOI gia tri duoi dang string; SDK doi sang boolean theo dung hai tap nay.
+_TRUE = frozenset({"1", "true", "t", "yes", "y", "on"})
+_FALSE = frozenset({"0", "false", "f", "no", "n", "off", ""})
+
+
+def _as_boolean(v: str) -> str:
+    """Gia tri RC -> 'true'/'false' cho node boolean cua mirror.
+
+    TC co nhung case co tinh dat gia tri KHONG hop le (`null`, chuoi rong) de
+    xem app xu ly sao. Firebase cho phep dat, va SDK doc ra `false` - chuoi la
+    khong parse duoc thi getBoolean tra ve mac dinh. Mirror phai ghi dung cai
+    app se doc, neu khong thi bo luon case do (truoc day 18/53 case chet o day).
+    """
+    low = v.lower()
+    if low in _TRUE:
+        return "true"
+    if low in _FALSE:
+        return "false"
+    return "false"
 
 
 def set_value(xml: str, node: MirrorNode, rc_value: str) -> str:

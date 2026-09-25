@@ -19,7 +19,11 @@ import re
 
 from .verdict_levels import FAIL, NEEDS_HUMAN, NOT_VERIFIABLE, PASS, out
 
-NEGATIVE_RE = re.compile(r"(?:kh[oô]ng|ko)\s+(?:c[óo]\s+)?(?:load|show|hi[ểe]n|request|xu[ấa]t hi[ệe]n)", re.I)
+NEGATIVE_RE = re.compile(
+    r"(?:kh[oô]ng|ko)\s+(?:c[óo]\s+|[đd][ưu][ợo]c\s+)?"
+    r"(?:load|show|hi[ểe]n|request|g[ọo]i|xu[ấa]t hi[ệe]n)|requests?\s*=\s*0",
+    re.I,
+)
 SHOW_RE = re.compile(r"hi[ểe]n\s*th[ịi]|show|xu[ấa]t\s*hi[ệe]n", re.I)
 # "Impression fire dung 1 lan khi ad show" - dem dong "occurred for ad unit".
 IMPRESSION_RE = re.compile(r"impression", re.I)
@@ -77,8 +81,14 @@ def type_from_position(text: str, rc_keys) -> str:
 
 
 def tapped(drive: dict) -> bool:
-    """Tool da thuc su thao tac chua. Chua tap gi thi van dang o man mo dau -
-    khong the ket luan ve man phai lai toi."""
+    """Tool da toi duoc man can cham chua.
+
+    Tinh ca chuyen LAI qua luong First Open (`walked`), khong chi cac buoc
+    Action: case ve man onboarding thuong khong co buoc tap nao, nhung neu da
+    lai toi dung man thi dump/anh la bang chung that.
+    """
+    if drive.get("walked"):
+        return True
     return any(s.get("action", {}).get("kind") == "tap" for s in (drive.get("steps") or []))
 
 
@@ -157,6 +167,8 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict) -> dict:
             return out(PASS, f"impression bắn {fired} lần", actual | {"impressions": fired})
         return out(NOT_VERIFIABLE, "không thấy dòng impression nào trong log của app", actual)
 
+    # Cau PHU DINH co chu "alternate" ("khong duoc goi ke ca trong alternate")
+    # khong phai cau ta thu tu preload - kiem NEGATIVE truoc.
     if ORDER_RE.search(text) and not NEGATIVE_RE.search(text):
         order = [u["unit"] for u in units if u["requested"]]
         if len(order) >= 2:
@@ -174,19 +186,20 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict) -> dict:
         if not requested:
             return out(PASS, f"không unit {kind} nào được request", actual)
         if ANY_RE.search(text):
-            # "khong load BAT KY banner nao" - moi request deu la sai
+            # "khong load BAT KY banner nao" - khong gioi han vi tri, moi request deu sai
             return out(FAIL, f"vẫn có request {kind}", actual)
-        if POSITION_RE.search(text) and not any(u["rc_keys"] for u in requested if "rc_keys" in u):
-            # Cau gioi han theo vi tri (105 / tren splash) ma ID trong log bi che,
-            # khong map duoc unit ve key nao -> KHONG duoc quy request nay cho vi
-            # tri do. Bao FAIL o day la bao oan: native cua man sau cung dang preload.
-            return out(
-                NOT_VERIFIABLE,
-                f"có request {kind} nhưng ID bị che, không map được unit về vị trí nào — "
-                "không quy được cho vị trí trong câu",
-                actual,
-            )
-        return out(FAIL, f"vẫn có request {kind}", actual)
+        if any(u.get("rc_keys") for u in requested):
+            # Map duoc unit ve key remote config -> quy duoc trach nhiem.
+            return out(FAIL, f"vẫn có request {kind}", actual)
+        # ID trong log bi che con 3 so cuoi, khong unit nao map duoc ve key ->
+        # KHONG biet request nay thuoc vi tri nao. Rat co the la vi tri khac dang
+        # preload. Bao FAIL o day la bao oan.
+        return out(
+            NOT_VERIFIABLE,
+            f"có {len(requested)} request {kind} nhưng ID bị che, không map được unit về "
+            "vị trí nào — không quy được cho vị trí trong câu",
+            actual,
+        )
 
     if not SHOW_RE.search(text):
         return out(NOT_VERIFIABLE, f"câu nói về {kind} nhưng không nêu rõ kỳ vọng", actual)

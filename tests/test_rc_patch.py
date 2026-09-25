@@ -119,10 +119,21 @@ def test_key_la_thi_bao_loi_ro(adb):
         rc_patch.build_writes(base(adb), {"key_bay_dau": "true"}, NOW)
 
 
-def test_sai_kieu_thi_bao_loi_chu_khong_ghi_bua(adb):
-    """enable_onb3_screen la boolean o mirror - dat '3' phai fail RO."""
+def test_kieu_so_sai_thi_bao_loi_chu_khong_ghi_bua(adb):
+    """banner_fail_time la int o mirror - dat chuoi phai fail RO."""
     with pytest.raises(RcError, match="khong dat duoc"):
-        rc_patch.build_writes(base(adb), {"enable_onb3_screen": "3"}, NOW)
+        rc_patch.build_writes(base(adb), {"banner_fail_time": "khong phai so"}, NOW)
+
+
+def test_gia_tri_la_cho_key_boolean_van_patch_duoc(adb):
+    """`null` vao node boolean -> mirror ghi false, dung cai app se doc."""
+    writes = dict(rc_patch.build_writes(base(adb), {"enable_onb3_screen": "null"}, NOW))
+    mirror = writes["shared_prefs/vsl_template4_remote_first_open.xml"]
+    assert 'name="enable_onb3_screen" value="false"' in mirror
+    # activate.json van giu NGUYEN VAN gia tri TC yeu cau
+    import json
+    activate = json.loads(writes[f"files/{ACTIVATE}"])
+    assert activate["configs_key"]["enable_onb3_screen"] == "null"
 
 
 def test_overrides_rong_thi_bao_loi(adb):

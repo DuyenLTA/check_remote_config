@@ -18,8 +18,8 @@ from rcr.adb_parsers import AdbTransportError
 from rcr.models import RcError
 
 ARGS = types.SimpleNamespace(
-    case="a,b,c", no_actions=True, keep=False, out_dir=".", no_dex_check=True, report="",
-    app_label="", tab="", sdk="",
+    case="a,b,c", no_actions=True, no_walk=True, keep=False, out_dir=".",
+    no_dex_check=True, report="", app_label="", tab="", sdk="",
 )
 RUNNABLE = {k: {"runs": ({"k": "v"},), "precondition": "", "actions": (), "expects": ()}
             for k in ("a", "b", "c")}
@@ -35,7 +35,7 @@ class FakeBaseline:
 
 def run(monkeypatch, outcomes):
     """outcomes: {key: Exception | verdict}"""
-    async def run_case(client, baseline, runs, pre, steps, expects, **kw):
+    async def run_case(client, baseline, runs, pre, steps, expects, goto="", **kw):
         key = run.order.pop(0)
         got = outcomes[key]
         if isinstance(got, Exception):

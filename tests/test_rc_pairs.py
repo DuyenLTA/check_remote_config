@@ -43,3 +43,12 @@ def test_json_khong_chuan_co_dau_phay_ben_trong_giu_nguyen():
 
 def test_mang_rong_roi_dong_mo_ta():
     assert pairs("1. list_language = []\n2. RC fetch thành công")["list_language"] == "[]"
+
+
+def test_cat_chu_thich_co_ngoac_mo_ma_khong_dong():
+    """`ob3_show_button_skip = true (key tu SDK cu` - ngoac bi cat giua chung."""
+    from rcr.rc_pairs import clean
+
+    assert clean("true (key từ SDK cũ") == "true"
+    assert clean("5 (default") == "5"
+    assert clean("true (mặc định)") == "true"

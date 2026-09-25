@@ -62,12 +62,22 @@ def test_int_va_long_parse_so():
     assert '<int name="banner_fail_time" value="7" />' in out
 
 
-def test_sai_kieu_thi_raise_chu_khong_ghi_bua():
+def test_kieu_so_sai_thi_raise_chu_khong_ghi_bua():
     n = parse_nodes(MIRROR_FIRST_OPEN)
-    with pytest.raises(ValueError, match="boolean"):
-        set_value(MIRROR_FIRST_OPEN, n["enable_onb3_screen"], "3")
     with pytest.raises(ValueError, match="int"):
         set_value(MIRROR_FIRST_OPEN, n["banner_fail_time"], "khong phai so")
+
+
+def test_node_boolean_nhan_moi_gia_tri_theo_luat_firebase():
+    """Truoc day raise, gio theo dung SDK: chuoi la -> false (getBoolean mac dinh).
+
+    Doi vi 18/53 case cua bo TC co tinh dat gia tri khong hop le (`null`, rong)
+    de xem app xu ly sao - raise la bo luon ca nhom case do.
+    """
+    n = parse_nodes(MIRROR_FIRST_OPEN)
+    assert 'name="enable_onb3_screen" value="false"' in set_value(
+        MIRROR_FIRST_OPEN, n["enable_onb3_screen"], "3"
+    )
 
 
 def test_khong_tim_thay_node_thi_raise():
@@ -120,3 +130,21 @@ def test_coerce_string_giu_nguyen_khoang_trang():
 
     assert coerce("string", '{"type": "image", "image_url": ') == '{"type": "image", "image_url": '
     assert coerce("boolean", " true ") == "true"
+
+
+# --- gia tri khong hop le cho node boolean ---------------------------------
+
+def test_gia_tri_la_cho_node_boolean_ghi_false_dung_nhu_SDK_doc():
+    """TC co tinh dat `null` / chuoi rong. Firebase cho phep, SDK doc ra false."""
+    from rcr.mirror_xml import coerce
+
+    assert coerce("boolean", "null") == "false"
+    assert coerce("boolean", "") == "false"
+    assert coerce("boolean", "linh tinh") == "false"
+
+
+def test_cac_dang_true_false_cua_firebase():
+    from rcr.mirror_xml import coerce
+
+    assert [coerce("boolean", v) for v in ("1", "TRUE", "t", "yes", "on")] == ["true"] * 5
+    assert [coerce("boolean", v) for v in ("0", "False", "f", "no", "off")] == ["false"] * 5
