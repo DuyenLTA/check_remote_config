@@ -31,10 +31,13 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
     by_key = {r["key"]: r for r in rows}
     records = []
     for wanted in [k.strip() for k in args.case.split(",") if k.strip()]:
-        key = tc_select.pick(runnable, wanted)
-        chosen = runnable[key]
-        log_fn(f"--- case {key} ---")
+        key = wanted
         try:
+            # Ten case sai cung phai xu nhu case hong: bao loi o day la mat sach
+            # ket qua cua nhung case da chay xong truoc do.
+            key = tc_select.pick(runnable, wanted)
+            chosen = runnable[key]
+            log_fn(f"--- case {key} ---")
             row = by_key.get(key, {})
             goto = "" if args.no_walk else fo_flow.target_for(
                 f"{row.get('label', '')} {row.get('feature', '')} {chosen['precondition']}"

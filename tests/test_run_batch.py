@@ -73,3 +73,23 @@ def test_case_hong_van_giu_ten_va_nhom_de_tim(monkeypatch):
     rec = report_data.error_record("a", ROWS[0], "x")
     assert rec["label"] == "case a" and rec["tab"] == "3.5.0"
     assert recs[0]["group"] == "Không chạy được"
+
+
+def test_go_nham_ten_case_khong_lam_mat_ket_qua_da_chay(monkeypatch):
+    """Ten case sai la loi cua nguoi go - khong duoc xoa cong cua 2 case truoc."""
+    def pick(runnable, wanted):
+        if wanted == "b":
+            raise RcError(f"Case {wanted} khong ton tai")
+        return wanted
+
+    monkeypatch.setattr(run_batch.tc_select, "pick", pick)
+
+    async def run_case(client, baseline, runs, pre, steps, expects, goto="", **kw):
+        return {"verdict": "PASS", "runs": [{"overrides": {}, "verdict": "PASS"}]}, baseline
+
+    monkeypatch.setattr(case_run, "run_case", run_case)
+    monkeypatch.setattr(rc_patch, "restore", _noop_restore)
+    recs = asyncio.run(
+        run_batch.run_cases(None, FakeBaseline(), ARGS, RUNNABLE, ROWS, {"sdk": "3.5.0"})
+    )
+    assert [r["verdict"] for r in recs] == ["PASS", "BLOCKED", "PASS"]
