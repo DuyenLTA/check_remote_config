@@ -66,6 +66,28 @@ class AdbClient:
         self._raise_if_transport(se)
         return so, se, proc.returncode or 0
 
+    async def run_binary(self, *args: str, timeout: float | None = None) -> tuple[bytes, str, int]:
+        """Nhu `_run` nhung GIU NGUYEN BYTE cua stdout.
+
+        `screencap -p` tra ve PNG: decode utf-8 la hong anh. Chi dung cho lenh
+        tra du lieu nhi phan.
+        """
+        proc = await asyncio.create_subprocess_exec(
+            self.adb, *args,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            out, err = await asyncio.wait_for(
+                proc.communicate(), timeout=timeout or DEFAULT_TIMEOUT
+            )
+        except TimeoutError:
+            proc.kill()
+            await proc.wait()
+            raise AdbError(f"adb {' '.join(args)} qua thoi gian cho") from None
+        se = err.decode("utf-8", "replace").replace("\r", "")
+        self._raise_if_transport(se)
+        return out, se, proc.returncode or 0
+
     @staticmethod
     def _raise_if_transport(stderr: str) -> None:
         low = stderr.lower()

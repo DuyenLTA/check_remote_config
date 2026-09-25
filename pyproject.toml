@@ -11,6 +11,10 @@ dependencies = [
     "python-multipart>=0.0.9",
 ]
 
+# CLI cho slash command /rc-check - chay mot luot, khong can mo web UI.
+[project.scripts]
+rcr-check = "rcr.cli_check:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.27"]
 
