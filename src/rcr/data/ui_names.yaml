@@ -1,0 +1,29 @@
+# Ten goi trong file TC -> node tren cay UI. DO THAT tren may, khong suy dien.
+#
+# TC viet bang ngon ngu cua nguoi ("icon SWIPE", "vung ad"), cay node thi mang
+# ten cua lap trinh vien (`ob2Bb2SwipeLottie`, `nativeAdView`). Khong co bang
+# nay thi moi dong ta UI deu ra "phai nhin mat", du anh va cay node da co san.
+#
+# Them dong moi khi gap ten moi - dung doan: id phai tung thay trong dump that.
+elements:
+  - name: icon swipe
+    aliases: ["icon SWIPE", "swipe icon", "biểu tượng vuốt"]
+    ids: [ob2Bb2SwipeLottie, ivSwipeOnboarding, lottieSwipe]
+    texts: ["Swipe to Next"]
+
+  - name: vùng quảng cáo
+    aliases: ["vùng ad", "khu vực ads", "khu vực quảng cáo", "native ad", "vùng native"]
+    ids: [nativeAdView, ad_media, shimmer_container_native, banner_container]
+
+  - name: nút next onboarding
+    aliases: ["nút Next", "button Next", "nút tiếp tục"]
+    ids: [btnNextOnboarding, btnNext, btnContinue]
+    texts: ["Next", "Get Started", "Get started"]
+
+  - name: nhãn ads
+    aliases: ["nhãn ads", "nhãn quảng cáo", "This action may contain ads"]
+    texts: ["This action may contain ads"]
+
+  - name: progress bar
+    aliases: ["progress bar", "thanh tiến trình"]
+    ids: [progressBar, pbLoading, progress_splash]

@@ -84,7 +84,40 @@ def test_hang_ngon_ngu_bung_ra_thi_phai_lam_hai_nhip():
 def test_doc_ra_man_can_lai_toi_tu_nhan_case():
     from rcr import fo_flow
 
-    assert fo_flow.target_for("#20 Ads OFF + swipe_onb2 → icon SWIPE") == "OnboardingActivity"
+    assert fo_flow.target_for("#20 Ads OFF + swipe_onb2 → icon SWIPE") == "OnboardingActivity#2"
     assert fo_flow.target_for("Popup Rating tại màn Home") == "MainActivity"
     # case ve splash thi app tu dung san o do, khong phai lai di dau
     assert fo_flow.target_for("#1 splash_banner_change=false, RC bật cả 2") == ""
+
+
+# --- dang o trang onboarding thu may ---------------------------------------
+
+INDICATOR = """<?xml version='1.0' encoding='UTF-8'?>
+<hierarchy rotation="0">
+  <node index="0" class="android.view.ViewGroup" package="com.ai.app" resource-id="com.ai.app:id/indicatorPageOnboarding"
+        text="" content-desc="" bounds="[136,1297][332,1318]" clickable="false" enabled="true">
+    <node index="0" class="android.view.View" package="com.ai.app" resource-id="com.ai.app:id/dot"
+          text="" content-desc="" bounds="[146,1297][167,1318]" clickable="false" enabled="true" />
+    <node index="1" class="android.view.View" package="com.ai.app" resource-id="com.ai.app:id/dot"
+          text="" content-desc="" bounds="[187,1297][240,1318]" clickable="false" enabled="true" />
+    <node index="2" class="android.view.View" package="com.ai.app" resource-id="com.ai.app:id/dot"
+          text="" content-desc="" bounds="[260,1297][281,1318]" clickable="false" enabled="true" />
+  </node>
+</hierarchy>
+"""
+
+
+def test_doc_trang_onboarding_tu_cham_chi_trang():
+    """Cac trang OB dung chung activity - cham cua trang hien tai duoc keo dai."""
+    assert fo_steps.onboarding_page(nodes(INDICATOR)) == 2
+
+
+def test_khong_co_cham_thi_tra_0_chu_khong_doan():
+    assert fo_steps.onboarding_page(nodes(ONBOARDING)) == 0
+
+
+def test_case_ve_OB2_thi_lai_toi_dung_trang_2():
+    from rcr import fo_flow
+
+    assert fo_flow.target_for("#20 swipe_onb2=true → icon SWIPE") == "OnboardingActivity#2"
+    assert fo_flow.target_for("#21 Vuốt sang OB3") == "OnboardingActivity#3"

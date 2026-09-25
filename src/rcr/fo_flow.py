@@ -39,10 +39,14 @@ def rules() -> dict:
 
 # Case noi ve man nao -> lai toi activity nao. Doc tu nhan/Precondition cua
 # case, vi bo TC khong co cot nao khai man hinh.
+# `#N` la trang thu N trong cung mot activity (cac trang OB dung chung activity).
 SCREEN_WORDS = (
+    ("onb2", "OnboardingActivity#2"), ("onb3", "OnboardingActivity#3"),
+    ("onb4", "OnboardingActivity#4"), ("onb1", "OnboardingActivity#1"),
+    ("ob1", "OnboardingActivity#1"), ("ob2", "OnboardingActivity#2"),
+    ("ob3", "OnboardingActivity#3"), ("ob4", "OnboardingActivity#4"),
+    ("onboarding 2", "OnboardingActivity#2"), ("onboarding 3", "OnboardingActivity#3"),
     ("onboarding", "OnboardingActivity"), ("onb", "OnboardingActivity"),
-    ("ob1", "OnboardingActivity"), ("ob2", "OnboardingActivity"),
-    ("ob3", "OnboardingActivity"), ("ob4", "OnboardingActivity"),
     ("question", "QuestionActivity"), ("language", "LanguageActivity"),
     ("lfo", "LanguageActivity"), ("paywall", "BillingActivity"),
     ("home", "MainActivity"),
@@ -144,10 +148,26 @@ async def walk_to(client, serial: str, package: str, target: str,
     idle = 0
     waited = 0.0
 
+    want_activity, _, want_page = target.partition("#")
+    page = int(want_page) if want_page.isdigit() else 0
+
     while waited < timeout and idle < STUCK_POLLS:
         pkg, activity = await device_app.focus(client, serial)
-        if target in activity:
-            return {"reached": True, "activity": activity, "trail": trail}
+        if want_activity in activity:
+            if not page:
+                return {"reached": True, "activity": activity, "trail": trail}
+            # Cac trang OB dung chung activity -> vuot cho toi dung trang.
+            nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)))
+            now = fo_steps.onboarding_page(nodes)
+            if now == page:
+                return {"reached": True, "activity": f"{activity} (trang {now})", "trail": trail}
+            if now and now < page:
+                await do_step(client, serial, {"swipe": "left"}, nodes, screen)
+                trail.append({"activity": activity.split(".")[-1], "did": f"vuot: trang {now} -> {now + 1}"})
+                log_fn(f"      onboarding: vuot sang trang {now + 1}")
+                await asyncio.sleep(POLL_SECONDS)
+                waited += POLL_SECONDS
+                continue
 
         rule = rule_for(activity, ruleset)
         if rule is None:

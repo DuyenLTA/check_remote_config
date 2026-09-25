@@ -274,3 +274,12 @@ def test_da_lai_toi_dung_man_thi_cham_that_chu_khong_bao_can_nguoi():
          "dump": "<node text='Swipe to Next'/>"}]}
     out = check('Hiển thị chữ "Swipe to Next"', drive=drive)
     assert out["verdict"] == a.PASS
+
+
+def test_dong_TC_tu_danh_dau_chua_co_spec_thi_khong_cham():
+    """"[TBD - spec chua neu]" - cham la cham voi ky vong do nguoi viet TC doan."""
+    for line in ("[TBD — spec chưa nêu]: vùng ad hiển thị gì khi cả ad và swipe đều tắt",
+                 "Fallback về UI cũ. [Assume — theo pattern config sai]",
+                 "Title hiển thị màu default. [Inferred — spec không định nghĩa]"):
+        out = check(line)
+        assert out["verdict"] == a.NOT_VERIFIABLE and "chưa có spec" in out["reason"]

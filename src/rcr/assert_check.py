@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from . import assert_ads
+from . import assert_ads, ui_names
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -28,11 +28,18 @@ from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     worst,
 )
 
+# TC tu danh dau dong nay chua co spec: "[TBD - spec chua neu]", "[Assume ...]",
+# "[Inferred ...]". Chua co chuan thi khong ai sai - cham la cham voi mot ky
+# vong do chinh nguoi viet TC doan ra.
+TBD_RE = re.compile(r"\[\s*(?:tbd|assume|inferred|todo)|spec ch[ưu]a n[êe]u|ch[ưu]a c[óo] spec", re.I)
+
 NO_CRASH_RE = re.compile(r"kh[oô]ng\s+(?:b[ịi]\s+)?crash|not\s+crash|no\s+crash", re.I)
 # Dong ta UI: "Popup hien thi", "Title can giua", "Button X o goc phai tren"...
 UI_RE = re.compile(r"hi[ểe]n\s*th[ịi]|popup|pop-up|button|n[úu]t|title|subtitle|"
                    r"m[àa]n\s|icon|layout|c[ăa]n\s*gi[ữu]a|g[óo]c\s", re.I)
 QUOTED_RE = re.compile(r"[\"“”']([^\"“”']{2,60})[\"“”']")
+# "KHONG hien thi icon SWIPE" - phu dinh cua mot phan tu UI.
+NOT_SHOW_RE = re.compile(r"kh[oô]ng\s+(?:c[óo]\s+)?(?:hi[ểe]n|th[ấa]y|xu[ấa]t hi[ệe]n)", re.I)
 
 
 def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=()) -> dict:
@@ -40,6 +47,10 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=()) -> dict:
     text = " ".join((line or "").split())
     if not text:
         return out(NOT_VERIFIABLE, "dòng trống", "")
+
+    if TBD_RE.search(text):
+        return out(NOT_VERIFIABLE,
+                   "TC tự đánh dấu dòng này là chưa có spec — không có chuẩn để chấm", text)
 
     if NO_CRASH_RE.search(text):
         if crash.get("crashed"):
@@ -53,6 +64,11 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=()) -> dict:
     quoted = QUOTED_RE.search(text)
     if quoted:
         return _text_on_screen(quoted.group(1), drive)
+
+    # Ten goi cua nguoi ("icon SWIPE") -> node tren cay UI (data/ui_names.yaml).
+    element = ui_names.find_in(text)
+    if element:
+        return _element_on_screen(element, text, drive)
 
     if UI_RE.search(text) and not assert_ads.tapped(drive):
         # Dong ta UI cua man phai lai toi, ma tool chua tap gi -> van o man mo dau.
@@ -90,6 +106,25 @@ def _text_on_screen(wanted: str, drive: dict) -> dict:
             "",
         )
     return out(FAIL, f"không thấy {wanted!r} trên màn hình nào đã chụp", "")
+
+
+def _element_on_screen(element: dict, text: str, drive: dict) -> dict:
+    """Phan tu UI co tren man da chup khong. Cau phu dinh thi dao ky vong."""
+    if not (drive.get("steps") or []):
+        return out(NEEDS_HUMAN, f"chưa lái tới màn nào để tìm {element['name']}", "")
+    if not assert_ads.tapped(drive):
+        return out(NEEDS_HUMAN,
+                   f"chưa lái tới màn cần xem {element['name']} "
+                   f"(đang ở {assert_ads.where(drive) or 'màn mở đầu'})", "")
+    hit = ui_names.seen_in(element, [s.get("dump", "") for s in drive["steps"]])
+    want_absent = bool(assert_ads.NEGATIVE_RE.search(text) or NOT_SHOW_RE.search(text))
+    if want_absent:
+        if hit:
+            return out(FAIL, f"vẫn thấy {element['name']} trên màn ({hit})", hit)
+        return out(PASS, f"không thấy {element['name']} trên màn — đúng kỳ vọng", "")
+    if hit:
+        return out(PASS, f"thấy {element['name']} trên màn ({hit})", hit)
+    return out(FAIL, f"không thấy {element['name']} trên màn đã chụp", "")
 
 
 def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=()) -> dict:

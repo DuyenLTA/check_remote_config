@@ -44,6 +44,9 @@ BOTTOM_BAND = 0.45
 MIN_WIDTH = 0.20
 MAX_AREA = 0.25
 
+INDICATOR_ID = "indicatorPageOnboarding"
+DOT_ID = "dot"
+
 TITLE_ID = "titleLanguageItem"
 CHECKBOX_ID = "checkboxLanguageItem"
 EXPAND_ID = "iconExpandLanguageItem"
@@ -154,3 +157,18 @@ def language_targets(nodes: list[DeviceNode], language: str) -> list[DeviceNode]
     if variants:
         return [variants[0]]          # da bung san - bam lai icon la GAP LAI
     return [row, "expanded"]          # can bung roi doc lai o vong sau
+
+
+def onboarding_page(nodes: list[DeviceNode]) -> int:
+    """Dang o trang onboarding thu may (1-based). 0 neu khong doc duoc.
+
+    Cac trang OB dung CHUNG mot activity, nen ten man khong phan biet duoc
+    OB1/OB2/OB3. Doc theo cham chi trang: cham cua trang hien tai duoc keo DAI
+    ra (do that: 53px so voi 21px cua cham thuong).
+    """
+    dots = [n for n in nodes if n.resource_id == DOT_ID and n.visible]
+    if not dots:
+        return 0
+    dots.sort(key=lambda n: n.bounds.left)
+    widest = max(dots, key=lambda n: n.bounds.right - n.bounds.left)
+    return dots.index(widest) + 1
