@@ -157,8 +157,11 @@ def test_case_khong_chay_tu_dong_duoc_thi_bao_ro(adb_ui, tmp_path, monkeypatch):
     args = cli_check.build_parser().parse_args(
         ["--package", PKG, "--serial", SERIAL, "--tc", str(path), "--case", "1"]
     )
-    with pytest.raises(RcError, match="khong chay tu dong duoc"):
-        asyncio.run(cli_check.run(args))
+    # Case khong chay tu dong duoc thi ghi vao report roi di tiep, KHONG nem loi:
+    # nem loi la mat sach ket qua cua nhung case da chay xong trong cung luot.
+    out = asyncio.run(cli_check.run(args))
+    assert out["cases"][0]["verdict"] == "BLOCKED"
+    assert "khong chay tu dong duoc" in out["cases"][0]["actual"]
 
 
 def test_case_can_file_tc(adb_ui, monkeypatch):
