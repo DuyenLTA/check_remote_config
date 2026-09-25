@@ -1,9 +1,9 @@
 ---
 title: "Remote Config Case Runner"
-status: in-progress   # phase 1-3 done, tiep phase 4 (doi huong: bo TC chung theo ban SDK)
+status: in-progress   # phase 1-4 xong phan loi, phase 5 dang lam (cham Expected)
 created: 2026-09-07
 source: docs/plan/reports/from-brainstorm-to-planner-rc-override-design-260904-1425-firebase-remote-config-testcase-runner-report.md
-target_repo: ~/projects/rc-case-runner
+target_repo: ~/projects/check_remote_config
 package: rcr
 blockedBy: []
 blocks: []
@@ -29,8 +29,8 @@ Brainstorm + thực nghiệm đã xong (GO). Bằng chứng & số đo: xem `sou
 | 1 | [Skeleton + adb + baseline reader](phase-01-skeleton-adb-and-rc-baseline-reader.md) | ✅ **done** (2026-09-07) | chọn device+app → hiện số key RC, file mirror, kiểu từng key |
 | 2 | [rc_patch + rc_verify](phase-02-rc-patch-and-verify-survival.md) | ✅ **done** (2026-09-08) | ⭐ đặt 1 key → mở app → **verify giá trị sống** |
 | 3 | [tc_loader + rc_extract](phase-03-testcase-loader-and-rc-key-extract.md) | ✅ **done** (2026-09-09) | nạp file TC → bảng case + key/value đã parse |
-| 4 | [device_reset + act_resolver](phase-04-device-reset-and-action-resolver.md) | ⬜ pending | chạy 1 case tới đúng màn cần chấm |
-| 5 | [assert_dump + verdict](phase-05-assert-dump-and-verdict.md) | ⬜ pending | ⭐ chấm được case RC, ra PASS/FAIL + actual result |
+| 4 | [device_reset + act_resolver](phase-04-device-reset-and-action-resolver.md) | 🟡 **đang làm** | chạy 1 case tới đúng màn cần chấm |
+| 5 | [assert_dump + verdict](phase-05-assert-dump-and-verdict.md) | 🟡 **đang làm** | ⭐ chấm được case RC, ra PASS/FAIL + actual result |
 | 6 | [report + web UI + e2e](phase-06-report-web-ui-and-e2e.md) | ⬜ pending | ⭐ **ship được cho tester** |
 
 Thứ tự thực thi tuần tự 1→6. Phase 2 là tim của tool — cơ chế đã verified, làm sớm để chốt rủi ro.
@@ -123,6 +123,20 @@ Thứ tự thực thi tuần tự 1→6. Phase 2 là tim của tool — cơ ch�
     (pageId 168689676), kể cả trang thêm sau. `python -m rcr.spec_sync` trước mỗi lượt chạy TC →
     trang NEW/CHANGED thì đọc (bản cũ giữ ở `.prev.txt`) và cập nhật `data/sdk_rules.yaml` kèm pageId.
     Text spec ở `data/specs/` **không commit** — repo public, spec là tài liệu nội bộ.
+
+30. **Case ads chấm ở tầng LOG request/load, không đòi nhìn thấy ad** (user chốt 2026-09-25):
+    "chỉ cần logic preload load show banner nó đúng là được, tại vì inter nó load nhanh quá
+    nên nhảy sang inter trước khi show banner ở splash rồi… có log load là cũng được rồi".
+    Test tay cũng phải chạy vài lần mới thấy banner. → `case_drive` không được coi "quảng
+    cáo che màn hình" là fail của case ads; `ad_log` đọc log theo PID app và chấm bằng
+    tập unit đã request/loaded.
+
+31. **Ad không fill vẫn tính PASS** (user chốt 2026-09-25): "ads no fill không sao nhá
+    vẫn coi là pass nhé". Unit được request đúng là logic app đúng; kho quảng cáo không trả
+    ad là chuyện của kho. → bỏ hẳn trạng thái `BLOCKED_NO_FILL`; `assert_ads` trả `PASS` kèm
+    ghi chú "request đúng nhưng không fill". Chỉ còn FAIL khi **không có request nào**.
+    Màn hình bị quảng cáo che (không đọc được chữ trên app) vẫn là `NEEDS_HUMAN` — đó là
+    chuyện khác: đóng ad rồi chạy lại.
 
 ## Facts đã verify — không cần verify lại
 

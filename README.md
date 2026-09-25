@@ -92,6 +92,81 @@ Bốn lý do `cần người`, đều là **cố tình không đoán**:
 Tool **đọc duy nhất cột `Test Data`**, không tự bóc key từ `Precondition`: cột đó là văn xuôi,
 bóc ra dễ sai.
 
+## Chạy một lượt không cần web UI (`rcr-check`)
+
+Dùng cho slash command `/rc-check`, hoặc gõ tay. stdout là **đúng một dòng JSON**,
+tiến độ ra stderr.
+
+```bash
+.venv/bin/rcr-check --package <pkg>                          # doc baseline
+.venv/bin/rcr-check --package <pkg> --tc BO_TC.xlsx          # bang case + so luot
+.venv/bin/rcr-check --package <pkg> --tc BO_TC.xlsx --tab 3.4.0 \
+     --case 3.4.0#1,3.4.0#3 --report out/run.html
+.venv/bin/rcr-check --package <pkg> --set splash_banner_change=false
+.venv/bin/rcr-check --package <pkg> --keep      # giu patch de tu mo app xem
+.venv/bin/rcr-check --package <pkg> --restore   # tra ve ban da luu o luot --keep
+```
+
+**`--tab 3.4.0` chỉ chạy đúng tab đó**, không kéo theo base và các delta khác — nêu
+đích danh một bản SDK thì chỉ phần đó là cần, chạy thừa là ngồi chờ máy thật cho không.
+
+`--case` nhận nhiều case ngăn bằng dấu phẩy, và `--report out/run.html` xuất trang HTML
+tự chứa: **ảnh chụp từng bước**, từng dòng Expected kèm tool đo được gì, log quảng cáo,
+nút lọc theo verdict và mục lục nhảy tới từng case.
+
+Case trong workbook bộ chung định danh bằng **`<bản SDK>#<số>`** (`--case 6.4.0#1`):
+số case trùng nhau giữa các tab — số `1` có ở 5 tab. Gõ mỗi con số vẫn được nếu nó chỉ
+có ở một tab; mơ hồ thì tool dừng và liệt kê.
+
+Workbook **bộ chung nhiều tab** `TC SDK <version>` thì tool lấy base + mọi delta ≤
+bản SDK của app. Bản SDK **tự đo từ logcat** (`VslTemplate4FirstOpenSDK: Using
+version X`) — đọc buffer sẵn có trước, không có thì mở lại app rồi đọc. Biết sẵn
+thì truyền `--sdk 3.2.0` để khỏi đo. Đo được rồi thì không đoán: lấy nhầm tab là
+chấm bằng TC của bản khác mà không ai biết. File một sheet thì đọc thẳng.
+
+Bản SDK **không suy ra được từ versionName của app**: Piclux 2.8.0 đang nhúng FO
+SDK 3.5.4-alpha02 — hai con số không liên quan. Tool đọc log của **đúng PID app đích**:
+tag `VslTemplate4FirstOpenSDK` mọi app nhúng SDK đều in, mà logcat thì chung cả máy —
+đọc cả buffer là nhặt bản SDK của app khác (đã vấp).
+
+Case có giá trị lựa chọn (`layout1/2/3`) chạy **nhiều lượt** — mỗi giá trị một
+lượt mở app. Verdict của case = lượt xấu nhất.
+
+Case có Precondition kiểu "chưa từng mở app / fresh install" thì tool **đặt lại
+trạng thái trước khi patch** (`pm clear` xoá luôn file vừa ghi, nên reset phải đi
+trước). Ba mức: mặc định chỉ `force-stop`; cần state sạch thì **lật cờ
+`ARG_KEY_SHOW_ONBOARDING`** — app vào lại luồng first-open mà giữ nguyên
+login/ngôn ngữ/data; app không có cờ đó mới dùng `pm clear`, và sau đó chờ app tự
+sinh lại `frc_*.json` rồi mới patch. Luật nhận Precondition để ở
+`src/rcr/data/reset_rules.yaml`. Đường `--set` không có Precondition để đọc, muốn
+ép state sạch thì thêm `--fresh`.
+
+Trước khi patch, tool **soi chuỗi key trong `classes*.dex`** của mọi APK (base +
+split). Key không có trong DEX → app không đọc key đó → `KEY_NOT_USED`, không tốn
+một lượt mở app. Đo thật trên Piclux: `enable_101_spl_a_banner` có trong remote
+config mà **code không tham chiếu** — chấm tiếp là ra PASS giả. Kết quả cache theo
+`(package, versionCode)`; `--no-dex-check` để bỏ bước này.
+
+Config đặt xong và verify xong thì tool **lái app qua các bước Action của case**:
+`Quan sát…` → không thao tác, `Nhấn nút "X"` / `Mở tab X` → tap, `Chờ N giây` → chờ.
+Câu khác, hoặc **nhiều hơn một node cùng khớp**, hoặc không node nào khớp → dừng kèm lý
+do, **không tap bừa**: một cú tap sai chỗ trên máy thật là bấm vào quảng cáo hoặc mua
+hàng thật. Quảng cáo đang che màn hình cũng dừng — tool không tự tìm nút đóng. `--no-actions`
+để chỉ đặt config, không lái.
+
+Case có dòng Expected thì tool **chấm từng dòng** (`run.runs[i].assert`): `PASS` /
+`FAIL` (kèm actual) / `BLOCKED_NO_FILL` (ad có request nhưng kho không trả ad — không phải
+app sai) / `NOT_VERIFIABLE` (dòng tool không đo được, người nhìn) / `NEEDS_HUMAN`.
+Verdict case = dòng xấu nhất. Case ads chấm ở **tầng request/load**, không đòi nhìn thấy ad:
+inter load nhanh hơn banner nên nó đè lên trước khi kịp nhìn.
+
+Case không có Expected thì verdict dừng ở `CONFIG_OK` / `BLOCKED` / `KEY_NOT_USED` —
+tool đặt được config nhưng không tự kết luận gì về app.
+
+Mặc định tool trả config về nguyên trạng ngay sau khi verify. `--keep` thì giữ
+patch **và lưu snapshot config gốc** ra `out/` — đó là đường về duy nhất: lượt
+sau đọc baseline sẽ ra bản đã patch, lúc đó không còn biết giá trị thật nữa.
+
 ### Đặt giá trị (API — nút trên UI làm ở phase 6)
 
 ```bash

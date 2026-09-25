@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "report + web UI + e2e"
-status: pending
+status: in-progress
 priority: P1
 effort: "1d"
 dependencies: [5]
@@ -82,3 +82,22 @@ Xuất `exports/rc-cases-<package>-<ngày giờ>.html`. Khuôn CSS/bảng lấy 
   Adjust token / Facebook Client Token.
 - Chạy hàng loạt case có `pm clear` → mỗi case tốn 15-30s. 12 case ≈ 5 phút. Chấp nhận được;
   hiện progress để tester không tưởng tool treo.
+
+
+## Đã làm (2026-09-25) — report HTML
+
+- `screencap.py` — chụp màn hình cùng lúc với dump (ảnh và cây node tả **cùng một màn**),
+  thu về ngang 360px + JPEG q70 (~25KB/ảnh) trước khi nhúng: ảnh gốc 1080×2400 PNG 1-3MB,
+  một lượt 14 case là report vượt mức 16MB. Màn tắt thì `screencap` vẫn thành công nhưng
+  trả ảnh gần như đen — bắt lấy và ghi cảnh báo ngay dưới ảnh.
+- `adb_client.run_binary` — `screencap -p` trả PNG, decode utf-8 là hỏng ảnh.
+- `report_data.py` — gom kết quả thành dữ liệu trang, **bỏ dump XML** (mỗi dump vài trăm KB).
+- `report_css.py` + `report_html.py` — trang tự chứa: bảng spec lượt chạy, nút lọc theo
+  verdict, mục lục một dòng một case, rồi chi tiết từng case (Expected ↔ tool đo được gì,
+  ảnh từng bước, log ads). Nhiều case thì lọc/nhảy chứ không lăn tay từ trên xuống.
+- `run_batch.py` + `--case a,b,c` + `--report <file.html>` — chạy nhiều case một lượt.
+- `--tab <ver>` — chỉ chạy đúng một tab (user dặn 2026-09-25): "sdk 3.4.0 thì check đúng
+  file test case sheet đó thôi, không nhắc đến thì đừng check cho mất công".
+
+Còn lại của phase 6: nút bấm trên web UI (route `POST /api/run-case`), và publish artifact
+tự động sau mỗi lượt.

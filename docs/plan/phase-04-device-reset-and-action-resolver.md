@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "device_reset + act_resolver (hep)"
-status: pending
+status: in-progress
 priority: P1
 effort: "1.5d"
 dependencies: [2, 3]
@@ -15,6 +15,106 @@ patch config, mở app, verify, rồi thực thi các bước Action.
 
 Phase này cũng tạo **file TC mẫu cho app thay thế** — bắt buộc, vì file IIP032 không khớp app
 đang có.
+
+
+## Đã làm (2026-09-25)
+
+Cắt một lát chạy được trước, dùng ngay qua slash command `/rc-check` thay vì chờ trọn phase:
+
+- `device_app.py` — force-stop / resolve launcher / `am start -n` / chờ foreground theo
+  trạng thái thật (không `sleep` cứng). Mở app bằng component PMS trả về, **không dùng
+  `monkey`**: monkey bắn sự kiện thật vào màn hình, gặp quảng cáo hay paywall là bấm bừa.
+  PMS không resolve được → báo thẳng "máy đang khoá", vì lỗi đó nhìn y hệt app hỏng.
+- `case_run.py` — patch → tắt hẳn app → mở lại → verify → restore.
+- `rc_snapshot.py` — lưu nguyên văn config gốc khi giữ patch. **Lỗ hổng đã vá:**
+  `rc_patch.restore` chỉ trả về được baseline đọc trong cùng lượt; giữ patch rồi chạy lượt
+  khác thì baseline đọc được đã là bản đã patch, "restore" lúc đó ghi lại chính giá trị bẩn.
+- `tc_select.py` — chọn bộ case: workbook nhiều tab thì qua `tc_catalog` (cần `--sdk`),
+  file một sheet thì `tc_loader`. Thiếu `--sdk` → dừng, không lấy bừa tab đầu.
+- `cli_check.py` + entry point `rcr-check` — một lượt headless, stdout 1 dòng JSON.
+  Case có `variants` chạy lần lượt từng lượt; verdict case = lượt xấu nhất.
+- `sdk_probe.py` — đo bản SDK FO từ logcat (`VslTemplate4FirstOpenSDK: Using version X`).
+  Đọc buffer sẵn có trước, không có mới mở lại app (xoá buffer trước để không nhặt
+  phải bản của lượt trước). **Bản SDK không suy ra được từ versionName app**: Piclux
+  2.8.0 nhúng SDK 3.5.4-alpha02 — đo 2026-09-25 trên Pixel 7.
+- `dex_check.py` — soi chuỗi key trong `classes*.dex` của **mọi** APK (base + split),
+  cache theo `(package, versionCode)`. Key không có → `KEY_NOT_USED`, không mở app.
+  Đo thật trên Piclux: `enable_101_spl_a_banner` có trong RC mà DEX không có →
+  đúng hiện tượng "có key trong config ≠ app dùng key đó" đã ghi ở phần Facts.
+- `device_reset.py` + `data/reset_rules.yaml` — ba mức: `force-stop` (mặc định) /
+  reset mềm (lật `ARG_KEY_SHOW_ONBOARDING`) / `pm clear` (chỉ khi app không có cờ đó).
+  Luật "cần state sạch" đọc từ YAML, khớp cả tiếng Việt có dấu lẫn không dấu.
+  Sau `pm clear` chờ app sinh lại `frc_*.json` rồi mới cho patch (ghi bằng redirect
+  cần file đích tồn tại sẵn), và trả `baseline_stale` để người gọi đọc lại baseline.
+- `ui_dump.py` — chụp `uiautomator dump` + parse thành cây node. Giữ
+  `index_in_parent` vì resource-id **không unique** (2 hàng cùng có nút `See All`).
+  Tap đi thẳng vào pixel, không quy đổi dp — quy đổi là thêm một chỗ sai mà không được gì.
+- `act_resolver.py` — 4 dạng câu: `Quan sát…` → NoOp, chuỗi trong ngoặc kép → Tap,
+  `Mở tab X` → Tap, `Chờ N giây` → Wait. Còn lại → NeedsHuman kèm nguyên văn câu.
+  **0 node hoặc >1 node khớp đều là NeedsHuman** — không bao giờ lấy node đầu tiên.
+  Node lồng nhau cùng khớp thì chỉ tính node ngoài (cùng một chỗ, đừng đếm 2 lần).
+- `case_drive.py` — chạy lần lượt từng bước, dừng ngay khi gặp bước không dịch được.
+  Màn hình bị che **chỉ chặn bước phải chạm vào màn hình** (Tap): không tự tìm nút X —
+  bấm lệch là vào chính quảng cáo. Bước *quan sát* và bước *chờ* vẫn đi tiếp, và được đánh
+  dấu `screen_blocked` để phase 5 biết dump đó không phải UI app — case ads chấm bằng log
+  request/load, mà inter thường đè lên trước khi kịp nhìn thấy banner (quyết định 30).
+  Dump mỗi bước giữ lại cho phase 5.
+- Slash command `/rc-check` (`~/.claude/commands/rc-check.md`).
+
+Đã chạy thật 2026-09-25 trên Pixel 7 `29301FDH2006K7`,
+`aiphotogenerator.photoshoot.aiart.aiimagegenerator` (206 key, 96 mirror, `run-as`):
+patch → mở lại (foreground 1.6s) → `CONFIG_OK` → restore sạch; vòng `--keep` → `--restore`
+trả đúng giá trị gốc kèm mốc fetch cũ.
+
+**Reset mềm verified trên Piclux 2026-09-25** (Pixel 7, `aiphotogenerator.photoshoot...`):
+lật cờ `false → true` → mở app → activity stack có `VslTemplate4Language14Activity`,
+tức app quay lại luồng first-open (Language → Onboarding) mà **không** `pm clear`,
+giữ nguyên login/ngôn ngữ. Cờ trả về `false` sau khi đo.
+
+Lưu ý khi tự nhìn tận mắt: màn onboarding nằm **sau splash ad**, ad không tự đóng.
+Tool cố tình không tap để đóng ad (tap sai chỗ = bấm quảng cáo thật) — đóng ad bằng tay
+rồi chạy tiếp. `case_drive` nhận ra màn này và dừng kèm lý do, **đo thật 2026-09-25**
+trên Piclux: `com.google.android.gms.ads.AdActivity` → `NEEDS_HUMAN`, 0 lệnh tap.
+
+**act_resolver verified trên máy 2026-09-25** (Pixel 7, màn Cài đặt — chọn màn không có
+quảng cáo để không phải bấm bừa): `Nhấn vào "Mạng và Internet"` → tap (449, 828) →
+màn hình đổi sang trang Internet/SIM; `Chờ 2 giây` → wait; `Quan sát màn hình` → noop.
+
+Verdict của lát này chỉ có `CONFIG_OK` / `BLOCKED` / `KEY_NOT_USED` — **chưa có PASS/FAIL**,
+vì chưa ai nhìn màn hình app. Gọi PASS ở đây là pass giả.
+
+## Chạy trên bộ TC chung thật (2026-09-25)
+
+File `TC SDK` 56 tab (link Google Sheet do user đưa), app Piclux 2.8.0 / SDK FO 3.5.4-alpha02:
+**538 case, 347 case tool chạy được**, chia theo tab: 6.4.0 65 · 3.2.0 42 · 3.3.0 25 ·
+3.4.0 50 · 3.5.0 53 · widget 22 · rating 90. Tab `daily checkin` tự bị loại (app không có
+key nào của tính năng đó). Ghi chú đúng: app 3.5.4 mới hơn delta mới nhất (3.5.0).
+
+**Hai lỗi chỉ lộ ra khi chạy file thật, đã vá:**
+
+1. **Đọc nhầm bản SDK của app khác.** Tag `VslTemplate4FirstOpenSDK` không riêng của app
+   nào — mọi app nhúng SDK VisionLab đều in, mà logcat thì chung cả máy. Lượt đầu đo ra
+   `3.5.4-alpha02`, lượt sau ra `3.5.3` cho cùng một app, chỉ vì app khác vừa chạy.
+   → `sdk_probe` lọc theo **PID của app đích** (`pidof`), và lấy dòng **mới nhất**.
+   App chưa chạy thì mở lại app chứ không đọc buffer chung.
+2. **Số case trùng nhau giữa các tab đè lên nhau im lặng.** Số `1` có ở 5 tab; khoá dict
+   là con số nên đếm ra **120 case chạy được trong khi thật ra là 347** — mất 227 case mà
+   không báo gì. → khoá là `<bản SDK>#<số>` (`6.4.0#1`). Gõ `--case 12` vẫn được nếu số đó
+   chỉ có ở một tab; mơ hồ thì dừng và liệt kê, không chạy bừa.
+
+**Độ phủ `act_resolver` đo trên 1272 bước thật:** 597 noop · 42 wait · 159 nhận ra là tap ·
+**473 chưa dịch được (37%)**. Phần chưa dịch được là *cả một chuỗi màn hình*
+("Hoàn thành luồng FO đến Home", "Vào màn Onboarding 2", "Trigger popup Rating") — đúng
+phạm vi round 1, đoán là lạc ngay từ bước đầu. Ba luật thêm sau khi đo: `Mở app` /
+`Cold start app` → NoOp (tool đã mở app rồi), `Config RC` → NoOp (vừa đặt xong),
+`Bấm <tên nút>` không ngoặc kép → Tap **vẫn phải khớp duy nhất**.
+
+**Chạy trọn case `6.4.0#1`:** soi DEX (3 key app đều đọc) → reset mềm (khớp "first open")
+→ patch 3 key → mở lại app → `CONFIG_OK` → lái hết 3 bước (`Mở app` noop, `Chờ Splash load`
+wait, `Quan sát bottom banner` noop, bước 3 đánh dấu `screen_blocked` vì inter đang đè)
+→ đọc log ads: 2 banner unit đã request, `adBannerState None → Loading → Fail` → restore.
+
+Còn lại của phase 4: route `POST /api/run-case` (web UI — phase 6 mới cần).
 
 ## Requirements
 - Functional: `run_case(case)` → chuỗi reset/patch/launch/verify đúng thứ tự đã chốt

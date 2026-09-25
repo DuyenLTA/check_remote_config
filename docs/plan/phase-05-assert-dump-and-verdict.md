@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "assert_dump + verdict"
-status: pending
+status: in-progress
 priority: P1
 effort: "1.5d"
 dependencies: [4]
@@ -146,3 +146,82 @@ thành PASS.
   bounds có diện tích, nếu không "không hiển thị" sẽ chấm sai.
 - **RecyclerView chưa scroll tới** → node chưa tồn tại trong dump, dễ chấm "không hiển thị" oan
   cho câu khẳng định. Round 1 chấp nhận; ghi rõ trong report là chỉ chấm phần đang thấy trên màn.
+
+
+## Grammar log ads — đo thật 2026-09-25 (Piclux 2.8.0 / FO SDK 3.5.4-alpha02)
+
+**Bản này KHÔNG có tag `FOR_TESTER_*` nào** (quyết định 18 ghi theo bản khác). Chỉ có hai nguồn:
+
+```
+BannerAdHelper: SplashActivity: adBannerState(None|Loading|Fail)
+AdEventLogger: trackAdRequest adPlatform:Admob  - adUnitId: *****495  -  adType: BANNER
+AdEventLogger: trackAdLoadSuccess - adUnitId: *****588  -  adType: interstitial  - ...
+AdEventLogger: trackAdLoadFailed  - adUnitId: *****825  -  adType: banner  -  errorMessage: No fill.
+AdEventLogger: trackAdShowSuccess - adUnitId: *****588  -  adType: interstitial  -  showStatus: success
+```
+
+**ID bị che, chỉ còn 3 số cuối** → đối chiếu với ID trong remote config phải theo đuôi;
+nhiều key cùng đuôi thì trả cả hai và nói rõ là mơ hồ, không chọn bừa (`ad_log.match_rc_id`).
+
+**Banner splash của Piclux KHÔNG lấy ID từ remote config**: unit `*****495` / `*****825`
+không khớp key nào, và `dex_check` xác nhận app không đọc `id_101_spl_a_banner` (…717).
+Chỉ `splash_inter_high_n_id` (…588) là RC-driven. → ép fill/fail theo ID (quyết định 27)
+với app này chỉ làm được ở inter high.
+
+## Hai case đối chứng đã chạy thật (bộ TC chung, tab TC SDK 6.4.0)
+
+| | `#1` bật cả 2 banner | `#4` tắt cả 2 banner |
+|---|---|---|
+| overrides | `sbc=false`, `show_101_spl_a_banner_high=true`, `show_101_spl_a_banner=true` | `sbc=false`, cả hai `show_101…=false` |
+| `adBannerState` | `None → Loading → Fail` | **không có dòng nào** |
+| banner unit request | `*****495` (high) rồi `*****825` (thường) | **0 unit** |
+| inter | `*****588` loaded + shown | `*****588` loaded + shown |
+
+Case #4 Expected: *"Không load bất kỳ banner nào / Không show banner trên Splash / Không crash"*
+→ **khớp**: 0 request banner. Case #1 Expected: *"SDK preload banner 101 theo alternate:
+high trước, thường sau"* → **khớp**: đúng 2 request theo thứ tự high → thường. Banner không
+hiển thị vì `No fill`, không phải lỗi app.
+
+Đây là tầng chấm mà phase 5 dùng cho case ads: **so tập unit đã request giữa lượt bật và
+lượt tắt**, độc lập với chuyện ad có fill hay không.
+
+
+## Đã làm (2026-09-25)
+
+- `crash_log.py` — đọc buffer `crash` riêng của Android (không grep logcat chính, tránh lẫn
+  dòng có chữ "exception" của app). **Không lọc theo PID**: app crash xong tiến trình chết,
+  PID biến mất — lọc theo PID là bỏ sót đúng cái đang tìm. Lọc theo tên package trong dòng.
+- `assert_check.py` — chấm **từng dòng** Expected, verdict case = dòng xấu nhất.
+  Thang bậc: `FAIL` > `BLOCKED` (config không sống) > `BLOCKED_NO_FILL` > `NEEDS_HUMAN` >
+  `NOT_VERIFIABLE` > `CONFIG_OK` > `PASS`. `CONFIG_OK` đứng **trước** `PASS`: "đặt được
+  config" kén hơn "đã chấm và đúng".
+
+Đo trên 1421 dòng Expected thật của bộ chung: 188 dòng "không crash", 125 dòng phủ định ads,
+474 dòng khẳng định hiển thị/show, 100 dòng preload/alternate. Bốn luật hiện có bám đúng
+những nhóm đó; dòng ngoài phạm vi → `NOT_VERIFIABLE` kèm nguyên văn, **không đoán thành PASS**.
+
+### Case ads chấm ở tầng request/load
+
+Theo quyết định 30 và 31: có log request/load là đủ, không đòi nhìn thấy ad.
+`shown>0` → PASS; `loaded>0, shown=0` → PASS (chấm ở tầng load); `requested>0` mà không
+fill → **PASS** kèm ghi chú "request đúng nhưng không fill" (kho quảng cáo không trả ad,
+app không sai); `requested=0` → FAIL, hoặc `NEEDS_HUMAN` nếu tool chưa lái tới màn nào.
+
+### Không được báo oan khi ID bị che
+
+Lần chạy đầu case `6.4.0#1` ra **FAIL** ở dòng *"Không hiển thị native ad trên splash"* vì
+log có 4 native unit được request. Sai: ID bị che chỉ còn 3 số cuối, không unit nào map được
+về key RC, nên **không quy được** những request đó cho native splash — rất có thể là native
+của màn sau đang preload. Đã sửa: câu phủ định **có nêu vị trí** (105 / "trên splash") mà
+không map được unit → `NOT_VERIFIABLE`. Câu phủ định **"bất kỳ… nào"** (không giới hạn vị
+trí) thì vẫn `FAIL` như cũ.
+
+### Hai case đối chứng — chấm thật
+
+| Case | Verdict | Từng dòng |
+|---|---|---|
+| `6.4.0#4` tắt cả 2 banner | **PASS** | "Không load bất kỳ banner nào" PASS · "Không show banner trên Splash" PASS · "Không crash" PASS |
+| `6.4.0#1` bật cả 2 banner | **PASS** (sau quyết định 31) | 2 dòng banner hiển thị → PASS (request đúng, không fill) · "preload alternate" NOT_VERIFIABLE · "không hiển thị native" NOT_VERIFIABLE |
+
+Còn lại của phase 5: chấm thứ tự preload (cần map unit → vị trí, hiện ID bị che nên chưa
+làm được), và `NEEDS_HUMAN` cho dòng đòi thao tác tay.
