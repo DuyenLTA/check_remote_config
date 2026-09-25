@@ -1,0 +1,40 @@
+# Precondition nao doi app o trang thai SACH (chua tung mo / first open).
+#
+# De o day chu khong hardcode: cau chu trong file TC doi theo nguoi viet, them
+# mau moi la sua file nay, khong phai sua code.
+#
+# Khop KHONG PHAN BIET hoa thuong, tim chuoi con. Khong khop mau nao -> chi
+# force-stop, KHONG dong vao du lieu app.
+clean_state_patterns:
+  - "chưa từng"
+  - "chua tung"
+  - "lần đầu"
+  - "lan dau"
+  - "first open"
+  - "first-open"
+  - "fresh install"
+  - "mới cài"
+  - "moi cai"
+  - "cài lại"
+  - "cai lai"
+  - "cài mới"
+  - "onboarding"
+  - "chưa đăng nhập"
+  - "chua dang nhap"
+  - "xoá data"
+  - "xóa data"
+  - "xoa data"
+  - "clear data"
+  - "new user"
+  - "người dùng mới"
+
+# File prefs giu co "da xem onboarding chua" cua SDK Apero. Lat co nay ve true
+# la app vao lai onboarding ma KHONG mat login/ngon ngu/data - re hon `pm clear`
+# rat nhieu. Do tay 2026-09-07: app vao lai VslTemplate4OnboardingActivity.
+#
+# Day la THAO TAC RESET, khac han patch config: rc_patch van tuyet doi khong
+# duoc ghi vao file nay (no la state noi bo app, 0 key trung remote config).
+onboarding_flag:
+  files:
+    - vsl_template4_prefs.xml
+  key: ARG_KEY_SHOW_ONBOARDING
