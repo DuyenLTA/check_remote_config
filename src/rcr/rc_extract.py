@@ -27,11 +27,16 @@ from __future__ import annotations
 
 import re
 
-from . import ad_state, rc_pairs, rc_variants
+from . import ad_state, rc_pairs, rc_unit_codes, rc_variants
 from .models import Case, RcCaseData
 
 ARROWS = rc_pairs.ARROWS
 
+# Chuoi gia tri noi bang mui ten: `true -> false -> true`, `OFF -> ON -> OFF`.
+# Doi it nhat HAI gia tri that: "ON 102-spl-n-inter-high1 -> load & show" cung co
+# mui ten nhung ve sau khong phai gia tri, do la cau ta ket qua.
+TOGGLE_RE = re.compile(
+    r"\b(?:true|false|on|off)\b\s*(?:->|→|=>)\s*\b(?:true|false|on|off)\b", re.I)
 # Gia tri la cho trong chua dien: `<id template dang test>`, `<gia tri tuong ung>`
 PLACEHOLDER_RE = re.compile(r"<[^<>]*>")
 # Key co dau '.' -> sua field trong JSON (vd restore.enable)
@@ -44,6 +49,18 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
     """Tra ve cap key/value da loc, hoac ly do can nguoi lam tay."""
     raw = case.test_data.strip()
     has_td = raw.upper() not in EMPTY
+
+    # Bo TC khong co cot Test Data thi runtime toggle nam o ten sub-scenario
+    # ("Runtime: swipe_onb2 true -> false -> true") hoac o Precondition. Khong
+    # doc hai cho do thi case chi chay duoc buoc dau ma van bi cham nhu da xong.
+    if TOGGLE_RE.search(case.label) or TOGGLE_RE.search(case.precondition):
+        return RcCaseData(
+            overrides={},
+            needs_human=(
+                "runtime toggle (doi gia tri khi app dang chay) - ngoai pham vi tool: "
+                "patch file + mo lai app khong tai hien duoc, app phai tu fetch luc dang chay"
+            ),
+        )
 
     if has_td and any(a in raw for a in ARROWS):
         return RcCaseData(
@@ -81,16 +98,22 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
             ),
         )
 
-    pre = rc_pairs.pairs(rc_pairs.precondition_lines(case.precondition))
+    dong_pre = rc_pairs.precondition_lines(case.precondition)
+    pre = rc_pairs.pairs(dong_pre)
     # Ky hieu `102-...: fail` khop PAIR_RE thanh cap rac (`high: fail`) -> bo truoc khi boc
     td = rc_pairs.pairs(ad_state.MARKER_RE.sub("", raw)) if has_td else {}
     td |= forced
-    if not pre and not td:
+    # Bo TC ghi key theo mau (`unit 102-spl-n-inter-high1 (key show_* tuong ung)
+    # = false`) thay vi ten that. Suy ra `show_<ma>` va CHI nhan khi key do co
+    # trong whitelist doc tu may. Uu tien thap nhat: ten viet ro thi thang.
+    suy_ra = rc_unit_codes.pairs(
+        dong_pre + ("\n" + raw if has_td else ""), whitelist)
+    if not pre and not td and not suy_ra:
         why = (f"khong boc duoc cap key=value nao tu Test Data: {raw[:80]!r}" if has_td
                else "Test Data trong va Precondition khong co key nao de dat")
         return RcCaseData(overrides={}, needs_human=why)
 
-    found = pre | td  # trung key -> Test Data thang
+    found = suy_ra | pre | td  # trung key -> Test Data thang, roi den ten viet ro
     # Key cua app duoc NHAC ma khong co gia tri (`splash_ui_config hop le nhung
     # image_url rong`) -> chay voi config mac dinh la sai ma khong ai biet.
     mentioned = _mentioned(rc_pairs.precondition_lines(case.precondition) + "\n" + raw, whitelist)

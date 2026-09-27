@@ -294,3 +294,66 @@ def test_key_duoc_nhac_ma_khong_co_gia_tri_thi_can_nguoi():
 def test_sau_dau_phay_la_mo_ta_thi_bo():
     d = extract(case("", precondition="2. enable_feature_aialbum = true, tất cả toggle ads khác bật"), WL)
     assert d.overrides == {"enable_feature_aialbum": "true"}
+
+
+# --- key viet theo MAU `show_*` trong bo TC dung chung -----------------------
+# Do that 2026-09-25 (tab TC SDK 3.5.0, 69 case): sheet khong co cot Test Data,
+# key nam trong Precondition duoi dang ma vi tri. 13/16 case bi gat oan vi
+# khong tim thay cap `key = value`.
+
+WL_ADS = frozenset({
+    "show_102_spl_n_inter_high1", "show_201_lfo1_n_native_high1",
+    "show_201_lfo1_n_native_high", "show_303_onb3_n_native_high1",
+})
+
+
+def pre_case(precondition: str, sub_scenario: str = "") -> Case:
+    return Case(n="1", feature="", description="", sub_scenario=sub_scenario,
+                precondition=precondition, test_data="")
+
+
+def test_ma_vi_tri_suy_ra_key_show_khi_key_do_co_that_tren_may():
+    d = extract(pre_case(
+        "4. Remote config tat unit 102-spl-n-inter-high1 (key show_* tuong ung) = false."),
+        WL_ADS)
+    assert d.runnable
+    assert d.overrides == {"show_102_spl_n_inter_high1": "false"}
+
+
+def test_mot_dong_hai_ma_hai_gia_tri_khac_nhau():
+    """`bat X; tat Y` - moi ma lay gia tri cua RIENG no, khong lay chung."""
+    d = extract(pre_case(
+        "4. Remote bat unit 201-lfo1-n-native-high1; tat 201-lfo1-n-native-high."), WL_ADS)
+    assert d.overrides == {"show_201_lfo1_n_native_high1": "true",
+                           "show_201_lfo1_n_native_high": "false"}
+
+
+def test_ma_khong_co_key_tuong_ung_tren_may_thi_KHONG_dat():
+    """Suy ra ten ma may khong co key do -> bo, khong phai doan roi ghi bua."""
+    d = extract(pre_case("4. Remote config tat unit 999-khong-ton-tai = false."), WL_ADS)
+    assert not d.runnable
+
+
+def test_ten_key_viet_ro_thang_ten_suy_ra():
+    d = extract(pre_case(
+        "4. show_303_onb3_n_native_high1 = true; remote 303-onb3-n-native-high1 = false."),
+        WL_ADS)
+    assert d.overrides == {"show_303_onb3_n_native_high1": "true"}
+
+
+# --- runtime toggle o ten sub-scenario, khong o Test Data --------------------
+
+def test_runtime_toggle_o_ten_case_cung_phai_NEEDS_HUMAN():
+    """Sheet khong co Test Data thi chuoi doi gia tri nam o ten sub-scenario."""
+    d = extract(pre_case("4. Lan chay 1: remote 303-onb3-n-native-high1 = false.",
+                         "Runtime: OFF → ON → OFF unit 303-onb3-n-native-high1"), WL_ADS)
+    assert not d.runnable
+    assert "runtime toggle" in d.needs_human
+
+
+def test_mui_ten_ta_KET_QUA_khong_bi_coi_la_toggle():
+    """"ON 102-... → load & show" - ve sau khong phai gia tri, van chay duoc."""
+    d = extract(pre_case("4. Remote config bat unit 102-spl-n-inter-high1 = true.",
+                         "ON 102-spl-n-inter-high1 → load & show theo priority"), WL_ADS)
+    assert d.runnable
+    assert d.overrides == {"show_102_spl_n_inter_high1": "true"}
