@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "assert_dump + verdict"
-status: in-progress
+status: in-progress   # loi xong 2026-09-25, con kiem lai tren may that
 priority: P1
 effort: "1.5d"
 dependencies: [4]
@@ -81,20 +81,24 @@ Tag dùng để chấm (đã đo thật): `FOR_TESTER_LOAD_AD` (`starting load` 
 `has load error`), `FOR_TESTER_SHOW_AD: <TYPE> - <unitId>`,
 `BannerAdHelper|BannerAdLogHelper: <Activity>: adBannerState(None|Loading|Loaded)`.
 
-**Verdict `BLOCKED_NO_FILL`**: assertion đòi *show* mà log có `starting load` + `has load error`
-→ config đúng, hành vi app đúng, chỉ là **không có quảng cáo để trả**. Không phải FAIL —
-báo FAIL là đẩy tester đi tìm bug không tồn tại.
+**Ad không fill → `PASS`, không có trạng thái riêng** (quyết định 31, user chốt 2026-09-25).
+Assertion đòi *show* mà log có `starting load` + `has load error` → config đúng, hành vi app
+đúng, chỉ là **không có quảng cáo để trả**. Trạng thái `BLOCKED_NO_FILL` của bản thiết kế đầu
+đã **bỏ hẳn** — ghi chú kèm là đủ, thêm một trạng thái nữa chỉ làm tester phải học thêm một từ.
+Chỉ FAIL khi **không có request nào**.
 
 **Verdict `KEY_NOT_USED`**: `dex_check` (phase 4) nói app không tham chiếu key → chặn từ đầu,
 không chạy app. Đây là nguồn **PASS giả** nguy hiểm nhất đã gặp thật.
 
+Thang bậc thật nằm ở `src/rcr/verdict_levels.py` (`SEVERITY`), xấu nhất đứng đầu:
+
 ```
-verdict.roll_up(assertions) -> Verdict
-  BLOCKED > KEY_NOT_USED > FAIL > BLOCKED_NO_FILL > NEEDS_HUMAN > NOT_VERIFIABLE > PASS
+FAIL > BLOCKED > NEEDS_HUMAN > NOT_VERIFIABLE > CONFIG_OK > PASS
 ```
 
-`KEY_NOT_USED` xếp trên `FAIL`: app không đọc key thì mọi kết luận về hành vi đều vô nghĩa.
-`BLOCKED_NO_FILL` xếp dưới `FAIL`: nếu có assertion khác đã FAIL thật thì FAIL là kết luận đúng hơn.
+`KEY_NOT_USED` **không nằm trong thang này**: `case_run` trả nó ra ngay sau `dex_check`, trước
+khi mở app, nên không có dòng assertion nào để so. App không đọc key thì mọi kết luận về hành
+vi đều vô nghĩa — dừng sớm rẻ hơn.
 
 Thứ tự này có nghĩa: một case có 3 assertion PASS + 1 NOT_VERIFIABLE → case là
 `NOT_VERIFIABLE`, và report ghi rõ 3 dòng đã pass, 1 dòng không chấm được. **Không** làm tròn
@@ -125,7 +129,7 @@ thành PASS.
    - roll-up: 3 PASS + 1 NOT_VERIFIABLE → case `NOT_VERIFIABLE`
    - roll-up: 1 FAIL + 1 BLOCKED → case `BLOCKED`
    - `assert_ads`: log có `starting load` + `has load error`, assertion đòi *show*
-     → `BLOCKED_NO_FILL`, **không** FAIL
+     → `PASS` kèm ghi chú "request đúng nhưng không fill", **không** FAIL
    - `assert_ads` case tắt vị trí: tập unit id baseline trừ tập unit id case = đúng unit của
      vị trí bị tắt → PASS (fixture lấy từ 2 log thật của `lingospeak`)
 
@@ -192,9 +196,9 @@ lượt tắt**, độc lập với chuyện ad có fill hay không.
   dòng có chữ "exception" của app). **Không lọc theo PID**: app crash xong tiến trình chết,
   PID biến mất — lọc theo PID là bỏ sót đúng cái đang tìm. Lọc theo tên package trong dòng.
 - `assert_check.py` — chấm **từng dòng** Expected, verdict case = dòng xấu nhất.
-  Thang bậc: `FAIL` > `BLOCKED` (config không sống) > `BLOCKED_NO_FILL` > `NEEDS_HUMAN` >
-  `NOT_VERIFIABLE` > `CONFIG_OK` > `PASS`. `CONFIG_OK` đứng **trước** `PASS`: "đặt được
-  config" kén hơn "đã chấm và đúng".
+  Thang bậc: `FAIL` > `BLOCKED` (config không sống) > `NEEDS_HUMAN` > `NOT_VERIFIABLE` >
+  `CONFIG_OK` > `PASS`. `CONFIG_OK` đứng **trước** `PASS`: "đặt được config" kén hơn "đã
+  chấm và đúng".
 
 Đo trên 1421 dòng Expected thật của bộ chung: 188 dòng "không crash", 125 dòng phủ định ads,
 474 dòng khẳng định hiển thị/show, 100 dòng preload/alternate. Bốn luật hiện có bám đúng

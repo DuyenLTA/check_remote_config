@@ -1,6 +1,6 @@
 ---
 title: "Remote Config Case Runner"
-status: in-progress   # phase 1-4 xong phan loi, phase 5 dang lam (cham Expected)
+status: in-progress   # phase 1-5 xong phan loi, phase 6 con web UI + publish artifact
 created: 2026-09-07
 source: docs/plan/reports/from-brainstorm-to-planner-rc-override-design-260904-1425-firebase-remote-config-testcase-runner-report.md
 target_repo: ~/projects/check_remote_config
@@ -29,9 +29,16 @@ Brainstorm + thực nghiệm đã xong (GO). Bằng chứng & số đo: xem `sou
 | 1 | [Skeleton + adb + baseline reader](phase-01-skeleton-adb-and-rc-baseline-reader.md) | ✅ **done** (2026-09-07) | chọn device+app → hiện số key RC, file mirror, kiểu từng key |
 | 2 | [rc_patch + rc_verify](phase-02-rc-patch-and-verify-survival.md) | ✅ **done** (2026-09-08) | ⭐ đặt 1 key → mở app → **verify giá trị sống** |
 | 3 | [tc_loader + rc_extract](phase-03-testcase-loader-and-rc-key-extract.md) | ✅ **done** (2026-09-09) | nạp file TC → bảng case + key/value đã parse |
-| 4 | [device_reset + act_resolver](phase-04-device-reset-and-action-resolver.md) | 🟡 **đang làm** | chạy 1 case tới đúng màn cần chấm |
-| 5 | [assert_dump + verdict](phase-05-assert-dump-and-verdict.md) | 🟡 **đang làm** | ⭐ chấm được case RC, ra PASS/FAIL + actual result |
-| 6 | [report + web UI + e2e](phase-06-report-web-ui-and-e2e.md) | ⬜ pending | ⭐ **ship được cho tester** |
+| 4 | [device_reset + act_resolver](phase-04-device-reset-and-action-resolver.md) | 🟡 **lõi xong** (2026-09-25) | chạy 1 case tới đúng màn cần chấm |
+| 5 | [assert_dump + verdict](phase-05-assert-dump-and-verdict.md) | 🟡 **lõi xong** (2026-09-25) | ⭐ chấm được case RC, ra PASS/FAIL + actual result |
+| 6 | [report + web UI + e2e](phase-06-report-web-ui-and-e2e.md) | 🟡 **đang làm** | ⭐ **ship được cho tester** |
+
+**Chạy được đầu-cuối bằng dòng lệnh** (`rcr-check --tc ... --case ... --report out.html`).
+Publish artifact (quyết định 28) đã có đường đi: `artifact_link` + `rcr-artifact` ghi/đọc link,
+`rcr-check` trả `report` trong JSON stdout, slash command `/rc-check` lo phần publish — **chưa
+chạy thử trọn lượt trên máy thật**. Còn lại của phase 6: nút chạy case trên web UI
+(`POST /api/run-case` chưa có trong `routes.py`). Các ô Success Criteria của phase 4-6 phần lớn
+là **kiểm trên máy thật** — chưa tick vì chưa chạy lại trọn lượt để ghi bằng chứng.
 
 Thứ tự thực thi tuần tự 1→6. Phase 2 là tim của tool — cơ chế đã verified, làm sớm để chốt rủi ro.
 
@@ -166,7 +173,7 @@ Thứ tự thực thi tuần tự 1→6. Phase 2 là tim của tool — cơ ch�
 
 | Case | Verdict | Bằng chứng |
 |---|---|---|
-| `splash_banner_change = false` → load & show banner | load **PASS** / show **BLOCKED_NO_FILL** | `adBannerState(None→Loading)`, `FOR_TESTER_LOAD_AD: Banner ...4020637064`, node `bannerAdView` + `shimmer_container_banner` `[0,2100][1080,2148]`. Lượt `true`: 0 log, 0 node. Show fail do `has load error` (không fill), **không phải lỗi app** |
+| `splash_banner_change = false` → load & show banner | load **PASS** / show **PASS, không fill** (lúc đo 2026-09-07 còn gọi là `BLOCKED_NO_FILL`; quyết định 31 bỏ trạng thái này) | `adBannerState(None→Loading)`, `FOR_TESTER_LOAD_AD: Banner ...4020637064`, node `bannerAdView` + `shimmer_container_banner` `[0,2100][1080,2148]`. Lượt `true`: 0 log, 0 node. Show fail do `has load error` (không fill), **không phải lỗi app** |
 | `sbc=true` + `show_105_spl_n_native=false` + `_high=false` | **PASS** | request native **6 → 4**; biến mất đúng 2 unit `...5974670961`, `...9913915974`; 2 unit khác giữ nguyên; 0 unit mới; banner = 0 (đúng vì `sbc=true`) |
 
 Case 2 **chạy 2 lần độc lập, trùng khớp từng con số** → kết quả tái lập được, đủ điều kiện tự động hoá.

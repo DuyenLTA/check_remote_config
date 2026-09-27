@@ -41,6 +41,9 @@ POSITION_RE = re.compile(r"\b\d{3}\b|splash|home|onboarding|lfo|ob\d|result|tab\
 # KEY RC THAT cua app (`show_202_lfo2_n_native_high` -> native). Du lieu that,
 # khong phai bang tu doan.
 POS_CODE_RE = re.compile(r"\b(\d{3})\b")
+# Ma day du trong cau TC: "303-onb3-n-native-high1" -> khop key RC
+# `id_303_onb3_n_native_high1`. Chi co 3 so ("105", "tren splash") thi lay so.
+TC_CODE_RE = re.compile(r"\b\d{3}(?:-[a-z0-9]+)+", re.I)
 
 AD_TYPES = {
     "banner": ("banner",),
@@ -102,31 +105,28 @@ def routes(text: str) -> bool:
     return bool(IMPRESSION_RE.search(text) or EXTERNAL_RE.search(text))
 
 
+def _position_token(text: str) -> str:
+    """Vi tri ma cau dang noi toi, dang khop duoc voi ten key RC."""
+    day_du = TC_CODE_RE.search(text)
+    if day_du:
+        return day_du.group(0).replace("-", "_").lower()
+    chi_so = POS_CODE_RE.search(text)
+    return chi_so.group(1) if chi_so else ""
+
+
+def _khop_vi_tri(unit: dict, token: str) -> bool:
+    """Khop TRON VEN: `..._high` khong duoc an vao `..._high1`.
+
+    Hai cai do la hai unit khac nhau voi hai ky vong khac nhau - so bang
+    `in` thi request cua high1 bi tinh cho high, bao oan theo chieu nguoc lai.
+    """
+    sau_token = re.compile(re.escape(token) + "(?![a-z0-9])")
+    return any(sau_token.search(k.lower()) for k in (unit.get("rc_keys") or ()))
+
+
 def _units(ads: dict, kind: str) -> list[dict]:
     """`kind` rong -> moi unit (cau khong neu loai, vd dong impression)."""
     return [u for u in (ads.get("units") or {}).values() if not kind or u["type"] == kind]
-
-
-def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=()) -> dict:
-    """Cham mot dong Expected -> {verdict, reason, actual}."""
-    text = " ".join((line or "").split())
-    if not text:
-        return out(NOT_VERIFIABLE, "dong rong", "")
-
-    if NO_CRASH_RE.search(text):
-        if crash.get("crashed"):
-            return out(FAIL, "app crash trong luot chay", crash.get("lines", [])[:3])
-        return out(PASS, "khong thay crash nao cua app trong buffer crash", "")
-
-    kind = ad_type_in(text) or type_from_position(text, rc_keys)
-    if kind:
-        return _ad_line(text, kind, ads, drive)
-
-    quoted = QUOTED_RE.search(text)
-    if quoted:
-        return _text_on_screen(quoted.group(1), drive)
-
-    return out(NOT_VERIFIABLE, "dong nay khong do duoc bang dump/log - nguoi nhin", text)
 
 
 def ad_line(text: str, kind: str, ads: dict, drive: dict) -> dict:
@@ -188,16 +188,31 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict) -> dict:
         if ANY_RE.search(text):
             # "khong load BAT KY banner nao" - khong gioi han vi tri, moi request deu sai
             return out(FAIL, f"vẫn có request {kind}", actual)
-        if any(u.get("rc_keys") for u in requested):
-            # Map duoc unit ve key remote config -> quy duoc trach nhiem.
-            return out(FAIL, f"vẫn có request {kind}", actual)
-        # ID trong log bi che con 3 so cuoi, khong unit nao map duoc ve key ->
-        # KHONG biet request nay thuoc vi tri nao. Rat co the la vi tri khac dang
-        # preload. Bao FAIL o day la bao oan.
+        token = _position_token(text)
+        if not token:
+            # Cau phu dinh khong neu vi tri nao -> moi unit map duoc deu tinh.
+            if any(u.get("rc_keys") for u in requested):
+                return out(FAIL, f"vẫn có request {kind}", actual)
+            return out(
+                NOT_VERIFIABLE,
+                f"có {len(requested)} request {kind} nhưng ID bị che, không map được unit về "
+                "vị trí nào — không quy được cho vị trí trong câu",
+                actual,
+            )
+        # Map duoc ve MOT key bat ky la chua du: request cua man khac
+        # (id_301_onb1_n_native) bi tinh cho 303-onb3-n-native-high1 la bao oan
+        # dung mot bug khong ton tai. Chi FAIL khi unit map ve DUNG vi tri cau noi.
+        charged = [u["unit"] for u in requested if _khop_vi_tri(u, token)]
+        if charged:
+            return out(FAIL, f"vẫn có request {kind} của {token}",
+                       actual | {"charged": charged})
+        khac = sorted({k for u in requested for k in (u.get("rc_keys") or ())})
         return out(
             NOT_VERIFIABLE,
-            f"có {len(requested)} request {kind} nhưng ID bị che, không map được unit về "
-            "vị trí nào — không quy được cho vị trí trong câu",
+            f"có {len(requested)} request {kind} nhưng không unit nào map được về vị trí "
+            f"`{token}` — không quy được cho vị trí trong câu"
+            + (f" — các unit map được thuộc vị trí khác: {', '.join(khac)}" if khac
+               else " — ID trong log bị che còn 3 số cuối"),
             actual,
         )
 

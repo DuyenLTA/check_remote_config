@@ -3,7 +3,7 @@
 Diem phai gac:
   - cham TUNG DONG, verdict case = dong xau nhat
   - case ads cham o tang request/load, KHONG doi nhin thay ad
-  - unit co request ma khong fill -> BLOCKED_NO_FILL, KHONG phai FAIL
+  - unit co request ma khong fill -> PASS kem ghi chu, KHONG phai FAIL
   - dong khong do duoc -> NOT_VERIFIABLE, khong doan bua thanh PASS
 """
 
@@ -283,3 +283,40 @@ def test_dong_TC_tu_danh_dau_chua_co_spec_thi_khong_cham():
                  "Title hiển thị màu default. [Inferred — spec không định nghĩa]"):
         out = check(line)
         assert out["verdict"] == a.NOT_VERIFIABLE and "chưa có spec" in out["reason"]
+
+
+# --- quy trach nhiem phai DUNG vi tri, khong phai "map duoc ve key bat ky" ---
+# Do that 2026-09-25 tren `photoshoot` (bo TC 3.5.0, case #16): unit native duy
+# nhat map duoc la `id_301_onb1_n_native` - native cua Onboarding 1 dang preload.
+# Tinh no cho `303-onb3-n-native-high1` la bao FAIL cho mot bug khong ton tai.
+
+CAU_303 = "303-onb3-n-native-high1: Requests = 0 (OFF không được gọi kể cả trong alternate/waterfall)."
+
+
+def _native(rc_keys):
+    return {"units": {"native:*****989": dict(
+        ADS_NO_FILL["units"]["native:*****394"], unit="*****989", rc_keys=rc_keys)}}
+
+
+def test_request_cua_vi_tri_KHAC_thi_khong_ket_toi_vi_tri_trong_cau():
+    out = check(CAU_303, ads=_native(["id_301_onb1_n_native"]))
+    assert out["verdict"] == a.NOT_VERIFIABLE
+    assert "id_301_onb1_n_native" in out["reason"]
+
+
+def test_request_cua_DUNG_vi_tri_trong_cau_thi_FAIL():
+    out = check(CAU_303, ads=_native(["id_303_onb3_n_native_high1"]))
+    assert out["verdict"] == a.FAIL
+
+
+def test_high_khong_bi_tinh_nham_cho_high1():
+    """`id_303_onb3_n_native_high` khong phai `..._high1` - khac unit, khac ky vong."""
+    out = check(CAU_303, ads=_native(["id_303_onb3_n_native_high"]))
+    assert out["verdict"] == a.NOT_VERIFIABLE
+
+
+def test_high1_khong_bi_tinh_nham_cho_high():
+    """Chieu nguoc lai: cau noi ve `_high`, unit la `_high1` - van la unit khac."""
+    cau = "303-onb3-n-native-high: Requests = 0 (OFF không được gọi)."
+    out = check(cau, ads=_native(["id_303_onb3_n_native_high1"]))
+    assert out["verdict"] == a.NOT_VERIFIABLE
