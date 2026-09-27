@@ -3,9 +3,11 @@
 Đổi giá trị **Firebase Remote Config** của app Android **từ file testcase** — không cần
 quyền admin Firebase, không đụng server thật, chỉ ảnh hưởng đúng một máy đang cắm.
 
-> **Trạng thái: phase 3/6.** Hiện **nạp được file testcase, bóc ra key/value cần đặt, đặt
-> giá trị và xác nhận nó sống qua lần mở app**. Phần tự thao tác trên app và chấm PASS/FAIL
-> ở các phase sau.
+> **Trạng thái: phase 6/6, chạy được đầu-cuối bằng dòng lệnh.** Nạp file testcase → bóc
+> key/value → đặt giá trị → xác nhận nó sống qua lần mở app → lái app tới màn cần chấm →
+> chấm từng dòng Expected → xuất report HTML tự chứa (`rcr-check --report`).
+> **Còn thiếu:** nút chạy case trên web UI — hiện phải gõ `rcr-check` hoặc dùng slash
+> command `/rc-check`.
 
 ## Cần gì trước khi chạy
 
@@ -111,8 +113,39 @@ tiến độ ra stderr.
 đích danh một bản SDK thì chỉ phần đó là cần, chạy thừa là ngồi chờ máy thật cho không.
 
 `--case` nhận nhiều case ngăn bằng dấu phẩy, và `--report out/run.html` xuất trang HTML
-tự chứa: **ảnh chụp từng bước**, từng dòng Expected kèm tool đo được gì, log quảng cáo,
-nút lọc theo verdict và mục lục nhảy tới từng case.
+tự chứa, bày đúng khuôn **bảng test case** của tester:
+
+| Case | Description case | Preconditions | Step | Expected Result | Actual Result | Status Test |
+|---|---|---|---|---|---|---|
+
+Cột **Step** ghi từng bước Action kèm nhãn tool làm được gì (`tap` / `wait` / `goto` /
+`needs_human`) — nhìn là biết case chết ở bước nào. Cột **Expected** và cột **Actual**
+đánh số **song song**: dòng thứ i của Actual là kết quả của dòng thứ i của Expected, nên
+so sánh bằng mắt chứ không phải tự ghép. Case sai còn có hộp **Lý do fail** gom lý do các
+dòng trượt. **Ảnh chụp từng bước** và bảng log quảng cáo nằm trong ô Actual; bấm ảnh là
+phóng to tại chỗ (ảnh chỉ nhúng một lần — nhúng hai lần là nhân đôi dung lượng trang).
+
+Trang gom nhóm theo **tính năng** (cột Feature của file TC), có ô đếm bấm được để lọc,
+dropdown trạng thái và ô tìm. Mỗi hàng mang `id="c-<mã case>"` để dán link nhảy thẳng tới
+một case khi log bug.
+
+### Publish report thành artifact
+
+Report HTML đã sẵn khuôn artifact (mở đầu bằng `<title>`, không bọc `html/head/body`) nên
+publish thẳng file được. Tool **không tự publish**: nó chạy ở `127.0.0.1`, không có đường tới
+claude.ai — Claude publish rồi ghi link lại:
+
+```bash
+.venv/bin/rcr-artifact --url "https://claude.ai/..." --generated-at "<generated_at trong JSON>"
+.venv/bin/rcr-artifact            # in link da luu cua luot truoc
+```
+
+URL artifact **cố định**: republish cùng file giữ nguyên link, nên lượt sau đừng rải link mới.
+`generated_at` lưu kèm là bắt buộc — thiếu nó thì không phân biệt được link đang trỏ tới lượt
+vừa chạy hay một lượt cũ, và gửi nhầm báo cáo cũ cho team là sai một cách im lặng.
+
+Cả quy trình (chọn máy → chạy → đọc verdict → publish → ghi link) nằm ở slash command
+`/rc-check` (`~/.claude/commands/rc-check.md`).
 
 Case trong workbook bộ chung định danh bằng **`<bản SDK>#<số>`** (`--case 6.4.0#1`):
 số case trùng nhau giữa các tab — số `1` có ở 5 tab. Gõ mỗi con số vẫn được nếu nó chỉ
@@ -155,10 +188,12 @@ hàng thật. Quảng cáo đang che màn hình cũng dừng — tool không t�
 để chỉ đặt config, không lái.
 
 Case có dòng Expected thì tool **chấm từng dòng** (`run.runs[i].assert`): `PASS` /
-`FAIL` (kèm actual) / `BLOCKED_NO_FILL` (ad có request nhưng kho không trả ad — không phải
-app sai) / `NOT_VERIFIABLE` (dòng tool không đo được, người nhìn) / `NEEDS_HUMAN`.
-Verdict case = dòng xấu nhất. Case ads chấm ở **tầng request/load**, không đòi nhìn thấy ad:
-inter load nhanh hơn banner nên nó đè lên trước khi kịp nhìn.
+`FAIL` (kèm actual) / `NOT_VERIFIABLE` (dòng tool không đo được, người nhìn) / `NEEDS_HUMAN`.
+Verdict case = dòng xấu nhất (thang bậc ở `src/rcr/verdict_levels.py`).
+Case ads chấm ở **tầng request/load**, không đòi nhìn thấy ad: inter load nhanh hơn banner
+nên nó đè lên trước khi kịp nhìn. **Ad không fill vẫn tính `PASS`** — unit được request đúng
+là logic app đúng, kho quảng cáo không trả ad là chuyện của kho; chỉ FAIL khi **không có
+request nào**.
 
 Case không có Expected thì verdict dừng ở `CONFIG_OK` / `BLOCKED` / `KEY_NOT_USED` —
 tool đặt được config nhưng không tự kết luận gì về app.
