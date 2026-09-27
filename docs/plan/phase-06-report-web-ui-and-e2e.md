@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "report + web UI + e2e"
-status: in-progress
+status: in-progress   # report HTML xong, con web UI + publish artifact
 priority: P1
 effort: "1d"
 dependencies: [5]
@@ -99,5 +99,16 @@ Xuất `exports/rc-cases-<package>-<ngày giờ>.html`. Khuôn CSS/bảng lấy 
 - `--tab <ver>` — chỉ chạy đúng một tab (user dặn 2026-09-25): "sdk 3.4.0 thì check đúng
   file test case sheet đó thôi, không nhắc đến thì đừng check cho mất công".
 
-Còn lại của phase 6: nút bấm trên web UI (route `POST /api/run-case`), và publish artifact
-tự động sau mỗi lượt.
+- `artifact_link.py` + `cli_artifact.py` (`rcr-artifact`) — ghi/đọc link artifact của lượt đã
+  publish. Tool **không tự publish được**: chạy ở `127.0.0.1`, không có đường tới claude.ai.
+  Bắt buộc lưu kèm `generated_at`, nếu không thì không biết link đang trỏ tới lượt nào — gửi
+  nhầm báo cáo cũ cho team là sai một cách im lặng. URL artifact cố định nên republish cùng
+  file giữ nguyên link.
+- `cli_check` trả thêm `report` trong JSON stdout — trước đó đường dẫn report chỉ ra stderr,
+  người gọi không parse được để publish.
+- Slash command `/rc-check` (`~/.claude/commands/rc-check.md`) — chọn máy, chạy nền, đọc
+  verdict, **chỉ publish khi lượt đo được thật** (cả lượt `BLOCKED`/`KEY_NOT_USED` thì không
+  publish: trang artifact không nói được gì về app), rồi ghi link lại.
+
+Còn lại của phase 6: nút bấm trên web UI (route `POST /api/run-case`). Đường publish artifact
+đã có nhưng **chưa chạy thử trọn lượt trên máy thật**.

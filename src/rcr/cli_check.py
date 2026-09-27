@@ -112,6 +112,10 @@ async def run(args: argparse.Namespace) -> dict:
             out["cases"] = await run_batch.run_cases(
                 client, baseline, args, runnable, rows, out["tc"], _log
             )
+            # Duong dan report phai nam trong JSON stdout: nguoi goi (slash
+            # command /rc-check) publish file nay, ma stderr thi khong parse.
+            if args.report:
+                out["report"] = args.report
             return out
     elif args.case:
         raise RcError("--case can di kem --tc <file.xlsx>.")
@@ -164,7 +168,21 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _stdio_utf8() -> None:
+    """Ep stdout/stderr ve utf-8.
+
+    Console Windows mac dinh cp1252: mot chu tieng Viet trong JSON la
+    UnicodeEncodeError, va no no SAU khi da chay xong ca luot tren may that -
+    mat trang ket qua vi cai dau ra, khong phai vi app.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def main(argv: list[str] | None = None) -> int:
+    _stdio_utf8()
     args = build_parser().parse_args(argv)
     try:
         result = asyncio.run(run(args))
