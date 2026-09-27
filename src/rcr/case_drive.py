@@ -3,6 +3,11 @@
 Moi buoc: chup UI -> dich thanh thao tac -> lam -> ghi lai. Dung NGAY khi gap
 buoc khong dich duoc: di tiep voi man hinh sai thi moi thu sau do deu vo nghia.
 
+Buoc noi "di toi mot man hinh" (`GoTo`) khong tu bam mo: giao cho `fo_flow`
+lai theo luat o `data/fo_flow.yaml`. Truoc day moi buoc dang nay deu la
+NEEDS_HUMAN, trong khi bo luat da biet duong di - case dung lai o buoc 2 du
+tool thua suc di tiep.
+
 HAI CHO TU CHOI THAO TAC, co y:
   - quang cao dang che man hinh -> khong tu tim nut X. Nut dong quang cao nho,
     lech vai pixel la bam vao chinh quang cao (mo trinh duyet, co khi mua hang).
@@ -16,7 +21,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from . import act_resolver, device_app, screencap, ui_dump
+from . import act_resolver, device_app, fo_flow, screencap, ui_dump
 
 log = logging.getLogger(__name__)
 
@@ -78,6 +83,22 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop) -> dict:
                + (f" (man hinh bi che: {activity})" if blocked else ""))
         done.append(record)
 
+        if isinstance(action, act_resolver.GoTo):
+            # Quang cao dang che van lai duoc: `fo_flow` co luat rieng cho
+            # AdActivity (cho ad chay xong roi dong), khong phai tu mo nut X.
+            walk = await fo_flow.walk_to(client, serial, package, action.target, log_fn=log_fn)
+            if not walk["reached"]:
+                # Lai hut thi phai noi ket o dau: "khong dich duoc buoc" se lam
+                # nguoi doc di sua cau TC, trong khi loi nam o bo luat fo_flow.
+                record["action"] = {
+                    "kind": "needs_human",
+                    "reason": f"khong lai toi duoc {action.target}, dung o {walk['activity']}",
+                }
+                return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,
+                        "blocked_steps": blocked_steps}
+            record["action"] = {"kind": "goto", "target": action.target,
+                                "activity": walk["activity"], "reason": action.reason}
+            continue
         if isinstance(action, act_resolver.NeedsHuman):
             return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,
                     "blocked_steps": blocked_steps}

@@ -100,9 +100,28 @@ def test_bam_ten_nut_van_phai_khop_duy_nhat():
     assert isinstance(kind("Nhấn See All"), act_resolver.NeedsHuman)
 
 
-@pytest.mark.parametrize("step", [
-    "Hoàn thành luồng FO đến Home.", "Vào màn Onboarding 2.", "Trigger popup Rating.",
+@pytest.mark.parametrize("step,target", [
+    ("Hoàn thành luồng FO đến Home.", "MainActivity"),
+    ("Vào màn Onboarding 2.", "OnboardingActivity#2"),
+    ("Chạy luồng FO đến OB3.", "OnboardingActivity#3"),
 ])
-def test_di_ca_mot_chuoi_man_hinh_van_la_viec_cua_nguoi(step):
-    """Ca mot chuoi man hinh, khong phai mot thao tac - doan la lac ngay buoc dau."""
+def test_buoc_di_toi_mot_man_hinh_giao_cho_bo_lai_FO(step, target):
+    """Ca mot chuoi man hinh thi `fo_flow` lai, khong bo cho nguoi.
+
+    Bo luat `data/fo_flow.yaml` biet duong di san - de nguyen NEEDS_HUMAN la
+    case chet o buoc 2 trong khi tool thua suc di tiep.
+    """
+    act = kind(step)
+    assert isinstance(act, act_resolver.GoTo) and act.target == target
+
+
+@pytest.mark.parametrize("step", [
+    # Cau con ve them mot y khac: lai toi noi roi coi nhu xong la bo im ve sau.
+    "Vào OB3, ghi nhận thời điểm ad show (t0).",
+    # VUOT tai OB2, khong phai di toi OB2 - nhac ten man o giua cau khong tinh.
+    "Vuốt phải tại Onboarding 2.",
+    # Khong man nao trong bo luat khop.
+    "Trigger popup Rating.",
+])
+def test_cau_khong_thuan_di_chuyen_van_la_viec_cua_nguoi(step):
     assert isinstance(kind(step), act_resolver.NeedsHuman)

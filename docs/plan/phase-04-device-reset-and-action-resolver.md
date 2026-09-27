@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "device_reset + act_resolver (hep)"
-status: in-progress
+status: in-progress   # loi xong 2026-09-25, con kiem lai tren may that
 priority: P1
 effort: "1.5d"
 dependencies: [2, 3]

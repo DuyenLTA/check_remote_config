@@ -15,8 +15,14 @@ Cac dang cau nhan duoc (do tren 1272 buoc that cua bo TC chung):
     "Cho 3 giay"                 -> Wait
 Con lai -> NeedsHuman kem nguyen van cau, de nguoi doc biet phai lam gi.
 
-"Hoan thanh luong FO den Home" / "Vao man Onboarding 2" van la NeedsHuman: do la
-CA MOT CHUOI man hinh, khong phai mot thao tac - doan la lac ngay tu buoc dau.
+"Hoan thanh luong FO den Home" / "Vao man Onboarding 2" -> GoTo: day la CA MOT
+CHUOI man hinh, khong phai mot thao tac, nhung `fo_flow` biet duong di (luat o
+`data/fo_flow.yaml`) nen giao cho no lai thay vi bo cho nguoi.
+
+CHI nhan cau THUAN DI CHUYEN. Cau con ve them mot y khac ("Vao OB3, ghi nhan
+thoi diem ad show") van la NeedsHuman: lai toi noi roi coi nhu xong buoc la bo
+im cai ve sau, case do co the ra PASS gia. Cau khong mo dau bang tu di chuyen
+cung khong nhan ("Vuot phai tai Onboarding 2" la VUOT, khong phai di toi OB2).
 """
 
 from __future__ import annotations
@@ -40,6 +46,14 @@ CONFIG_RE = re.compile(r"^\s*(?:config|cấu\s*hình|cau\s*hinh|set|đặt|dat)\
 TAP_WORD_RE = re.compile(r"^\s*(?:bấm|bam|nhấn|nhan|chọn|chon|tap|click|press)\s+(?:vào|vao|nút|nut|button)?\s*(.+?)\s*[.。]?$", re.I)
 TAB_RE = re.compile(r"^\s*(?:mở|mo|open|chuyển\s*sang|chuyen\s*sang)\s+tab\s+(.+?)\s*\.?$", re.I)
 WAIT_RE = re.compile(r"^\s*(?:chờ|cho|đợi|doi|wait)\s*(\d+)?", re.I)
+# Buoc "di toi mot man hinh". Phai MO DAU bang tu di chuyen: cau chi nhac ten
+# man o giua ("Vuot phai tai Onboarding 2") khong phai lenh di toi man do.
+GOTO_RE = re.compile(
+    r"^\s*(?:hoàn\s*thành|hoan\s*thanh|vào|vao|đi\s*(?:đến|den|tới|toi)|di\s*(?:den|toi)"
+    r"|chạy\s*luồng|chay\s*luong|quay\s*(?:lại|lai)|trở\s*(?:lại|lai)|tro\s*(?:lai))\b",
+    re.I)
+# Cau con ve mot y khac sau dau phay/cham phay -> khong phai thuan di chuyen.
+CLAUSE_RE = re.compile(r"[,;]")
 DEFAULT_WAIT = 3.0
 MAX_WAIT = 60.0
 
@@ -76,6 +90,18 @@ class NoOp:
 
 
 @dataclass(frozen=True, slots=True)
+class GoTo:
+    """Lai qua ca luong First Open toi mot man hinh, do `fo_flow` lo."""
+
+    target: str
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "goto", "target": self.target, "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
 class NeedsHuman:
     reason: str
 
@@ -84,7 +110,7 @@ class NeedsHuman:
         return {"kind": "needs_human", "reason": self.reason}
 
 
-Action = Tap | Wait | NoOp | NeedsHuman
+Action = Tap | Wait | NoOp | GoTo | NeedsHuman
 
 
 def resolve(step: str, nodes: list[DeviceNode]) -> Action:
@@ -118,7 +144,22 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     if word and len(word.group(1)) <= 40:
         return _tap_by_text(word.group(1).strip(), nodes, f"chu sau dong tu: {word.group(1)}")
 
+    goto = _goto(text)
+    if goto:
+        return goto
     return NeedsHuman(f"khong dich duoc buoc: {text!r}")
+
+
+def _goto(text: str) -> Action | None:
+    """Buoc thuan di chuyen -> GoTo. Khong phai thi tra None."""
+    from . import fo_flow  # noi day de tranh vong import khi fo_flow lon len
+
+    if not GOTO_RE.match(text) or CLAUSE_RE.search(text):
+        return None
+    target = fo_flow.target_for(text)
+    if not target:
+        return None
+    return GoTo(target, f"lai qua luong FO toi {target}")
 
 
 def _tap_by_text(wanted: str, nodes: list[DeviceNode], matched: str) -> Action:

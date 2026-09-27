@@ -4,6 +4,7 @@ Diem phai gac:
   - quang cao che man hinh -> DUNG, tuyet doi khong tu tim nut dong
   - buoc khong dich duoc -> dung ngay, khong lam tiep cac buoc sau
   - buoc dich duoc -> tap dung toa do tam node
+  - buoc "di toi man X" -> giao cho fo_flow lai, khong bo cho nguoi
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import asyncio
 from conftest import PKG, FakeAdb
 from test_ui_dump import DUMP_XML
 
-from rcr import case_drive
+from rcr import case_drive, fo_flow
 
 APP_XML = DUMP_XML.replace("com.ai.app", PKG)
 COMPONENT = f"{PKG}/.MainActivity"
@@ -82,3 +83,27 @@ def test_quang_cao_van_chan_buoc_phai_bam():
     assert out["status"] == "NEEDS_HUMAN" and out["stopped_at"] == 2
     assert "quang cao" in out["steps"][1]["action"]["reason"]
     assert not adb.cmds_with("input tap")
+
+
+def test_buoc_di_toi_home_duoc_bo_lai_FO_lam_thay_vi_bo_cho_nguoi():
+    """App dang o MainActivity roi -> `walk_to` toi ngay, buoc tinh la da chay."""
+    adb = fake()
+    out = drive(adb, ["Hoàn thành luồng FO đến Home."])
+    assert out["status"] == "DONE" and out["stopped_at"] == 0
+    assert out["steps"][0]["action"]["kind"] == "goto"
+    assert out["steps"][0]["action"]["target"] == "MainActivity"
+
+
+def test_lai_hut_thi_noi_ket_o_dau_chu_khong_noi_khong_dich_duoc_buoc(monkeypatch):
+    """Loi nam o bo luat fo_flow, khong phai o cau chu trong file TC.
+
+    Man `SettingsActivity` khong co luat nao khop -> `walk_to` khong lam duoc
+    buoc nao, ket sau STUCK_POLLS vong. Rut poll ve 0s de test khong ngoi cho
+    that 20 giay.
+    """
+    monkeypatch.setattr(fo_flow, "POLL_SECONDS", 0)
+    monkeypatch.setattr(fo_flow, "STUCK_POLLS", 2)
+    adb = fake(f"{PKG}/.SettingsActivity")
+    out = drive(adb, ["Hoàn thành luồng FO đến Home."])
+    assert out["status"] == "NEEDS_HUMAN" and out["stopped_at"] == 1
+    assert "khong lai toi duoc MainActivity" in out["steps"][0]["action"]["reason"]
