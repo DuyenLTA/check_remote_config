@@ -22,6 +22,7 @@ stdin cua tien trinh app.
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
 import uuid
 from pathlib import Path
@@ -50,7 +51,11 @@ async def write_file(
     """
     app_sandbox.guard(serial, package)
     remote_tmp = _tmp_path()
-    local = Path(tempfile.mkstemp(prefix="rcr_", suffix=".tmp")[1])
+    # Dong ngay fd cua mkstemp: de mo thi `unlink` o Windows bao WinError 32,
+    # con Linux thi im lang lo fd cho toi het luot chay.
+    fd, ten = tempfile.mkstemp(prefix="rcr_", suffix=".tmp")
+    os.close(fd)
+    local = Path(ten)
     try:
         local.write_text(content, encoding="utf-8")
         out, err, code = await client._run(

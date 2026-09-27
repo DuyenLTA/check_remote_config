@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import os
 import tempfile
 import zipfile
 from pathlib import Path
@@ -98,7 +99,11 @@ async def check(client, serial: str, package: str, keys, cache_dir) -> dict[str,
 async def _scan_device(client, serial: str, package: str, keys: list[str]) -> dict[str, bool]:
     found: set[str] = set()
     for remote in await apk_paths(client, serial, package):
-        local = Path(tempfile.mkstemp(prefix="rcr_apk_", suffix=".apk")[1])
+        # Dong ngay fd cua mkstemp: de mo thi `unlink` o Windows bao
+        # WinError 32, con Linux thi im lang lo fd cho toi het luot chay.
+        fd, ten = tempfile.mkstemp(prefix="rcr_apk_", suffix=".apk")
+        os.close(fd)
+        local = Path(ten)
         try:
             out, err, code = await client._run(
                 "-s", serial, "pull", remote, str(local), timeout=PUSH_TIMEOUT * 4
