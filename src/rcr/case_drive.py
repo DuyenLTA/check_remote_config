@@ -25,7 +25,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from . import act_resolver, device_app, fo_flow, screencap, ui_dump
+from . import act_resolver, device_app, fo_flow, fo_steps, screencap, ui_dump
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +56,23 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
     if not pkg:
         return "khong doc duoc man hinh dang hien (may khoa?)"
     return ""
+
+
+async def _chup_ket(client, serial: str, package: str, index: int) -> dict:
+    """Chup man hinh SAU khi lam xong buoc cuoi.
+
+    Moi buoc chup TRUOC khi thao tac, nen khong co anh nao cho trang thai sau
+    cung - ma nhieu dong Expected noi dung ve no ("Chuyen sang man Onboarding
+    3" sau buoc vuot). Thieu anh nay thi dong do phai bo cho nguoi.
+    """
+    _, activity = await device_app.focus(client, serial)
+    xml = await ui_dump.dump(client, serial)
+    shot = await screencap.capture(client, serial)
+    nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
+    return {"n": index, "step": "(sau bước cuối)", "activity": activity, "dump": xml,
+            "shot": shot["thumb"], "shot_warning": shot["warning"],
+            "page": fo_steps.onboarding_page(nodes),
+            "action": {"kind": "noop", "reason": "chup lai man sau khi lam xong cac buoc"}}
 
 
 async def drive(client, serial: str, package: str, steps, log_fn=_noop, man_can: str | None = None) -> dict:
@@ -131,5 +148,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop, man_can:
             await asyncio.sleep(1.0)
         elif isinstance(action, act_resolver.Wait):
             await asyncio.sleep(action.seconds)
+    cuoi = await _chup_ket(client, serial, package, len(done) + 1)
+    done.append(cuoi)
     return {"steps": done, "status": "DONE", "stopped_at": 0,
-            "blocked_steps": blocked_steps}
+            "blocked_steps": blocked_steps, "final": cuoi}

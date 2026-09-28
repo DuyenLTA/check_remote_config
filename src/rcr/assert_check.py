@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from . import assert_ads, ui_names
+from . import assert_ads, fo_screens, ui_names
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -38,6 +38,12 @@ NO_CRASH_RE = re.compile(r"kh[oô]ng\s+(?:b[ịi]\s+)?crash|not\s+crash|no\s+cra
 UI_RE = re.compile(r"hi[ểe]n\s*th[ịi]|popup|pop-up|button|n[úu]t|title|subtitle|"
                    r"m[àa]n\s|icon|layout|c[ăa]n\s*gi[ữu]a|g[óo]c\s", re.I)
 QUOTED_RE = re.compile(r"[\"“”']([^\"“”']{2,60})[\"“”']")
+# "Chuyen sang man Onboarding 3", "Vao man Home" - dong ta man hinh DEN duoc
+# sau buoc cuoi. Do duoc bang activity dang focus, khong phai "phai nhin mat".
+TOI_MAN_RE = re.compile(
+    r"chuy[ểe]n\s*(?:sang|qua|t[ớo]i)|v[àa]o\s*m[àa]n|[đd]i\s*(?:[đd]ến|den|t[ớo]i)|"
+    r"quay\s*(?:l[ạa]i|v[ềe])|hi[ểe]n\s*th[ịi]\s*m[àa]n|m[àa]n\s+\S+\s+hi[ểe]n\s*th[ịi]",
+    re.I)
 # "KHONG hien thi icon SWIPE" - phu dinh cua mot phan tu UI.
 NOT_SHOW_RE = re.compile(r"kh[oô]ng\s+(?:c[óo]\s+)?(?:hi[ểe]n|th[ấa]y|xu[ấa]t hi[ệe]n)", re.I)
 
@@ -73,6 +79,11 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     element = ui_names.find_in(text)
     if element:
         return _element_on_screen(element, text, drive)
+
+    if TOI_MAN_RE.search(text):
+        ket = _man_da_toi(text, drive)
+        if ket:
+            return ket
 
     if UI_RE.search(text) and not assert_ads.tapped(drive):
         # Dong ta UI cua man phai lai toi, ma tool chua tap gi -> van o man mo dau.
@@ -157,3 +168,30 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     verdict = worst(measured) if measured else worst(r["verdict"] for r in lines)
     return {"verdict": verdict, "lines": lines, "measured": len(measured),
             "pending": pending, "po": po}
+
+
+def _man_da_toi(text: str, drive: dict) -> dict | None:
+    """Dong "chuyen sang man X" -> so voi man dang focus SAU buoc cuoi.
+
+    `None` khi cau khong neu man nao trong bo luat - de cac nhanh sau xu ly.
+    """
+    target = fo_screens.target_for(text)
+    if not target:
+        return None
+    cuoi = drive.get("final") or {}
+    activity = cuoi.get("activity") or ""
+    if not activity:
+        return out(NEEDS_HUMAN, "chưa chụp được màn sau bước cuối nên không đối chiếu được", text)
+    ten, _, trang = target.partition("#")
+    gon = activity.split(".")[-1]
+    if ten not in activity:
+        return out(FAIL, f"sau bước cuối đang ở {gon}, không phải {target}", gon)
+    if trang:
+        # Cac trang OB dung chung activity -> phan biet bang cham chi trang.
+        now = cuoi.get("page") or 0
+        if not now:
+            return out(NEEDS_HUMAN, f"đang ở {gon} nhưng không đọc được đang ở trang thứ mấy", gon)
+        if str(now) != trang:
+            return out(FAIL, f"đang ở {gon} trang {now}, kỳ vọng trang {trang}", f"{gon} trang {now}")
+        return out(PASS, f"sau bước cuối đang ở {gon} trang {now} — đúng kỳ vọng", f"{gon} trang {now}")
+    return out(PASS, f"sau bước cuối đang ở {gon} — đúng kỳ vọng", gon)

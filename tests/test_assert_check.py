@@ -472,3 +472,42 @@ def test_key_khong_phai_vi_tri_ads_thi_bo_qua():
 
     assert assert_ads.vi_tri_cua_case(OV_TAT_302) == (
         "302_onb2_n_native", "302_onb2_n_native_high")
+
+
+# --- dong "chuyen sang man X" do duoc bang activity -------------------------
+# Do that 2026-09-28, case 21: truoc day bi xep vao "phai nhin mat" trong khi
+# so activity sau buoc cuoi la ra ngay.
+
+def _drive_ket(activity, page=0):
+    return {"steps": [{"n": 1, "action": {"kind": "swipe"}}],
+            "final": {"activity": activity, "page": page}}
+
+
+def test_chuyen_sang_man_dung_thi_PASS():
+    res = a.check("Chuyển sang màn Onboarding 3.", {}, _drive_ket(
+        "aiphoto/VslTemplate4OnboardingActivity", page=3), OK_CRASH)
+    assert res["verdict"] == a.PASS and "trang 3" in res["reason"]
+
+
+def test_dung_o_trang_khac_thi_FAIL():
+    res = a.check("Chuyển sang màn Onboarding 3.", {}, _drive_ket(
+        "aiphoto/VslTemplate4OnboardingActivity", page=2), OK_CRASH)
+    assert res["verdict"] == a.FAIL and "kỳ vọng trang 3" in res["reason"]
+
+
+def test_dung_o_man_khac_han_thi_FAIL():
+    res = a.check("Vào màn Home.", {}, _drive_ket("aiphoto/VslTemplate4OnboardingActivity"), OK_CRASH)
+    assert res["verdict"] == a.FAIL
+
+
+def test_chua_chup_duoc_man_ket_thi_khong_ket_luan():
+    res = a.check("Chuyển sang màn Onboarding 3.", {}, {"steps": []}, OK_CRASH)
+    assert res["verdict"] == a.NEEDS_HUMAN
+
+
+def test_dong_ta_phan_tu_UI_khong_bi_cham_thanh_man_hinh():
+    """"Icon SWIPE hien thi" o man OB2 van la dong ve ICON, khong phai ve man."""
+    drive = {"steps": [{"n": 1, "dump": "<hierarchy />", "action": {"kind": "noop"}}],
+             "final": {"activity": "x/VslTemplate4OnboardingActivity", "page": 2}}
+    res = a.check("Vùng ad hiển thị icon SWIPE (animated).", {}, drive, OK_CRASH)
+    assert "trang" not in res["reason"]

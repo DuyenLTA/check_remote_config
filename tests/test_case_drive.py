@@ -54,7 +54,9 @@ def test_lai_duoc_thi_tap_dung_tam_node():
     out = drive(adb, ["Mở tab Moment", "Quan sát màn hình"])
     assert out["status"] == "DONE"
     assert adb.cmds_with("input tap 540 2300")
-    assert [s["action"]["kind"] for s in out["steps"]] == ["tap", "noop"]
+    # Ban ghi cuoi la anh chup SAU khi lam xong, khong phai buoc cua TC.
+    assert [s["action"]["kind"] for s in out["steps"][:-1]] == ["tap", "noop"]
+    assert out["final"]["step"] == "(sau bước cuối)"
     # dump giu lai de phase 5 cham, khong phai chup lai
     assert "<hierarchy" in out["steps"][0]["dump"]
 
@@ -74,7 +76,7 @@ def test_quang_cao_che_man_hinh_van_cho_buoc_QUAN_SAT_di_tiep():
     assert out["status"] == "DONE"
     assert out["blocked_steps"] == [1, 2]
     # danh dau de phase 5 biet dump nay khong phai UI app
-    assert all("screen_blocked" in s for s in out["steps"])
+    assert all("screen_blocked" in s for s in out["steps"][:-1])
     assert not adb.cmds_with("input tap")
 
 
@@ -114,7 +116,7 @@ def test_buoc_vuot_vuot_that_tren_may():
     adb = fake()
     out = drive(adb, ["Vuốt sang trái."])
     assert out["status"] == "DONE"
-    assert [s["action"]["kind"] for s in out["steps"]] == ["swipe"]
+    assert [s["action"]["kind"] for s in out["steps"][:-1]] == ["swipe"]
     # Man mac dinh 1080x2400 -> vuot doc dai giua man, tu 80% ve 20% chieu ngang.
     assert adb.cmds_with("input swipe 864 1200 216 1200 300")
 
