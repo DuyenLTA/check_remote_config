@@ -52,3 +52,18 @@ def test_cat_chu_thich_co_ngoac_mo_ma_khong_dong():
     assert clean("true (key từ SDK cũ") == "true"
     assert clean("5 (default") == "5"
     assert clean("true (mặc định)") == "true"
+
+
+def test_chu_thich_trong_ngoac_con_van_xuoi_phia_sau_bi_cat():
+    """`false (tat unit X). Cac key khac giu default` -> gia tri la `false`.
+
+    Khong cat thi ca cau chui vao config; voi `true (...)` Firebase doc khong ra
+    boolean nen thanh FALSE - dat nguoc han y cua TC ma khong ai thay.
+    """
+    line = ("4. show_102_spl_n_inter_high1 = false (tắt unit 102-spl-n-inter-high1). "
+            "Các key show_* khác giữ default.")
+    assert pairs(line) == {"show_102_spl_n_inter_high1": "false"}
+
+
+def test_gia_tri_trong_nhay_giu_nguyen_dau_ngoac():
+    assert pairs('k = "a (b) c"') == {"k": "a (b) c"}

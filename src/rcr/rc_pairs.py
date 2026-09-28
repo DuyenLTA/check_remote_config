@@ -71,6 +71,12 @@ def clean(val: str) -> str:
             v = v[:-1].rstrip()
         # Chu thich trong ngoac don o cuoi: `false (mac dinh)`, `2 (default)`
         v = re.sub(r"\s*\([^()]*\)$", "", v).strip()
+        # Chu thich trong ngoac RO I con van xuoi phia sau: `false (tat unit
+        # 102-spl-n-inter-high1). Cac key show_* khac giu default`. Gia tri la
+        # phan TRUOC ngoac. Khong cat thi ca cau chui vao config, va voi `true
+        # (...)` Firebase doc khong ra boolean -> thanh FALSE, nguoc han y TC.
+        if v[:1] not in "\"'“" and "(" in v and v[:v.index("(")].strip():
+            v = v[:v.index("(")].strip()
         # Ngoac MO ma khong dong: chu thich bi cat giua chung khi tach dong/dau
         # phay - `true (key tu SDK cu`. Khong cat la gia tri mang ca cau van xuoi.
         if v.count("(") > v.count(")"):
