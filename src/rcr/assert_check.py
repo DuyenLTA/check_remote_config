@@ -51,7 +51,7 @@ TOI_MAN_RE = re.compile(
 
 
 def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str = "",
-          vi_tri=()) -> dict:
+          vi_tri=(), events=()) -> dict:
     """Cham mot dong Expected -> {verdict, reason, actual}.
 
     `scope` la vi tri unit ma ca case noi toi, cho dong khong tu nhac ten unit.
@@ -72,6 +72,11 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     kind = assert_ads.ad_type_in(text) or assert_ads.type_from_position(text, rc_keys)
     if kind or assert_ads.routes(text):
         return assert_ads.ad_line(text, kind, ads, drive, scope, vi_tri)
+
+    if assert_ui.EVENT_RE.search(text):
+        ket = assert_ui.event_da_ban(text, events)
+        if ket:
+            return ket
 
     quoted = QUOTED_RE.search(text)
     if quoted:
@@ -101,7 +106,8 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     return out(NOT_VERIFIABLE, "dòng này phải nhìn mắt mới kết luận được (design/màu/animation)", text)
 
 
-def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), overrides=()) -> dict:
+def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), overrides=(),
+              events=()) -> dict:
     """Cham ca case -> {verdict, lines: [...]}"""
     lines = []
     # Vi tri unit cua ca case: dong "Impressions = 0" khong tu nhac ten unit,
@@ -110,7 +116,7 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     # Cau phu dinh chung chung noi ve cac vi tri chinh case nay bat/tat.
     vi_tri = assert_ads.vi_tri_cua_case(overrides)
     for index, line in enumerate(expects, 1):
-        row = check(line, ads or {}, drive or {}, crash or {}, rc_keys, scope, vi_tri)
+        row = check(line, ads or {}, drive or {}, crash or {}, rc_keys, scope, vi_tri, events)
         lines.append({"n": index, "expected": " ".join(line.split()), **row})
     if not lines:
         return {"verdict": NOT_VERIFIABLE, "lines": [], "note": "case không có dòng Expected nào"}

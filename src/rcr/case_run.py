@@ -20,6 +20,7 @@ import logging
 from . import (
     ad_log,
     ad_units,
+    fa_log,
     fo_flow,
     screencap,
     assert_check,
@@ -59,6 +60,9 @@ async def apply_case(
     # Xoa log TRUOC khi mo app: khong thi nhat log ads/crash cua luot truoc.
     await ad_log.clear(client, baseline.serial)
     await crash_log.clear(client, baseline.serial)
+    # Property doc luc process START -> bat TRUOC khi mo lai app, khong thi
+    # ca luot chay khong co dong FA nao de doi chieu.
+    await fa_log.bat(client, baseline.serial)
     launch = await device_app.restart(client, baseline.serial, baseline.package)
     result = await rc_verify.verify(client, baseline, overrides)
 
@@ -94,10 +98,11 @@ async def apply_case(
     # de len truoc khi kip nhin thay banner.
     out["ads"] = await _read_ads(client, baseline)
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
+    out["events"] = await fa_log.doc(client, baseline.serial)
     if expects:
         out["assert"] = assert_check.check_all(
             expects, out["ads"], out.get("drive") or {}, out["crash"],
-            tuple(baseline.configs), overrides,
+            tuple(baseline.configs), overrides, out["events"],
         )
         # Config khong song thi chua test duoc gi - dung ket luan tu dong Expected.
         out["verdict"] = out["verdict"] if not result.ok else out["assert"]["verdict"]

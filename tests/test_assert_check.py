@@ -557,3 +557,32 @@ def test_dong_khong_doi_animation_thi_cham_nhu_phan_tu_thuong():
     res = a.check("Icon SWIPE hiển thị.", {},
                   _drive_anim({"doi": False, "lap": False, "lech_max": 0.1}), OK_CRASH)
     assert "đứng yên" not in res["reason"]
+
+
+# --- dong doi mot event Firebase -------------------------------------------
+
+EV = [{"name": "complete_ob2", "origin": "app", "params": {"engagement_time": "1234"}},
+      {"name": "screen_view", "origin": "auto", "params": {}}]
+
+
+def test_event_co_ban_va_du_param_thi_PASS():
+    res = a.check("Log event complete_ob2 (có engagement_time) theo spec nền.",
+                  {}, NO_DRIVE, OK_CRASH, events=EV)
+    assert res["verdict"] == a.PASS and "complete_ob2" in res["reason"]
+
+
+def test_event_khong_ban_thi_FAIL_kem_danh_sach_da_ban():
+    res = a.check("Log event complete_ob3.", {}, NO_DRIVE, OK_CRASH, events=EV)
+    assert res["verdict"] == a.FAIL and "screen_view" in res["reason"]
+
+
+def test_event_co_ban_nhung_thieu_param_thi_FAIL():
+    ev = [{"name": "complete_ob2", "origin": "app", "params": {"ga_event_origin": "app"}}]
+    res = a.check("Log event complete_ob2 (có engagement_time).", {}, NO_DRIVE, OK_CRASH, events=ev)
+    assert res["verdict"] == a.FAIL and "thiếu param engagement_time" in res["reason"]
+
+
+def test_khong_co_dong_FA_nao_thi_noi_ro_chu_khong_bao_FAIL():
+    """Build tat Analytics thi vang event KHONG phai loi cua app."""
+    res = a.check("Log event complete_ob2.", {}, NO_DRIVE, OK_CRASH, events=[])
+    assert res["verdict"] == a.NEEDS_HUMAN and "FA-SVC" in res["reason"]
