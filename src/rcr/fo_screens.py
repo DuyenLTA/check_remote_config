@@ -23,6 +23,10 @@ SCREEN_WORDS = (
     # het ca luong roi bao "KHONG toi duoc" (do 2026-09-28, case 3 va 4).
     ("lfo", "Language"), ("paywall", "BillingActivity"),
     ("home", "MainActivity"),
+    # Xep CUOI: "hoan thanh luong" khong neu ten man nao, nhung het luong First
+    # Open la Home. De truoc thi no cuop mat cau co ten man ro rang
+    # ("Hoan thanh luong FO den OB3").
+    ("hoàn thành luồng", "MainActivity"), ("hoan thanh luong", "MainActivity"),
 )
 
 

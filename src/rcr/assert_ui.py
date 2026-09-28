@@ -164,6 +164,24 @@ def event_da_ban(text: str, events) -> dict | None:
                      + (f", {gia_tri}" if gia_tri else ""), muon)
 
 
+def luong_thong(drive: dict) -> dict | None:
+    """"Luong FO thong suot" - do bang nhat ky lai, khong phai nhin mat.
+
+    Thong suot = di het cac buoc ma khong buoc nao ket. `case_drive` dung NGAY
+    khi gap man khong lai duoc, nen `status` DONE la bang chung du.
+    """
+    steps = drive.get("steps") or []
+    if not steps:
+        return None
+    ket = [s for s in steps if s.get("action", {}).get("kind") == "needs_human"]
+    if drive.get("status") == "DONE" and not ket:
+        cuoi = next((s.get("activity", "") for s in reversed(steps) if s.get("activity")), "")
+        return out(PASS, "đi hết luồng, không bước nào kẹt"
+                   + (f" — dừng ở {cuoi.split('.')[-1]}" if cuoi else ""), "")
+    ly_do = ket[0]["action"].get("reason", "") if ket else f"dừng ở bước {drive.get('stopped_at')}"
+    return out(FAIL, f"luồng không thông: {ly_do}", "")
+
+
 def vuot_duoc(drive: dict) -> dict | None:
     """Dong "user co the vuot sang man ke" -> ket qua cu vuot thu o cuoi luot."""
     thu = drive.get("thu_vuot")

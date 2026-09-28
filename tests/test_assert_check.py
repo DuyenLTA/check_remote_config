@@ -221,13 +221,28 @@ def test_unit_dau_fill_luon_thi_khong_can_alternate():
     assert out["verdict"] == a.PASS and "fill luôn" in out["reason"]
 
 
-def test_verdict_case_chi_tinh_cac_dong_DO_DUOC():
-    """Dong "can nguoi" noi ve gioi han cua tool, khong noi gi ve app."""
+def test_mot_dong_chua_cham_duoc_thi_case_KHONG_duoc_ra_PASS():
+    """PASS hut: cham duoc moi dong "khong crash" ma bao ca case dat.
+
+    Do that 2026-09-28, case 17 va 18: 2/3 dong ra NOT_VERIFIABLE - trong do co
+    dong quyet dinh ("Requests = 0 cho unit OFF") - nhung dong "khong crash"
+    PASS keo ca case len PASS. Nguoi doc report tuong case da duoc cham tron ven.
+    """
     out = a.check_all(
         ["Không crash", "Pop-up Add Widget hiển thị"], ADS_BANNER, NO_DRIVE, OK_CRASH
     )
     assert [l["verdict"] for l in out["lines"]] == [a.PASS, a.NEEDS_HUMAN]
-    assert out["verdict"] == a.PASS and out["pending"] == 1
+    assert out["verdict"] == a.NEEDS_HUMAN and out["pending"] == 1
+
+
+def test_dong_cua_PO_khong_keo_case_xuong():
+    """Tester khong vao duoc AdMob console - do la viec cua PO, khong phai
+    gioi han cua tool. Dong do van hien trong report nhung khong ha verdict."""
+    out = a.check_all(
+        ["Không crash", "Doanh thu hiển thị trên AdMob console"],
+        ADS_BANNER, NO_DRIVE, OK_CRASH,
+    )
+    assert out["po"] == 1 and out["verdict"] == a.PASS
 
 
 def test_con_FAIL_thi_van_la_FAIL():
@@ -607,3 +622,43 @@ def test_man_doi_nhung_khong_tien_len_thi_FAIL():
     drive = {"steps": [], "thu_vuot": {"doi": True, "trang_truoc": 3, "trang_sau": 2}}
     res = a.check("User có thể vuốt sang màn kế tiếp.", {}, drive, OK_CRASH)
     assert res["verdict"] == a.FAIL
+
+
+# --- dong noi ve REQUEST: log la nguon duy nhat, khong phai "nhin mat" -------
+
+def test_requests_bang_0_khong_neu_loai_ad_van_di_ve_luat_ads():
+    """"Requests = 0 cho unit OFF" khong co tu native/inter/banner va khong co
+    ma vi tri. Truoc day roi xuong luat UI va bi tra "phai nhin mat", trong khi
+    day la dong QUYET DINH cua ca case (do 2026-09-28, case 17 va 18)."""
+    out = a.check("Requests = 0 cho unit OFF.", ADS_BANNER, NO_DRIVE, OK_CRASH)
+    assert "nhìn mắt" not in out["reason"]
+
+
+def test_khong_PHAT_SINH_request_van_la_cau_phu_dinh():
+    """Chu chen giua "khong" va "request" tung lam cau thanh "khong neu ro ky vong"."""
+    from rcr import assert_ads as ads
+    assert ads.NEGATIVE_RE.search("SDK KHÔNG phát sinh request cho 102-spl-n-inter-high1")
+    assert ads.NEGATIVE_RE.search("Banner không được gọi kể cả trong alternate")
+
+
+def test_luong_FO_thong_suot_cham_bang_nhat_ky_lai():
+    di_het = {"status": "DONE", "steps": [
+        {"n": 1, "activity": "x.MainActivity", "action": {"kind": "goto"}}]}
+    assert a.check("Luồng FO thông suốt.", ADS_BANNER, di_het, OK_CRASH)["verdict"] == a.PASS
+    ket = {"status": "NEEDS_HUMAN", "stopped_at": 2, "steps": [
+        {"n": 1, "activity": "x.Splash", "action": {"kind": "needs_human", "reason": "kẹt ở OB2"}}]}
+    xau = a.check("Luồng FO thông suốt.", ADS_BANNER, ket, OK_CRASH)
+    assert xau["verdict"] == a.FAIL and "kẹt ở OB2" in xau["reason"]
+
+
+def test_lai_het_luong_bang_mot_buoc_GoTo_van_tinh_la_da_toi_noi():
+    """Case 17 di toi Home bang DUNG MOT buoc GoTo, khong co cu tap nao."""
+    from rcr import assert_ads as ads
+    assert ads.tapped({"steps": [{"action": {"kind": "goto"}}]})
+    assert not ads.tapped({"steps": [{"action": {"kind": "noop"}}]})
+
+
+def test_cau_khong_neu_loai_ad_khong_bi_thua_dau_cach():
+    """`f"khong request {kind} nao"` voi kind rong -> "request  nao"."""
+    out = a.check("Requests = 0 cho unit OFF.", ADS_BANNER, NO_DRIVE, OK_CRASH)
+    assert "  " not in out["reason"]

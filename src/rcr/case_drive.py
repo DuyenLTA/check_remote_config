@@ -25,7 +25,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from . import act_resolver, device_app, drive_probes, fo_flow, fo_steps, screencap, ui_dump
+from . import (act_resolver, device_app, drive_probes, fo_flow, fo_steps, net_ctl,
+               screencap, ui_dump)
 
 log = logging.getLogger(__name__)
 
@@ -140,6 +141,12 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             if action.direction == "left":
                 vuot_sau += 1          # vuot trai = sang trang ke
             await asyncio.sleep(1.0)
+        elif isinstance(action, act_resolver.Net):
+            ket = await (net_ctl.bat(client, serial) if action.on
+                         else net_ctl.tat(client, serial))
+            record["net"] = ket
+            log_fn(f"    buoc {index}: mang -> {ket['mang']}"
+                   + (" (ping thong)" if ket["thong"] else " (ping khong di)"))
         elif isinstance(action, act_resolver.Wait):
             await asyncio.sleep(action.seconds)
     cuoi = await drive_probes._chup_ket(client, serial, package, len(done) + 1,

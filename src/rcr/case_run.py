@@ -29,6 +29,7 @@ from . import (
     device_app,
     device_reset,
     dex_check,
+    net_ctl,
     rc_baseline,
     rc_patch,
     rc_snapshot,
@@ -48,6 +49,7 @@ def _noop(_msg: str) -> None:
 async def apply_case(
     client, baseline: RcBaseline, overrides: dict[str, str], keep: bool, out_dir,
     steps=(), expects=(), goto: str = "", log_fn=_noop, man_can=None,
+    precondition: str = "",
 ) -> dict:
     """patch -> tat han app -> mo lai -> verify -> lai cac buoc -> restore.
 
@@ -63,7 +65,20 @@ async def apply_case(
     # Property doc luc process START -> bat TRUOC khi mo lai app, khong thi
     # ca luot chay khong co dong FA nao de doi chieu.
     await fa_log.bat(client, baseline.serial)
-    launch = await device_app.restart(client, baseline.serial, baseline.package)
+    # Case "mo app khi mat mang": phai ngat mang TRUOC `restart`. Ngat sau do la
+    # app da fetch xong roi - do mot thu khac han cai case hoi.
+    mat_mang = net_ctl.tat_truoc_khi_mo(precondition, steps)
+    net = await net_ctl.tat(client, baseline.serial) if mat_mang else None
+    if net:
+        log_fn("    da ngat mang truoc khi mo app"
+               + ("" if not net["thong"] else " - NHUNG may van ra duoc internet"))
+    try:
+        launch = await device_app.restart(client, baseline.serial, baseline.package)
+    except Exception:
+        # Mo app hong ma de may mat mang la hong ca nhung luot sau.
+        if mat_mang:
+            await net_ctl.bat(client, baseline.serial)
+        raise
     result = await rc_verify.verify(client, baseline, overrides)
 
     out = {
@@ -75,6 +90,8 @@ async def apply_case(
         "verdict": "CONFIG_OK" if result.ok else "BLOCKED",
         "restored": False,
     }
+    if net:
+        out["net"] = net
     # Case noi ve man khac splash -> lai toi do TRUOC khi cham, khong thi moi
     # dong ta UI cua man ay deu ra "chua lai toi noi".
     if goto and result.ok:
@@ -109,6 +126,11 @@ async def apply_case(
         )
         # Config khong song thi chua test duoc gi - dung ket luan tu dong Expected.
         out["verdict"] = out["verdict"] if not result.ok else out["assert"]["verdict"]
+    if mat_mang:
+        # May phai duoc tra ve co mang du buoc nao trong case da bat lai: luot
+        # sau chay tren may mat mang la hong het ma khong ai biet vi sao.
+        out["net_cuoi"] = await net_ctl.bat(client, baseline.serial)
+        log_fn(f"    tra mang ve: {'thong' if out['net_cuoi']['thong'] else 'VAN CHUA THONG'}")
     if keep:
         out["snapshot"] = str(snapshot)
     else:
@@ -145,12 +167,12 @@ async def run_case(
         baseline = await rc_baseline.read(client, baseline.serial, baseline.package)
 
     out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                            log_fn, man_can)
+                            log_fn, man_can, precondition)
     return out | {"reset": reset}, baseline
 
 
 async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                      log_fn, man_can=None) -> dict:
+                      log_fn, man_can=None, precondition: str = "") -> dict:
     """Case co gia tri lua chon -> nhieu luot. Verdict case = luot xau nhat."""
     done: list[dict] = []
     for index, overrides in enumerate(runs, 1):
@@ -158,7 +180,7 @@ async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, got
         log_fn(head + ", ".join(f"{k}={v}" for k, v in overrides.items()))
         out = await apply_case(
             client, baseline, overrides, keep, out_dir, steps, expects, goto,
-            log_fn, man_can,
+            log_fn, man_can, precondition,
         )
         log_fn(f"    foreground sau {out['launch']['waited_s']}s · verify: "
                f"{'CONFIG_OK' if out['verify']['ok'] else 'BLOCKED'} · verdict: {out['verdict']}")

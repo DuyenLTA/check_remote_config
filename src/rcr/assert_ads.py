@@ -24,8 +24,11 @@ from .ad_positions import (  # noqa: F401 - tai xuat cho cho goi cu
 )
 from .verdict_levels import FAIL, NEEDS_HUMAN, NOT_VERIFIABLE, PASS, out
 
+# Toi 2 chu chen giua "khong" va dong tu: "KHONG phat sinh request",
+# "khong duoc goi". Chen khong gioi han thi mot cau khang dinh o ve sau cung bi
+# hut vao phu dinh o ve dau.
 NEGATIVE_RE = re.compile(
-    r"(?:kh[oô]ng|ko)\s+(?:c[óo]\s+|[đd][ưu][ợo]c\s+)?"
+    r"(?:kh[oô]ng|ko)\s+(?:\w+\s+){0,2}?"
     r"(?:load|show|hi[ểe]n|request|g[ọo]i|xu[ấa]t hi[ệe]n)|requests?\s*=\s*0",
     re.I,
 )
@@ -79,7 +82,11 @@ def tapped(drive: dict) -> bool:
     """
     if drive.get("walked"):
         return True
-    return any(s.get("action", {}).get("kind") == "tap" for s in (drive.get("steps") or []))
+    # Buoc GoTo da lai xong cung tinh: case 17 di het luong FO toi Home bang
+    # DUNG MOT buoc GoTo, khong co cu tap nao trong nhat ky - the ma moi dong ta
+    # UI cua no deu bi tra ve "tool moi dung o man mo dau" (do 2026-09-28).
+    return any(s.get("action", {}).get("kind") in ("tap", "goto")
+               for s in (drive.get("steps") or []))
 
 
 def where(drive: dict) -> str:
@@ -87,9 +94,17 @@ def where(drive: dict) -> str:
     return steps[-1].get("activity", "") if steps else ""
 
 
+# "Requests = 0 cho unit OFF" - noi ve request ads ma KHONG neu ten loai ad va
+# khong co ma vi tri nao. Khong bat o day thi dong nay roi xuong luat UI va bi
+# tra ve "phai nhin mat", trong khi so request la thu duy nhat log noi duoc
+# (do 2026-09-28, case 17 va 18: dong quyet dinh cua ca case bi bo qua).
+REQUEST_RE = re.compile(r"requests?\b|ph[áa]t\s*sinh\s*request", re.I)
+
+
 def routes(text: str) -> bool:
     """Dong nay phai do bang log ads du khong neu ten loai ad."""
-    return bool(assert_ad_rules.IMPRESSION_RE.search(text) or EXTERNAL_RE.search(text))
+    return bool(assert_ad_rules.IMPRESSION_RE.search(text) or EXTERNAL_RE.search(text)
+                or REQUEST_RE.search(text))
 
 
 def _units(ads: dict, kind: str) -> list[dict]:

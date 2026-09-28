@@ -41,6 +41,10 @@ DOI_VUOT_RE = re.compile(
     r"(?:vu[ốo]t|swipe).{0,24}(?:sang|qua|t[ớo]i|to)\s*(?:m[àa]n|trang|next)", re.I)
 ANIM_RE = re.compile(r"animation|animated|hi[ệe]u\s*[ứu]ng|l[ặa]p\s*l[ạa]i|\bl[ặa]p\b|loop|"
                      r"nh[áa]y|chuy[ểe]n\s*[đd][ộo]ng", re.I)
+# "Luong FO thong suot", "flow tiep tuc binh thuong", "khong bi ket o man nao".
+LUONG_RE = re.compile(r"(?:lu[ồo]ng|flow)\b.{0,30}(?:th[ôo]ng\s*su[ốo]t|m[ưu][ợo]t|"
+                      r"ti[ếe]p\s*t[ụu]c|b[ìi]nh\s*th[ưu][ờo]ng|kh[ôo]ng\s*k[ẹe]t)|"
+                      r"(?:th[ôo]ng\s*su[ốo]t|kh[ôo]ng\s*b[ịi]\s*k[ẹe]t)\b", re.I)
 NO_CRASH_RE = re.compile(r"kh[oô]ng\s+(?:b[ịi]\s+)?crash|not\s+crash|no\s+crash", re.I)
 # Dong ta UI: "Popup hien thi", "Title can giua", "Button X o goc phai tren"...
 UI_RE = re.compile(r"hi[ểe]n\s*th[ịi]|popup|pop-up|button|n[úu]t|title|subtitle|"
@@ -76,6 +80,11 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     kind = assert_ads.ad_type_in(text) or assert_ads.type_from_position(text, rc_keys)
     if kind or assert_ads.routes(text):
         return assert_ads.ad_line(text, kind, ads, drive, scope, vi_tri)
+
+    if LUONG_RE.search(text):
+        ket = assert_ui.luong_thong(drive)
+        if ket:
+            return ket
 
     if DOI_VUOT_RE.search(text):
         ket = assert_ui.vuot_duoc(drive)
@@ -130,15 +139,16 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     if not lines:
         return {"verdict": NOT_VERIFIABLE, "lines": [], "note": "case không có dòng Expected nào"}
 
-    # Verdict case = muc xau nhat trong cac dong DO DUOC. Dong chua do duoc
-    # (can nguoi / phai nhin mat) khong keo ca case xuong: chung khong noi gi ve
-    # app, chi noi ve gioi han cua tool. So dong do di kem de khong ai tuong case
-    # da duoc cham tron ven.
     measured = [r["verdict"] for r in lines if r["verdict"] in (PASS, FAIL)]
     # Dong cua PO khong tinh vao "can nguoi": tester khong vao duoc AdMob console
     # nen bao ho di lam la bao sai viec. Van hien trong report, chi dem rieng.
     po = sum(1 for r in lines if r.get("scope") == "po")
     pending = len(lines) - len(measured) - po
-    verdict = worst(measured) if measured else worst(r["verdict"] for r in lines)
+    # Verdict case = muc xau nhat trong MOI dong (tru dong cua PO). Truoc day
+    # dong chua do duoc bi loai ra, nen mot case chi cham duoc dong "khong
+    # crash" van ra PASS trong khi dong quyet dinh khong ai cham - PASS hut
+    # (do 2026-09-28, case 17 va 18: 2/3 dong NOT_VERIFIABLE ma case bao PASS).
+    ke = [r["verdict"] for r in lines if r.get("scope") != "po"]
+    verdict = worst(ke) if ke else worst(r["verdict"] for r in lines)
     return {"verdict": verdict, "lines": lines, "measured": len(measured),
             "pending": pending, "po": po}

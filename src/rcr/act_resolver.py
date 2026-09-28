@@ -32,10 +32,11 @@ from __future__ import annotations
 
 import re
 
-from .act_types import Action, GoTo, NeedsHuman, NoOp, Swipe, Tap, Wait
+from .act_types import Action, GoTo, Net, NeedsHuman, NoOp, Swipe, Tap, Wait
+from . import net_ctl
 from .ui_dump import DeviceNode
 
-__all__ = ["Action", "GoTo", "NeedsHuman", "NoOp", "Swipe", "Tap", "Wait",
+__all__ = ["Action", "GoTo", "Net", "NeedsHuman", "NoOp", "Swipe", "Tap", "Wait",
            "resolve", "find"]
 
 # Buoc doi soat tren console ngoai (AdMob, Firebase, dashboard). Tool cham ads
@@ -61,7 +62,7 @@ WAIT_RE = re.compile(r"^\s*(?:chờ|cho|đợi|doi|wait)\s*(\d+)?", re.I)
 # man o giua ("Vuot phai tai Onboarding 2") khong phai lenh di toi man do.
 GOTO_RE = re.compile(
     r"^\s*(?:hoàn\s*thành|hoan\s*thanh|vào|vao|đi\s*(?:đến|den|tới|toi)|di\s*(?:den|toi)"
-    r"|chạy\s*luồng|chay\s*luong|quay\s*(?:lại|lai)|trở\s*(?:lại|lai)|tro\s*(?:lai))\b",
+    r"|chạy|chay|quay\s*(?:lại|lai)|trở\s*(?:lại|lai)|tro\s*(?:lai))\b",
     re.I)
 # Cau vuot. KHONG doi hoi phai neu huong: vuot khong bam trung thu gi, nen doan
 # sai huong chi lam man khong doi - khac han mot cu tap sai (bam quang cao, mua
@@ -88,11 +89,25 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
         return NoOp("buoc rong")
     if OBSERVE_RE.match(text):
         return NoOp("buoc quan sat - khong thao tac, chuyen sang cham")
+    # Cau ve MANG phai xet truoc cau mo app: "Mo app khong mang" khop ca hai,
+    # ma ve "khong mang" moi la thu case dang hoi. Bo im ve do = PASS gia.
+    if net_ctl.BAT_RE.search(text):
+        return Net(True, "buoc bao bat lai mang")
     if LAUNCH_RE.match(text):
+        if net_ctl.TAT_RE.search(text):
+            return NoOp("tool da mo app khi mang dang tat - buoc nay da xong")
         return NoOp("tool da mo app sau khi patch - buoc nay da xong")
+    if net_ctl.TAT_RE.search(text):
+        return Net(False, "buoc bao tat mang")
     if CONFIG_RE.match(text):
         return NoOp("config da duoc dat truoc do - buoc nay da xong")
     if CONSOLE_RE.search(text) and not QUOTED_RE.search(text):
+        # "Hoan thanh luong FO, doi soat AdMob console": ve doi soat la viec cua
+        # PO, nhung ve DAU van la mot chuyen di that. Bo ca cau la bo luon cu
+        # lai, va moi dong cham ve man cuoi deu thanh "chua toi noi".
+        di = _goto(text)
+        if di:
+            return di
         return NoOp("buoc doi soat tren console ngoai - tool cham ads bang log cua may, "
                     "khong mo console. Khong dong gi den app nen di tiep")
 
@@ -139,8 +154,10 @@ def _goto(text: str) -> Action | None:
     head, *rest = CLAUSE_RE.split(text)
     if not GOTO_RE.match(head):
         return None
-    # Ve sau chi duoc la quan sat. Con lai la mot viec khac ma buoc nay khong lam.
-    if any(not OBSERVE_RE.match(ve) for ve in (v.strip() for v in rest) if ve):
+    # Ve sau chi duoc la quan sat, hoac doi soat console (viec cua PO, khong
+    # phai thao tac tren app). Con lai la mot viec khac ma buoc nay khong lam.
+    if any(not (OBSERVE_RE.match(ve) or CONSOLE_RE.search(ve))
+           for ve in (v.strip() for v in rest) if ve):
         return None
     target = fo_flow.target_for(head)
     if not target:

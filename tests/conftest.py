@@ -171,6 +171,14 @@ class FakeAdb:
         for needle, res in self.fails.items():
             if needle in cmd:
                 return res
+        if "svc wifi" in cmd or "svc data" in cmd:
+            # May that: `svc` khong in gi, trang thai doc bang ping o buoc sau.
+            self.mang = "enable" in cmd
+            return "", "", 0
+        if "ping " in cmd:
+            # Ping la thu DUY NHAT net_ctl tin: `svc` tra ve ngay ca khi mang
+            # chua len. Fake phai tra loi theo dung trang thai svc vua dat.
+            return ("THONG" if getattr(self, "mang", True) else "TAC") + "\n", "", 0
         if " rm -f /data/local/tmp/" in cmd:
             self.tmp.pop(cmd.rsplit(" ", 1)[1], None)
             return "", "", 0

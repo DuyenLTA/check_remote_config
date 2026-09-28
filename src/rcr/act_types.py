@@ -68,6 +68,18 @@ class GoTo:
 
 
 @dataclass(frozen=True, slots=True)
+class Net:
+    """Bat/tat mang tren may. `on=False` la ngat wifi + data."""
+
+    on: bool
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "net", "on": self.on, "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
 class NeedsHuman:
     reason: str
 
@@ -76,4 +88,4 @@ class NeedsHuman:
         return {"kind": "needs_human", "reason": self.reason}
 
 
-Action = Tap | Swipe | Wait | NoOp | GoTo | NeedsHuman
+Action = Tap | Swipe | Wait | NoOp | GoTo | Net | NeedsHuman
