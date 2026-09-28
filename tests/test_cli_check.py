@@ -429,3 +429,43 @@ def test_sdk_rieng_khong_thuoc_luong_FO_thi_goi_theo_ten(adb, tmp_path):
     assert list(runnable) == ["rating#1"]
     # goi ten tab thi KHONG do ban SDK First Open - SDK rieng khong lien quan
     assert "Chỉ chạy tab" in notes[0]
+
+
+def _adb_lai_duoc(adb):
+    """Them cac cau tra loi de FakeAdb lai duoc buoc Action (dump + man dang focus)."""
+    from test_ui_dump import DUMP_XML
+
+    adb.fails.update({
+        "dumpsys window": (f"  mCurrentFocus=Window{{4a2 u0 {COMPONENT}}}\n", "", 0),
+        "uiautomator dump": ("UI hierchary dumped to: /data/local/tmp/rcr_uidump.xml\n", "", 0),
+        "rcr_uidump.xml": (DUMP_XML.replace("com.ai.app", PKG), "", 0),
+    })
+    return adb
+
+
+def test_apply_case_co_buoc_Action_thi_lai_that_tren_may(adb_ui, tmp_path):
+    """Chay het duong apply_case -> case_drive, khong mock o giua.
+
+    Cac test khac deu goi apply_case KHONG kem buoc Action, nen mot tham so
+    thieu o loi goi `case_drive.drive` khong test nao cham toi: suite xanh ma
+    lenh that chet sau 3 giay (2026-09-28, `man_can` chua duoc truyen qua
+    apply_case va _apply_runs).
+    """
+    adb_ui = _adb_lai_duoc(adb_ui)
+    bl = baseline_of(adb_ui)
+    out = asyncio.run(case_run.apply_case(
+        adb_ui, bl, {"enable_onb3_screen": "false"}, True, tmp_path,
+        steps=["Quan sát màn hình"], man_can="",
+    ))
+    assert out["drive"]["steps"][0]["action"]["kind"] == "noop"
+
+
+def test_run_case_co_buoc_Action_thi_lai_that_tren_may(adb_ui, tmp_path):
+    """Nhu tren nhung tu run_case - duong ma run_batch that su goi."""
+    adb_ui = _adb_lai_duoc(adb_ui)
+    bl = baseline_of(adb_ui)
+    out, _ = asyncio.run(case_run.run_case(
+        adb_ui, bl, ({"enable_onb3_screen": "false"},),
+        steps=["Quan sát màn hình"], keep=True, out_dir=tmp_path, dex=False, man_can="",
+    ))
+    assert out["runs"][0]["drive"]["steps"][0]["action"]["kind"] == "noop"

@@ -46,7 +46,7 @@ def _noop(_msg: str) -> None:
 
 async def apply_case(
     client, baseline: RcBaseline, overrides: dict[str, str], keep: bool, out_dir,
-    steps=(), expects=(), goto: str = "", log_fn=_noop,
+    steps=(), expects=(), goto: str = "", log_fn=_noop, man_can=None,
 ) -> dict:
     """patch -> tat han app -> mo lai -> verify -> lai cac buoc -> restore.
 
@@ -167,18 +167,21 @@ async def run_case(
         log_fn("  app da bi xoa data -> doc lai baseline")
         baseline = await rc_baseline.read(client, baseline.serial, baseline.package)
 
-    out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto, log_fn)
+    out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
+                            log_fn, man_can)
     return out | {"reset": reset}, baseline
 
 
-async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto, log_fn) -> dict:
+async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
+                      log_fn, man_can=None) -> dict:
     """Case co gia tri lua chon -> nhieu luot. Verdict case = luot xau nhat."""
     done: list[dict] = []
     for index, overrides in enumerate(runs, 1):
         head = f"  luot {index}/{len(runs)}: " if len(runs) > 1 else "  "
         log_fn(head + ", ".join(f"{k}={v}" for k, v in overrides.items()))
         out = await apply_case(
-            client, baseline, overrides, keep, out_dir, steps, expects, goto, log_fn
+            client, baseline, overrides, keep, out_dir, steps, expects, goto,
+            log_fn, man_can,
         )
         log_fn(f"    foreground sau {out['launch']['waited_s']}s · verify: "
                f"{'CONFIG_OK' if out['verify']['ok'] else 'BLOCKED'} · verdict: {out['verdict']}")
