@@ -527,11 +527,16 @@ def _drive_anim(ket):
                        "anim": {"ob2Bb2SwipeLottie": ket}, "action": {"kind": "noop"}}]}
 
 
-def test_icon_co_chuyen_dong_va_lap_thi_PASS():
+def test_icon_chuyen_dong_khong_dung_thi_PASS():
+    """Animation lap = KHONG dung lai. Khung trung khit nhau la doi hoi sai:
+
+    do that tren may (10 khung cach 0,30s) cap giong nhau nhat van lech 5,5/255
+    vi vung crop chua ca anh nen dang doi.
+    """
     res = a.check("Icon là animation lặp, gợi ý rõ hướng vuốt ngang.", {},
-                  _drive_anim({"doi": True, "lap": True, "lech_max": 19.4, "chu_ky_khung": 2}),
-                  OK_CRASH)
-    assert res["verdict"] == a.PASS and "lặp lại sau 2" in res["reason"]
+                  _drive_anim({"doi": True, "lap": True, "lech_max": 19.4,
+                               "lech_cuoi": 17.0, "so_khung": 10}), OK_CRASH)
+    assert res["verdict"] == a.PASS and "không dừng lại" in res["reason"]
 
 
 def test_icon_dung_yen_thi_FAIL():
@@ -540,10 +545,11 @@ def test_icon_dung_yen_thi_FAIL():
     assert res["verdict"] == a.FAIL and "đứng yên" in res["reason"]
 
 
-def test_co_chuyen_dong_nhung_khong_lap_thi_FAIL():
+def test_chay_mot_lan_roi_dung_thi_FAIL():
     res = a.check("Icon là animation lặp.", {},
-                  _drive_anim({"doi": True, "lap": False, "lech_max": 12.0}), OK_CRASH)
-    assert res["verdict"] == a.FAIL and "không khung nào lặp" in res["reason"]
+                  _drive_anim({"doi": True, "lap": False, "lech_max": 12.0,
+                               "lech_cuoi": 0.3, "so_khung": 10}), OK_CRASH)
+    assert res["verdict"] == a.FAIL and "dừng hẳn" in res["reason"]
 
 
 def test_dong_khong_doi_animation_thi_cham_nhu_phan_tu_thuong():

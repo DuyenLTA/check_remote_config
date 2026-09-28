@@ -36,31 +36,35 @@ def _lech(a, b) -> float:
 
 
 def do(frames: list[bytes], bounds) -> dict:
-    """{doi, lap, lech_max, chu_ky_khung} tu cac khung PNG da chup."""
+    """{doi, lap, lech_max, lech_cuoi} tu cac khung PNG da chup.
+
+    `lap` KHONG doi hai khung trung khit nhau. Do that tren may 2026-09-28
+    (`ob2Bb2SwipeLottie`, 10 khung cach 0,30s): cap giong nhau nhat van lech
+    5,5/255 - vung crop chua ca anh nen dang doi, nen khung khong bao gio lap
+    y het. Dau hieu dung cua "lap" la animation KHONG DUNG LAI: chay mot lan
+    roi thoi thi may khung cuoi dung yen canh nhau.
+    """
     try:
         from PIL import Image
     except ImportError:                       # pragma: no cover - Pillow la phu thuoc that
         return {"doi": False, "lap": False, "loi": "khong co Pillow de so anh"}
-    if len(frames) < 2:
-        return {"doi": False, "lap": False, "loi": "chua du 2 khung de so"}
+    if len(frames) < 3:
+        return {"doi": False, "lap": False, "loi": "chua du 3 khung de so"}
     hop = (bounds.left, bounds.top, bounds.right, bounds.bottom)
     anh = []
     for png in frames:
         try:
             anh.append(Image.open(io.BytesIO(png)).crop(hop).convert("RGB"))
-        except Exception as exc:              # anh hong thi bo khung do, khong lam do ca case
+        except Exception as exc:              # anh hong thi bo khung do
             log.debug("bo mot khung: %s", exc)
-    if len(anh) < 2:
+    if len(anh) < 3:
         return {"doi": False, "lap": False, "loi": "khong doc duoc anh"}
 
-    lech = [_lech(anh[0], x) for x in anh[1:]]
-    doi = max(lech) > NGUONG_DOI
-    lap, chu_ky = False, 0
-    for i in range(len(anh)):
-        for j in range(i + 2, len(anh)):      # bo khung ke nhau: giong la binh thuong
-            if _lech(anh[i], anh[j]) < NGUONG_GIONG:
-                lap, chu_ky = True, j - i
-                break
-        if lap:
-            break
-    return {"doi": doi, "lap": lap, "lech_max": round(max(lech), 2), "chu_ky_khung": chu_ky}
+    lien_tiep = [_lech(anh[i], anh[i + 1]) for i in range(len(anh) - 1)]
+    doi = max(lien_tiep) > NGUONG_DOI
+    # Hai nhip cuoi deu dung yen -> animation da chay xong va dung.
+    dung_lai = all(x < NGUONG_DOI for x in lien_tiep[-2:])
+    return {"doi": doi, "lap": doi and not dung_lai,
+            "lech_max": round(max(lien_tiep), 1),
+            "lech_cuoi": round(lien_tiep[-1], 1),
+            "so_khung": len(anh)}

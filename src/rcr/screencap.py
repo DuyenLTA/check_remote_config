@@ -66,7 +66,9 @@ async def raw(client, serial: str) -> bytes:
     return out if out.startswith(b"\x89PNG") else b""
 
 
-async def frames(client, serial: str, so_khung: int = 4, nhip: float = 0.35) -> list[bytes]:
+# 10 khung cach 0,30s = cua so 2,7 giay: du dai de mot animation chay mot lan
+# roi dung lai lo ra, ma van ngan so voi ~80 giay moi case.
+async def frames(client, serial: str, so_khung: int = 10, nhip: float = 0.30) -> list[bytes]:
     """Vai khung cach nhau `nhip` giay. Khung hong bi bo, khong lam do ca case."""
     import asyncio
 

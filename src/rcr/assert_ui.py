@@ -122,9 +122,10 @@ def _animation_cua(element: dict | None, text: str, drive: dict) -> dict | None:
     if not ket["doi"]:
         return out(FAIL, f"{ten} đứng yên giữa các khung chụp (lệch tối đa "
                          f"{ket.get('lech_max', 0)}/255) — không phải animation", node_id)
+    so = ket.get("so_khung", 0)
     if re.search(r"l[ặa]p|loop|li[êe]n\s*t[ụu]c", text, re.I) and not ket["lap"]:
-        return out(FAIL, f"{ten} có chuyển động nhưng không khung nào lặp lại "
-                         "trong khoảng đã chụp", node_id)
-    chu_ky = ket.get("chu_ky_khung") or 0
-    return out(PASS, f"{ten} đổi giữa các khung (lệch {ket.get('lech_max', 0)}/255)"
-                     + (f", khung lặp lại sau {chu_ky} nhịp chụp" if chu_ky else ""), node_id)
+        return out(FAIL, f"{ten} chạy rồi dừng hẳn — {so} khung cuối đứng yên "
+                         f"(lệch {ket.get('lech_cuoi', 0)}/255), không phải animation lặp",
+                   node_id)
+    return out(PASS, f"{ten} chuyển động suốt {so} khung chụp, không dừng lại "
+                     f"(lệch tối đa {ket.get('lech_max', 0)}/255)", node_id)
