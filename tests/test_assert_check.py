@@ -372,3 +372,44 @@ def test_case_noi_ve_nhieu_vi_tri_thi_khong_thu_hep_dong_impression():
                "Impressions = 0.")
     res = a.check_all(expects, ADS_VI_TRI_KHAC, NO_DRIVE, OK_CRASH)
     assert res["lines"][2]["verdict"] == a.FAIL
+
+
+# --- biet ID vi tri thi vang mat la mot ket luan, khong phai mu tit ----------
+# Do that 2026-09-28: nap checklist ID ads xong, case tat unit phai ra PASS.
+
+ADS_BIET_ID = {
+    "units": ADS_VI_TRI_KHAC["units"],
+    # ID cua chinh vi tri dang test CO trong bang -> vang mat la ket luan duoc.
+    "positions": ["201_lfo1_n_native_high1", "305_onb5_n_native_high"],
+}
+
+
+def test_vi_tri_da_biet_ID_ma_log_khong_co_unit_nao_thi_la_PASS():
+    """Tat unit roi, log khong thay ID do -> dung la 0 request. Ket luan duoc.
+
+    Truoc day van tra NOT_VERIFIABLE vi khong biet ID vi tri nao la vi tri nao,
+    nen mot request khong quy duoc VAN CO THE la cua vi tri dang test.
+    """
+    res = a.check_all(EXPECTS_MOT_UNIT, ADS_BIET_ID, NO_DRIVE, OK_CRASH)
+    assert res["lines"][0]["verdict"] == a.PASS       # dong "KHONG hien thi"
+    assert res["lines"][2]["verdict"] == a.PASS       # dong "Impressions = 0"
+    assert res["verdict"] == a.PASS
+
+
+def test_khong_biet_ID_vi_tri_thi_van_khong_ket_luan():
+    """Khong co `positions` -> giu nguyen NOT_VERIFIABLE, khong doan thanh PASS."""
+    res = a.check_all(EXPECTS_MOT_UNIT, ADS_VI_TRI_KHAC, NO_DRIVE, OK_CRASH)
+    assert res["lines"][0]["verdict"] == a.NOT_VERIFIABLE
+    assert res["lines"][2]["verdict"] == a.NOT_VERIFIABLE
+
+
+def test_biet_ID_ma_vi_tri_do_van_chay_thi_FAIL():
+    """Noi long de bot FAIL oan ma lam tool ngung bat loi that thi con te hon."""
+    ads = {"units": {"native:*****684": {
+        "type": "native", "unit": "*****684", "requested": 2, "loaded": 1,
+        "load_failed": 0, "shown": 1, "impressions": 1, "errors": [],
+        "rc_keys": ["id_201_lfo1_n_native_high1"]}},
+        "positions": ["201_lfo1_n_native_high1"]}
+    res = a.check_all(EXPECTS_MOT_UNIT, ads, NO_DRIVE, OK_CRASH)
+    assert res["lines"][0]["verdict"] == a.FAIL
+    assert res["verdict"] == a.FAIL

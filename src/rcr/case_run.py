@@ -134,7 +134,10 @@ async def _read_ads(client, baseline: RcBaseline) -> dict:
     for row in units.values():
         # Unit khong khop key nao: app hardcode ID, hoac lay tu key app khong doc.
         row["rc_keys"] = ad_log.match_rc_id(row["unit"], rc_ids, row["type"])
-    return {"pid": pid, "units": units, "banner_states": parsed["banner_states"]}
+    # Vi tri DA BIET ID: log khong co unit nao cua vi tri do = vi tri do khong
+    # duoc request, ket luan duoc. Khong biet ID thi im lang khong noi len gi.
+    return {"pid": pid, "units": units, "banner_states": parsed["banner_states"],
+            "positions": sorted(k[3:] for k in rc_ids if k.startswith("id_"))}
 
 
 async def run_case(

@@ -20,7 +20,8 @@ ORDER_RE = re.compile(r"preload|alternate|tr[ưu][ớo]c.*sau", re.I)
 ANY_RE = re.compile(r"b[ấa]t\s*k[ỳy]|nào\b|any\b", re.I)
 
 
-def impression(text: str, units: list[dict], actual: dict, token: str, khop) -> dict:
+def impression(text: str, units: list[dict], actual: dict, token: str, khop,
+               biet_id: bool = False) -> dict:
     """Dong noi ve impression.
 
     `token` la vi tri ma dong - hoac ca case - dang noi toi. Cau "Impressions = 0"
@@ -32,6 +33,14 @@ def impression(text: str, units: list[dict], actual: dict, token: str, khop) -> 
     if token:
         thuoc = [u for u in units if khop(u, token)]
         if not thuoc:
+            # Biet ID cua vi tri ma log khong co unit nao mang ID do -> vi tri
+            # nay khong he chay, impression cua no bang 0. Ket luan duoc.
+            if biet_id:
+                if ZERO_RE.search(text):
+                    return out(PASS, f"không unit nào của `{token}` chạy nên impression = 0 "
+                                     "— đúng kỳ vọng", actual | {"impressions": 0})
+                return out(NEEDS_HUMAN, f"vị trí `{token}` không chạy lượt này nên chưa có "
+                                        "impression để đối chiếu", actual)
             return out(
                 NOT_VERIFIABLE,
                 f"không unit nào trong log map được về vị trí `{token}` nên không "
@@ -75,7 +84,8 @@ def preload_order(kind: str, units: list[dict], actual: dict) -> dict | None:
     return None
 
 
-def negative(text: str, kind: str, requested: list[dict], actual: dict, token: str, khop) -> dict:
+def negative(text: str, kind: str, requested: list[dict], actual: dict, token: str,
+             khop, biet_id: bool = False) -> dict:
     """Cau phu dinh: ky vong KHONG co request."""
     if not requested:
         return out(PASS, f"không unit {kind} nào được request", actual)
@@ -95,6 +105,12 @@ def negative(text: str, kind: str, requested: list[dict], actual: dict, token: s
     charged = [u["unit"] for u in requested if khop(u, token)]
     if charged:
         return out(FAIL, f"vẫn có request {kind} của {token}", actual | {"charged": charged})
+    if biet_id:
+        # ID cua vi tri nay co trong bang, ma khong request nao mang ID do ->
+        # vi tri nay KHONG duoc request. Dung cai ma cau phu dinh doi hoi.
+        return out(PASS, f"không request {kind} nào của `{token}` — ID vị trí này đã biết "
+                         f"nên đối chiếu được, {len(requested)} request còn lại thuộc vị trí khác",
+                   actual)
     khac = sorted({k for u in requested for k in (u.get("rc_keys") or ())})
     return out(NOT_VERIFIABLE,
                f"có {len(requested)} request {kind} nhưng không unit nào map được về vị trí "

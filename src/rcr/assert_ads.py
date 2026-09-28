@@ -142,9 +142,11 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "") -> di
         return out(NOT_VERIFIABLE,
                    "dòng này phải mở console AdMob/Firebase mới biết — ngoài tầm của tool", actual)
 
+    biet = set(ads.get("positions") or ())
     if assert_ad_rules.IMPRESSION_RE.search(text):
+        token = _position_token(text) or scope
         return assert_ad_rules.impression(
-            text, units, actual, _position_token(text) or scope, _khop_vi_tri)
+            text, units, actual, token, _khop_vi_tri, token in biet)
 
     # Cau PHU DINH co chu "alternate" ("khong duoc goi ke ca trong alternate")
     # khong phai cau ta thu tu preload - kiem NEGATIVE truoc.
@@ -154,8 +156,9 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "") -> di
             return ket
 
     if NEGATIVE_RE.search(text):
+        token = _position_token(text)
         return assert_ad_rules.negative(
-            text, kind, requested, actual, _position_token(text), _khop_vi_tri)
+            text, kind, requested, actual, token, _khop_vi_tri, token in biet)
 
     if not SHOW_RE.search(text):
         return out(NOT_VERIFIABLE, f"câu nói về {kind} nhưng không nêu rõ kỳ vọng", actual)
