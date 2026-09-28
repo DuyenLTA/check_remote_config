@@ -152,3 +152,23 @@ def test_tieu_de_co_ban_SDK_thi_ghep_vao():
     data = report_data.page_data(FakeBaseline(), {"total": 2, "runnable": 2, "sdk": "3.5.0"},
                                  [], app_label="Piclux 2.8.0")
     assert data["title"] == "Lượt chấm Piclux 2.8.0 · SDK FO 3.5.0"
+
+
+def test_buoc_khong_thao_tac_phai_noi_duoc_VI_SAO():
+    """"noop" tren report khong noi duoc gi, va no la nhan hay gap nhat.
+
+    Te hon: buoc da lai toi man roi dung dung cho cung ra "noop" - doc vao
+    tuong tool khong lam gi ca (do 2026-09-28, case 17 buoc 1).
+    """
+    rec, _ = page()
+    d = report_row.build(rec)
+    assert all("r" in s for s in d["steps"]), "buoc phai mang theo ly do"
+
+
+def test_report_khong_ro_ma_thao_tac_noi_bo_ra_ngoai():
+    """Tester doc `noop`/`goto`/`net` thi khong hieu gi - phai dich sang chu."""
+    from rcr.report_js import JS
+
+    for ma, chu in (("noop", "không cần thao tác"), ("goto", "lái qua luồng FO"),
+                    ("net", "đổi trạng thái mạng"), ("tap", "bấm")):
+        assert f"{ma}: \"{chu}\"" in JS

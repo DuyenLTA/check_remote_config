@@ -112,8 +112,8 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             # doc log o day la du. 16 thao tac de toi Home ton ~90 giay va
             # khong them mot so do nao cho case nay.
             record["action"] = {"kind": "noop", "target": action.target,
-                                "reason": f"key cua case nam o {man_can or 'splash'}, "
-                                          f"khong can di tiep toi {action.target}"}
+                                "reason": f"key của case nằm ở {man_can or 'splash'}, "
+                                          f"không cần đi tiếp tới {action.target}"}
             log_fn(f"    buoc {index}: dung o {man_can or 'splash'}, bo buoc di toi {action.target}")
             continue
         if isinstance(action, act_resolver.GoTo):
@@ -125,7 +125,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                 # nguoi doc di sua cau TC, trong khi loi nam o bo luat fo_flow.
                 record["action"] = {
                     "kind": "needs_human",
-                    "reason": f"khong lai toi duoc {action.target}, dung o {walk['activity']}",
+                    "reason": f"không lái tới được {action.target}, dừng ở {walk['activity']}",
                 }
                 return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,
                         "blocked_steps": blocked_steps}

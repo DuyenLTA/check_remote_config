@@ -9,6 +9,14 @@ la 60+ case, ban HTML tinh keo theo anh chup se nang toi muc khong mo noi.
 
 JS = """
 const LABEL = {PASS: "PASS", FAIL: "FAIL", BLOCKED: "BLOCKED", NA: "N/A"};
+// Tu vung noi bo cua tool -> chu tester doc duoc. "noop" tren report khong noi
+// duoc gi, ma no la nhan HAY GAP NHAT: phan lon buoc Action cua bo TC la buoc
+// quan sat hoac buoc tool da lam xong o cho khac.
+const THAOTAC = {
+  tap: "bấm", swipe: "vuốt", wait: "chờ", goto: "lái qua luồng FO",
+  net: "đổi trạng thái mạng", noop: "không cần thao tác",
+  needs_human: "tool không tự làm được",
+};
 const TILE = {
   FAIL: "sai so với Expected", BLOCKED: "chưa test được",
   PASS: "đúng như Expected", NA: "ngoài phạm vi tester",
@@ -84,13 +92,14 @@ function shots(d) {
   if (!has.length) return "";
   return `<div class="full"><h4>Ảnh từng bước</h4><div class="shots">` + has.map(s =>
     `<figure><img loading="lazy" src="${s.shot}" alt="${esc(s.s)}">` +
-    `<figcaption>#${s.n} ${esc(s.k)}</figcaption></figure>`).join("") + `</div></div>`;
+    `<figcaption>#${s.n} ${esc(THAOTAC[s.k] || s.k)}</figcaption></figure>`).join("") + `</div></div>`;
 }
 function steps(d) {
   if (!d.steps.length) return "";
   return `<div class="full"><h4>Các bước đã lái</h4><ol>` + d.steps.map(s =>
-    `<li>${esc(s.s)} <span class="why">→ ${esc(s.k)}` +
-    (s.blocked ? " · màn bị che" : "") + `</span></li>`).join("") + `</ol></div>`;
+    `<li>${esc(s.s)}<span class="why">${esc(THAOTAC[s.k] || s.k)}` +
+    (s.r ? ` — ${esc(s.r)}` : "") + (s.blocked ? " · màn bị quảng cáo che" : "") +
+    `</span></li>`).join("") + `</ol></div>`;
 }
 function row(d) {
   return `<div class="row" id="c${d.n}">

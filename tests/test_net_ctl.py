@@ -21,14 +21,14 @@ PRE_18 = """1. Cai build SDK visionlab:tutorial:3.5.0.
 
 def test_doc_duoc_cau_tat_va_bat_lai_mang():
     assert act_resolver.resolve("Bật lại mạng khi vẫn đang trong luồng FO.", []).summary == {
-        "kind": "net", "on": True, "reason": "buoc bao bat lai mang"}
+        "kind": "net", "on": True, "reason": "bước bảo bật lại mạng"}
     assert act_resolver.resolve("Tắt mạng.", []).summary["on"] is False
 
 
 def test_mo_app_khong_mang_khong_bi_nuot_thanh_mo_app_thuong():
     """Ve "khong mang" phai duoc nhac trong ly do, khong duoc bien mat."""
     ra = act_resolver.resolve("Mở app không mạng, chờ ở Splash.", []).summary
-    assert ra["kind"] == "noop" and "mang dang tat" in ra["reason"]
+    assert ra["kind"] == "noop" and "mạng đang tắt" in ra["reason"]
 
 
 def test_cau_co_internet_on_dinh_khong_bi_hieu_thanh_tat_mang():

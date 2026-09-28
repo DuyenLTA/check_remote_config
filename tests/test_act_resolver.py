@@ -45,7 +45,7 @@ def test_hai_node_cung_khop_thi_khong_doan():
 
 def test_khong_thay_node_thi_khong_tap_bua():
     act = kind('Nhấn nút "Khong Co Nut Nay"')
-    assert isinstance(act, act_resolver.NeedsHuman) and "khong thay node" in act.reason
+    assert isinstance(act, act_resolver.NeedsHuman) and "không thấy phần tử" in act.reason
 
 
 def test_cau_khong_dich_duoc_giu_nguyen_van():
@@ -82,7 +82,7 @@ def test_node_long_nhau_cung_khop_chi_tinh_node_ngoai():
 def test_buoc_mo_app_la_viec_tool_da_lam(step):
     """Tool tu mo app sau khi patch - buoc nay khong con gi de lam."""
     act = kind(step)
-    assert isinstance(act, act_resolver.NoOp) and "da mo app" in act.reason
+    assert isinstance(act, act_resolver.NoOp) and "đã được mở lại" in act.reason
 
 
 @pytest.mark.parametrize("step", ["Config RC", "Cấu hình remote config", "Đặt RC"])

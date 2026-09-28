@@ -109,7 +109,7 @@ def test_lai_hut_thi_noi_ket_o_dau_chu_khong_noi_khong_dich_duoc_buoc(monkeypatc
     adb = fake(f"{PKG}/.SettingsActivity")
     out = drive(adb, ["Hoàn thành luồng FO đến Home."])
     assert out["status"] == "NEEDS_HUMAN" and out["stopped_at"] == 1
-    assert "khong lai toi duoc MainActivity" in out["steps"][0]["action"]["reason"]
+    assert "không lái tới được MainActivity" in out["steps"][0]["action"]["reason"]
 
 
 def test_buoc_vuot_vuot_that_tren_may():
@@ -143,7 +143,7 @@ def test_buoc_di_toi_Home_bi_bo_khi_key_cua_case_nam_o_man_som_hon():
     out = drive(adb, ["Hoàn thành luồng FO đến Home."], man_can="")   # "" = splash
     assert out["status"] == "DONE"
     assert out["steps"][0]["action"]["kind"] == "noop"
-    assert "khong can di tiep" in out["steps"][0]["action"]["reason"]
+    assert "không cần đi tiếp" in out["steps"][0]["action"]["reason"]
 
 
 def test_van_di_toi_Home_khi_khong_biet_case_noi_ve_man_nao():

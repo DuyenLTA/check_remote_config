@@ -38,7 +38,7 @@ async def _chup_ket(client, serial: str, package: str, index: int,
     return {"n": index, "step": "(sau bước cuối)", "activity": activity, "dump": xml,
             "shot": shot["thumb"], "shot_warning": shot["warning"],
             "page": trang, "page_nguon": nguon if trang else "",
-            "action": {"kind": "noop", "reason": "chup lai man sau khi lam xong cac buoc"}}
+            "action": {"kind": "noop", "reason": "chụp lại màn sau khi làm xong các bước"}}
 
 
 async def _thu_vuot(client, serial: str, package: str, truoc: dict, index: int) -> dict:

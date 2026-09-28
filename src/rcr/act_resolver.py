@@ -86,21 +86,21 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     """Mot buoc Action -> thao tac. Khong dich duoc -> NeedsHuman."""
     text = (step or "").strip()
     if not text:
-        return NoOp("buoc rong")
+        return NoOp("bước rỗng")
     if OBSERVE_RE.match(text):
-        return NoOp("buoc quan sat - khong thao tac, chuyen sang cham")
+        return NoOp("bước quan sát — không thao tác, chuyển thẳng sang chấm")
     # Cau ve MANG phai xet truoc cau mo app: "Mo app khong mang" khop ca hai,
     # ma ve "khong mang" moi la thu case dang hoi. Bo im ve do = PASS gia.
     if net_ctl.BAT_RE.search(text):
-        return Net(True, "buoc bao bat lai mang")
+        return Net(True, "bước bảo bật lại mạng")
     if LAUNCH_RE.match(text):
         if net_ctl.TAT_RE.search(text):
-            return NoOp("tool da mo app khi mang dang tat - buoc nay da xong")
-        return NoOp("tool da mo app sau khi patch - buoc nay da xong")
+            return NoOp("app đã được mở sẵn trong lúc mạng đang tắt — bước này xong rồi")
+        return NoOp("app đã được mở lại sau khi đặt config — bước này xong rồi")
     if net_ctl.TAT_RE.search(text):
-        return Net(False, "buoc bao tat mang")
+        return Net(False, "bước bảo tắt mạng")
     if CONFIG_RE.match(text):
-        return NoOp("config da duoc dat truoc do - buoc nay da xong")
+        return NoOp("config đã được đặt trước đó — bước này xong rồi")
     if CONSOLE_RE.search(text) and not QUOTED_RE.search(text):
         # "Hoan thanh luong FO, doi soat AdMob console": ve doi soat la viec cua
         # PO, nhung ve DAU van la mot chuyen di that. Bo ca cau la bo luon cu
@@ -108,14 +108,14 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
         di = _goto(text)
         if di:
             return di
-        return NoOp("buoc doi soat tren console ngoai - tool cham ads bang log cua may, "
-                    "khong mo console. Khong dong gi den app nen di tiep")
+        return NoOp("đối soát trên console ngoài — việc của PO; tool chấm ads bằng log "
+                    "của máy. Bước này không động gì đến app nên đi tiếp")
 
     wait = WAIT_RE.match(text)
     if wait and not QUOTED_RE.search(text):
         seconds = float(wait.group(1)) if wait.group(1) else DEFAULT_WAIT
         if seconds > MAX_WAIT:
-            return NeedsHuman(f"cho {seconds:g}s - qua {MAX_WAIT:g}s, TC co ve viet nham")
+            return NeedsHuman(f"chờ {seconds:g}s — quá {MAX_WAIT:g}s, TC có vẻ viết nhầm")
         return Wait(seconds)
 
     if SWIPE_RE.match(text):
@@ -136,15 +136,15 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     goto = _goto(text)
     if goto:
         return goto
-    return NeedsHuman(f"khong dich duoc buoc: {text!r}")
+    return NeedsHuman(f"không dịch được bước: {text!r}")
 
 
 def _swipe(text: str) -> Action:
     """Cau vuot -> Swipe. Huong lay tu cau, khong neu thi lay huong sang trang ke."""
     for pattern, direction in DIRECTION_WORDS:
         if pattern.search(text):
-            return Swipe(direction, f"huong trong cau: {direction}")
-    return Swipe(DEFAULT_SWIPE, "TC khong neu huong - lay huong sang trang ke")
+            return Swipe(direction, f"hướng nêu trong câu: {direction}")
+    return Swipe(DEFAULT_SWIPE, "TC không nêu hướng — lấy hướng sang trang kế")
 
 
 def _goto(text: str) -> Action | None:
@@ -162,14 +162,14 @@ def _goto(text: str) -> Action | None:
     target = fo_flow.target_for(head)
     if not target:
         return None
-    return GoTo(target, f"lai qua luong FO toi {target}")
+    return GoTo(target, f"lái qua luồng FO tới {target}")
 
 
 def _tap_by_text(wanted: str, nodes: list[DeviceNode], matched: str) -> Action:
     """Tim node theo text/content-desc. Phai DUY NHAT moi tap."""
     hits = find(wanted, nodes)
     if not hits:
-        return NeedsHuman(f"khong thay node nao khop {wanted!r} tren man hinh")
+        return NeedsHuman(f"không thấy phần tử nào khớp {wanted!r} trên màn hình")
     if len(hits) > 1:
         names = ", ".join(n.label for n in hits[:4])
         return NeedsHuman(

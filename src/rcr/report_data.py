@@ -101,6 +101,10 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         "banner_states": [s["state"] for s in (run.get("ads") or {}).get("banner_states", [])],
         "steps": [
             {"n": s["n"], "s": s["step"], "k": s["action"]["kind"],
+             # Ly do la thu DUY NHAT giai thich mot buoc "khong thao tac":
+             # bo no di thi buoc lai-roi-dung-dung-cho va buoc that su khong
+             # lam gi trong y het nhau tren report.
+             "r": s["action"].get("reason", ""),
              "blocked": bool(s.get("screen_blocked")),
              "shot": s.get("shot", ""), "shot_warning": s.get("shot_warning", "")}
             for s in drive.get("steps", [])
