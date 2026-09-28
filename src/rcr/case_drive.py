@@ -31,6 +31,8 @@ from . import (act_resolver, device_app, drive_probes, fo_flow, fo_steps, net_ct
 log = logging.getLogger(__name__)
 
 AD_HINTS = ("adactivity", "com.google.android.gms.ads")
+# Cho SDK co co hoi retry sau khi mang len lai, truoc khi doc log.
+CHO_SAU_KHI_CO_MANG = 6.0
 
 
 def _noop(_msg: str) -> None:
@@ -147,6 +149,11 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             record["net"] = ket
             log_fn(f"    buoc {index}: mang -> {ket['mang']}"
                    + (" (ping thong)" if ket["thong"] else " (ping khong di)"))
+            if action.on:
+                # Ca cau hoi cua case la "mang len lai thi SDK co request len
+                # unit da tat khong". Doc log ngay luc vua co mang la doc truoc
+                # khi SDK kip retry - khong thay gi roi bao PASS.
+                await asyncio.sleep(CHO_SAU_KHI_CO_MANG)
         elif isinstance(action, act_resolver.Wait):
             await asyncio.sleep(action.seconds)
     cuoi = await drive_probes._chup_ket(client, serial, package, len(done) + 1,

@@ -76,3 +76,22 @@ def test_precondition_di_qua_du_ba_tang_run_case(adb_ui, tmp_path):
         keep=True, dex=False, man_can="",
     ))
     assert [c for c in adb_ui.calls if "svc wifi disable" in c]
+
+
+def test_dung_o_man_SAU_CUNG_ma_case_dong_toi_chu_khong_di_het():
+    """Case tat mot loat unit truoc day khong ra vi tri nao -> di het toi Home.
+
+    Case 17 tat 10 unit tu 102 (splash) den 303 (OB3): xa nhat la OB3, bon man
+    sau do khong co unit nao cua case.
+    """
+    from rcr import assert_ads, fo_flow
+
+    keys = {"show_102_spl_n_inter_high1", "show_201_lfo1_n_native_high1",
+            "show_303_onb3_n_native_high2"}
+    assert fo_flow.man_sau_cung(assert_ads.vi_tri_cua_case(keys)) == "OnboardingActivity#3"
+    # Chi unit splash -> dung ngay o splash.
+    assert fo_flow.man_sau_cung(
+        assert_ads.vi_tri_cua_case({"show_102_spl_n_inter_high1"})) == ""
+    # Ma khong biet -> di het, dung doan roi dung som.
+    assert fo_flow.man_sau_cung(("999_gi_do",)) is None
+    assert fo_flow.man_sau_cung(()) is None

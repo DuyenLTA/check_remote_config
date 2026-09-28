@@ -93,14 +93,32 @@ async def run(args: argparse.Namespace) -> dict:
         runs = (parse_sets(args.set),)
     if args.tc:
         sdk, source = args.sdk, "tham so --sdk"
-        if not sdk and not args.tab and tc_select.needs_sdk(Path(args.tc)):
+        # Bo TC mot sheet khong can ban SDK de CHON tab, nhung report van phai
+        # noi duoc no do ban nao - do tu logcat roi chi dung de hien.
+        chi_de_hien = not tc_select.needs_sdk(Path(args.tc))
+        if not sdk and not args.tab:
             # Bo chung chia tab theo ban SDK - do that con hon bat nguoi go tay,
             # go nham ban la cham bang TC cua ban khac ma khong ai biet.
-            _log("Bo TC chung - do ban SDK First Open tu logcat...")
-            probe = await sdk_probe.detect(client, serial, args.package)
-            sdk, source = probe["version"], probe["source"]
-            _log(f"  SDK FO: {sdk} ({source})")
-        rows, runnable, notes = tc_select.load_cases(args.tc, baseline, sdk, args.tab)
+            #
+            # Bo mot sheet thi ban SDK chi de in len report: luc do KHONG duoc
+            # mo lai app chi de doc mot dong log - do la mot luot khoi dong
+            # thua cho moi lan chay. Soi buffer co san, khong thay thi de trong.
+            _log("Do ban SDK First Open tu logcat..."
+                 + (" (chi de in len report)" if chi_de_hien else ""))
+            try:
+                probe = await sdk_probe.detect(
+                    client, serial, args.package, relaunch=not chi_de_hien)
+                sdk, source = probe["version"], probe["source"]
+                _log(f"  SDK FO: {sdk} ({source})")
+            except AdbError:
+                if not chi_de_hien:
+                    raise
+                source = "khong doc duoc tu buffer logcat"
+                _log("  khong doc duoc ban SDK - de trong tren report")
+        # Ban do duoc chi de hien thi thi KHONG duoc dung de chon tab: bo mot
+        # sheet von khong chia ban, truyen vao la doi cach chon case.
+        rows, runnable, notes = tc_select.load_cases(
+            args.tc, baseline, "" if chi_de_hien else sdk, args.tab)
         out["tc"] = {
             "file": args.tc, "sdk": sdk, "sdk_source": source, "notes": notes,
             "total": len(rows), "runnable": len(runnable), "cases": rows,

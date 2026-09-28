@@ -55,6 +55,25 @@ def man_cua_ma(token: str) -> str | None:
     return MAN_THEO_MA.get(ma) if ma in MAN_THEO_MA else None
 
 
+def man_sau_cung(tokens) -> str | None:
+    """Man xa nhat trong so cac vi tri case dong toi. None = phai di het.
+
+    Case tat mot LOAT unit (case 17: 10 unit tu 102 den 303) thi khong co mot
+    "man cua case" duy nhat - truoc day tra None va di het luong toi Home, du
+    vi tri xa nhat chi la OB3. Bon man sau OB3 (OB4, OB5, Question, paywall)
+    khong co unit nao cua case, di qua chi ton thoi gian.
+
+    Mot ma khong biet -> None: doan nham ma dung som la bo sot chinh cho can do.
+    """
+    mans = []
+    for token in tokens:
+        man = man_cua_ma(token)
+        if man is None:
+            return None
+        mans.append(man)
+    return max(mans, key=thu_tu) if mans else None
+
+
 def thu_tu(target: str) -> int:
     """Man nay o buoc thu may cua luong. Khong biet -> xep cuoi (di het)."""
     return THU_TU.index(target) if target in THU_TU else len(THU_TU)

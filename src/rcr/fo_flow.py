@@ -23,6 +23,7 @@ from .fo_screens import (  # noqa: F401 - tai xuat cho cho goi cu
     SCREEN_WORDS,
     THU_TU,
     man_cua_ma,
+    man_sau_cung,
     target_for,
     thu_tu,
 )

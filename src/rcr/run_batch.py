@@ -53,8 +53,16 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # Ma vi tri ads noi san key cua case nam o man nao. Buoc Action cua
             # TC van bao "Hoan thanh luong FO den Home", nhung doc log o dung
             # man do la du - di tiep chi ton thoi gian.
-            man_can = None if args.full_walk else fo_flow.man_cua_ma(
-                assert_ads.case_position(chosen["expects"]))
+            #
+            # Lay vi tri tu CA HAI nguon: key ma case dat, va ma trong dong
+            # Expected. Chi doc dong Expected thi case tat mot loat unit
+            # (case 17: 10 unit) khong ra vi tri nao va phai di het luong.
+            tokens = set(assert_ads.vi_tri_cua_case(
+                {k for luot in chosen["runs"] for k in luot}))
+            trong_cau = assert_ads.case_position(chosen["expects"])
+            if trong_cau:
+                tokens.add(trong_cau)
+            man_can = None if args.full_walk else fo_flow.man_sau_cung(tokens)
             result, baseline = await case_run.run_case(
                 client, baseline, chosen["runs"], chosen["precondition"],
                 () if args.no_actions else chosen["actions"], chosen["expects"], goto,

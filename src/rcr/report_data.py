@@ -111,15 +111,21 @@ def case_record(key: str, row: dict, result: dict) -> dict:
 def page_data(baseline, tc: dict, records: list[dict], app_label: str = "") -> dict:
     """Du lieu day du cho `report_html.build`."""
     name = app_label or baseline.package.split(".")[-1]
-    sdk = tc.get("sdk") or "—"
+    # "—" la cho HIEN o o trong bang, KHONG duoc ghep vao tieu de: tieu de
+    # thanh "Luot cham Piclux —", dau gach cut duoi (do 2026-09-28).
+    ban = (tc.get("sdk") or "").strip()
+    sdk = ban or "—"
     notes = tc.get("notes") or []
     # Ghi chu kieu "app moi hon delta moi nhat" phai len dau trang: doc so lieu
     # ma khong biet bo TC lech ban la hieu sai ca luot.
     warn = " · ".join(n for n in notes if "moi hon" in n or "Bo qua" in n)
     tabs = ", ".join(sorted({c.get("tab", "") for c in records if c.get("tab")}))
     return {
-        "title": f"Lượt chấm {name} {sdk}",
-        "eyebrow": f"Remote Config Case Runner · TC SDK {tabs or sdk}",
+        # "Piclux 2.8.0 3.5.0" - hai so version dinh nhau, khong ai doc ra cai
+        # nao la app cai nao la SDK. Ban SDK phai co nhan di kem.
+        "title": f"Lượt chấm {name}" + (f" · SDK FO {ban}" if ban else ""),
+        "eyebrow": "Remote Config Case Runner"
+                   + (f" · TC SDK {tabs or ban}" if (tabs or ban) else ""),
         "warn": warn,
         "subtitle": (
             f"{len(records)} case lấy từ bộ TC chung, chạy trên máy thật — mỗi case tự đặt "
