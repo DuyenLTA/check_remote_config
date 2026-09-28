@@ -161,3 +161,27 @@ def test_van_di_tiep_khi_man_cua_case_nam_sau(monkeypatch):
         adb, "29301FDH2006K7", PKG, ["Vào màn Onboarding 2."],
         man_can="OnboardingActivity#3"))
     assert out["steps"][0]["action"]["kind"] != "noop"
+
+
+def test_trang_OB_suy_ra_khi_man_do_khong_co_cham_chi_trang():
+    """OB3 la trang quang cao native toan man, khong cham nao de dem.
+
+    Tool van biet: no DO duoc trang truoc do va chinh no vuot. Chi suy khi man
+    that su doi - mot cu vuot khong an thi dump giong het, khong duoc tinh.
+    """
+    adb = fake()
+    out = drive(adb, ["Vuốt sang trái."], man_can=None)
+    cuoi = out["final"]
+    assert cuoi["step"] == "(sau bước cuối)"
+    # DUMP_XML khong co node `dot` -> khong doc duoc trang, va dump khong doi
+    # (FakeAdb tra cung mot xml) -> KHONG suy bua.
+    assert cuoi["page"] == 0 and cuoi["page_nguon"] == ""
+
+
+def test_khong_suy_trang_khi_man_khong_doi():
+    """Man khong doi = cu vuot khong an -> khong duoc tinh la da sang trang."""
+    import rcr.case_drive as cd
+
+    cuoi = asyncio.run(cd._chup_ket(fake(), "29301FDH2006K7", PKG, 9,
+                                    trang_cu=2, vuot=1, dump_cu=APP_XML))
+    assert cuoi["page"] == 0

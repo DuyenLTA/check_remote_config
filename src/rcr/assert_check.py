@@ -191,7 +191,13 @@ def _man_da_toi(text: str, drive: dict) -> dict | None:
         now = cuoi.get("page") or 0
         if not now:
             return out(NEEDS_HUMAN, f"đang ở {gon} nhưng không đọc được đang ở trang thứ mấy", gon)
+        # Trang suy ra (OB3 khong co cham chi trang) phai noi ro trong ly do:
+        # nguoi doc can biet so nay do duoc hay tinh ra.
+        cach = (" (suy từ trang đo được + số lần vuốt, màn đã đổi thật)"
+                if cuoi.get("page_nguon") == "suy_ra" else "")
         if str(now) != trang:
-            return out(FAIL, f"đang ở {gon} trang {now}, kỳ vọng trang {trang}", f"{gon} trang {now}")
-        return out(PASS, f"sau bước cuối đang ở {gon} trang {now} — đúng kỳ vọng", f"{gon} trang {now}")
+            return out(FAIL, f"đang ở {gon} trang {now}, kỳ vọng trang {trang}{cach}",
+                       f"{gon} trang {now}")
+        return out(PASS, f"sau bước cuối đang ở {gon} trang {now} — đúng kỳ vọng{cach}",
+                   f"{gon} trang {now}")
     return out(PASS, f"sau bước cuối đang ở {gon} — đúng kỳ vọng", gon)
