@@ -18,6 +18,14 @@ import logging
 from pathlib import Path
 
 from . import device_app, fo_steps, ui_dump
+from .fo_screens import (  # noqa: F401 - tai xuat cho cho goi cu
+    MAN_THEO_MA,
+    SCREEN_WORDS,
+    THU_TU,
+    man_cua_ma,
+    target_for,
+    thu_tu,
+)
 from .adb_parsers import AdbError
 from .app_sandbox import guard
 
@@ -35,33 +43,6 @@ def rules() -> dict:
     import yaml
 
     return yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}
-
-
-# Case noi ve man nao -> lai toi activity nao. Doc tu nhan/Precondition cua
-# case, vi bo TC khong co cot nao khai man hinh.
-# `#N` la trang thu N trong cung mot activity (cac trang OB dung chung activity).
-SCREEN_WORDS = (
-    ("onb2", "OnboardingActivity#2"), ("onb3", "OnboardingActivity#3"),
-    ("onb4", "OnboardingActivity#4"), ("onb1", "OnboardingActivity#1"),
-    ("ob1", "OnboardingActivity#1"), ("ob2", "OnboardingActivity#2"),
-    ("ob3", "OnboardingActivity#3"), ("ob4", "OnboardingActivity#4"),
-    ("onboarding 2", "OnboardingActivity#2"), ("onboarding 3", "OnboardingActivity#3"),
-    ("onboarding", "OnboardingActivity"), ("onb", "OnboardingActivity"),
-    ("question", "QuestionActivity"), ("language", "LanguageActivity"),
-    ("lfo", "LanguageActivity"), ("paywall", "BillingActivity"),
-    ("home", "MainActivity"),
-)
-
-
-def target_for(text: str) -> str:
-    """Man can lai toi, "" neu case chi noi ve splash (app tu o do sau khi mo)."""
-    low = (text or "").casefold()
-    if "splash" in low or "spl" in low:
-        return ""
-    for word, activity in SCREEN_WORDS:
-        if word in low:
-            return activity
-    return ""
 
 
 def rule_for(activity: str, ruleset: list[dict]) -> dict | None:

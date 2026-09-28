@@ -9,7 +9,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import case_run, fo_flow, rc_patch, report_data, report_html, tc_select
+from . import (
+    assert_ads,
+    case_run,
+    fo_flow,
+    rc_patch,
+    report_data,
+    report_html,
+    tc_select,
+)
 from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
 
@@ -42,10 +50,16 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             goto = "" if args.no_walk else fo_flow.target_for(
                 f"{row.get('label', '')} {row.get('feature', '')} {chosen['precondition']}"
             )
+            # Ma vi tri ads noi san key cua case nam o man nao. Buoc Action cua
+            # TC van bao "Hoan thanh luong FO den Home", nhung doc log o dung
+            # man do la du - di tiep chi ton thoi gian.
+            man_can = None if args.full_walk else fo_flow.man_cua_ma(
+                assert_ads.case_position(chosen["expects"]))
             result, baseline = await case_run.run_case(
                 client, baseline, chosen["runs"], chosen["precondition"],
                 () if args.no_actions else chosen["actions"], chosen["expects"], goto,
-                keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check, log_fn=log_fn,
+                keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
+                log_fn=log_fn, man_can=man_can,
             )
         except AdbTransportError:
             raise  # mat ket noi may: chay tiep la vo nghia

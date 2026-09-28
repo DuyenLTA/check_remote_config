@@ -18,7 +18,7 @@ from rcr.adb_parsers import AdbTransportError
 from rcr.models import RcError
 
 ARGS = types.SimpleNamespace(
-    case="a,b,c", no_actions=True, no_walk=True, keep=False, out_dir=".",
+    case="a,b,c", no_actions=True, no_walk=True, full_walk=False, keep=False, out_dir=".",
     no_dex_check=True, report="", app_label="", tab="", sdk="",
 )
 RUNNABLE = {k: {"runs": ({"k": "v"},), "precondition": "", "actions": (), "expects": ()}

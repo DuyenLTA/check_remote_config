@@ -154,6 +154,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help=f"noi luu snapshot config goc (mac dinh {DEFAULT_OUT})")
     p.add_argument("--no-walk", action="store_true",
                    help="khong lai qua luong First Open de toi man cua case")
+    p.add_argument("--full-walk", action="store_true",
+                   help="di het luong FO nhu TC ghi, ke ca khi key cua case nam o man som hon")
     p.add_argument("--no-actions", action="store_true",
                    help="chi dat config, khong lai app qua cac buoc Action cua case")
     p.add_argument("--fresh", action="store_true",

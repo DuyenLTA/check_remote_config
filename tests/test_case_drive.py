@@ -29,8 +29,9 @@ def fake(activity=COMPONENT):
     })
 
 
-def drive(adb, steps):
-    return asyncio.run(case_drive.drive(adb, "29301FDH2006K7", PKG, steps))
+def drive(adb, steps, man_can=None):
+    """man_can=None = khong biet case noi ve man nao -> di het nhu TC bao."""
+    return asyncio.run(case_drive.drive(adb, "29301FDH2006K7", PKG, steps, man_can=man_can))
 
 
 def test_quang_cao_che_man_hinh_thi_dung_va_khong_tap():
@@ -128,3 +129,33 @@ def test_quang_cao_che_man_khong_chan_buoc_vuot():
     out = drive(adb, ["Vuốt sang trái."])
     assert out["status"] == "DONE"
     assert adb.cmds_with("input swipe")
+
+
+def test_buoc_di_toi_Home_bi_bo_khi_key_cua_case_nam_o_man_som_hon():
+    """Ma vi tri noi san man: 102 o splash thi doc log o splash la du.
+
+    Buoc Action cua TC van ghi "Hoan thanh luong FO den Home" - di het mat 16
+    thao tac (~90 giay) ma khong them mot so do nao cho case nay.
+    """
+    adb = fake()
+    out = drive(adb, ["Hoàn thành luồng FO đến Home."], man_can="")   # "" = splash
+    assert out["status"] == "DONE"
+    assert out["steps"][0]["action"]["kind"] == "noop"
+    assert "khong can di tiep" in out["steps"][0]["action"]["reason"]
+
+
+def test_van_di_toi_Home_khi_khong_biet_case_noi_ve_man_nao():
+    """man_can=None (case khong co ma vi tri) -> di het nhu TC bao."""
+    adb = fake()
+    out = asyncio.run(case_drive.drive(
+        adb, "29301FDH2006K7", PKG, ["Hoàn thành luồng FO đến Home."], man_can=None))
+    assert out["steps"][0]["action"]["kind"] in ("goto", "needs_human")
+
+
+def test_van_di_tiep_khi_man_cua_case_nam_sau(monkeypatch):
+    """Case ve 303 (OB3) thi buoc di toi OB3 khong bi bo."""
+    adb = fake()
+    out = asyncio.run(case_drive.drive(
+        adb, "29301FDH2006K7", PKG, ["Vào màn Onboarding 2."],
+        man_can="OnboardingActivity#3"))
+    assert out["steps"][0]["action"]["kind"] != "noop"

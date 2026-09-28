@@ -84,7 +84,7 @@ async def apply_case(
             out["drive"] = await _snapshot(client, baseline, out["walk"]["activity"])
     if steps and result.ok:
         driven = await case_drive.drive(
-            client, baseline.serial, baseline.package, steps, log_fn
+            client, baseline.serial, baseline.package, steps, log_fn, man_can
         )
         # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
         driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]
@@ -139,7 +139,7 @@ async def _read_ads(client, baseline: RcBaseline) -> dict:
 
 async def run_case(
     client, baseline: RcBaseline, runs, precondition: str = "", steps=(), expects=(),
-    goto: str = "", *, keep=False, out_dir=".", dex=True, log_fn=_noop,
+    goto: str = "", *, keep=False, out_dir=".", dex=True, log_fn=_noop, man_can=None,
 ) -> tuple[dict, RcBaseline]:
     """Chay tron mot case. Tra (ket qua, baseline dang dung).
 

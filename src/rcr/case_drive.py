@@ -36,6 +36,14 @@ def _noop(_msg: str) -> None:
     pass
 
 
+def _di_qua(man_can: str | None, target: str) -> bool:
+    """Buoc nay lai QUA man ma case can quan sat?
+
+    `man_can` None nghia la khong biet case noi ve man nao -> di het nhu TC bao.
+    """
+    return man_can is not None and fo_flow.thu_tu(target) > fo_flow.thu_tu(man_can)
+
+
 def blocking_screen(package: str, pkg: str, activity: str) -> str:
     """Man hinh hien tai co can nguoi xu ly truoc khong -> ly do, "" neu on."""
     if any(h in activity.casefold() for h in AD_HINTS):
@@ -50,7 +58,7 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
     return ""
 
 
-async def drive(client, serial: str, package: str, steps, log_fn=_noop) -> dict:
+async def drive(client, serial: str, package: str, steps, log_fn=_noop, man_can: str | None = None) -> dict:
     """Chay lan luot cac buoc. Tra nhat ky tung buoc + dump de phase 5 cham.
 
     Man hinh bi che CHI chan buoc phai cham vao man hinh. Buoc quan sat va buoc
@@ -87,6 +95,15 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop) -> dict:
                + (f" (man hinh bi che: {activity})" if blocked else ""))
         done.append(record)
 
+        if isinstance(action, act_resolver.GoTo) and _di_qua(man_can, action.target):
+            # Buoc TC bao di tiep, nhung key cua case nam o man truoc do roi:
+            # doc log o day la du. 16 thao tac de toi Home ton ~90 giay va
+            # khong them mot so do nao cho case nay.
+            record["action"] = {"kind": "noop", "target": action.target,
+                                "reason": f"key cua case nam o {man_can or 'splash'}, "
+                                          f"khong can di tiep toi {action.target}"}
+            log_fn(f"    buoc {index}: dung o {man_can or 'splash'}, bo buoc di toi {action.target}")
+            continue
         if isinstance(action, act_resolver.GoTo):
             # Quang cao dang che van lai duoc: `fo_flow` co luat rieng cho
             # AdActivity (cho ad chay xong roi dong), khong phai tu mo nut X.
