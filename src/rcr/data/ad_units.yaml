@@ -1,0 +1,61 @@
+# ID ads tung vi tri, cho nhung vi tri REMOTE CONFIG KHONG chua ID.
+#
+# Log AdMob che ID con 3 so cuoi. Tool quy mot request ve vi tri bang cach so
+# duoi ID voi cac key `id_* = ca-app-pub-...` trong remote config - nhung app
+# chi khai `id_*` cho tier goc va `_high`. Moi tier `high1`/`high2` deu khong
+# co `id_*` nao, ma bo TC 3.5.0 lai test chu yeu vao chung: 92 vi tri co
+# `show_*`, chi 9 vi tri map duoc (do 2026-09-28, Piclux).
+#
+# Nguon: sheet "Check thong so KT" cua team QA, moi app mot tab.
+# DAY LA SO TEAM KHAI, khong phai so do tu may. Sheet cu hon build dang test
+# thi tool quy request cho sai vi tri - sua sheet truoc khi do lai.
+#
+# Ten vi tri trong sheet viet lan lon `-` va `_` -> chuan hoa thanh
+# `id_<vi_tri>`, dung dinh dang key remote config ma cac luat cham dang doi.
+#
+# Hai vi tri co the trung 3 so cuoi (Piclux: `528` la ca 102-spl-n-inter-high1
+# lan 202-lfo2-n-native-high2). Loai ad trong log tach duoc chung; trung ca
+# loai thi `ad_log.match_rc_id` tra ve nhieu key va khong duoc dung lam bang
+# chung FAIL.
+
+aiphotogenerator.photoshoot.aiart.aiimagegenerator:
+  id_101_spl_a_banner: ca-app-pub-4584260126367940/5926557825
+  id_101_spl_a_banner_high: ca-app-pub-4584260126367940/7239639495
+  id_102_spl_n_inter: ca-app-pub-4584260126367940/3436125854
+  id_102_spl_n_inter_high: ca-app-pub-4584260126367940/2920391588
+  id_102_spl_n_inter_high1: ca-app-pub-4584260126367940/4749207528
+  id_102_spl_o_inter: ca-app-pub-4584260126367940/3160064739
+  id_102_spl_o_inter_high: ca-app-pub-4584260126367940/5631044358
+  id_105_spl_n_native: ca-app-pub-4584260126367940/5981669191
+  id_105_spl_n_native_high: ca-app-pub-4584260126367940/1846983067
+  id_106_spl_o_native: ca-app-pub-4584260126367940/3300394480
+  id_106_spl_o_native_high: ca-app-pub-4584260126367940/2123044186
+  id_106_spl_o_native_high1: ca-app-pub-4584260126367940/4613476152
+  id_201_lfo1_n_native: ca-app-pub-4584260126367940/1987312818
+  id_201_lfo1_n_native_high: ca-app-pub-4584260126367940/9533901394
+  id_201_lfo1_n_native_high1: ca-app-pub-4584260126367940/4317962684
+  id_201_lfo1_n_native_high2: ca-app-pub-4584260126367940/8187158577
+  id_202_lfo2_n_native: ca-app-pub-4584260126367940/1607309912
+  id_202_lfo2_n_native_high: ca-app-pub-4584260126367940/9674231145
+  id_202_lfo2_n_native_high1: ca-app-pub-4584260126367940/8361149473
+  id_202_lfo2_n_native_high2: ca-app-pub-4584260126367940/4668587528
+  id_301_onb1_n_native: ca-app-pub-4584260126367940/1040172001
+  id_301_onb1_n_native_high: ca-app-pub-4584260126367940/3034307772
+  id_301_onb1_n_native_high1: ca-app-pub-4584260126367940/1838248350
+  id_301_onb1_n_native_high2: ca-app-pub-4584260126367940/3666335349
+  id_301_onb1_o_inter: ca-app-pub-4584260126367940/2764958815
+  id_301_onb1_o_inter_high: ca-app-pub-4584260126367940/3033082356
+  id_301_onb1_o_native: ca-app-pub-4584260126367940/6064919898
+  id_301_onb1_o_native_high: ca-app-pub-4584260126367940/7378001566
+  id_302_onb2_n_native: ca-app-pub-4584260126367940/2409093993
+  id_302_onb2_n_native_high: ca-app-pub-4584260126367940/7414008661
+  id_303_onb3_n_native: ca-app-pub-4584260126367940/2161681989
+  id_303_onb3_n_native_high: ca-app-pub-4584260126367940/8095062765
+  id_303_onb3_n_native_high1: ca-app-pub-4584260126367940/6781981098
+  id_303_onb3_n_native_high2: ca-app-pub-4584260126367940/1096012328
+  id_304_onb4_n_native: ca-app-pub-4584260126367940/5909355303
+  id_304_onb4_n_native_high: ca-app-pub-4584260126367940/8782930657
+  id_305_onb5_n_native: ca-app-pub-4584260126367940/3051743749
+  id_305_onb5_n_native_high: ca-app-pub-4584260126367940/1139896271
+  id_306_onb5_n_inter: ca-app-pub-4584260126367940/4173253728
+  id_306_onb5_n_inter_high: ca-app-pub-4584260126367940/4887569595

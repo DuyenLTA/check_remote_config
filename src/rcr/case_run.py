@@ -19,6 +19,7 @@ import logging
 
 from . import (
     ad_log,
+    ad_units,
     fo_flow,
     screencap,
     assert_check,
@@ -124,11 +125,15 @@ async def _read_ads(client, baseline: RcBaseline) -> dict:
     if not pid:
         return {"pid": "", "note": "app không còn chạy — không đọc được log quảng cáo"}
     parsed = ad_log.parse(await ad_log.read(client, baseline.serial, pid))
-    rc_ids = {k: v for k, v in baseline.configs.items() if v.startswith("ca-app-pub")}
+    # Checklist cua team truoc, ID doc tu may DE len tren: ID trong RC la cai
+    # app that su dung, checklist chi la so team khai va co the cu hon build.
+    rc_ids = ad_units.cho_package(baseline.package) | {
+        k: v for k, v in baseline.configs.items() if v.startswith("ca-app-pub")
+    }
     units = ad_log.summary(parsed)
     for row in units.values():
         # Unit khong khop key nao: app hardcode ID, hoac lay tu key app khong doc.
-        row["rc_keys"] = ad_log.match_rc_id(row["unit"], rc_ids)
+        row["rc_keys"] = ad_log.match_rc_id(row["unit"], rc_ids, row["type"])
     return {"pid": pid, "units": units, "banner_states": parsed["banner_states"]}
 
 

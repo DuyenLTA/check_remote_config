@@ -69,3 +69,36 @@ def test_verdict_case_lay_dong_xau_nhat():
     assert a.worst([a.PASS, a.CONFIG_BLOCKED]) == a.CONFIG_BLOCKED
     # case khong co Expected nao -> "dat duoc config", ken hon PASS
     assert a.worst([a.CONFIG_OK, a.PASS]) == a.CONFIG_OK
+
+
+# --- ID ads lay tu checklist cua team ---------------------------------------
+# Do that 2026-09-28: RC cua Piclux chi khai id_* cho tier goc va _high, moi
+# tier high1/high2 khong co -> 83/92 vi tri khong map duoc.
+
+def test_hai_vi_tri_trung_3_so_cuoi_thi_tach_bang_loai_ad():
+    """Piclux: duoi `528` la ca 102-spl-n-inter-high1 lan 202-lfo2-n-native-high2.
+
+    Log co ghi loai ad, nen unit native khong duoc quy cho vi tri inter.
+    """
+    ids = {
+        "id_102_spl_n_inter_high1": "ca-app-pub-4584260126367940/4749207528",
+        "id_202_lfo2_n_native_high2": "ca-app-pub-4584260126367940/4668587528",
+    }
+    assert ad_log.match_rc_id("*****528", ids, "native") == ["id_202_lfo2_n_native_high2"]
+    assert ad_log.match_rc_id("*****528", ids, "interstitial") == ["id_102_spl_n_inter_high1"]
+
+
+def test_trung_ca_loai_thi_tra_ve_ca_hai_khong_chon_bua():
+    """Mo ho that thi phai noi ra - chon mot cai la quy oan cho mot vi tri."""
+    ids = {"id_301_onb1_n_native": "ca-app-pub-1/1111111528",
+           "id_303_onb3_n_native": "ca-app-pub-1/2222222528"}
+    assert len(ad_log.match_rc_id("*****528", ids, "native")) == 2
+
+
+def test_checklist_doc_duoc_va_ten_vi_tri_noi_ra_loai_ad():
+    from rcr import ad_units
+    ids = ad_units.cho_package("aiphotogenerator.photoshoot.aiart.aiimagegenerator")
+    assert ids["id_106_spl_o_native_high1"].endswith("4613476152")
+    assert ad_units.loai_cua("id_106_spl_o_native_high1") == "native"
+    assert ad_units.loai_cua("id_102_spl_n_inter_high1") == "interstitial"
+    assert ad_units.loai_cua("id_khong_noi_gi") == ""

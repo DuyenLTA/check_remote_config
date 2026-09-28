@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import re
 
+from . import ad_units
 from .app_sandbox import guard
 
 LOGCAT_TIMEOUT = 30.0
@@ -115,14 +116,23 @@ def summary(parsed: dict) -> dict:
     return {k: v for k, v in out.items() if v["type"] != "?" or v["unit"] not in typed}
 
 
-def match_rc_id(masked: str, rc_ids: dict[str, str]) -> list[str]:
-    """Unit bi che (`*****825`) -> cac key remote config co ID cung duoi.
+def match_rc_id(masked: str, rc_ids: dict[str, str], kind: str = "") -> list[str]:
+    """Unit bi che (`*****825`) -> cac key co ID cung duoi.
 
     Tra NHIEU key la mo ho, khong chon bua. Tra rong nghia la unit nay khong
     den tu remote config - app hardcode, hoac tu key ma app khong doc.
+
+    `kind` la loai ad doc duoc trong log. Hai vi tri co the trung 3 so cuoi
+    (Piclux: `528` la ca 102-spl-n-inter-high1 lan 202-lfo2-n-native-high2);
+    loai ad tach duoc chung, nen mot unit native khong bi quy cho vi tri inter.
     """
     m = MASK_RE.match(masked.strip())
     if not m:
         return []
     tail = m.group("tail")
-    return sorted(k for k, v in rc_ids.items() if v.rsplit("/", 1)[-1].endswith(tail))
+    hit = sorted(k for k, v in rc_ids.items() if v.rsplit("/", 1)[-1].endswith(tail))
+    if kind and len(hit) > 1:
+        cung_loai = [k for k in hit if ad_units.loai_cua(k) in ("", kind)]
+        if cung_loai:
+            return cung_loai
+    return hit
