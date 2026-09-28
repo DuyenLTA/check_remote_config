@@ -357,3 +357,31 @@ def test_mui_ten_ta_KET_QUA_khong_bi_coi_la_toggle():
                          "ON 102-spl-n-inter-high1 → load & show theo priority"), WL_ADS)
     assert d.runnable
     assert d.overrides == {"show_102_spl_n_inter_high1": "true"}
+
+
+# --- cong tac quang cao viet bang van xuoi, khong map duoc sang key ----------
+# Do that 2026-09-25, case 3.5.0#20 cua tab TC SDK 3.5.0.
+
+PRE_OB2 = (
+    "3. enable_onb2_screen = true; luồng FO new user đi đến Onboarding 2.\n"
+    "5. Remote native OB2 = OFF; swipe_onb2 = true."
+)
+WL_OB2 = frozenset({"enable_onb2_screen", "swipe_onb2"})
+
+
+def test_cau_tat_quang_cao_khong_map_duoc_key_thi_khong_duoc_chay_tiep():
+    """`Remote native OB2 = OFF` boc ra `OB2 = OFF`, khong phai key -> bi loai.
+
+    Loai im lang thi case van chay, tren may quang cao OB2 con bat, roi bi cham
+    FAIL vi "vẫn có request native" - bao sai cho dev mot loi khong ton tai.
+    """
+    d = extract(case("", precondition=PRE_OB2), WL_OB2)
+    assert not d.runnable
+    assert "bat/tat quang cao" in d.needs_human
+    assert "Remote native OB2 = OFF" in d.needs_human
+
+
+def test_param_analytics_trung_tu_ads_khong_bi_coi_la_cong_tac():
+    """`source = ads_screen` co chu "ads" nhung khong bat/tat gi - van chay."""
+    d = extract(case("enable_feature_aialbum = true, source = ads_screen"), WL)
+    assert d.runnable and d.overrides == {"enable_feature_aialbum": "true"}

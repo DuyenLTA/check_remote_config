@@ -27,21 +27,18 @@ from __future__ import annotations
 
 import re
 
-from . import ad_state, rc_pairs, rc_unit_codes, rc_variants
+from . import ad_state, rc_guards, rc_pairs, rc_unit_codes, rc_variants
 from .models import Case, RcCaseData
 
 ARROWS = rc_pairs.ARROWS
 
-# Chuoi gia tri noi bang mui ten: `true -> false -> true`, `OFF -> ON -> OFF`.
-# Doi it nhat HAI gia tri that: "ON 102-spl-n-inter-high1 -> load & show" cung co
-# mui ten nhung ve sau khong phai gia tri, do la cau ta ket qua.
-TOGGLE_RE = re.compile(
-    r"\b(?:true|false|on|off)\b\s*(?:->|→|=>)\s*\b(?:true|false|on|off)\b", re.I)
-# Gia tri la cho trong chua dien: `<id template dang test>`, `<gia tri tuong ung>`
-PLACEHOLDER_RE = re.compile(r"<[^<>]*>")
-# Key co dau '.' -> sua field trong JSON (vd restore.enable)
-DOTTED_RE = re.compile(r"\b[A-Za-z][\w]*\.[A-Za-z][\w]*\s*[:=]")
 EMPTY = ("", "N/A", "NA", "-")
+# Tu chi quang cao trong van xuoi cua Precondition.
+AD_WORDS_RE = re.compile(
+    r"native|banner|inter|reward|app\s*open|\baoa\b|\bads?\b|quảng\s*cáo|quang\s*cao", re.I)
+# Gia tri bat/tat. CHI cap dang nay moi la mot cong tac: `source = ads_screen` co
+# chu "ads" nhung khong tat gi ca, con `OB2 = OFF` thi co.
+ONOFF_RE = re.compile(r"^(?:on|off|true|false|bật|bat|tắt|tat|enable|disable)$", re.I)
 
 
 
@@ -53,7 +50,7 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
     # Bo TC khong co cot Test Data thi runtime toggle nam o ten sub-scenario
     # ("Runtime: swipe_onb2 true -> false -> true") hoac o Precondition. Khong
     # doc hai cho do thi case chi chay duoc buoc dau ma van bi cham nhu da xong.
-    if TOGGLE_RE.search(case.label) or TOGGLE_RE.search(case.precondition):
+    if rc_guards.TOGGLE_RE.search(case.label) or rc_guards.TOGGLE_RE.search(case.precondition):
         return RcCaseData(
             overrides={},
             needs_human=(
@@ -71,7 +68,7 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
             ),
         )
 
-    if has_td and DOTTED_RE.search(raw):
+    if has_td and rc_guards.DOTTED_RE.search(raw):
         return RcCaseData(
             overrides={},
             needs_human=(
@@ -116,7 +113,7 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
     found = suy_ra | pre | td  # trung key -> Test Data thang, roi den ten viet ro
     # Key cua app duoc NHAC ma khong co gia tri (`splash_ui_config hop le nhung
     # image_url rong`) -> chay voi config mac dinh la sai ma khong ai biet.
-    mentioned = _mentioned(rc_pairs.precondition_lines(case.precondition) + "\n" + raw, whitelist)
+    mentioned = rc_guards.mentioned(rc_pairs.precondition_lines(case.precondition) + "\n" + raw, whitelist)
     vague = sorted(mentioned - set(found) - set(forced))
     if vague:
         return RcCaseData(
@@ -128,10 +125,22 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
         )
     overrides = {k: v for k, v in found.items() if k in whitelist}
     ignored = tuple(sorted(k for k in found if k not in whitelist))
+
+    cong_tac = rc_guards.cong_tac_ads_chua_map(dong_pre + "\n" + raw, found, ignored, whitelist)
+    if cong_tac:
+        return RcCaseData(
+            overrides={},
+            ignored=ignored,
+            needs_human=(
+                f"cau bat/tat quang cao ma tool khong map duoc sang key RC: "
+                f"{'; '.join(repr(v) for v in cong_tac)}. Chay tiep la cham tren may "
+                "con dang bat quang cao - case se FAIL oan"
+            ),
+        )
     from_pre = tuple(sorted(k for k in overrides if k not in td))
 
     # Gia tri con la cho trong -> patch vao la ghi nguyen chuoi mo ta vao config.
-    holes = sorted(k for k, v in overrides.items() if PLACEHOLDER_RE.search(v))
+    holes = sorted(k for k, v in overrides.items() if rc_guards.PLACEHOLDER_RE.search(v))
     if holes:
         return RcCaseData(
             overrides={},
@@ -158,12 +167,6 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
         )
     return RcCaseData(overrides=overrides, ignored=ignored, variants=variants,
                       from_precondition=from_pre)
-
-
-def _mentioned(text: str, whitelist) -> set[str]:
-    """Key cua app xuat hien nhu mot tu rieng trong van ban."""
-    words = set(re.findall(r"[A-Za-z][A-Za-z0-9_]*", text))
-    return words & set(whitelist)
 
 
 def whitelist_of(baseline) -> frozenset[str]:
