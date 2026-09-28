@@ -191,7 +191,10 @@ mới biết giá trị thật.
 - `FAIL` — lệch Expected, kèm số đo thật (unit nào đã request, log ra sao)
 - `NEEDS_HUMAN` — tool chưa lái tới được màn cần, hoặc quảng cáo che màn nên không đọc
   được chữ trên app. **Không kết luận gì về app** — đóng ad rồi chạy lại
-- `NOT_VERIFIABLE` — dòng đòi nhìn mắt (đúng design, đúng màu, animation mượt)
+- `NOT_VERIFIABLE` — dòng đòi nhìn mắt (đúng design, đúng màu, animation mượt), hoặc
+  dòng hỏi số liệu trên **AdMob/Firebase console**. Dòng console là việc của **PO**:
+  tester không có quyền vào console, nên báo cáo đếm riêng (`po`), **không** gộp vào
+  `pending`. Bước Action bảo mở console cũng bỏ qua, không dừng case lại
 - `CONFIG_OK` / `BLOCKED` — case không có Expected: đặt được config, hoặc config không
   sống qua lần mở app (build dev đặt `minimumFetchInterval = 0`)
 - `KEY_NOT_USED` — key không có chuỗi trong `classes*.dex`: **app không đọc key đó**,
