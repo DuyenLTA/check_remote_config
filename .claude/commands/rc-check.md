@@ -15,8 +15,10 @@ Command chạy được từ thư mục bất kỳ — **đừng giả định C
 2. biến môi trường `$RC_RUNNER_REPO`
 3. `~/projects/check_remote_config` (clone của github.com/LuuThiAnDuyen/check_remote_config)
 
-Repo có **hai remote**: `luu` (LuuThiAnDuyen) là bản mới nhất, `origin` (DuyenLTA) là bản
-sao và thường chậm hơn vài commit. Lấy code mới thì `git pull luu main`.
+Repo có **hai remote**, và máy này chỉ có credential của một tài khoản:
+`luu` (LuuThiAnDuyen) **chỉ đọc** — `git pull luu main` để lấy code người khác đẩy lên;
+`origin` (DuyenLTA) là chỗ **ghi**. Push URL của `luu` đã đặt thành `no_push` để một cú
+push nhầm chết ngay tại chỗ thay vì đi hỏi mật khẩu.
 
 Không thấy thì dừng, nói rõ đã tìm ở đâu. Gọi đường dẫn tìm được là `<repo>`.
 
