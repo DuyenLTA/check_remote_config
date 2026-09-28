@@ -19,7 +19,7 @@ import logging
 
 from . import (
     ad_log,
-    ad_units,
+    case_evidence,
     fa_log,
     fo_flow,
     screencap,
@@ -85,10 +85,13 @@ async def apply_case(
         log_fn(f"    {'da toi' if out['walk']['reached'] else 'KHONG toi duoc'} "
                f"{out['walk']['activity'].split('.')[-1]}")
         if out["walk"]["reached"]:
-            out["drive"] = await _snapshot(client, baseline, out["walk"]["activity"])
+            out["drive"] = await case_evidence._snapshot(client, baseline, out["walk"]["activity"])
     if steps and result.ok:
+        # Dong "user co the vuot sang man ke" doi mot cu vuot that de chung
+        # minh - bao case_drive lam sau khi moi dong khac da co bang chung.
+        thu_vuot = any(assert_check.DOI_VUOT_RE.search(e or "") for e in expects)
         driven = await case_drive.drive(
-            client, baseline.serial, baseline.package, steps, log_fn, man_can
+            client, baseline.serial, baseline.package, steps, log_fn, man_can, thu_vuot
         )
         # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
         driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]
@@ -96,7 +99,7 @@ async def apply_case(
         out["drive"] = driven
     # Cham case ads bang LOG, khong bang mat: inter load nhanh hon banner nen no
     # de len truoc khi kip nhin thay banner.
-    out["ads"] = await _read_ads(client, baseline)
+    out["ads"] = await case_evidence._read_ads(client, baseline)
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
     out["events"] = await fa_log.doc(client, baseline.serial)
     if expects:
@@ -112,38 +115,6 @@ async def apply_case(
         await rc_patch.restore(client, baseline)
         out["restored"] = True
     return out
-
-
-async def _snapshot(client, baseline: RcBaseline, activity: str) -> dict:
-    """Chup man vua lai toi: cham can bang chung, du case khong co buoc Action."""
-    xml = await ui_dump.dump(client, baseline.serial)
-    shot = await screencap.capture(client, baseline.serial)
-    return {
-        "status": "DONE", "stopped_at": 0, "blocked_steps": [], "walked": True,
-        "steps": [{"n": 0, "step": f"lái tới {activity.split('.')[-1]}",
-                   "action": {"kind": "walk"}, "activity": activity, "dump": xml,
-                   "shot": shot["thumb"], "shot_warning": shot["warning"]}],
-    }
-
-
-async def _read_ads(client, baseline: RcBaseline) -> dict:
-    pid = await sdk_probe.pid_of(client, baseline.serial, baseline.package)
-    if not pid:
-        return {"pid": "", "note": "app không còn chạy — không đọc được log quảng cáo"}
-    parsed = ad_log.parse(await ad_log.read(client, baseline.serial, pid))
-    # Checklist cua team truoc, ID doc tu may DE len tren: ID trong RC la cai
-    # app that su dung, checklist chi la so team khai va co the cu hon build.
-    rc_ids = ad_units.cho_package(baseline.package) | {
-        k: v for k, v in baseline.configs.items() if v.startswith("ca-app-pub")
-    }
-    units = ad_log.summary(parsed)
-    for row in units.values():
-        # Unit khong khop key nao: app hardcode ID, hoac lay tu key app khong doc.
-        row["rc_keys"] = ad_log.match_rc_id(row["unit"], rc_ids, row["type"])
-    # Vi tri DA BIET ID: log khong co unit nao cua vi tri do = vi tri do khong
-    # duoc request, ket luan duoc. Khong biet ID thi im lang khong noi len gi.
-    return {"pid": pid, "units": units, "banner_states": parsed["banner_states"],
-            "positions": sorted(k[3:] for k in rc_ids if k.startswith("id_"))}
 
 
 async def run_case(

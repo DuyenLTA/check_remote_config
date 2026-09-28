@@ -180,8 +180,8 @@ def test_trang_OB_suy_ra_khi_man_do_khong_co_cham_chi_trang():
 
 def test_khong_suy_trang_khi_man_khong_doi():
     """Man khong doi = cu vuot khong an -> khong duoc tinh la da sang trang."""
-    import rcr.case_drive as cd
+    from rcr import drive_probes
 
-    cuoi = asyncio.run(cd._chup_ket(fake(), "29301FDH2006K7", PKG, 9,
+    cuoi = asyncio.run(drive_probes._chup_ket(fake(), "29301FDH2006K7", PKG, 9,
                                     trang_cu=2, vuot=1, dump_cu=APP_XML))
     assert cuoi["page"] == 0

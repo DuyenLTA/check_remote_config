@@ -25,33 +25,15 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from . import act_resolver, anim_check, device_app, fo_flow, fo_steps, screencap, ui_dump
+from . import act_resolver, device_app, drive_probes, fo_flow, fo_steps, screencap, ui_dump
 
 log = logging.getLogger(__name__)
 
 AD_HINTS = ("adactivity", "com.google.android.gms.ads")
-# Node co ten nhu mot animation. Chi nhung man CO node nay moi chup them
-# khung de do - man khong co thi khong ton them giay nao.
-ANIM_HINTS = ("lottie", "anim")
 
 
 def _noop(_msg: str) -> None:
     pass
-
-
-async def _do_animation(client, serial: str, nodes: list) -> dict:
-    """{id node: ket qua do} cho cac node trong ten la animation.
-
-    Dong Expected "icon la animation lap" truoc day phai bo cho nguoi, trong
-    khi chup vai khung roi so vung cua node la tra loi duoc (do 2026-09-28).
-    """
-    canh = [n for n in nodes
-            if n.visible and not n.bounds.empty
-            and any(h in n.resource_id.lower() for h in ANIM_HINTS)]
-    if not canh:
-        return {}
-    khung = await screencap.frames(client, serial)
-    return {n.resource_id: anim_check.do(khung, n.bounds) for n in canh}
 
 
 def _di_qua(man_can: str | None, target: str) -> bool:
@@ -76,33 +58,8 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
     return ""
 
 
-async def _chup_ket(client, serial: str, package: str, index: int,
-                    trang_cu: int = 0, vuot: int = 0, dump_cu: str = "") -> dict:
-    """Chup man hinh SAU khi lam xong buoc cuoi.
-
-    Moi buoc chup TRUOC khi thao tac, nen khong co anh nao cho trang thai sau
-    cung - ma nhieu dong Expected noi dung ve no ("Chuyen sang man Onboarding
-    3" sau buoc vuot). Thieu anh nay thi dong do phai bo cho nguoi.
-
-    Trang OB doc theo cham chi trang, nhung OB3 la trang quang cao native toan
-    man va KHONG co cham nao (do tren may 2026-09-28). Luc do suy tu trang da
-    DO duoc cong so lan tool tu vuot - va chi suy khi man that su da doi, de
-    mot cu vuot khong an khong bi tinh thanh da sang trang.
-    """
-    _, activity = await device_app.focus(client, serial)
-    xml = await ui_dump.dump(client, serial)
-    shot = await screencap.capture(client, serial)
-    nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
-    trang, nguon = fo_steps.onboarding_page(nodes), "cham"
-    if not trang and trang_cu and vuot and dump_cu and xml != dump_cu:
-        trang, nguon = trang_cu + vuot, "suy_ra"
-    return {"n": index, "step": "(sau bước cuối)", "activity": activity, "dump": xml,
-            "shot": shot["thumb"], "shot_warning": shot["warning"],
-            "page": trang, "page_nguon": nguon if trang else "",
-            "action": {"kind": "noop", "reason": "chup lai man sau khi lam xong cac buoc"}}
-
-
-async def drive(client, serial: str, package: str, steps, log_fn=_noop, man_can: str | None = None) -> dict:
+async def drive(client, serial: str, package: str, steps, log_fn=_noop,
+                man_can: str | None = None, thu_vuot: bool = False) -> dict:
     """Chay lan luot cac buoc. Tra nhat ky tung buoc + dump de phase 5 cham.
 
     Man hinh bi che CHI chan buoc phai cham vao man hinh. Buoc quan sat va buoc
@@ -120,7 +77,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop, man_can:
         # Chup cung luc voi dump -> anh va cay node ta CUNG mot man hinh.
         shot = await screencap.capture(client, serial)
         nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
-        anim = await _do_animation(client, serial, nodes)
+        anim = await drive_probes._do_animation(client, serial, nodes)
         trang = fo_steps.onboarding_page(nodes)
         if trang:                      # doc duoc thi lay lam moc, bo so dem cu
             trang_cu, vuot_sau = trang, 0
@@ -185,8 +142,12 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop, man_can:
             await asyncio.sleep(1.0)
         elif isinstance(action, act_resolver.Wait):
             await asyncio.sleep(action.seconds)
-    cuoi = await _chup_ket(client, serial, package, len(done) + 1,
+    cuoi = await drive_probes._chup_ket(client, serial, package, len(done) + 1,
                            trang_cu, vuot_sau, dump_cu)
     done.append(cuoi)
-    return {"steps": done, "status": "DONE", "stopped_at": 0,
-            "blocked_steps": blocked_steps, "final": cuoi}
+    ra = {"steps": done, "status": "DONE", "stopped_at": 0,
+          "blocked_steps": blocked_steps, "final": cuoi}
+    if thu_vuot:
+        ra["thu_vuot"] = await drive_probes._thu_vuot(client, serial, package, cuoi, len(done) + 1)
+        done.append(ra["thu_vuot"]["anh"])
+    return ra

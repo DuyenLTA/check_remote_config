@@ -35,6 +35,10 @@ TBD_RE = re.compile(r"\[\s*(?:tbd|assume|inferred|todo)|spec ch[ưu]a n[êe]u|ch
 
 # "Icon la animation lap", "hieu ung chay lien tuc" - do bang cach chup vai
 # khung roi so vung cua node, KHONG phai dong "phai nhin mat".
+# "User co the vuot sang man ke tiep" - chung minh bang mot cu vuot that.
+DOI_VUOT_RE = re.compile(
+    r"(?:c[óo]\s*th[ểe]|\bcan\b|\bable\b).{0,20}(?:vu[ốo]t|swipe)|"
+    r"(?:vu[ốo]t|swipe).{0,24}(?:sang|qua|t[ớo]i|to)\s*(?:m[àa]n|trang|next)", re.I)
 ANIM_RE = re.compile(r"animation|animated|hi[ệe]u\s*[ứu]ng|l[ặa]p\s*l[ạa]i|\bl[ặa]p\b|loop|"
                      r"nh[áa]y|chuy[ểe]n\s*[đd][ộo]ng", re.I)
 NO_CRASH_RE = re.compile(r"kh[oô]ng\s+(?:b[ịi]\s+)?crash|not\s+crash|no\s+crash", re.I)
@@ -72,6 +76,11 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     kind = assert_ads.ad_type_in(text) or assert_ads.type_from_position(text, rc_keys)
     if kind or assert_ads.routes(text):
         return assert_ads.ad_line(text, kind, ads, drive, scope, vi_tri)
+
+    if DOI_VUOT_RE.search(text):
+        ket = assert_ui.vuot_duoc(drive)
+        if ket:
+            return ket
 
     if assert_ui.EVENT_RE.search(text):
         ket = assert_ui.event_da_ban(text, events)

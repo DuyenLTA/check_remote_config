@@ -162,3 +162,20 @@ def event_da_ban(text: str, events) -> dict | None:
     gia_tri = {k: v for e in khop for k, v in e["params"].items() if k in con_lai}
     return out(PASS, f"event `{muon}` bắn {len(khop)} lần"
                      + (f", {gia_tri}" if gia_tri else ""), muon)
+
+
+def vuot_duoc(drive: dict) -> dict | None:
+    """Dong "user co the vuot sang man ke" -> ket qua cu vuot thu o cuoi luot."""
+    thu = drive.get("thu_vuot")
+    if not thu:
+        return None
+    truoc, sau = thu.get("trang_truoc") or 0, thu.get("trang_sau") or 0
+    if not thu.get("doi"):
+        return out(FAIL, "vuốt sang trái nhưng màn hình không đổi — không vuốt sang màn kế được",
+                   f"trang {truoc}")
+    if truoc and sau and sau <= truoc:
+        return out(FAIL, f"vuốt xong màn có đổi nhưng vẫn ở trang {sau}, không tiến lên",
+                   f"trang {truoc} → {sau}")
+    return out(PASS, "vuốt sang trái thì màn đổi sang màn kế"
+                     + (f" (trang {truoc} → {sau})" if truoc and sau else ""),
+               f"trang {truoc} → {sau}")

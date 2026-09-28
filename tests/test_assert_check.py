@@ -586,3 +586,24 @@ def test_khong_co_dong_FA_nao_thi_noi_ro_chu_khong_bao_FAIL():
     """Build tat Analytics thi vang event KHONG phai loi cua app."""
     res = a.check("Log event complete_ob2.", {}, NO_DRIVE, OK_CRASH, events=[])
     assert res["verdict"] == a.NEEDS_HUMAN and "FA-SVC" in res["reason"]
+
+
+# --- dong "user co the vuot sang man ke" -> chung minh bang cu vuot that -----
+
+def test_vuot_lam_man_doi_thi_PASS():
+    drive = {"steps": [], "thu_vuot": {"doi": True, "trang_truoc": 2, "trang_sau": 3}}
+    res = a.check("User có thể vuốt sang màn kế tiếp.", {}, drive, OK_CRASH)
+    assert res["verdict"] == a.PASS and "trang 2 → 3" in res["reason"]
+
+
+def test_vuot_ma_man_khong_doi_thi_FAIL():
+    drive = {"steps": [], "thu_vuot": {"doi": False, "trang_truoc": 2, "trang_sau": 2}}
+    res = a.check("User có thể vuốt sang màn kế tiếp.", {}, drive, OK_CRASH)
+    assert res["verdict"] == a.FAIL and "không đổi" in res["reason"]
+
+
+def test_man_doi_nhung_khong_tien_len_thi_FAIL():
+    """Vuot ra man khac ma trang lui lai hoac dung yen -> khong phai "sang man ke"."""
+    drive = {"steps": [], "thu_vuot": {"doi": True, "trang_truoc": 3, "trang_sau": 2}}
+    res = a.check("User có thể vuốt sang màn kế tiếp.", {}, drive, OK_CRASH)
+    assert res["verdict"] == a.FAIL
