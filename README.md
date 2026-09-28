@@ -145,7 +145,15 @@ URL artifact **cố định**: republish cùng file giữ nguyên link, nên lư
 vừa chạy hay một lượt cũ, và gửi nhầm báo cáo cũ cho team là sai một cách im lặng.
 
 Cả quy trình (chọn máy → chạy → đọc verdict → publish → ghi link) nằm ở slash command
-`/rc-check` (`~/.claude/commands/rc-check.md`).
+`/rc-check`, và file lệnh **nằm trong repo** ở `.claude/commands/rc-check.md` — clone về là
+có, không phải chép tay. Claude Code chỉ đọc `~/.claude/commands/`, nên trỏ nó sang repo:
+
+```bash
+ln -s "$PWD/.claude/commands/rc-check.md" ~/.claude/commands/rc-check.md
+```
+
+Sửa cách chạy thì sửa file trong repo, đừng sửa bản ở `~/.claude/` — hai bản là chắc chắn
+lệch, và bản người khác clone về là bản lạc hậu.
 
 Case trong workbook bộ chung định danh bằng **`<bản SDK>#<số>`** (`--case 6.4.0#1`):
 số case trùng nhau giữa các tab — số `1` có ở 5 tab. Gõ mỗi con số vẫn được nếu nó chỉ
