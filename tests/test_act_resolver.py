@@ -157,3 +157,26 @@ def test_vuot_khong_neu_huong_thi_lay_huong_sang_trang_ke():
     """
     act = kind("Vuốt theo đúng hướng icon gợi ý.")
     assert isinstance(act, act_resolver.Swipe) and act.direction == "left"
+
+
+# --- buoc doi soat tren console ngoai ---------------------------------------
+# Do that 2026-09-28: bo TC SDK 3.5.0 ban key ro, buoc 3 va 4 cua moi case ads.
+
+@pytest.mark.parametrize("step", [
+    "4. Mở AdMob console → tìm ad unit 106-spl-o-native-high1.",
+    "3. Chờ AdMob console sync số liệu (theo chu kỳ báo cáo).",
+    "Kiểm tra dashboard Firebase console.",
+])
+def test_buoc_doi_soat_console_ngoai_khong_chan_case(step):
+    """Buoc nay khong dong gi den app - dung lai la bo luon cac buoc sau.
+
+    Tool cham ads bang log cua may chu khong qua console, nen day la buoc cua
+    nguoi doi soat tay. Dong Expected tuong ung van ra NOT_VERIFIABLE.
+    """
+    assert isinstance(kind(step), act_resolver.NoOp)
+
+
+def test_nut_trong_app_ten_console_van_la_buoc_tap():
+    """Chuoi trong ngoac kep la ten node trong app, khong phai console ngoai."""
+    act = kind('Nhấn nút "Moment"')
+    assert isinstance(act, act_resolver.Tap)

@@ -38,6 +38,11 @@ from .ui_dump import DeviceNode
 __all__ = ["Action", "GoTo", "NeedsHuman", "NoOp", "Swipe", "Tap", "Wait",
            "resolve", "find"]
 
+# Buoc doi soat tren console ngoai (AdMob, Firebase, dashboard). Tool cham ads
+# bang log cua may, khong mo console - nhung day KHONG phai cho phai dung lai:
+# dung thi moi buoc sau do khong chay, trong khi buoc nay chang dong gi den app.
+# Dong Expected tuong ung da co luat rieng o `assert_ads.EXTERNAL_RE`.
+CONSOLE_RE = re.compile(r"admob|firebase\s*console|ad\s*manager|dashboard", re.I)
 # Cau chi quan sat, khong thao tac.
 OBSERVE_RE = re.compile(r"^\s*(quan\s*sát|quan\s*sat|kiểm\s*tra|kiem\s*tra|xem|observe|verify|check)\b", re.I)
 # Chuoi trong ngoac kep - ngoac thang, ngoac cong, ngoac don kieu Viet.
@@ -87,6 +92,9 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
         return NoOp("tool da mo app sau khi patch - buoc nay da xong")
     if CONFIG_RE.match(text):
         return NoOp("config da duoc dat truoc do - buoc nay da xong")
+    if CONSOLE_RE.search(text) and not QUOTED_RE.search(text):
+        return NoOp("buoc doi soat tren console ngoai - tool cham ads bang log cua may, "
+                    "khong mo console. Khong dong gi den app nen di tiep")
 
     wait = WAIT_RE.match(text)
     if wait and not QUOTED_RE.search(text):
