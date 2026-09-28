@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 
+from . import assert_ad_rules
 from .verdict_levels import FAIL, NEEDS_HUMAN, NOT_VERIFIABLE, PASS, out
 
 NEGATIVE_RE = re.compile(
@@ -25,16 +26,8 @@ NEGATIVE_RE = re.compile(
     re.I,
 )
 SHOW_RE = re.compile(r"hi[ểe]n\s*th[ịi]|show|xu[ấa]t\s*hi[ệe]n", re.I)
-# "Impression fire dung 1 lan khi ad show" - dem dong "occurred for ad unit".
-IMPRESSION_RE = re.compile(r"impression", re.I)
-ZERO_RE = re.compile(r"=\s*0\b|kh[oô]ng\s+(?:c[óo]\s+)?impression", re.I)
-# "SDK preload banner 101 theo alternate: high truoc, thuong sau" - doc THU TU
-# request trong log. Khong biet unit nao la high (ID bi che), nhung dem duoc.
-ORDER_RE = re.compile(r"preload|alternate|tr[ưu][ớo]c.*sau", re.I)
 # Nguon ngoai tool: console AdMob, Firebase - khong doc duoc tu may.
 EXTERNAL_RE = re.compile(r"admob\s*console|firebase\s*console|dashboard", re.I)
-# "khong load BAT KY banner nao" - phu dinh toan loai, khong gioi han vi tri.
-ANY_RE = re.compile(r"b[ấa]t\s*k[ỳy]|nào\b|any\b", re.I)
 # Ma vi tri ads trong TC: 101-spl-a-banner, 105-spl-n-native-high, "tren splash"...
 POSITION_RE = re.compile(r"\b\d{3}\b|splash|home|onboarding|lfo|ob\d|result|tab\s+\w+", re.I)
 # Ma vi tri (202, 304...) khong kem chu "native"/"inter" -> tra loai tu TEN
@@ -102,7 +95,7 @@ def where(drive: dict) -> str:
 
 def routes(text: str) -> bool:
     """Dong nay phai do bang log ads du khong neu ten loai ad."""
-    return bool(IMPRESSION_RE.search(text) or EXTERNAL_RE.search(text))
+    return bool(assert_ad_rules.IMPRESSION_RE.search(text) or EXTERNAL_RE.search(text))
 
 
 def _position_token(text: str) -> str:
@@ -129,8 +122,12 @@ def _units(ads: dict, kind: str) -> list[dict]:
     return [u for u in (ads.get("units") or {}).values() if not kind or u["type"] == kind]
 
 
-def ad_line(text: str, kind: str, ads: dict, drive: dict) -> dict:
-    """`kind` rong nghia la xet moi loai ad."""
+def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "") -> dict:
+    """`kind` rong nghia la xet moi loai ad.
+
+    `scope` la vi tri unit ma CA case noi toi, dung cho dong khong tu nhac ten
+    unit (vd "Impressions = 0" - ten unit nam o dong Expected phia tren).
+    """
     units = _units(ads, kind)
     requested = [u for u in units if u["requested"]]
     loaded = [u for u in units if u["loaded"]]
@@ -145,76 +142,20 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict) -> dict:
         return out(NOT_VERIFIABLE,
                    "dòng này phải mở console AdMob/Firebase mới biết — ngoài tầm của tool", actual)
 
-    if IMPRESSION_RE.search(text):
-        fired = sum(u["impressions"] for u in units)
-        want_one = "1 lần" in text or "đúng 1" in text.lower()
-        # "Impressions = 0 (Impressions > 0 = loi nang)" - ky vong KHONG co impression.
-        if ZERO_RE.search(text):
-            if fired:
-                return out(FAIL, f"impression bắn {fired} lần, kỳ vọng 0", actual | {"impressions": fired})
-            return out(PASS, "không có impression nào — đúng kỳ vọng", actual)
-        if fired == 0 and not requested:
-            return out(NEEDS_HUMAN,
-                       f"chưa thấy {kind or 'unit'} nào được request nên không có impression", actual)
-        if fired == 0 and not shown:
-            # Khong co ad nao show thi khong co impression la DUNG, khong phai loi app.
-            return out(PASS,
-                       "không có ad nào show (không fill) nên chưa có impression — "
-                       "tính đạt theo luật không-fill", actual)
-        if want_one and fired != 1:
-            return out(FAIL, f"impression bắn {fired} lần, kỳ vọng đúng 1", actual | {"impressions": fired})
-        if fired:
-            return out(PASS, f"impression bắn {fired} lần", actual | {"impressions": fired})
-        return out(NOT_VERIFIABLE, "không thấy dòng impression nào trong log của app", actual)
+    if assert_ad_rules.IMPRESSION_RE.search(text):
+        return assert_ad_rules.impression(
+            text, units, actual, _position_token(text) or scope, _khop_vi_tri)
 
     # Cau PHU DINH co chu "alternate" ("khong duoc goi ke ca trong alternate")
     # khong phai cau ta thu tu preload - kiem NEGATIVE truoc.
-    if ORDER_RE.search(text) and not NEGATIVE_RE.search(text):
-        order = [u["unit"] for u in units if u["requested"]]
-        if len(order) >= 2:
-            return out(PASS, "request đúng thứ tự " + " → ".join(order)
-                       + " (ID bị che nên không khẳng định được unit nào là high)", actual)
-        if len(order) == 1:
-            if loaded or shown:
-                # Unit dau fill duoc thi SDK khong can goi alternate - dung thiet ke.
-                return out(PASS,
-                           f"chỉ 1 unit {kind} được request vì unit đó fill luôn, "
-                           "không cần gọi alternate", actual)
-            return out(FAIL, f"chỉ có 1 unit {kind} được request, không có alternate", actual)
+    if assert_ad_rules.ORDER_RE.search(text) and not NEGATIVE_RE.search(text):
+        ket = assert_ad_rules.preload_order(kind, units, actual)
+        if ket:
+            return ket
 
     if NEGATIVE_RE.search(text):
-        if not requested:
-            return out(PASS, f"không unit {kind} nào được request", actual)
-        if ANY_RE.search(text):
-            # "khong load BAT KY banner nao" - khong gioi han vi tri, moi request deu sai
-            return out(FAIL, f"vẫn có request {kind}", actual)
-        token = _position_token(text)
-        if not token:
-            # Cau phu dinh khong neu vi tri nao -> moi unit map duoc deu tinh.
-            if any(u.get("rc_keys") for u in requested):
-                return out(FAIL, f"vẫn có request {kind}", actual)
-            return out(
-                NOT_VERIFIABLE,
-                f"có {len(requested)} request {kind} nhưng ID bị che, không map được unit về "
-                "vị trí nào — không quy được cho vị trí trong câu",
-                actual,
-            )
-        # Map duoc ve MOT key bat ky la chua du: request cua man khac
-        # (id_301_onb1_n_native) bi tinh cho 303-onb3-n-native-high1 la bao oan
-        # dung mot bug khong ton tai. Chi FAIL khi unit map ve DUNG vi tri cau noi.
-        charged = [u["unit"] for u in requested if _khop_vi_tri(u, token)]
-        if charged:
-            return out(FAIL, f"vẫn có request {kind} của {token}",
-                       actual | {"charged": charged})
-        khac = sorted({k for u in requested for k in (u.get("rc_keys") or ())})
-        return out(
-            NOT_VERIFIABLE,
-            f"có {len(requested)} request {kind} nhưng không unit nào map được về vị trí "
-            f"`{token}` — không quy được cho vị trí trong câu"
-            + (f" — các unit map được thuộc vị trí khác: {', '.join(khac)}" if khac
-               else " — ID trong log bị che còn 3 số cuối"),
-            actual,
-        )
+        return assert_ad_rules.negative(
+            text, kind, requested, actual, _position_token(text), _khop_vi_tri)
 
     if not SHOW_RE.search(text):
         return out(NOT_VERIFIABLE, f"câu nói về {kind} nhưng không nêu rõ kỳ vọng", actual)
@@ -240,3 +181,14 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict) -> dict:
     return out(FAIL, f"không có request {kind} nào", actual)
 
 
+
+
+def case_position(lines) -> str:
+    """Vi tri unit ma CA case noi toi, "" neu cac dong noi ve nhieu vi tri.
+
+    Dong "Impressions = 0" khong tu nhac ten unit; ten no nam o dong Expected
+    phia tren cua cung case. Chi nhan khi CA khoi Expected noi ve DUNG MOT vi
+    tri - nhieu vi tri thi lay cai nao cung la doan.
+    """
+    tokens = {t for t in (_position_token(l or "") for l in lines) if t}
+    return tokens.pop() if len(tokens) == 1 else ""

@@ -320,3 +320,55 @@ def test_high1_khong_bi_tinh_nham_cho_high():
     cau = "303-onb3-n-native-high: Requests = 0 (OFF không được gọi)."
     out = check(cau, ads=_native(["id_303_onb3_n_native_high1"]))
     assert out["verdict"] == a.NOT_VERIFIABLE
+
+
+# --- dong impression phai theo vi tri cua case ------------------------------
+# Do that 2026-09-28, case #2/#3/#4 cua bo TC SDK 3.5.0 ban key ro.
+
+EXPECTS_MOT_UNIT = (
+    "Ad Native của unit 201-lfo1-n-native-high1 KHÔNG hiển thị tại màn Language 1.",
+    "AdMob console: Requests = 0 và Bid requests = 0 cho unit 201-lfo1-n-native-high1.",
+    "Impressions = 0 (Impressions > 0 = lỗi nặng, ưu tiên fix).",
+    "Luồng FO không bị block, không crash.",
+)
+# Tren may: unit CO impression deu la vi tri khac, khong unit nao map ve 201.
+ADS_VI_TRI_KHAC = {"units": {
+    "native:*****271": {"type": "native", "unit": "*****271", "requested": 3, "loaded": 1,
+                        "load_failed": 0, "shown": 1, "impressions": 2, "errors": [], "rc_keys": []},
+    "interstitial:*****595": {"type": "interstitial", "unit": "*****595", "requested": 1,
+                              "loaded": 1, "load_failed": 0, "shown": 1, "impressions": 1,
+                              "errors": [], "rc_keys": ["id_102_spl_n_inter_high"]},
+}}
+
+
+def test_dong_impression_khong_dem_impression_cua_vi_tri_khac():
+    """Tat MOT unit khong lam ca app het quang cao.
+
+    Cau "Impressions = 0" khong tu nhac ten unit - ten no o dong Expected phia
+    tren. Lay vi tri cua ca case thi day dem impression cua moi unit, va mot vi
+    tri khac show ad la case bi bao FAIL cho mot bug khong ton tai.
+    """
+    res = a.check_all(EXPECTS_MOT_UNIT, ADS_VI_TRI_KHAC, NO_DRIVE, OK_CRASH)
+    dong = res["lines"][2]
+    assert dong["verdict"] == a.NOT_VERIFIABLE
+    assert "201_lfo1_n_native_high1" in dong["reason"]
+    assert res["verdict"] != a.FAIL
+
+
+def test_dong_impression_van_FAIL_khi_dung_vi_tri_do_ban():
+    """Map dung vi tri cau noi thi van phai FAIL - khong noi long thanh bo qua."""
+    ads = {"units": {"native:*****271": dict(
+        ADS_VI_TRI_KHAC["units"]["native:*****271"],
+        rc_keys=["id_201_lfo1_n_native_high1"])}}
+    res = a.check_all(EXPECTS_MOT_UNIT, ads, NO_DRIVE, OK_CRASH)
+    assert res["lines"][2]["verdict"] == a.FAIL
+    assert res["verdict"] == a.FAIL
+
+
+def test_case_noi_ve_nhieu_vi_tri_thi_khong_thu_hep_dong_impression():
+    """Nhieu vi tri thi lay cai nao cung la doan -> giu cach dem cu."""
+    expects = ("Native 201-lfo1-n-native-high1 không hiển thị.",
+               "Native 303-onb3-n-native-high2 không hiển thị.",
+               "Impressions = 0.")
+    res = a.check_all(expects, ADS_VI_TRI_KHAC, NO_DRIVE, OK_CRASH)
+    assert res["lines"][2]["verdict"] == a.FAIL
