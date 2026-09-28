@@ -13,24 +13,30 @@ Cac dang cau nhan duoc (do tren 1272 buoc that cua bo TC chung):
     "Bam Submit"                 -> Tap    (chu sau dong tu, van phai khop DUY NHAT)
     "Mo tab Moment"              -> Tap    (ten tab)
     "Cho 3 giay"                 -> Wait
+    "Vuot sang trai"             -> Swipe
 Con lai -> NeedsHuman kem nguyen van cau, de nguoi doc biet phai lam gi.
 
 "Hoan thanh luong FO den Home" / "Vao man Onboarding 2" -> GoTo: day la CA MOT
 CHUOI man hinh, khong phai mot thao tac, nhung `fo_flow` biet duong di (luat o
 `data/fo_flow.yaml`) nen giao cho no lai thay vi bo cho nguoi.
 
-CHI nhan cau THUAN DI CHUYEN. Cau con ve them mot y khac ("Vao OB3, ghi nhan
-thoi diem ad show") van la NeedsHuman: lai toi noi roi coi nhu xong buoc la bo
-im cai ve sau, case do co the ra PASS gia. Cau khong mo dau bang tu di chuyen
-cung khong nhan ("Vuot phai tai Onboarding 2" la VUOT, khong phai di toi OB2).
+Ve sau dau phay chi duoc phep la ve QUAN SAT ("Chay luong FO den OB3, quan sat
+banner"): quan sat la viec cua buoc cham, khong phai thao tac. Ve sau la viec
+khac ("Vao OB3, ghi nhan thoi diem ad show") van la NeedsHuman - lai toi noi roi
+coi nhu xong buoc la bo im cai ve sau, case do co the ra PASS gia. Cau khong mo
+dau bang tu di chuyen cung khong nhan ("Vuot phai tai Onboarding 2" la VUOT,
+khong phai di toi OB2).
 """
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 
+from .act_types import Action, GoTo, NeedsHuman, NoOp, Swipe, Tap, Wait
 from .ui_dump import DeviceNode
+
+__all__ = ["Action", "GoTo", "NeedsHuman", "NoOp", "Swipe", "Tap", "Wait",
+           "resolve", "find"]
 
 # Cau chi quan sat, khong thao tac.
 OBSERVE_RE = re.compile(r"^\s*(quan\s*sát|quan\s*sat|kiểm\s*tra|kiem\s*tra|xem|observe|verify|check)\b", re.I)
@@ -52,65 +58,22 @@ GOTO_RE = re.compile(
     r"^\s*(?:hoàn\s*thành|hoan\s*thanh|vào|vao|đi\s*(?:đến|den|tới|toi)|di\s*(?:den|toi)"
     r"|chạy\s*luồng|chay\s*luong|quay\s*(?:lại|lai)|trở\s*(?:lại|lai)|tro\s*(?:lai))\b",
     re.I)
-# Cau con ve mot y khac sau dau phay/cham phay -> khong phai thuan di chuyen.
+# Cau vuot. KHONG doi hoi phai neu huong: vuot khong bam trung thu gi, nen doan
+# sai huong chi lam man khong doi - khac han mot cu tap sai (bam quang cao, mua
+# hang that). Khong neu huong thi lay huong sang trang ke, dung huong ma
+# `fo_flow` dung de di qua OB1/2/3.
+SWIPE_RE = re.compile(r"^\s*(?:vuốt|vuot|swipe|lướt|luot|kéo|keo)\b", re.I)
+DIRECTION_WORDS = (
+    (re.compile(r"\b(?:trái|trai|left)\b", re.I), "left"),
+    (re.compile(r"\b(?:phải|phai|right)\b", re.I), "right"),
+    (re.compile(r"\b(?:lên|len|up)\b", re.I), "up"),
+    (re.compile(r"\b(?:xuống|xuong|down)\b", re.I), "down"),
+)
+DEFAULT_SWIPE = "left"
+# Ve dung sau dau phay/cham phay. Ve quan sat thi bo qua duoc, ve khac thi khong.
 CLAUSE_RE = re.compile(r"[,;]")
 DEFAULT_WAIT = 3.0
 MAX_WAIT = 60.0
-
-
-@dataclass(frozen=True, slots=True)
-class Tap:
-    node_label: str
-    x: int
-    y: int
-    matched: str
-
-    @property
-    def summary(self) -> dict:
-        return {"kind": "tap", "node": self.node_label, "x": self.x, "y": self.y,
-                "matched": self.matched}
-
-
-@dataclass(frozen=True, slots=True)
-class Wait:
-    seconds: float
-
-    @property
-    def summary(self) -> dict:
-        return {"kind": "wait", "seconds": self.seconds}
-
-
-@dataclass(frozen=True, slots=True)
-class NoOp:
-    reason: str
-
-    @property
-    def summary(self) -> dict:
-        return {"kind": "noop", "reason": self.reason}
-
-
-@dataclass(frozen=True, slots=True)
-class GoTo:
-    """Lai qua ca luong First Open toi mot man hinh, do `fo_flow` lo."""
-
-    target: str
-    reason: str
-
-    @property
-    def summary(self) -> dict:
-        return {"kind": "goto", "target": self.target, "reason": self.reason}
-
-
-@dataclass(frozen=True, slots=True)
-class NeedsHuman:
-    reason: str
-
-    @property
-    def summary(self) -> dict:
-        return {"kind": "needs_human", "reason": self.reason}
-
-
-Action = Tap | Wait | NoOp | GoTo | NeedsHuman
 
 
 def resolve(step: str, nodes: list[DeviceNode]) -> Action:
@@ -132,6 +95,9 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
             return NeedsHuman(f"cho {seconds:g}s - qua {MAX_WAIT:g}s, TC co ve viet nham")
         return Wait(seconds)
 
+    if SWIPE_RE.match(text):
+        return _swipe(text)
+
     quoted = QUOTED_RE.search(text)
     if quoted:
         return _tap_by_text(quoted.group(1).strip(), nodes, f'chuoi trong ngoac: "{quoted.group(1)}"')
@@ -150,13 +116,25 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     return NeedsHuman(f"khong dich duoc buoc: {text!r}")
 
 
+def _swipe(text: str) -> Action:
+    """Cau vuot -> Swipe. Huong lay tu cau, khong neu thi lay huong sang trang ke."""
+    for pattern, direction in DIRECTION_WORDS:
+        if pattern.search(text):
+            return Swipe(direction, f"huong trong cau: {direction}")
+    return Swipe(DEFAULT_SWIPE, "TC khong neu huong - lay huong sang trang ke")
+
+
 def _goto(text: str) -> Action | None:
     """Buoc thuan di chuyen -> GoTo. Khong phai thi tra None."""
     from . import fo_flow  # noi day de tranh vong import khi fo_flow lon len
 
-    if not GOTO_RE.match(text) or CLAUSE_RE.search(text):
+    head, *rest = CLAUSE_RE.split(text)
+    if not GOTO_RE.match(head):
         return None
-    target = fo_flow.target_for(text)
+    # Ve sau chi duoc la quan sat. Con lai la mot viec khac ma buoc nay khong lam.
+    if any(not OBSERVE_RE.match(ve) for ve in (v.strip() for v in rest) if ve):
+        return None
+    target = fo_flow.target_for(head)
     if not target:
         return None
     return GoTo(target, f"lai qua luong FO toi {target}")

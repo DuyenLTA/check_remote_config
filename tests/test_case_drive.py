@@ -107,3 +107,24 @@ def test_lai_hut_thi_noi_ket_o_dau_chu_khong_noi_khong_dich_duoc_buoc(monkeypatc
     out = drive(adb, ["Hoàn thành luồng FO đến Home."])
     assert out["status"] == "NEEDS_HUMAN" and out["stopped_at"] == 1
     assert "khong lai toi duoc MainActivity" in out["steps"][0]["action"]["reason"]
+
+
+def test_buoc_vuot_vuot_that_tren_may():
+    adb = fake()
+    out = drive(adb, ["Vuốt sang trái."])
+    assert out["status"] == "DONE"
+    assert [s["action"]["kind"] for s in out["steps"]] == ["swipe"]
+    # Man mac dinh 1080x2400 -> vuot doc dai giua man, tu 80% ve 20% chieu ngang.
+    assert adb.cmds_with("input swipe 864 1200 216 1200 300")
+
+
+def test_quang_cao_che_man_khong_chan_buoc_vuot():
+    """Vuot khong bam trung gi nen khong the bam nham vao quang cao.
+
+    Va dung cai dang duoc test - icon SWIPE thay cho vung ad - nam o man co
+    quang cao, chan o day la khong bao gio cham duoc case do.
+    """
+    adb = fake(AD_COMPONENT)
+    out = drive(adb, ["Vuốt sang trái."])
+    assert out["status"] == "DONE"
+    assert adb.cmds_with("input swipe")

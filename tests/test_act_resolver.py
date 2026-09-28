@@ -118,10 +118,42 @@ def test_buoc_di_toi_mot_man_hinh_giao_cho_bo_lai_FO(step, target):
 @pytest.mark.parametrize("step", [
     # Cau con ve them mot y khac: lai toi noi roi coi nhu xong la bo im ve sau.
     "Vào OB3, ghi nhận thời điểm ad show (t0).",
-    # VUOT tai OB2, khong phai di toi OB2 - nhac ten man o giua cau khong tinh.
-    "Vuốt phải tại Onboarding 2.",
     # Khong man nao trong bo luat khop.
     "Trigger popup Rating.",
 ])
 def test_cau_khong_thuan_di_chuyen_van_la_viec_cua_nguoi(step):
     assert isinstance(kind(step), act_resolver.NeedsHuman)
+
+
+@pytest.mark.parametrize("step,target", [
+    ("Chạy luồng FO đến OB3, quan sát banner.", "OnboardingActivity#3"),
+    ("Vào màn Home; kiểm tra native ad.", "MainActivity"),
+])
+def test_ve_quan_sat_sau_dau_phay_khong_chan_buoc_di_chuyen(step, target):
+    """Quan sat la viec cua buoc CHAM, khong phai mot thao tac phai lam.
+
+    Chan ca cau chi vi co dau phay la bo cho nguoi mot buoc ma tool di duoc.
+    """
+    act = kind(step)
+    assert isinstance(act, act_resolver.GoTo) and act.target == target
+
+
+@pytest.mark.parametrize("step,direction", [
+    ("Vuốt sang trái để qua màn tiếp theo.", "left"),
+    # VUOT tai OB2, khong phai di toi OB2 - nhac ten man o giua cau khong tinh.
+    ("Vuốt phải tại Onboarding 2.", "right"),
+    ("Vuốt lên.", "up"),
+    ("Swipe down", "down"),
+])
+def test_buoc_vuot_doc_duoc_huong_tu_cau(step, direction):
+    act = kind(step)
+    assert isinstance(act, act_resolver.Swipe) and act.direction == direction
+
+
+def test_vuot_khong_neu_huong_thi_lay_huong_sang_trang_ke():
+    """Doan sai huong vuot chi lam man khong doi - khac han mot cu tap sai cho.
+
+    OB1/2/3 sang man bang vuot trai, va do cung la huong `fo_flow` dung.
+    """
+    act = kind("Vuốt theo đúng hướng icon gợi ý.")
+    assert isinstance(act, act_resolver.Swipe) and act.direction == "left"

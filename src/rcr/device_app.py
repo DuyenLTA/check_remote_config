@@ -106,6 +106,46 @@ async def tap(client, serial: str, x: int, y: int) -> None:
         raise AdbError(f"Tap ({x},{y}) that bai: {problem}")
 
 
+async def screen_size(client, serial: str) -> tuple[int, int]:
+    """Kich thuoc man hinh (px). Doc khong duoc thi lay co pho bien nhat."""
+    out, _, _ = await client.shell(serial, "wm", "size")
+    for part in out.split():
+        if "x" in part and part.replace("x", "").isdigit():
+            w, h = part.split("x")
+            return int(w), int(h)
+    return 1080, 2400
+
+
+# Vuot doc dai giua man, tu 80% sang 20%: du dai de he thong tinh la vuot chu
+# khong phai cham, va khong cham hai mep - mep la vung cu chi he thong (back
+# gesture), vuot tu do thi noi dung app khong nhan duoc gi.
+SWIPE_NEAR, SWIPE_FAR = 0.2, 0.8
+SWIPE_MS = 300
+_SWIPE_ENDS = {
+    "left": (SWIPE_FAR, 0.5, SWIPE_NEAR, 0.5),
+    "right": (SWIPE_NEAR, 0.5, SWIPE_FAR, 0.5),
+    "up": (0.5, SWIPE_FAR, 0.5, SWIPE_NEAR),
+    "down": (0.5, SWIPE_NEAR, 0.5, SWIPE_FAR),
+}
+
+
+async def swipe(client, serial: str, direction: str, screen=None) -> None:
+    """Vuot mot chieu. `screen` co san thi truyen vao, khong thi tu do."""
+    ends = _SWIPE_ENDS.get(direction)
+    if ends is None:
+        raise AdbError(f"Huong vuot khong hieu: {direction!r}")
+    guard(serial)
+    width, height = screen or await screen_size(client, serial)
+    x1, y1, x2, y2 = ends
+    out, err, _ = await client.shell(
+        serial, "input", "swipe",
+        str(int(width * x1)), str(int(height * y1)),
+        str(int(width * x2)), str(int(height * y2)), str(SWIPE_MS))
+    problem = output_error(out, err)
+    if problem:
+        raise AdbError(f"Vuot {direction} that bai: {problem}")
+
+
 async def wait_foreground(
     client, serial: str, package: str, timeout: float = LAUNCH_TIMEOUT
 ) -> float:

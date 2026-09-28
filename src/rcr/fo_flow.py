@@ -69,15 +69,6 @@ def rule_for(activity: str, ruleset: list[dict]) -> dict | None:
     return next((r for r in ruleset if r["match"] in activity), None)
 
 
-async def _screen(client, serial: str) -> tuple[int, int]:
-    out, _, _ = await client.shell(serial, "wm", "size")
-    for part in out.split():
-        if "x" in part and part.replace("x", "").isdigit():
-            w, h = part.split("x")
-            return int(w), int(h)
-    return 1080, 2400
-
-
 async def _tap(client, serial: str, node) -> None:
     x, y = node.bounds.center
     await device_app.tap(client, serial, x, y)
@@ -96,11 +87,9 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
         await asyncio.sleep(step["wait"])
         return f"cho {step['wait']}s", True
     if "swipe" in step:
-        w, h = screen
-        await client.shell(serial, "input", "swipe",
-                           str(int(w * 0.8)), str(int(h * 0.5)),
-                           str(int(w * 0.2)), str(int(h * 0.5)), "300")
-        return "vuot sang trai", True
+        direction = step["swipe"] or "left"
+        await device_app.swipe(client, serial, direction, screen)
+        return f"vuot sang {direction}", True
     if "key" in step:
         await client.shell(serial, "input", "keyevent", step["key"])
         return step["key"], True
@@ -141,7 +130,7 @@ async def walk_to(client, serial: str, package: str, target: str,
     """
     guard(serial, package)
     data = rules()
-    ruleset, screen = data.get("rules") or [], await _screen(client, serial)
+    ruleset, screen = data.get("rules") or [], await device_app.screen_size(client, serial)
     target = target or data.get("home_match", "MainActivity")
     trail: list[dict] = []
     progress: dict[str, int] = {}

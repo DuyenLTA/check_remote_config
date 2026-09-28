@@ -34,11 +34,21 @@ Làm được: đặt giá trị remote config **không cần quyền admin Fire
 sống qua lần mở app không.
 
 Lái được app qua các bước Action của case: `Quan sát…` (không thao tác),
-`Nhấn nút "X"` / `Mở tab X` (tap), `Chờ N giây`, và **bước đi tới cả một màn**
-(`Hoàn thành luồng FO đến Home`, `Vào màn Onboarding 2`) — chỗ này `fo_flow` lo,
-OB1/2/3 sang màn bằng **vuốt** chứ không bấm Next, vì chính nút Next là thứ đang
-được test. Câu khác — hoặc **nhiều hơn một node cùng khớp** — thì dừng kèm lý do,
-**không tap bừa**: tap sai chỗ trên máy thật là bấm vào quảng cáo hoặc mua hàng thật.
+`Nhấn nút "X"` / `Mở tab X` (tap), `Chờ N giây`, `Vuốt sang trái/phải/lên/xuống`,
+và **bước đi tới cả một màn** (`Hoàn thành luồng FO đến Home`, `Vào màn Onboarding 2`)
+— chỗ này `fo_flow` lo, OB1/2/3 sang màn bằng **vuốt** chứ không bấm Next, vì chính
+nút Next là thứ đang được test. Câu khác — hoặc **nhiều hơn một node cùng khớp** —
+thì dừng kèm lý do, **không tap bừa**: tap sai chỗ trên máy thật là bấm vào quảng
+cáo hoặc mua hàng thật.
+
+Hai chỗ nới lỏng có chủ ý, vì cái giá sai khác hẳn cái giá sai của một cú tap:
+
+- **Câu vuốt không nêu hướng** (`Vuốt theo đúng hướng icon gợi ý`) thì lấy hướng
+  sang trang kế (trái). Vuốt không bấm trúng gì nên đoán sai chỉ làm màn không đổi
+- **Vế sau dấu phẩy nếu chỉ là quan sát thì không chặn bước đi tới màn**
+  (`Chạy luồng FO đến OB3, quan sát banner` vẫn lái được). Vế sau là việc khác
+  (`Vào OB3, ghi nhận thời điểm ad show`) thì vẫn dừng — lái tới nơi rồi coi như
+  xong bước là bỏ im vế sau, case đó có thể ra PASS giả
 
 **Chấm được PASS/FAIL** từng dòng Expected: dòng về quảng cáo chấm bằng log
 request/load/show, dòng về chữ và node chấm bằng cây UI. Dòng nào không đo được

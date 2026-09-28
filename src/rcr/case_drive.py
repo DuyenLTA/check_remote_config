@@ -8,6 +8,10 @@ lai theo luat o `data/fo_flow.yaml`. Truoc day moi buoc dang nay deu la
 NEEDS_HUMAN, trong khi bo luat da biet duong di - case dung lai o buoc 2 du
 tool thua suc di tiep.
 
+Buoc VUOT khong bi chan khi quang cao che man: vuot khong bam trung thu gi nen
+khong the bam nham vao quang cao, va dung cai dang duoc test (icon SWIPE thay
+cho vung ad) lai nam o man co quang cao.
+
 HAI CHO TU CHOI THAO TAC, co y:
   - quang cao dang che man hinh -> khong tu tim nut X. Nut dong quang cao nho,
     lech vai pixel la bam vao chinh quang cao (mo trinh duyet, co khi mua hang).
@@ -105,6 +109,9 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop) -> dict:
         if isinstance(action, act_resolver.Tap):
             await device_app.tap(client, serial, action.x, action.y)
             await asyncio.sleep(1.0)  # cho man hinh kip doi truoc khi chup buoc sau
+        elif isinstance(action, act_resolver.Swipe):
+            await device_app.swipe(client, serial, action.direction)
+            await asyncio.sleep(1.0)
         elif isinstance(action, act_resolver.Wait):
             await asyncio.sleep(action.seconds)
     return {"steps": done, "status": "DONE", "stopped_at": 0,
