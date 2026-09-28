@@ -9,6 +9,8 @@ Diem phai gac:
 
 from __future__ import annotations
 
+import pytest
+
 from rcr import fo_steps, ui_dump
 
 ONBOARDING = """<?xml version='1.0' encoding='UTF-8'?>
@@ -121,3 +123,38 @@ def test_case_ve_OB2_thi_lai_toi_dung_trang_2():
 
     assert fo_flow.target_for("#20 swipe_onb2=true → icon SWIPE") == "OnboardingActivity#2"
     assert fo_flow.target_for("#21 Vuốt sang OB3") == "OnboardingActivity#3"
+
+
+# --- ten man phai khop TEN LOP THAT tren may --------------------------------
+
+def test_target_cua_man_Language_khop_ten_lop_that():
+    """`walk_to` so bang `target in activity`, nen target phai la chuoi CON.
+
+    Lop that la `VslTemplate4Language14Activity` - khong chua "LanguageActivity".
+    De sai thi case ve man Language lai het ca luong roi bao "KHONG toi duoc"
+    (do 2026-09-28: case 3 va 4 moi case ton them ~90 giay).
+    """
+    from rcr import fo_screens
+
+    for lop in ("VslTemplate4Language14Activity", "VslTemplate4Language24Activity"):
+        assert fo_screens.target_for("Vào màn Language 1.") in lop
+        assert fo_screens.man_cua_ma("201_lfo1_n_native_high1") in lop
+
+
+@pytest.mark.parametrize("cau,lop", [
+    ("Vào màn Onboarding 2.", "VslTemplate4OnboardingActivity"),
+    ("Hoàn thành luồng FO đến Home.", "com.app.MainActivity"),
+    ("Vào màn Question.", "VslTemplate4QuestionActivity"),
+])
+def test_cac_target_con_lai_cung_la_chuoi_con_cua_ten_lop(cau, lop):
+    from rcr import fo_screens
+
+    assert fo_screens.target_for(cau).split("#")[0] in lop
+
+
+def test_moi_man_trong_bang_ma_deu_co_trong_bang_thu_tu():
+    """Man khong co trong THU_TU bi xep cuoi -> cai chan 'dung o day' hong im."""
+    from rcr import fo_screens
+
+    for man in set(fo_screens.MAN_THEO_MA.values()):
+        assert man in fo_screens.THU_TU

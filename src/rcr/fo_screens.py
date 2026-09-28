@@ -16,8 +16,12 @@ SCREEN_WORDS = (
     ("ob3", "OnboardingActivity#3"), ("ob4", "OnboardingActivity#4"),
     ("onboarding 2", "OnboardingActivity#2"), ("onboarding 3", "OnboardingActivity#3"),
     ("onboarding", "OnboardingActivity"), ("onb", "OnboardingActivity"),
-    ("question", "QuestionActivity"), ("language", "LanguageActivity"),
-    ("lfo", "LanguageActivity"), ("paywall", "BillingActivity"),
+    ("question", "QuestionActivity"), ("language", "Language"),
+    # Ten lop that la `VslTemplate4Language14Activity` / `...Language24Activity`,
+    # KHONG chua chuoi "LanguageActivity". `walk_to` so bang `target in activity`
+    # nen de "LanguageActivity" la khong bao gio khop: case ve man Language lai
+    # het ca luong roi bao "KHONG toi duoc" (do 2026-09-28, case 3 va 4).
+    ("lfo", "Language"), ("paywall", "BillingActivity"),
     ("home", "MainActivity"),
 )
 
@@ -29,14 +33,14 @@ SCREEN_WORDS = (
 # ~2 phut trong khi doc log o splash la xong).
 MAN_THEO_MA = {
     "101": "", "102": "", "105": "", "106": "",      # splash: app tu o do sau khi mo
-    "201": "LanguageActivity",
-    "202": "LanguageActivity",
+    "201": "Language",
+    "202": "Language",
     "301": "OnboardingActivity#1", "302": "OnboardingActivity#2",
     "303": "OnboardingActivity#3", "304": "OnboardingActivity#4",
     "305": "OnboardingActivity#5", "306": "OnboardingActivity#5",
 }
 # Thu tu cac man trong luong FO, de biet man nao nam SAU man nao.
-THU_TU = ("", "LanguageActivity", "OnboardingActivity#1", "OnboardingActivity#2",
+THU_TU = ("", "Language", "OnboardingActivity#1", "OnboardingActivity#2",
           "OnboardingActivity#3", "OnboardingActivity#4", "OnboardingActivity#5",
           "OnboardingActivity", "QuestionActivity", "BillingActivity", "MainActivity")
 
