@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from . import assert_ads, fo_screens, ui_names
+from . import assert_ads, assert_ui, ui_names
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -33,6 +33,10 @@ from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
 # vong do chinh nguoi viet TC doan ra.
 TBD_RE = re.compile(r"\[\s*(?:tbd|assume|inferred|todo)|spec ch[ưu]a n[êe]u|ch[ưu]a c[óo] spec", re.I)
 
+# "Icon la animation lap", "hieu ung chay lien tuc" - do bang cach chup vai
+# khung roi so vung cua node, KHONG phai dong "phai nhin mat".
+ANIM_RE = re.compile(r"animation|animated|hi[ệe]u\s*[ứu]ng|l[ặa]p\s*l[ạa]i|\bl[ặa]p\b|loop|"
+                     r"nh[áa]y|chuy[ểe]n\s*[đd][ộo]ng", re.I)
 NO_CRASH_RE = re.compile(r"kh[oô]ng\s+(?:b[ịi]\s+)?crash|not\s+crash|no\s+crash", re.I)
 # Dong ta UI: "Popup hien thi", "Title can giua", "Button X o goc phai tren"...
 UI_RE = re.compile(r"hi[ểe]n\s*th[ịi]|popup|pop-up|button|n[úu]t|title|subtitle|"
@@ -44,8 +48,6 @@ TOI_MAN_RE = re.compile(
     r"chuy[ểe]n\s*(?:sang|qua|t[ớo]i)|v[àa]o\s*m[àa]n|[đd]i\s*(?:[đd]ến|den|t[ớo]i)|"
     r"quay\s*(?:l[ạa]i|v[ềe])|hi[ểe]n\s*th[ịi]\s*m[àa]n|m[àa]n\s+\S+\s+hi[ểe]n\s*th[ịi]",
     re.I)
-# "KHONG hien thi icon SWIPE" - phu dinh cua mot phan tu UI.
-NOT_SHOW_RE = re.compile(r"kh[oô]ng\s+(?:c[óo]\s+)?(?:hi[ểe]n|th[ấa]y|xu[ấa]t hi[ệe]n)", re.I)
 
 
 def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str = "",
@@ -73,15 +75,20 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
 
     quoted = QUOTED_RE.search(text)
     if quoted:
-        return _text_on_screen(quoted.group(1), drive)
+        return assert_ui._text_on_screen(quoted.group(1), drive)
 
     # Ten goi cua nguoi ("icon SWIPE") -> node tren cay UI (data/ui_names.yaml).
     element = ui_names.find_in(text)
+    # Cau doi animation cham truoc: no do duoc, con nhanh phan tu chi noi CO/KHONG.
+    if ANIM_RE.search(text):
+        ket = assert_ui._animation_cua(element, text, drive)
+        if ket:
+            return ket
     if element:
-        return _element_on_screen(element, text, drive)
+        return assert_ui._element_on_screen(element, text, drive)
 
     if TOI_MAN_RE.search(text):
-        ket = _man_da_toi(text, drive)
+        ket = assert_ui._man_da_toi(text, drive)
         if ket:
             return ket
 
@@ -92,54 +99,6 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         return out(NEEDS_HUMAN,
                    f"dòng này tả UI của màn cần lái tới, tool mới dừng ở {where}", text)
     return out(NOT_VERIFIABLE, "dòng này phải nhìn mắt mới kết luận được (design/màu/animation)", text)
-
-
-def _text_on_screen(wanted: str, drive: dict) -> dict:
-    """Chu co xuat hien tren man hinh nao da chup khong."""
-    steps = drive.get("steps") or []
-    if not steps:
-        return out(NEEDS_HUMAN, f"chưa lái tới màn nào để tìm {wanted!r}", "")
-    want = wanted.casefold()
-    for step in steps:
-        if want in (step.get("dump") or "").casefold():
-            return out(PASS, f"thấy {wanted!r} ở bước {step['n']}", step.get("activity", ""))
-    if drive.get("blocked_steps"):
-        # Dump la UI quang cao, khong phai app -> nguoi dong ad roi chay lai.
-        return out(
-            NEEDS_HUMAN,
-            f"không thấy {wanted!r} vì màn hình bị quảng cáo che ở bước {drive['blocked_steps']} "
-            "— đóng quảng cáo rồi chạy lại",
-            "",
-        )
-    if not assert_ads.tapped(drive):
-        # Chua tap gi thi van dang o man mo dau: khong thay chu cua MAN KHAC la
-        # duong nhien, khong phai app thieu.
-        return out(
-            NEEDS_HUMAN,
-            f"không thấy {wanted!r}, nhưng tool chưa lái tới màn nào khác "
-            f"(đang ở {assert_ads.where(drive) or 'màn mở đầu'})",
-            "",
-        )
-    return out(FAIL, f"không thấy {wanted!r} trên màn hình nào đã chụp", "")
-
-
-def _element_on_screen(element: dict, text: str, drive: dict) -> dict:
-    """Phan tu UI co tren man da chup khong. Cau phu dinh thi dao ky vong."""
-    if not (drive.get("steps") or []):
-        return out(NEEDS_HUMAN, f"chưa lái tới màn nào để tìm {element['name']}", "")
-    if not assert_ads.tapped(drive):
-        return out(NEEDS_HUMAN,
-                   f"chưa lái tới màn cần xem {element['name']} "
-                   f"(đang ở {assert_ads.where(drive) or 'màn mở đầu'})", "")
-    hit = ui_names.seen_in(element, [s.get("dump", "") for s in drive["steps"]])
-    want_absent = bool(assert_ads.NEGATIVE_RE.search(text) or NOT_SHOW_RE.search(text))
-    if want_absent:
-        if hit:
-            return out(FAIL, f"vẫn thấy {element['name']} trên màn ({hit})", hit)
-        return out(PASS, f"không thấy {element['name']} trên màn — đúng kỳ vọng", "")
-    if hit:
-        return out(PASS, f"thấy {element['name']} trên màn ({hit})", hit)
-    return out(FAIL, f"không thấy {element['name']} trên màn đã chụp", "")
 
 
 def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), overrides=()) -> dict:
@@ -168,36 +127,3 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     verdict = worst(measured) if measured else worst(r["verdict"] for r in lines)
     return {"verdict": verdict, "lines": lines, "measured": len(measured),
             "pending": pending, "po": po}
-
-
-def _man_da_toi(text: str, drive: dict) -> dict | None:
-    """Dong "chuyen sang man X" -> so voi man dang focus SAU buoc cuoi.
-
-    `None` khi cau khong neu man nao trong bo luat - de cac nhanh sau xu ly.
-    """
-    target = fo_screens.target_for(text)
-    if not target:
-        return None
-    cuoi = drive.get("final") or {}
-    activity = cuoi.get("activity") or ""
-    if not activity:
-        return out(NEEDS_HUMAN, "chưa chụp được màn sau bước cuối nên không đối chiếu được", text)
-    ten, _, trang = target.partition("#")
-    gon = activity.split(".")[-1]
-    if ten not in activity:
-        return out(FAIL, f"sau bước cuối đang ở {gon}, không phải {target}", gon)
-    if trang:
-        # Cac trang OB dung chung activity -> phan biet bang cham chi trang.
-        now = cuoi.get("page") or 0
-        if not now:
-            return out(NEEDS_HUMAN, f"đang ở {gon} nhưng không đọc được đang ở trang thứ mấy", gon)
-        # Trang suy ra (OB3 khong co cham chi trang) phai noi ro trong ly do:
-        # nguoi doc can biet so nay do duoc hay tinh ra.
-        cach = (" (suy từ trang đo được + số lần vuốt, màn đã đổi thật)"
-                if cuoi.get("page_nguon") == "suy_ra" else "")
-        if str(now) != trang:
-            return out(FAIL, f"đang ở {gon} trang {now}, kỳ vọng trang {trang}{cach}",
-                       f"{gon} trang {now}")
-        return out(PASS, f"sau bước cuối đang ở {gon} trang {now} — đúng kỳ vọng{cach}",
-                   f"{gon} trang {now}")
-    return out(PASS, f"sau bước cuối đang ở {gon} — đúng kỳ vọng", gon)

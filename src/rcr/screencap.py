@@ -52,6 +52,34 @@ def to_thumb(png: bytes) -> str:
         return ""
 
 
+async def raw(client, serial: str) -> bytes:
+    """PNG goc, chua thu nho. Dung de SO hai khung voi nhau (do animation)."""
+    guard(serial)
+    runner = getattr(client, "run_binary", None)
+    if runner is None:
+        return b""
+    try:
+        out, _, _ = await runner("-s", serial, "exec-out", "screencap", "-p",
+                                 timeout=CAPTURE_TIMEOUT)
+    except AdbError:
+        return b""
+    return out if out.startswith(b"\x89PNG") else b""
+
+
+async def frames(client, serial: str, so_khung: int = 4, nhip: float = 0.35) -> list[bytes]:
+    """Vai khung cach nhau `nhip` giay. Khung hong bi bo, khong lam do ca case."""
+    import asyncio
+
+    ra = []
+    for i in range(so_khung):
+        if i:
+            await asyncio.sleep(nhip)
+        png = await raw(client, serial)
+        if png:
+            ra.append(png)
+    return ra
+
+
 async def capture(client, serial: str) -> dict:
     """-> {thumb: data URI, warning: str}. Khong raise: thieu anh thi bao chu
     khong lam do ca case dang chay."""

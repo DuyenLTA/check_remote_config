@@ -116,7 +116,11 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
         "shown": [u["unit"] for u in shown],
     }
 
-    if EXTERNAL_RE.search(text):
+    # Cau nhac console nhung DOI DUNG thu tool do duoc ("Requests = 0 cho unit
+    # X") thi cham bang log, khong day sang cho nguoi: so request trong log
+    # chinh la so AdMob dem. Chi cau khong co ky vong do duoc moi bo qua.
+    if EXTERNAL_RE.search(text) and not (NEGATIVE_RE.search(text)
+                                         or assert_ad_rules.IMPRESSION_RE.search(text)):
         return out(NOT_VERIFIABLE,
                    "số liệu trên console AdMob/Firebase — PO đối soát, tester không có quyền vào",
                    actual, scope="po")

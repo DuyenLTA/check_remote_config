@@ -415,17 +415,22 @@ def test_biet_ID_ma_vi_tri_do_van_chay_thi_FAIL():
     assert res["verdict"] == a.FAIL
 
 
-def test_dong_AdMob_console_khong_tinh_la_can_nguoi():
-    """Tester khong vao duoc AdMob console - do la viec cua PO.
+def test_dong_console_co_ky_vong_do_duoc_thi_cham_bang_log():
+    """"Requests = 0 cho unit X" la thu tool dem duoc trong log.
 
-    Gop chung vao con so "can nguoi" la bao tester di lam mot viec ho khong co
-    quyen lam (user chot 28/09/2026).
+    So request trong log chinh la so AdMob dem, nen day sang cho nguoi la bo
+    mot dong cham duoc (user chot 28/09/2026: phai tu verify het).
     """
     res = a.check_all(EXPECTS_MOT_UNIT, ADS_BIET_ID, NO_DRIVE, OK_CRASH)
     console = res["lines"][1]
-    assert console["scope"] == "po"
-    assert "PO đối soát" in console["reason"]
-    assert res["po"] == 1 and res["pending"] == 0
+    assert console["verdict"] == a.PASS
+    assert res["po"] == 0
+
+
+def test_cau_console_khong_neu_ky_vong_do_duoc_thi_van_la_viec_cua_PO():
+    """"Mo console xem doanh thu" khong co con so nao de doi chieu."""
+    res = a.check("Mở AdMob console xem báo cáo doanh thu.", ADS_BIET_ID, NO_DRIVE, OK_CRASH)
+    assert res["scope"] == "po"
 
 
 # --- cau phu dinh chung chung -> xet cac vi tri CHINH CASE tat ---------------
@@ -511,3 +516,38 @@ def test_dong_ta_phan_tu_UI_khong_bi_cham_thanh_man_hinh():
              "final": {"activity": "x/VslTemplate4OnboardingActivity", "page": 2}}
     res = a.check("Vùng ad hiển thị icon SWIPE (animated).", {}, drive, OK_CRASH)
     assert "trang" not in res["reason"]
+
+
+# --- dong doi animation: do bang cach so cac khung da chup ------------------
+# Do that 2026-09-28 tren `ob2Bb2SwipeLottie` cua Piclux: khung 1 va khung 3
+# trung khit nhau -> chu ky ~1,05 giay.
+
+def _drive_anim(ket):
+    return {"steps": [{"n": 1, "dump": '<node resource-id="x:id/ob2Bb2SwipeLottie" />',
+                       "anim": {"ob2Bb2SwipeLottie": ket}, "action": {"kind": "noop"}}]}
+
+
+def test_icon_co_chuyen_dong_va_lap_thi_PASS():
+    res = a.check("Icon là animation lặp, gợi ý rõ hướng vuốt ngang.", {},
+                  _drive_anim({"doi": True, "lap": True, "lech_max": 19.4, "chu_ky_khung": 2}),
+                  OK_CRASH)
+    assert res["verdict"] == a.PASS and "lặp lại sau 2" in res["reason"]
+
+
+def test_icon_dung_yen_thi_FAIL():
+    res = a.check("Icon là animation lặp.", {},
+                  _drive_anim({"doi": False, "lap": False, "lech_max": 0.2}), OK_CRASH)
+    assert res["verdict"] == a.FAIL and "đứng yên" in res["reason"]
+
+
+def test_co_chuyen_dong_nhung_khong_lap_thi_FAIL():
+    res = a.check("Icon là animation lặp.", {},
+                  _drive_anim({"doi": True, "lap": False, "lech_max": 12.0}), OK_CRASH)
+    assert res["verdict"] == a.FAIL and "không khung nào lặp" in res["reason"]
+
+
+def test_dong_khong_doi_animation_thi_cham_nhu_phan_tu_thuong():
+    """"Icon SWIPE hien thi" chi hoi CO tren man khong, khong hoi no co dong."""
+    res = a.check("Icon SWIPE hiển thị.", {},
+                  _drive_anim({"doi": False, "lap": False, "lech_max": 0.1}), OK_CRASH)
+    assert "đứng yên" not in res["reason"]
