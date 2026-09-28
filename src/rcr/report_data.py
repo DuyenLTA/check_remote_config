@@ -11,12 +11,23 @@ from __future__ import annotations
 
 
 def actual_text(run: dict, drive: dict) -> str:
-    """Mot cau ta lai luot chay that - de doc canh cot Expected."""
+    """Mot cau ta lai luot chay that - de doc canh cot Expected.
+
+    KHONG liet ke tung unit o day: bang ads ngay duoi da co du `req/load/show`
+    cua tung unit, chep lai bang chu la doc hai lan cung mot thu va lam troi mat
+    nhung y chi co o day (lai may buoc, config co song khong).
+    """
     parts = []
     units = (run.get("ads") or {}).get("units") or {}
-    for u in sorted(units.values(), key=lambda x: (x["type"], x["unit"])):
-        got = "đã show" if u["shown"] else ("load được" if u["loaded"] else "không fill")
-        parts.append(f'{u["type"]} {u["unit"]} {got}')
+    if units:
+        show = sum(1 for u in units.values() if u["shown"])
+        load = sum(1 for u in units.values() if u["loaded"] and not u["shown"])
+        req = sum(1 for u in units.values() if u["requested"])
+        dem = [f"{req} unit được request"]
+        if load:
+            dem.append(f"{load} load được")
+        dem.append(f"{show} đã show" if show else "không unit nào show (không fill)")
+        parts.append(" · ".join(dem))
     states = [s["state"] for s in (run.get("ads") or {}).get("banner_states", [])]
     if states:
         parts.append("adBannerState " + " → ".join(states))

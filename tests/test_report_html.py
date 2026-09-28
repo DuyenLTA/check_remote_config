@@ -80,9 +80,15 @@ def test_nhom_theo_tinh_nang_cua_file_TC():
     assert "Splash UI mới" in report_html.build(data)
 
 
-def test_cau_ta_lai_luot_chay_co_trong_dong_thu_gon():
+def test_cau_ta_lai_luot_chay_dem_chu_khong_liet_ke_tung_unit():
+    """Bang ads ngay duoi da co `req/load/show` tung unit.
+
+    Chep lai bang chu la doc hai lan cung mot thu, va lam troi mat nhung y chi
+    co o dong nay: lai may buoc, config co song qua lan mo app khong.
+    """
     rec, out = page()
-    assert "banner *****825 không fill" in rec["actual"]
+    assert "unit được request" in rec["actual"]
+    assert "*****825" not in rec["actual"]
     assert "adBannerState None → Loading" in rec["actual"]
 
 
