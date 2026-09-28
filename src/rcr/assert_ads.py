@@ -140,7 +140,8 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "") -> di
 
     if EXTERNAL_RE.search(text):
         return out(NOT_VERIFIABLE,
-                   "dòng này phải mở console AdMob/Firebase mới biết — ngoài tầm của tool", actual)
+                   "số liệu trên console AdMob/Firebase — PO đối soát, tester không có quyền vào",
+                   actual, scope="po")
 
     biet = set(ads.get("positions") or ())
     if assert_ad_rules.IMPRESSION_RE.search(text):

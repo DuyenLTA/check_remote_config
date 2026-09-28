@@ -30,5 +30,9 @@ def worst(verdicts) -> str:
     return NOT_VERIFIABLE
 
 
-def out(verdict: str, reason: str, actual) -> dict:
-    return {"verdict": verdict, "reason": reason, "actual": actual}
+def out(verdict: str, reason: str, actual, scope: str = "") -> dict:
+    """`scope="po"`: dong nay KHONG thuoc pham vi tester (so lieu tren AdMob
+    console - chi PO vao duoc). Khac han "tool chua do duoc": gop chung vao mot
+    con so "can nguoi" la bao tester di lam mot viec ho khong co quyen lam."""
+    row = {"verdict": verdict, "reason": reason, "actual": actual}
+    return row | {"scope": scope} if scope else row

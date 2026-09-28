@@ -94,3 +94,17 @@ def test_tung_dong_expected_len_bang():
 def test_tieu_de_theo_app_va_ban_sdk():
     _, out = page()
     assert "<title>Lượt chấm app 3.5.4</title>" in out
+
+
+def test_cot_trang_thai_tach_rieng_dong_cua_PO():
+    """"cần người" va "PO đối soát" la hai viec khac nhau, khong duoc gop."""
+    from rcr import report_row
+
+    td = report_row._status({"verdict": "PASS", "pending": 0, "po": 1})
+    assert "PO đối soát" in td and "cần người" not in td
+
+    td = report_row._status({"verdict": "PASS", "pending": 2, "po": 1})
+    assert "còn 2 dòng cần người" in td and "1 dòng PO đối soát" in td
+
+    td = report_row._status({"verdict": "PASS", "pending": 0, "po": 0})
+    assert "cần người" not in td and "PO" not in td

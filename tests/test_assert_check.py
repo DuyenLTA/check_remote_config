@@ -413,3 +413,16 @@ def test_biet_ID_ma_vi_tri_do_van_chay_thi_FAIL():
     res = a.check_all(EXPECTS_MOT_UNIT, ads, NO_DRIVE, OK_CRASH)
     assert res["lines"][0]["verdict"] == a.FAIL
     assert res["verdict"] == a.FAIL
+
+
+def test_dong_AdMob_console_khong_tinh_la_can_nguoi():
+    """Tester khong vao duoc AdMob console - do la viec cua PO.
+
+    Gop chung vao con so "can nguoi" la bao tester di lam mot viec ho khong co
+    quyen lam (user chot 28/09/2026).
+    """
+    res = a.check_all(EXPECTS_MOT_UNIT, ADS_BIET_ID, NO_DRIVE, OK_CRASH)
+    console = res["lines"][1]
+    assert console["scope"] == "po"
+    assert "PO đối soát" in console["reason"]
+    assert res["po"] == 1 and res["pending"] == 0

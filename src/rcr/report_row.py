@@ -125,8 +125,13 @@ def _actual(c: dict) -> str:
 
 
 def _status(c: dict) -> str:
-    n = c.get("pending") or 0
-    note = f'<span class="why">còn {n} dòng cần người</span>' if n else ""
+    """Hai con so, KHONG gop: tester lam duoc gi, va gi thuoc ve PO."""
+    ghi = []
+    if c.get("pending"):
+        ghi.append(f"còn {c['pending']} dòng cần người")
+    if c.get("po"):
+        ghi.append(f"{c['po']} dòng PO đối soát")
+    note = f'<span class="why">{" · ".join(ghi)}</span>' if ghi else ""
     return f'<td class="c-st">{pill(c["verdict"])}{note}</td>'
 
 

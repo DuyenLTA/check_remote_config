@@ -147,6 +147,10 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=()) -> dict:
     # app, chi noi ve gioi han cua tool. So dong do di kem de khong ai tuong case
     # da duoc cham tron ven.
     measured = [r["verdict"] for r in lines if r["verdict"] in (PASS, FAIL)]
-    pending = len(lines) - len(measured)
+    # Dong cua PO khong tinh vao "can nguoi": tester khong vao duoc AdMob console
+    # nen bao ho di lam la bao sai viec. Van hien trong report, chi dem rieng.
+    po = sum(1 for r in lines if r.get("scope") == "po")
+    pending = len(lines) - len(measured) - po
     verdict = worst(measured) if measured else worst(r["verdict"] for r in lines)
-    return {"verdict": verdict, "lines": lines, "measured": len(measured), "pending": pending}
+    return {"verdict": verdict, "lines": lines, "measured": len(measured),
+            "pending": pending, "po": po}

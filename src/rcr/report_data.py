@@ -76,10 +76,12 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         "drive": drive.get("status", "—"),
         "keys_not_used": result.get("keys_not_used") or [],
         "lines": [
-            {"v": l["verdict"], "e": l["expected"], "r": l["reason"]}
+            {"v": l["verdict"], "e": l["expected"], "r": l["reason"],
+             **({"scope": l["scope"]} if l.get("scope") else {})}
             for l in (run.get("assert") or {}).get("lines", [])
         ],
         "pending": (run.get("assert") or {}).get("pending", 0),
+        "po": (run.get("assert") or {}).get("po", 0),
         "ads": [
             {"t": u["type"], "u": u["unit"], "req": u["requested"], "load": u["loaded"],
              "show": u["shown"], "keys": u.get("rc_keys") or []}
