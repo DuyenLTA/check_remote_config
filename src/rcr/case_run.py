@@ -96,7 +96,8 @@ async def apply_case(
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
     if expects:
         out["assert"] = assert_check.check_all(
-            expects, out["ads"], out.get("drive") or {}, out["crash"], tuple(baseline.configs)
+            expects, out["ads"], out.get("drive") or {}, out["crash"],
+            tuple(baseline.configs), overrides,
         )
         # Config khong song thi chua test duoc gi - dung ket luan tu dong Expected.
         out["verdict"] = out["verdict"] if not result.ok else out["assert"]["verdict"]

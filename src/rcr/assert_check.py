@@ -42,7 +42,8 @@ QUOTED_RE = re.compile(r"[\"“”']([^\"“”']{2,60})[\"“”']")
 NOT_SHOW_RE = re.compile(r"kh[oô]ng\s+(?:c[óo]\s+)?(?:hi[ểe]n|th[ấa]y|xu[ấa]t hi[ệe]n)", re.I)
 
 
-def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str = "") -> dict:
+def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str = "",
+          vi_tri=()) -> dict:
     """Cham mot dong Expected -> {verdict, reason, actual}.
 
     `scope` la vi tri unit ma ca case noi toi, cho dong khong tu nhac ten unit.
@@ -62,7 +63,7 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
 
     kind = assert_ads.ad_type_in(text) or assert_ads.type_from_position(text, rc_keys)
     if kind or assert_ads.routes(text):
-        return assert_ads.ad_line(text, kind, ads, drive, scope)
+        return assert_ads.ad_line(text, kind, ads, drive, scope, vi_tri)
 
     quoted = QUOTED_RE.search(text)
     if quoted:
@@ -130,14 +131,16 @@ def _element_on_screen(element: dict, text: str, drive: dict) -> dict:
     return out(FAIL, f"không thấy {element['name']} trên màn đã chụp", "")
 
 
-def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=()) -> dict:
+def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), overrides=()) -> dict:
     """Cham ca case -> {verdict, lines: [...]}"""
     lines = []
     # Vi tri unit cua ca case: dong "Impressions = 0" khong tu nhac ten unit,
     # ten no nam o dong Expected phia tren.
     scope = assert_ads.case_position(expects)
+    # Cau phu dinh chung chung noi ve cac vi tri chinh case nay bat/tat.
+    vi_tri = assert_ads.vi_tri_cua_case(overrides)
     for index, line in enumerate(expects, 1):
-        row = check(line, ads or {}, drive or {}, crash or {}, rc_keys, scope)
+        row = check(line, ads or {}, drive or {}, crash or {}, rc_keys, scope, vi_tri)
         lines.append({"n": index, "expected": " ".join(line.split()), **row})
     if not lines:
         return {"verdict": NOT_VERIFIABLE, "lines": [], "note": "case không có dòng Expected nào"}

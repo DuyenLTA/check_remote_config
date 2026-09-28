@@ -117,3 +117,35 @@ def negative(text: str, kind: str, requested: list[dict], actual: dict, token: s
                f"`{token}` — không quy được cho vị trí trong câu"
                + (f" — các unit map được thuộc vị trí khác: {', '.join(khac)}" if khac
                   else " — ID trong log bị che còn 3 số cuối"), actual)
+
+
+def negative_theo_case(text: str, kind: str, requested: list[dict], actual: dict,
+                       vi_tri: tuple[str, ...], khop, biet: set) -> dict:
+    """Cau phu dinh khong nhac ma vi tri -> xet cac vi tri CHINH CASE NAY tat.
+
+    "App KHONG request/load native ad" trong mot case tat `show_302_*` noi ve
+    302, khong noi ve ca app: 301 va 303 van preload cho man sau, do la thiet ke.
+    """
+    if not requested:
+        return out(PASS, f"không unit {kind} nào được request", actual)
+    if ANY_RE.search(text):
+        return out(FAIL, f"vẫn có request {kind}", actual)
+    if not vi_tri:
+        # Khong biet case noi ve vi tri nao -> giu cach cu.
+        if any(u.get("rc_keys") for u in requested):
+            return out(FAIL, f"vẫn có request {kind}", actual)
+        return out(NOT_VERIFIABLE,
+                   f"có {len(requested)} request {kind} nhưng ID bị che, không map được unit "
+                   "về vị trí nào — không quy được cho vị trí trong câu", actual)
+    ban = [u["unit"] for u in requested if any(khop(u, t) for t in vi_tri)]
+    if ban:
+        return out(FAIL, f"vẫn có request {kind} của {', '.join(sorted(set(vi_tri)))}",
+                   actual | {"charged": ban})
+    if all(t in biet for t in vi_tri):
+        return out(PASS,
+                   f"không request {kind} nào của {', '.join(vi_tri)} — ID các vị trí này đã "
+                   f"biết nên đối chiếu được, {len(requested)} request còn lại thuộc vị trí khác",
+                   actual)
+    return out(NOT_VERIFIABLE,
+               f"có {len(requested)} request {kind} nhưng chưa biết ID của "
+               f"{', '.join(t for t in vi_tri if t not in biet)} nên không quy được", actual)

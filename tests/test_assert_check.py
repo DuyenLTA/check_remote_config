@@ -426,3 +426,49 @@ def test_dong_AdMob_console_khong_tinh_la_can_nguoi():
     assert console["scope"] == "po"
     assert "PO đối soát" in console["reason"]
     assert res["po"] == 1 and res["pending"] == 0
+
+
+# --- cau phu dinh chung chung -> xet cac vi tri CHINH CASE tat ---------------
+# Do that 2026-09-28, case 20: tat 302 va 202, nhung 301/303 van preload cho
+# man sau -> luat cu bao FAIL cho mot bug khong ton tai.
+
+EXPECTS_CHUNG = ("App KHÔNG request/load native ad (AdMob Requests = 0).",)
+OV_TAT_302 = {"show_302_onb2_n_native_high": "false", "show_302_onb2_n_native": "false",
+              "enable_onb2_screen": "true", "swipe_onb2": "true"}
+
+
+def _ads(keys, positions):
+    return {"units": {"native:*****765": {
+        "type": "native", "unit": "*****765", "requested": 1, "loaded": 0,
+        "load_failed": 1, "shown": 0, "impressions": 0, "errors": [], "rc_keys": keys}},
+        "positions": positions}
+
+
+def test_request_cua_vi_tri_KHAC_khong_lam_case_FAIL():
+    """301/303 preload cho man sau la thiet ke, khong phai loi cua case tat 302."""
+    ads = _ads(["id_303_onb3_n_native_high"],
+               ["302_onb2_n_native_high", "302_onb2_n_native", "303_onb3_n_native_high"])
+    res = a.check_all(EXPECTS_CHUNG, ads, NO_DRIVE, OK_CRASH, overrides=OV_TAT_302)
+    assert res["lines"][0]["verdict"] == a.PASS
+    assert "302_onb2_n_native" in res["lines"][0]["reason"]
+
+
+def test_request_dung_vi_tri_case_tat_thi_van_FAIL():
+    ads = _ads(["id_302_onb2_n_native_high"],
+               ["302_onb2_n_native_high", "302_onb2_n_native"])
+    res = a.check_all(EXPECTS_CHUNG, ads, NO_DRIVE, OK_CRASH, overrides=OV_TAT_302)
+    assert res["lines"][0]["verdict"] == a.FAIL
+
+
+def test_chua_biet_ID_vi_tri_case_tat_thi_khong_ket_luan():
+    ads = _ads(["id_303_onb3_n_native_high"], ["303_onb3_n_native_high"])
+    res = a.check_all(EXPECTS_CHUNG, ads, NO_DRIVE, OK_CRASH, overrides=OV_TAT_302)
+    assert res["lines"][0]["verdict"] == a.NOT_VERIFIABLE
+
+
+def test_key_khong_phai_vi_tri_ads_thi_bo_qua():
+    """`swipe_onb2`, `enable_onb2_screen` khong co ma 3 so -> khong phai vi tri."""
+    from rcr import assert_ads
+
+    assert assert_ads.vi_tri_cua_case(OV_TAT_302) == (
+        "302_onb2_n_native", "302_onb2_n_native_high")

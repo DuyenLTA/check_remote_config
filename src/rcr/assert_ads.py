@@ -122,11 +122,14 @@ def _units(ads: dict, kind: str) -> list[dict]:
     return [u for u in (ads.get("units") or {}).values() if not kind or u["type"] == kind]
 
 
-def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "") -> dict:
+def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
+            vi_tri=()) -> dict:
     """`kind` rong nghia la xet moi loai ad.
 
     `scope` la vi tri unit ma CA case noi toi, dung cho dong khong tu nhac ten
     unit (vd "Impressions = 0" - ten unit nam o dong Expected phia tren).
+    `vi_tri` la cac vi tri chinh case nay BAT/TAT (suy tu key da dat) - cau phu
+    dinh chung chung ("App KHONG request native ad") noi ve dung chung no.
     """
     units = _units(ads, kind)
     requested = [u for u in units if u["requested"]]
@@ -158,8 +161,11 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "") -> di
 
     if NEGATIVE_RE.search(text):
         token = _position_token(text)
-        return assert_ad_rules.negative(
-            text, kind, requested, actual, token, _khop_vi_tri, token in biet)
+        if token:
+            return assert_ad_rules.negative(
+                text, kind, requested, actual, token, _khop_vi_tri, token in biet)
+        return assert_ad_rules.negative_theo_case(
+            text, kind, requested, actual, tuple(vi_tri), _khop_vi_tri, biet)
 
     if not SHOW_RE.search(text):
         return out(NOT_VERIFIABLE, f"câu nói về {kind} nhưng không nêu rõ kỳ vọng", actual)
@@ -196,3 +202,20 @@ def case_position(lines) -> str:
     """
     tokens = {t for t in (_position_token(l or "") for l in lines) if t}
     return tokens.pop() if len(tokens) == 1 else ""
+
+
+def vi_tri_cua_case(overrides) -> tuple[str, ...]:
+    """Cac vi tri ads ma case nay bat/tat, suy tu ten key da dat.
+
+    Cau phu dinh trong bo TC hay viet chung chung ("App KHONG request native
+    ad") va khong nhac ma vi tri nao. Ma vi tri nam o KEY case dat
+    (`show_302_onb2_n_native_high`), do moi la thu case dang noi toi. Khong lay
+    thi moi request cua vi tri KHAC - 301/303 preload cho man sau - deu bi tinh
+    la loi (do that 2026-09-28, case 20 FAIL oan).
+    """
+    ra = set()
+    for key in overrides or ():
+        m = re.match(r"(?:show|enable|id)_(\d{3}_.+)$", key)
+        if m:
+            ra.add(m.group(1))
+    return tuple(sorted(ra))
