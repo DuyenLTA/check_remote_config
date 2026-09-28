@@ -94,6 +94,8 @@ def build(rec: dict) -> dict:
                   for l in (rec.get("lines") or [])],
         "po": rec.get("po", 0),
         "pending": rec.get("pending", 0),
+        "thieu": rec.get("precondition_thieu") or [],
+        "ep": rec.get("ep_ad_fail", ""),
         "ads": rec.get("ads") or [],
         "steps": rec.get("steps") or [],
     }

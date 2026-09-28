@@ -79,6 +79,10 @@ DEFAULT_SWIPE = "left"
 # Ve dung sau dau phay/cham phay. Ve quan sat thi bo qua duoc, ve khac thi khong.
 CLAUSE_RE = re.compile(r"[,;]")
 DEFAULT_WAIT = 3.0
+# "Cho het timeout load ad" - TC khong neu so giay. Dat cao hon timeout load ad
+# thuong gap (~10s) de cu cho phu het ca lan thu cuoi cung.
+CHO_TIMEOUT_ADS = 12.0
+TIMEOUT_RE = re.compile(r"timeout|h[ếe]t\s*gi[ờo]", re.I)
 MAX_WAIT = 60.0
 
 
@@ -154,15 +158,36 @@ def _goto(text: str) -> Action | None:
     head, *rest = CLAUSE_RE.split(text)
     if not GOTO_RE.match(head):
         return None
-    # Ve sau chi duoc la quan sat, hoac doi soat console (viec cua PO, khong
-    # phai thao tac tren app). Con lai la mot viec khac ma buoc nay khong lam.
-    if any(not (OBSERVE_RE.match(ve) or CONSOLE_RE.search(ve))
-           for ve in (v.strip() for v in rest) if ve):
-        return None
+    # Ve sau duoc phep la: quan sat, doi soat console (viec cua PO), hoac mot
+    # cu CHO - cho thi lam duoc that nen khong bo. Con lai la mot viec khac ma
+    # buoc nay khong lam -> tra None, de cau roi ve NeedsHuman.
+    cho = 0.0
+    for ve in (v.strip() for v in rest):
+        if not ve or OBSERVE_RE.match(ve) or CONSOLE_RE.search(ve):
+            continue
+        giay = _cho_bao_lau(ve)
+        if giay is None:
+            return None
+        cho = max(cho, giay)
     target = fo_flow.target_for(head)
     if not target:
         return None
-    return GoTo(target, f"lái qua luồng FO tới {target}")
+    ly_do = f"lái qua luồng FO tới {target}"
+    return GoTo(target, ly_do + (f", chờ {cho:g}s tại đó" if cho else ""), cho)
+
+
+def _cho_bao_lau(ve: str) -> float | None:
+    """Ve nay la mot cu cho? -> so giay. Khong phai cho -> None.
+
+    "cho het timeout load ad" khong neu so giay: lay CHO_TIMEOUT_ADS, dat cao
+    hon timeout load ad thuong gap de chac chan cu cho phu het lan thu cuoi.
+    """
+    m = WAIT_RE.match(ve)
+    if not m:
+        return None
+    if m.group(1):
+        return float(m.group(1))
+    return CHO_TIMEOUT_ADS if TIMEOUT_RE.search(ve) else DEFAULT_WAIT
 
 
 def _tap_by_text(wanted: str, nodes: list[DeviceNode], matched: str) -> Action:

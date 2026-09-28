@@ -95,3 +95,30 @@ def test_dung_o_man_SAU_CUNG_ma_case_dong_toi_chu_khong_di_het():
     # Ma khong biet -> di het, dung doan roi dung som.
     assert fo_flow.man_sau_cung(("999_gi_do",)) is None
     assert fo_flow.man_sau_cung(()) is None
+
+
+def test_ngat_mang_KHONG_dung_de_gia_lap_no_fill():
+    """Do tren may that 2026-09-28: ngat mang thi log KHONG CO unit nao - SDK
+    khong gui noi request. No-fill that la "co request, kho khong tra ad".
+    Lay ngat mang lam no-fill la cham mot trang thai khac han cai TC mo ta."""
+    import inspect
+
+    from rcr import case_run
+
+    assert "ep_ad_fail" not in inspect.signature(case_run.apply_case).parameters
+    # Mang chi duoc ngat khi CHINH precondition bao ngat, khong phai de gia lap
+    # mot trang thai khac.
+    nguon = inspect.getsource(case_run.apply_case)
+    assert "net_ctl.tat_truoc_khi_mo(precondition, steps)" in nguon
+
+
+def test_da_khong_fill_doc_tu_log_chu_khong_mac_dinh():
+    from rcr import ad_positions, precond_guards as g
+
+    vi_tri = ("302_onb2_n_native",)
+    xin = [{"loaded": 0, "shown": 0, "rc_keys": ["id_302_onb2_n_native"]}]
+    fill = [{"loaded": 1, "shown": 0, "rc_keys": ["id_302_onb2_n_native"]}]
+    assert g.da_khong_fill(xin, vi_tri, ad_positions._khop_vi_tri)
+    assert not g.da_khong_fill(fill, vi_tri, ad_positions._khop_vi_tri)
+    # Khong co unit nao cua vi tri do trong log -> chua chung minh duoc gi.
+    assert not g.da_khong_fill([], vi_tri, ad_positions._khop_vi_tri)

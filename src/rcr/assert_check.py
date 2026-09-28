@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from . import assert_ads, assert_ui, ui_names
+from . import ad_positions, assert_ad_area, assert_ads, assert_ui, ui_names
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -38,7 +38,7 @@ TBD_RE = re.compile(r"\[\s*(?:tbd|assume|inferred|todo)|spec ch[ưu]a n[êe]u|ch
 # "User co the vuot sang man ke tiep" - chung minh bang mot cu vuot that.
 DOI_VUOT_RE = re.compile(
     r"(?:c[óo]\s*th[ểe]|\bcan\b|\bable\b).{0,20}(?:vu[ốo]t|swipe)|"
-    r"(?:vu[ốo]t|swipe).{0,24}(?:sang|qua|t[ớo]i|to)\s*(?:m[àa]n|trang|next)", re.I)
+    r"(?:vu[ốo]t|swipe).{0,24}(?:sang|qua|t[ớo]i|to|chuy[ểe]n)\s*(?:m[àa]n|trang|next)", re.I)
 ANIM_RE = re.compile(r"animation|animated|hi[ệe]u\s*[ứu]ng|l[ặa]p\s*l[ạa]i|\bl[ặa]p\b|loop|"
                      r"nh[áa]y|chuy[ểe]n\s*[đd][ộo]ng", re.I)
 # "Luong FO thong suot", "flow tiep tuc binh thuong", "khong bi ket o man nao".
@@ -71,6 +71,18 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     if TBD_RE.search(text):
         return out(NOT_VERIFIABLE,
                    "TC tự đánh dấu dòng này là chưa có spec — không có chuẩn để chấm", text)
+
+    # Dong ve VUNG AD phai cham truoc luat "khong crash": cau "Phan ads khong
+    # load duoc de TRONG (..., khong crash)" co ca hai ve, ma luat crash tra
+    # ve ngay -> ve chinh (vung ad co trong khong) khong ai cham.
+    don_vi = [u for u in (ads.get("units") or {}).values()]
+    if assert_ad_area.VUNG_TRONG_RE.search(text):
+        return assert_ad_area.vung_trong(
+            text, don_vi, {}, crash, tuple(vi_tri), ad_positions._khop_vi_tri)
+    ket = assert_ad_area.dieu_kien_ad(
+        text, don_vi, {}, tuple(vi_tri), ad_positions._khop_vi_tri)
+    if ket:
+        return ket
 
     if NO_CRASH_RE.search(text):
         if crash.get("crashed"):

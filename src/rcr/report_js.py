@@ -105,15 +105,20 @@ function row(d) {
   return `<div class="row" id="c${d.n}">
     <button class="rowbtn" aria-expanded="false" aria-controls="d${d.n}">
       <span class="n">#${d.n}</span>${pill(d.status)}
-      <span class="t"><b>${esc(d.title)}</b><span>${esc(d.actual)}</span></span>
+      <span class="t"><b>${esc(d.title)}` +
+        (d.thieu && d.thieu.length ? ' <span class="pill FIX">thiếu điều kiện</span>' : "") +
+        `</b><span>${esc(d.actual)}</span></span>
       <span class="chev" aria-hidden="true">›</span>
     </button>
     <div class="detail" id="d${d.n}">
       <div><h4>Kỳ vọng (TC) &amp; kết quả</h4><ol>${expects(d)}</ol></div>
       <div style="display:flex;flex-direction:column;gap:12px">
-        <div><h4>Config đã đặt</h4><div class="box">${esc(d.cfg)}</div></div>
+        <div><h4>Config đã đặt</h4><div class="box">${esc(d.cfg)}` +
+          (d.ep ? `<span class="why">Ép điều kiện: ${esc(d.ep)}</span>` : "") + `</div></div>
         <div><h4>Thực tế</h4><div class="box">${esc(d.actual)}</div></div>
       </div>
+      ${d.thieu && d.thieu.length ? `<div class="full fixnote"><b>Precondition chưa tạo được:</b> ` +
+        esc(d.thieu.join("; ")) + ` — case chưa chạy đúng nhánh TC mô tả.</div>` : ""}
       <div class="full"><h4>Precondition (TC)</h4><div class="pre">${esc(d.pre)}</div></div>
       ${steps(d)}${adsTable(d)}${shots(d)}
     </div>

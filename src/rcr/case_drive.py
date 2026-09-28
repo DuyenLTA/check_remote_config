@@ -131,6 +131,8 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                         "blocked_steps": blocked_steps}
             record["action"] = {"kind": "goto", "target": action.target,
                                 "activity": walk["activity"], "reason": action.reason}
+            if action.cho:
+                await asyncio.sleep(action.cho)
             continue
         if isinstance(action, act_resolver.NeedsHuman):
             return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,

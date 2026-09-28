@@ -83,6 +83,12 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         "actual": actual_text(run, drive),
         "overrides": run.get("overrides") or {},
         "verdict": result.get("verdict", ""),
+        # Dieu kien precondition doi ma may nay khong tao duoc - phai hien tren
+        # report, khong thi doc vao tuong case da chay dung nhanh TC mo ta.
+        "precondition_thieu": result.get("precondition_thieu") or [],
+        # Ep ad fail bang cach nao - loi mang va no-fill that cho cung mot
+        # man hinh nhung khac ma loi, nguoi doc phai biet la cach nao.
+        "ep_ad_fail": result.get("ep_ad_fail", ""),
         "reset": (result.get("reset") or {}).get("mode", ""),
         "drive": drive.get("status", "—"),
         "keys_not_used": result.get("keys_not_used") or [],

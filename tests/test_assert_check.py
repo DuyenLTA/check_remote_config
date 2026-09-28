@@ -662,3 +662,79 @@ def test_cau_khong_neu_loai_ad_khong_bi_thua_dau_cach():
     """`f"khong request {kind} nao"` voi kind rong -> "request  nao"."""
     out = a.check("Requests = 0 cho unit OFF.", ADS_BANNER, NO_DRIVE, OK_CRASH)
     assert "  " not in out["reason"]
+
+
+# --- dong noi ve VUNG AD tren man, khong ve so request ----------------------
+
+ADS_302 = {"units": {
+    "native:*****661": {"type": "native", "unit": "*****661", "requested": 2,
+                        "loaded": 0, "shown": 0, "impressions": 0,
+                        "rc_keys": ["id_302_onb2_n_native_high"]},
+}}
+VI_TRI_302 = ("302_onb2_n_native_high",)
+
+
+def test_vung_ad_trong_cham_bang_unit_co_show_khong_chu_khong_muon_luat_crash():
+    """Cau co ca ve "khong crash" nen truoc day roi vao luat crash: dung ket
+    qua nhung ve chinh (vung ad co trong khong) khong ai cham."""
+    out = a.check("Phần ads không load được để TRỐNG (không blank trắng vỡ layout, "
+                  "không crash — ERR_ADS_001).", ADS_302, NO_DRIVE, OK_CRASH,
+                  vi_tri=VI_TRI_302)
+    assert out["verdict"] == a.PASS
+    assert "không unit nào show" in out["reason"] and "không crash" in out["reason"]
+
+
+def test_vung_ad_trong_ma_unit_van_show_thi_FAIL():
+    ads = {"units": {k: dict(v, shown=1) for k, v in ADS_302["units"].items()}}
+    out = a.check("Vùng ad để trống.", ads, NO_DRIVE, OK_CRASH, vi_tri=VI_TRI_302)
+    assert out["verdict"] == a.FAIL and "KHÔNG trống" in out["reason"]
+
+
+def test_vung_ad_trong_nhung_app_crash_thi_van_FAIL():
+    crash = {"crashed": True, "lines": ["FATAL EXCEPTION"]}
+    out = a.check("Phần ads để TRỐNG, không crash.", ADS_302, NO_DRIVE, crash,
+                  vi_tri=VI_TRI_302)
+    assert out["verdict"] == a.FAIL and "crash" in out["reason"]
+
+
+def test_cau_co_dieu_kien_ma_tien_de_khong_xay_ra_thi_BLOCKED_chu_khong_PASS():
+    """"Neu ad tra ve muon sau timeout: KHONG chen de" - ad khong he load thi
+    luot nay khong chung minh duoc gi, bao PASS la nhan vo cong."""
+    out = a.check("Nếu ad trả về muộn sau timeout: KHÔNG chèn đè gây nhảy layout "
+                  "ngoài spec.", ADS_302, NO_DRIVE, OK_CRASH, vi_tri=VI_TRI_302)
+    assert out["verdict"] == "BLOCKED"
+    assert "không xảy ra" in out["reason"]
+
+
+def test_tien_de_CO_xay_ra_thi_khong_chan_o_luat_dieu_kien():
+    ads = {"units": {k: dict(v, loaded=1) for k, v in ADS_302["units"].items()}}
+    out = a.check("Nếu ad trả về muộn sau timeout: KHÔNG chèn đè gây nhảy layout.",
+                  ads, NO_DRIVE, OK_CRASH, vi_tri=VI_TRI_302)
+    assert out["verdict"] != "BLOCKED"
+
+
+# --- dieu kien moi truong ma precondition doi ------------------------------
+
+def test_phan_biet_dieu_kien_ep_duoc_voi_dieu_kien_khong_ep_duoc():
+    """Ba case 22/23/24 ta ba dieu kien khac nhau. Khong ep dieu kien nao thi
+    ca ba chay duoi dung mot trang thai that va cung ra PASS - doc report
+    tuong da phu ba nhanh (do 2026-09-28)."""
+    from rcr import precond_guards as g
+
+    assert g.ep_duoc("5. Simulate AdMob no-fill cho 302-onb2-n-native-high.")
+    assert g.ep_duoc("6. Chặn mạng đến ad server ngay khi bắt đầu load native OB2.")
+    assert not g.khong_ep_duoc("5. Simulate AdMob no-fill cho 302.")
+    assert g.khong_ep_duoc("6. Throttle mạng ≤50kbps để ad load vượt timeout.")
+    assert g.khong_ep_duoc("4. Bật mediation test mode.")
+
+
+def test_ep_fail_giu_nguyen_publisher_va_chi_doi_slot():
+    """Doi ca publisher thi request khong con di ve tai khoan dang test."""
+    from rcr import precond_guards as g
+
+    cfg = {"id_302_onb2_n_native": "ca-app-pub-4584260126367940/2409093993"}
+    ra = g.khoa_ep_fail(("302_onb2_n_native",), cfg)
+    assert ra["id_302_onb2_n_native"].startswith("ca-app-pub-4584260126367940/")
+    assert not ra["id_302_onb2_n_native"].endswith("2409093993")
+    # Vi tri khong khai ID thi khong bia ra mot ID nao.
+    assert g.khoa_ep_fail(("999_khong_co",), cfg) == {}

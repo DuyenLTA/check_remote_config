@@ -10,8 +10,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import (
+    ad_positions,
     assert_ads,
     case_run,
+    precond_guards,
     fo_flow,
     rc_patch,
     report_data,
@@ -63,8 +65,18 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             if trong_cau:
                 tokens.add(trong_cau)
             man_can = None if args.full_walk else fo_flow.man_sau_cung(tokens)
+            # Precondition doi ad KHONG FILL: ep bang cach doi `id_*` sang mot
+            # slot khong ton tai. Khong ep thi case chay duoi dung trang thai
+            # tu nhien cua may, va ba case ta ba dieu kien khac nhau deu ra
+            # cung mot ket qua (do 2026-09-28, case 22/23/24).
+            ep = precond_guards.ep_duoc(chosen["precondition"])
+            them = precond_guards.khoa_ep_fail(tokens, baseline.configs) if ep else {}
+            if them:
+                log_fn(f"  ép ad fail ({', '.join(ep)}): "
+                       + ", ".join(f"{k}=…/{v.rsplit('/', 1)[-1]}" for k, v in them.items()))
+            runs = [dict(luot) | them for luot in chosen["runs"]]
             result, baseline = await case_run.run_case(
-                client, baseline, chosen["runs"], chosen["precondition"],
+                client, baseline, runs, chosen["precondition"],
                 () if args.no_actions else chosen["actions"], chosen["expects"], goto,
                 keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
                 log_fn=log_fn, man_can=man_can,
@@ -78,6 +90,34 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             await _try_restore(client, baseline, log_fn)
             records.append(report_data.error_record(key, by_key.get(key, {}), str(exc)))
             continue
+        # Precondition doi mot dieu kien may nay khong tao duoc (throttle bang
+        # thong, mediation test mode): case KHONG duoc ra PASS im lang - no
+        # chua he chay dung nhanh ma TC mo ta.
+        thieu = precond_guards.khong_ep_duoc(chosen["precondition"])
+        if ep:
+            # Dieu kien dat hay khong la do TRANG THAI THAT: kiem bang log, du
+            # da ep hay khong. Ep roi ma ad van fill thi ep hong.
+            don_vi = list(((result.get("runs") or [{}])[0].get("ads") or {})
+                          .get("units", {}).values())
+            vi = ", ".join(sorted(tokens)) or "vị trí của case"
+            thuoc = [u for u in don_vi
+                     if any(ad_positions._khop_vi_tri(u, t) for t in tokens)]
+            if not thuoc:
+                thieu = thieu + [f"{', '.join(ep)} — log không có request nào của {vi}, "
+                                 "chưa biết ad có fill hay không"]
+            elif not precond_guards.da_khong_fill(don_vi, tokens,
+                                                  ad_positions._khop_vi_tri):
+                thieu = thieu + [f"{', '.join(ep)} — lượt chạy này ad vẫn fill"]
+            elif them:
+                result["ep_ad_fail"] = f"ép fail bằng cách đổi `id_*` của {vi} sang slot trống"
+            else:
+                result["ep_ad_fail"] = ("không ép được (remote config không khai `id_*` cho "
+                                        f"{vi}) — nhưng log cho thấy ad tự không fill, "
+                                        "đúng trạng thái case cần")
+        if thieu and result.get("verdict") == "PASS":
+            result["verdict"] = "BLOCKED"
+            result["precondition_thieu"] = thieu
+            log_fn("    precondition chua tao duoc: " + "; ".join(thieu) + " -> BLOCKED")
         log_fn(f"    verdict: {result['verdict']}")
         records.append(report_data.case_record(key, by_key.get(key, {}), result))
 

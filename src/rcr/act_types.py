@@ -57,14 +57,21 @@ class NoOp:
 
 @dataclass(frozen=True, slots=True)
 class GoTo:
-    """Lai qua ca luong First Open toi mot man hinh, do `fo_flow` lo."""
+    """Lai qua ca luong First Open toi mot man hinh, do `fo_flow` lo.
+
+    `cho` la so giay phai dung yen SAU khi toi noi: buoc "Vao man OB2, cho het
+    timeout load ad" vua la mot chuyen di vua la mot cu cho. Bo ve cho di thi
+    cham ngay luc vua toi man, truoc khi ad kip fail.
+    """
 
     target: str
     reason: str
+    cho: float = 0.0
 
     @property
     def summary(self) -> dict:
-        return {"kind": "goto", "target": self.target, "reason": self.reason}
+        ra = {"kind": "goto", "target": self.target, "reason": self.reason}
+        return ra | {"cho": self.cho} if self.cho else ra
 
 
 @dataclass(frozen=True, slots=True)

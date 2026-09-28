@@ -22,15 +22,19 @@ async def _snapshot(client, baseline: RcBaseline, activity: str) -> dict:
     }
 
 
-async def _read_ads(client, baseline: RcBaseline) -> dict:
+async def _read_ads(client, baseline: RcBaseline, overrides=None) -> dict:
     pid = await sdk_probe.pid_of(client, baseline.serial, baseline.package)
     if not pid:
         return {"pid": "", "note": "app không còn chạy — không đọc được log quảng cáo"}
     parsed = ad_log.parse(await ad_log.read(client, baseline.serial, pid))
     # Checklist cua team truoc, ID doc tu may DE len tren: ID trong RC la cai
     # app that su dung, checklist chi la so team khai va co the cu hon build.
+    # `overrides` DE LEN TREN baseline: case co the tu dat `id_*` (vd ep unit
+    # fail bang mot ID khong ton tai). Tra bang ID cu thi unit trong log khong
+    # khop vi tri nao, va dong Expected ve vi tri do thanh khong cham duoc.
+    dang_chay = dict(baseline.configs) | dict(overrides or {})
     rc_ids = ad_units.cho_package(baseline.package) | {
-        k: v for k, v in baseline.configs.items() if v.startswith("ca-app-pub")
+        k: v for k, v in dang_chay.items() if v.startswith("ca-app-pub")
     }
     units = ad_log.summary(parsed)
     for row in units.values():

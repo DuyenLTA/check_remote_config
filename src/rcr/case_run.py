@@ -67,6 +67,10 @@ async def apply_case(
     await fa_log.bat(client, baseline.serial)
     # Case "mo app khi mat mang": phai ngat mang TRUOC `restart`. Ngat sau do la
     # app da fetch xong roi - do mot thu khac han cai case hoi.
+    # KHONG dung viec ngat mang de gia lap "ad khong fill": do tren may that
+    # 2026-09-28, ngat mang thi log KHONG CO unit nao ca - SDK khong gui noi
+    # request. No-fill that la "co request, kho khong tra ad", hai trang thai
+    # khac han nhau.
     mat_mang = net_ctl.tat_truoc_khi_mo(precondition, steps)
     net = await net_ctl.tat(client, baseline.serial) if mat_mang else None
     if net:
@@ -116,7 +120,7 @@ async def apply_case(
         out["drive"] = driven
     # Cham case ads bang LOG, khong bang mat: inter load nhanh hon banner nen no
     # de len truoc khi kip nhin thay banner.
-    out["ads"] = await case_evidence._read_ads(client, baseline)
+    out["ads"] = await case_evidence._read_ads(client, baseline, overrides)
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
     out["events"] = await fa_log.doc(client, baseline.serial)
     if expects:
