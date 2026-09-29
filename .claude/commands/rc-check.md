@@ -1,6 +1,6 @@
 ---
 description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, trên máy thật
-argument-hint: "<package> [--tc <bo-tc.xlsx> [--tab <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app>'] [--serial <serial>] [--fresh] [--no-walk|--no-actions] [--keep|--restore]"
+argument-hint: "<package> [--tc <bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
 ---
 
 Chạy `rcr-check` một lượt: đọc baseline remote config, nạp file testcase, đặt
@@ -35,25 +35,40 @@ sống qua lần mở app không.
 
 Lái được app qua các bước Action của case: `Quan sát…` (không thao tác),
 `Nhấn nút "X"` / `Mở tab X` (tap), `Chờ N giây`, `Vuốt sang trái/phải/lên/xuống`,
-và **bước đi tới cả một màn** (`Hoàn thành luồng FO đến Home`, `Vào màn Onboarding 2`)
-— chỗ này `fo_flow` lo, OB1/2/3 sang màn bằng **vuốt** chứ không bấm Next, vì chính
-nút Next là thứ đang được test. Câu khác — hoặc **nhiều hơn một node cùng khớp** —
-thì dừng kèm lý do, **không tap bừa**: tap sai chỗ trên máy thật là bấm vào quảng
-cáo hoặc mua hàng thật.
+`Tắt mạng` / `Bật lại mạng`, và **bước đi tới cả một màn** (`Hoàn thành luồng FO
+đến Home`, `Vào màn Onboarding 2`) — chỗ này `fo_flow` lo, OB1/2/3 sang màn bằng
+**vuốt** chứ không bấm Next, vì chính nút Next là thứ đang được test.
+
+Câu khác — hoặc **nhiều hơn một node cùng khớp** — thì dừng kèm lý do, **không
+tap bừa**: tap sai chỗ trên máy thật là bấm vào quảng cáo hoặc mua hàng thật.
+
+`Mở app không mạng` **không** phải là `Mở app`: tool ngắt wifi + data **trước**
+`am start`, rồi bật lại và **chờ ping thông** (lệnh `svc` trả về ngay lúc mạng
+chưa lên). Cuối case luôn trả mạng về, kể cả khi case hỏng giữa chừng — để máy
+mất mạng là hỏng mọi lượt sau mà không ai biết vì sao.
 
 Hai chỗ nới lỏng có chủ ý, vì cái giá sai khác hẳn cái giá sai của một cú tap:
 
 - **Câu vuốt không nêu hướng** (`Vuốt theo đúng hướng icon gợi ý`) thì lấy hướng
   sang trang kế (trái). Vuốt không bấm trúng gì nên đoán sai chỉ làm màn không đổi
-- **Vế sau dấu phẩy nếu chỉ là quan sát thì không chặn bước đi tới màn**
-  (`Chạy luồng FO đến OB3, quan sát banner` vẫn lái được). Vế sau là việc khác
-  (`Vào OB3, ghi nhận thời điểm ad show`) thì vẫn dừng — lái tới nơi rồi coi như
-  xong bước là bỏ im vế sau, case đó có thể ra PASS giả
+- **Vế sau dấu phẩy nếu chỉ là quan sát, đối soát console, hoặc một cú chờ thì
+  không chặn bước đi tới màn**: `Chạy luồng FO đến OB3, quan sát banner` lái được;
+  `Vào màn OB2, chờ hết timeout load ad` lái tới rồi **đứng yên 12s** tại đó. Vế
+  sau là việc khác (`Vào OB3, ghi nhận thời điểm ad show`) thì vẫn dừng — lái tới
+  nơi rồi coi như xong bước là bỏ im vế sau, case đó có thể ra PASS giả
 
 **Chấm được PASS/FAIL** từng dòng Expected: dòng về quảng cáo chấm bằng log
-request/load/show, dòng về chữ và node chấm bằng cây UI. Dòng nào không đo được
-bằng máy (đúng design, đúng màu, animation mượt) ra `NOT_VERIFIABLE` — **không
-được đoán thành PASS**. Verdict của case = dòng xấu nhất trong các dòng đo được.
+request/load/show, dòng về chữ và node chấm bằng cây UI, dòng *"icon là animation
+lặp"* chấm bằng cách chụp nhiều khung rồi so vùng node, dòng *"user vuốt sang màn
+kế"* chấm bằng **một cú vuốt thật**, dòng *"app bắn event X"* chấm bằng log
+`FA-SVC`, dòng *"luồng FO thông suốt"* chấm bằng nhật ký lái. Dòng thật sự phải
+nhìn mắt (đúng design, đúng màu) ra `NOT_VERIFIABLE` — **không được đoán thành
+PASS**.
+
+**Verdict của case = dòng xấu nhất trong MỌI dòng**, trừ dòng của PO. Dòng chưa
+chấm được cũng kéo case xuống: trước đây chúng bị loại khỏi verdict, nên một case
+chỉ chấm được mỗi dòng `"không crash"` vẫn ra PASS trong khi dòng quyết định không
+ai đụng tới — PASS hụt, người đọc tưởng đã test xong nên không ai test lại.
 
 ## 2. Package và điều kiện vào được app
 
@@ -154,9 +169,10 @@ Các flag còn lại, dùng khi cần:
 
 | Flag | Khi nào dùng |
 |---|---|
-| `--app-label "Piclux 2.8.0"` | tên app in trên tiêu đề report — **luôn truyền khi có `--report`**, không thì báo cáo không nói được nó đo app nào |
+| `--app-label "Piclux 2.8.0"` | tên + **version của APP** in trên tiêu đề report — **luôn truyền khi có `--report`**. Đừng nhét version SDK vào đây: "SDK First Open" là ô riêng, nhét nhầm thì ô đó ra `—` và tiêu đề cụt đuôi |
 | `--fresh` | ép app về trạng thái chưa từng mở (reset mềm, hoặc `pm clear`) — case Precondition đòi user mới |
-| `--sdk 3.2.0` | khai thẳng bản SDK FO, bỏ qua bước đo từ logcat. Chỉ dùng khi máy không ra log |
+| `--sdk 3.2.0` | khai thẳng bản SDK FO. Dùng khi máy không ra log, **và khi workbook chỉ có một sheet** — bộ một sheet không cần bản SDK để chọn tab nên tool chỉ soi buffer log sẵn có, không thấy thì ô SDK trên report để trống |
+| `--full-walk` | đi hết luồng FO như TC ghi. **Mặc định tool dừng ở màn SÂU NHẤT case đụng tới**, suy từ cả key case đặt lẫn mã vị trí trong dòng Expected — case tắt 10 unit từ 102 (splash) tới 303 (OB3) thì dừng ở OB3, bỏ 4 màn sau. Chỉ bật khi thật sự cần đi tiếp |
 | `--no-walk` | không lái qua luồng First Open để tới màn của case |
 | `--no-actions` | chỉ đặt config, không lái bước Action nào |
 | `--no-dex-check` | bỏ bước soi key trong DEX — **nhanh hơn nhưng có thể ra PASS giả**, chỉ dùng khi đã biết chắc app đọc key đó |
@@ -191,16 +207,55 @@ mới biết giá trị thật.
 - `FAIL` — lệch Expected, kèm số đo thật (unit nào đã request, log ra sao)
 - `NEEDS_HUMAN` — tool chưa lái tới được màn cần, hoặc quảng cáo che màn nên không đọc
   được chữ trên app. **Không kết luận gì về app** — đóng ad rồi chạy lại
-- `NOT_VERIFIABLE` — dòng đòi nhìn mắt (đúng design, đúng màu, animation mượt), hoặc
+- `NOT_VERIFIABLE` — dòng đòi nhìn mắt (đúng design, đúng màu), hoặc
   dòng hỏi số liệu trên **AdMob/Firebase console**. Dòng console là việc của **PO**:
   tester không có quyền vào console, nên báo cáo đếm riêng (`po`), **không** gộp vào
   `pending`. Bước Action bảo mở console cũng bỏ qua, không dừng case lại
 - `CONFIG_OK` / `BLOCKED` — case không có Expected: đặt được config, hoặc config không
-  sống qua lần mở app (build dev đặt `minimumFetchInterval = 0`)
+  sống qua lần mở app (build dev đặt `minimumFetchInterval = 0`). `BLOCKED` còn
+  dùng khi **precondition chưa thành hiện thực** (xem mục dưới) hoặc khi điều kiện
+  của một dòng `"Nếu X thì Y"` không hề xảy ra trong lượt chạy
 - `KEY_NOT_USED` — key không có chuỗi trong `classes*.dex`: **app không đọc key đó**,
   template Firebase dùng chung nhiều app. Chấm tiếp là ra PASS giả
 
 Case có nhiều lượt thì `run.runs` là từng lượt; verdict case = lượt xấu nhất.
+
+**Verdict case = dòng xấu nhất trong MỌI dòng, trừ dòng của PO.** Dòng chưa chấm
+được cũng kéo case xuống — đọc kèm `pending` để biết còn bao nhiêu dòng bỏ ngỏ.
+Case PASS nghĩa là **mọi dòng đều đã được chấm**, không phải "dòng nào chấm được
+thì đều đạt".
+
+### Precondition có thành hiện thực không
+
+Nhiều case đòi một **điều kiện môi trường** chứ không chỉ đòi config: *simulate
+no-fill*, *chặn mạng đến ad server*, *throttle ≤50kbps*, *bật mediation test
+mode*. Không tạo được điều kiện đó thì case chạy dưới trạng thái tự nhiên của
+máy — và **nhiều case tả nhiều điều kiện khác nhau sẽ cùng ra một kết quả**, đọc
+report tưởng đã phủ nhiều nhánh (đo 28/09/2026: case 22/23/24 đều PASS trong khi
+chỉ một trạng thái từng xảy ra).
+
+Tool xử lý:
+
+- **Ép được** — đổi `id_*` của vị trí sang slot trống (`…/0000000001`): request
+  vẫn đi, vẫn đếm được trong log, nhưng không bao giờ có ad. **Chỉ dùng được với
+  vị trí mà remote config có khai `id_*`** — Piclux chỉ 12/92 vị trí, và 302
+  (OB2) không có
+- **Không ép được** — throttle băng thông, mediation test mode, cần root: case
+  **không được ra PASS**, verdict hạ xuống `BLOCKED` kèm lý do ở
+  `precondition_thieu`
+- **Dù ép hay không, vẫn kiểm bằng log**: `ep_ad_fail` nói đã ép bằng cách nào,
+  hoặc "không ép được nhưng log cho thấy ad tự không fill". Ép rồi mà ad vẫn fill
+  thì cũng là `BLOCKED` — ép hỏng
+
+**Ngắt mạng KHÔNG phải cách giả lập no-fill.** Đo trên máy thật 28/09/2026: mất
+mạng thì log **không có unit ads nào** — SDK không gửi nổi request. No-fill thật
+là *"có request, kho không trả ad"*. Hai trạng thái khác hẳn nhau.
+
+Cách thủ công của tester: **lắc máy → Ad Inspector → chọn Meta**. App lưu trạng
+thái này ở `shared_prefs/admob.xml` key `inspector_info`, trường `networkExtras`
+— tool ghi được file đó bằng `run-as`, nhưng **chưa biết schema** của trường này.
+Muốn tự động hoá thì nhờ tester lắc máy chọn Meta một lần rồi đọc `inspector_info`
+ra để lấy đúng payload.
 
 `run.runs[i].drive` là nhật ký lái: từng bước ra thao tác gì, dừng ở bước nào và vì
 sao. `status: NEEDS_HUMAN` ở đây **không phải bug app** — là tool từ chối đoán. Hai
@@ -240,9 +295,23 @@ khỏi phần chạy được, kèm nguyên văn lý do.
 
 ## 6. Xuất report
 
-Luôn truyền `--report <repo>/out/run-<pkg>-<hhmm>.html` khi chạy `--case`: trang HTML
-tự chứa, có **ảnh chụp từng bước**, từng dòng Expected kèm tool đo được gì, log quảng
-cáo, và nút lọc theo verdict. `out/` đã gitignore.
+Luôn truyền `--report <repo>/out/run-<pkg>-<hhmm>.html` khi chạy `--case`: trang
+HTML tự chứa, `out/` đã gitignore. Bố cục **tester đã chốt** — đừng đổi:
+
+1. Header: eyebrow · H1 · dòng meta (App + package + version, Máy, Ngày)
+2. **4 thẻ đếm** PASS / FAIL / BLOCKED / N-A — bấm vào là lọc
+3. Khối **"cần xử lý"** ngay đầu trang: FAIL cần báo dev · BLOCKED cần chạy lại ·
+   cần PO đối soát console
+4. Thanh lọc: chip trạng thái + ô tìm + "Mở tất cả"
+5. **Danh sách case gập/mở**, nhóm theo Feature. Mỗi dòng Expected mang nhãn +
+   lý do của **chính dòng đó** — không phải hai cột đánh số song song
+6. Mở một case ra thấy: config đã đặt (kèm cách ép điều kiện nếu có), thực tế,
+   precondition, các bước đã lái, bảng ad unit, ảnh từng bước
+
+Trên report chỉ có **4 nhãn**, dịch từ verdict của tool qua `report_row.nhan_cua`:
+`BLOCKED` = chạy lại thì ra kết quả (việc của tester); `N/A` = ngoài quyền tester
+(console của PO, dòng phải nhìn mắt). Mã thao tác nội bộ (`noop`, `goto`, `net`)
+**không được lộ ra** — luôn kèm tên tiếng Việt và lý do của bước.
 
 Lượt đã **đo được thật** (có case ra PASS/FAIL/BLOCKED) thì publish trang đó thành
 artifact **rồi tự mở link** cho người dùng — tool chạy ở máy, không tự lên claude.ai
