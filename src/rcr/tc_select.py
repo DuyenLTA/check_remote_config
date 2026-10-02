@@ -140,12 +140,15 @@ def load_cases(path, baseline, sdk: str = "", tab: str = "") -> tuple[list[dict]
                 "precondition": case.precondition,
                 "actions": case.actions,
                 "expects": case.expects,
+                "user_state": case.user_state,
+                "runtime": data.runtime,
             }
         rows.append({
             "n": case.n,
             "key": case_key(tab, case.n),
             "tab": tab,
             "feature": case.feature,
+            "user_state": case.user_state,
             "precondition": case.precondition,
             "label": case.label,
             "steps": len(case.actions),

@@ -9,6 +9,8 @@ Dump chi dung luc cham (`assert_check`), cham xong thi bo.
 
 from __future__ import annotations
 
+from . import report_runs
+
 
 def actual_text(run: dict, drive: dict) -> str:
     """Mot cau ta lai luot chay that - de doc canh cot Expected.
@@ -68,10 +70,32 @@ def error_record(key: str, row: dict, message: str) -> dict:
 
 
 def case_record(key: str, row: dict, result: dict) -> dict:
-    """Mot case -> mot the tren report."""
-    run = (result.get("runs") or [{}])[0]
-    drive = run.get("drive") or {}
-    ads = (run.get("ads") or {}).get("units") or {}
+    """Mot case -> mot the tren report. Case nhieu luot: moi dong/buoc/unit
+    mang nhan luot cua no (xem `report_runs`)."""
+    runs = result.get("runs") or [{}]
+    nhan = report_runs.nhan_luot(runs)
+    lines, steps, ads, actual = [], [], [], []
+    for run, n in zip(runs, nhan):
+        drive = run.get("drive") or {}
+        lines += report_runs.gan_nhan(n, [
+            {"v": l["verdict"], "e": l["expected"], "r": l["reason"],
+             **({"scope": l["scope"]} if l.get("scope") else {})}
+            for l in (run.get("assert") or {}).get("lines", [])], "e")
+        steps += report_runs.gan_nhan(n, [
+            {"n": s["n"], "s": s["step"], "k": s["action"]["kind"],
+             # Ly do la thu DUY NHAT giai thich mot buoc "khong thao tac":
+             # bo no di thi buoc lai-roi-dung-dung-cho va buoc that su khong
+             # lam gi trong y het nhau tren report.
+             "r": _ly_do(s),
+             "blocked": bool(s.get("screen_blocked")),
+             "shot": s.get("shot", ""), "shot_warning": s.get("shot_warning", "")}
+            for s in drive.get("steps", [])], "s")
+        ads += report_runs.gan_nhan(n, [
+            {"t": u["type"], "u": u["unit"], "req": u["requested"], "load": u["loaded"],
+             "show": u["shown"], "keys": u.get("rc_keys") or []}
+            for u in ((run.get("ads") or {}).get("units") or {}).values()], "t")
+        actual.append((f"{n}: " if n else "") + actual_text(run, drive))
+    dau = runs[0]
     return {
         "key": key,
         "tab": (row.get("tab") or "").replace("TC SDK", "").strip(),
@@ -80,8 +104,8 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         "group": row.get("feature") or (row.get("tab") or "").replace("TC SDK", "").strip(),
         "label": row.get("label", ""),
         "precondition": row.get("precondition", ""),
-        "actual": actual_text(run, drive),
-        "overrides": run.get("overrides") or {},
+        "actual": " · ".join(actual) if len(actual) == 1 else " | ".join(actual),
+        "overrides": report_runs.overrides_gop(runs),
         "verdict": result.get("verdict", ""),
         # Dieu kien precondition doi ma may nay khong tao duoc - phai hien tren
         # report, khong thi doc vao tuong case da chay dung nhanh TC mo ta.
@@ -90,31 +114,15 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         # man hinh nhung khac ma loi, nguoi doc phai biet la cach nao.
         "ep_ad_fail": result.get("ep_ad_fail", ""),
         "reset": (result.get("reset") or {}).get("mode", ""),
-        "drive": drive.get("status", "—"),
+        "drive": (dau.get("drive") or {}).get("status", "—"),
         "keys_not_used": result.get("keys_not_used") or [],
-        "lines": [
-            {"v": l["verdict"], "e": l["expected"], "r": l["reason"],
-             **({"scope": l["scope"]} if l.get("scope") else {})}
-            for l in (run.get("assert") or {}).get("lines", [])
-        ],
-        "pending": (run.get("assert") or {}).get("pending", 0),
-        "po": (run.get("assert") or {}).get("po", 0),
-        "ads": [
-            {"t": u["type"], "u": u["unit"], "req": u["requested"], "load": u["loaded"],
-             "show": u["shown"], "keys": u.get("rc_keys") or []}
-            for u in ads.values()
-        ],
-        "banner_states": [s["state"] for s in (run.get("ads") or {}).get("banner_states", [])],
-        "steps": [
-            {"n": s["n"], "s": s["step"], "k": s["action"]["kind"],
-             # Ly do la thu DUY NHAT giai thich mot buoc "khong thao tac":
-             # bo no di thi buoc lai-roi-dung-dung-cho va buoc that su khong
-             # lam gi trong y het nhau tren report.
-             "r": _ly_do(s),
-             "blocked": bool(s.get("screen_blocked")),
-             "shot": s.get("shot", ""), "shot_warning": s.get("shot_warning", "")}
-            for s in drive.get("steps", [])
-        ],
+        "lines": lines,
+        "pending": sum((r.get("assert") or {}).get("pending", 0) for r in runs),
+        "po": sum((r.get("assert") or {}).get("po", 0) for r in runs),
+        "ads": ads,
+        "banner_states": [s["state"] for r in runs
+                          for s in (r.get("ads") or {}).get("banner_states", [])],
+        "steps": steps,
     }
 
 

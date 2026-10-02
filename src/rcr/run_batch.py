@@ -79,7 +79,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 client, baseline, runs, chosen["precondition"],
                 () if args.no_actions else chosen["actions"], chosen["expects"], goto,
                 keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
-                log_fn=log_fn, man_can=man_can,
+                log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
+                runtime=chosen.get("runtime", False),
             )
         except AdbTransportError:
             raise  # mat ket noi may: chay tiep la vo nghia

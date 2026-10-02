@@ -132,6 +132,20 @@ def set_value(xml: str, node: MirrorNode, rc_value: str) -> str:
     return out
 
 
+def remove_node(xml: str, node: MirrorNode) -> str:
+    """Xoa han node cua key (ca dong cua no) - quy uoc `key=<absent>`: server
+    khong tra key thi SDK cung khong co gia tri nao de mirror. Moi byte khac
+    giu nguyen. Khong tim thay node -> raise, nhu set_value."""
+    if node.kind in ATTR_KINDS:
+        body = rf'<{node.kind}\s+name="{re.escape(node.key)}"\s+value="[^"]*"\s*/>'
+    else:
+        body = rf'<string\s+name="{re.escape(node.key)}"\s*(?:/>|>.*?</string>)'
+    out, n = re.subn(rf"[ \t]*{body}[ \t]*\r?\n?", "", xml, count=1, flags=re.DOTALL)
+    if n != 1:
+        raise ValueError(f"khong tim thay node {node.key!r} kieu {node.kind!r} trong prefs")
+    return out
+
+
 def read_long(xml: str, key: str) -> int | None:
     m = re.search(rf'<long\s+name="{re.escape(key)}"\s+value="(-?\d+)"', xml)
     return int(m.group(1)) if m else None

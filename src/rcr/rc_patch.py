@@ -23,7 +23,8 @@ import json
 import time
 
 from . import rc_write
-from .mirror_xml import set_long, set_value
+from .mirror_xml import remove_node, set_long, set_value
+from .rc_variants import ABSENT
 from .models import PatchResult, RcBaseline, RcError
 
 FETCH_TIME_KEY = "fetch_time_key"
@@ -38,7 +39,8 @@ def build_writes(
 
     Thuan ham -> test duoc het cac luat khong can device.
     """
-    unknown = sorted(k for k in overrides if k not in baseline.configs)
+    # `<absent>` = xoa key: key khong co san thi cung da "vang" roi, khong loi.
+    unknown = sorted(k for k, v in overrides.items() if k not in baseline.configs and v != ABSENT)
     if unknown:
         raise RcError(
             "Key khong co trong remote config cua app: " + ", ".join(unknown) + ".\n"
@@ -55,7 +57,8 @@ def build_writes(
         xml = baseline.mirror_raw[name]
         for key, value in touched.items():
             try:
-                xml = set_value(xml, nodes[key], value)
+                xml = (remove_node(xml, nodes[key]) if value == ABSENT
+                       else set_value(xml, nodes[key], value))
             except ValueError as exc:
                 raise RcError(f"{name}: khong dat duoc {key}={value!r} - {exc}") from exc
         writes.append((f"shared_prefs/{name}", xml))
@@ -74,7 +77,8 @@ def build_writes(
 
 def _build_activate(baseline: RcBaseline, overrides: dict[str, str], now_ms: int) -> str:
     data = json.loads(baseline.activate_raw)
-    data[CONFIGS_KEY] = {**data.get(CONFIGS_KEY, {}), **overrides}
+    configs = {**data.get(CONFIGS_KEY, {}), **overrides}
+    data[CONFIGS_KEY] = {k: v for k, v in configs.items() if v != ABSENT}
     data[FETCH_TIME_KEY] = now_ms
     return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
 

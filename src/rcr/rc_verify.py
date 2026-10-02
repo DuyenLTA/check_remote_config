@@ -17,6 +17,7 @@ import json
 from . import app_sandbox
 from .mirror_xml import parse_nodes
 from .models import Mismatch, RcBaseline, RcError, VerifyResult
+from .rc_variants import ABSENT
 
 FILES_DIR = "files"
 PREFS_DIR = "shared_prefs"
@@ -46,7 +47,8 @@ async def verify(client, baseline: RcBaseline, expected: dict[str, str]) -> Veri
     out: list[Mismatch] = []
     for key, want in expected.items():
         got = configs.get(key)
-        if got != want:
+        # `<absent>`: dat dung la key KHONG con trong config sau lan mo app.
+        if (got is not None) if want == ABSENT else (got != want):
             out.append(Mismatch(key, want, got, where="activate"))
 
     out += await _verify_mirrors(client, baseline, expected)
@@ -74,6 +76,12 @@ async def _verify_mirrors(client, baseline: RcBaseline, expected: dict[str, str]
         for key, want in touched.items():
             node = live.get(key)
             got = node.value if node else None
+            if want == ABSENT:
+                # SDK ghi lai node vao mirror -> app doc gia tri do, khong phai
+                # "server khong tra key". Bao lech de case ra BLOCKED, khong PASS.
+                if node is not None:
+                    out.append(Mismatch(key, want, got, where=name))
+                continue
             # Mirror luu co kieu; so sanh theo dang da chuan hoa cua kieu do.
             if got is None or not _same(nodes[key].kind, got, want):
                 out.append(Mismatch(key, want, got, where=name))

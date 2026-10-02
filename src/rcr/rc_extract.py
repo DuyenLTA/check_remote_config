@@ -7,8 +7,10 @@ Khong loc thi tool se day rac vao remote config. Nho whitelist, khong can tester
 khai bao gi: key nao khong co trong config cua app thi tu roi ra.
 
 BA DANG PHAI DANH `NEEDS_HUMAN`, KHONG DUOC DOAN:
-  1. Runtime toggle: `key: true -> false -> true (doi khi app dang chay)`.
-     Patch file + restart KHONG lam duoc - app phai tu fetch lai luc dang chay.
+  1. Runtime toggle chi ghi o ten case / Precondition, Test Data khong co mui
+     ten -> khong biet gia tri tung buoc. Co mui ten trong Test Data (quy uoc bo
+     TC 3.5.0: moi mui ten = doi config, tat app, chay lai) thi CHAY duoc: moi
+     buoc mot luot, `runtime=True`.
   2. Sua field trong JSON: `restore.enable = false`. Cau do khong neu key goc;
      `restore` la `id` cua mot phan tu trong mang `moment_spotlight_banners`,
      suy ra la doan.
@@ -50,16 +52,11 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
     # Bo TC khong co cot Test Data thi runtime toggle nam o ten sub-scenario
     # ("Runtime: swipe_onb2 true -> false -> true") hoac o Precondition. Khong
     # doc hai cho do thi case chi chay duoc buoc dau ma van bi cham nhu da xong.
-    if rc_guards.TOGGLE_RE.search(case.label) or rc_guards.TOGGLE_RE.search(case.precondition):
-        return RcCaseData(
-            overrides={},
-            needs_human=(
-                "runtime toggle (doi gia tri khi app dang chay) - ngoai pham vi tool: "
-                "patch file + mo lai app khong tai hien duoc, app phai tu fetch luc dang chay"
-            ),
-        )
-
-    if has_td and any(a in raw for a in ARROWS):
+    td_runtime = has_td and any(a in raw for a in ARROWS)
+    # "(doi khi app dang chay)": doi luc app CON CHAY - khac tat app roi mo lai.
+    dang_chay = td_runtime and rc_variants.DANG_CHAY_RE.search(raw)
+    if dang_chay or not td_runtime and (rc_guards.TOGGLE_RE.search(case.label)
+                           or rc_guards.TOGGLE_RE.search(case.precondition)):
         return RcCaseData(
             overrides={},
             needs_human=(
@@ -140,7 +137,9 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
     from_pre = tuple(sorted(k for k in overrides if k not in td))
 
     # Gia tri con la cho trong -> patch vao la ghi nguyen chuoi mo ta vao config.
-    holes = sorted(k for k, v in overrides.items() if rc_guards.PLACEHOLDER_RE.search(v))
+    # `<absent>` la quy uoc "server khong tra key", khong phai cho trong.
+    holes = sorted(k for k, v in overrides.items()
+                   if rc_guards.PLACEHOLDER_RE.search(v.replace(rc_variants.ABSENT, "")))
     if holes:
         return RcCaseData(
             overrides={},
@@ -150,6 +149,18 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
                 "Tester dien gia tri that vao file testcase roi chay lai"
             ),
         )
+    # Runtime `a → b → c` (Test Data, quy uoc bo TC 3.5.0): mui ten = doi config,
+    # tat app, chay lai luong. Lam duoc bang patch + mo lai, nhu moi luot khac.
+    overrides, chuoi, loi = rc_variants.split_runtime(overrides)
+    if loi:
+        return RcCaseData(overrides={}, ignored=ignored, needs_human=loi)
+    if chuoi:
+        return RcCaseData(overrides=overrides, ignored=ignored, variants=chuoi,
+                          runtime=True, from_precondition=from_pre)
+    overrides, ong = rc_variants.split_pipe(overrides)
+    if ong:
+        return RcCaseData(overrides=overrides, ignored=ignored, variants=ong,
+                          from_precondition=from_pre)
     overrides, variants, too_many = rc_variants.split(overrides)
     if too_many:
         return RcCaseData(overrides={}, ignored=ignored, needs_human=too_many)

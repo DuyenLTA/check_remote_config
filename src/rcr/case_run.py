@@ -34,6 +34,7 @@ from . import (
     rc_patch,
     rc_snapshot,
     rc_verify,
+    runtime_steps,
     sdk_probe,
     ui_dump,
 )
@@ -146,6 +147,7 @@ async def apply_case(
 async def run_case(
     client, baseline: RcBaseline, runs, precondition: str = "", steps=(), expects=(),
     goto: str = "", *, keep=False, out_dir=".", dex=True, log_fn=_noop, man_can=None,
+    user_state: str = "", runtime: bool = False,
 ) -> tuple[dict, RcBaseline]:
     """Chay tron mot case. Tra (ket qua, baseline dang dung).
 
@@ -164,22 +166,29 @@ async def run_case(
             return {"verdict": "KEY_NOT_USED", "keys_not_used": unused, "runs": []}, baseline
         log_fn("  app co doc het cac key nay")
 
-    reset = await device_reset.prepare(client, baseline, precondition)
+    reset = await device_reset.prepare(client, baseline, precondition, user_state, log_fn)
     log_fn(f"Reset: {reset['mode']}" + (f" (khop '{reset['matched']}')" if reset["matched"] else ""))
     if reset["baseline_stale"]:
         log_fn("  app da bi xoa data -> doc lai baseline")
         baseline = await rc_baseline.read(client, baseline.serial, baseline.package)
 
     out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                            log_fn, man_can, precondition)
+                            log_fn, man_can, precondition, runtime)
     return out | {"reset": reset}, baseline
 
 
 async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                      log_fn, man_can=None, precondition: str = "") -> dict:
-    """Case co gia tri lua chon -> nhieu luot. Verdict case = luot xau nhat."""
+                      log_fn, man_can=None, precondition: str = "", runtime=False) -> dict:
+    """Case co gia tri lua chon -> nhieu luot. Verdict case = luot xau nhat.
+
+    `runtime`: luot i chi lai buoc + cham dong Expected cua luot i (`runtime_steps`).
+    """
     done: list[dict] = []
+    n = len(runs)
+    buoc = runtime_steps.chia_buoc(steps, n) if runtime else [steps] * n
+    mong = runtime_steps.chia_expected(expects, n) if runtime else [expects] * n
     for index, overrides in enumerate(runs, 1):
+        steps, expects = buoc[index - 1], mong[index - 1]
         head = f"  luot {index}/{len(runs)}: " if len(runs) > 1 else "  "
         log_fn(head + ", ".join(f"{k}={v}" for k, v in overrides.items()))
         out = await apply_case(

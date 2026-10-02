@@ -154,6 +154,13 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
             return ket
 
     if NEGATIVE_RE.search(text):
+        if not any(u["requested"] for u in _units(ads, "")):
+            # Log khong co request ads NAO (moi loai): SDK chua chay toi, hoac
+            # doc log hut. "Khong request unit X" luc do dung mot cach rong -
+            # do 2026-10-02 case old user ra PASS voi log trong tron.
+            return out(NEEDS_HUMAN, "log không có request ads nào (mọi loại) — chưa chứng "
+                       "minh được SDK ads đã chạy, nên “không request” chưa kết luận được. "
+                       "Chạy lại", actual)
         token = ad_positions._position_token(text)
         if token:
             return assert_ad_rules.negative(

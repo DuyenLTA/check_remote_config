@@ -129,7 +129,8 @@ def test_nap_file_testcase_loc_bang_whitelist(with_baseline, tmp_path):
     assert r.status_code == 200, r.text
     b = r.json()
     assert b["total"] == 3
-    assert b["runnable"] == 1
+    # case 3: mui ten trong Test Data = chuoi luot runtime (quy uoc bo TC 3.5.0)
+    assert b["runnable"] == 2
     assert b["whitelist_size"] == 6
 
     by_n = {c["n"]: c for c in b["cases"]}
@@ -141,8 +142,8 @@ def test_nap_file_testcase_loc_bang_whitelist(with_baseline, tmp_path):
     assert by_n["2"]["ignored"] == ["click_area"]
     assert "khong co key nao thuoc remote config" in by_n["2"]["needs_human"]
 
-    assert by_n["3"]["overrides"] == {}
-    assert "runtime toggle" in by_n["3"]["needs_human"]
+    assert by_n["3"]["runtime"] is True
+    assert [v["enable_onb3_screen"] for v in by_n["3"]["variants"]] == ["true", "false", "true"]
 
 
 def test_nap_file_thieu_cot_thi_400(with_baseline, tmp_path):
