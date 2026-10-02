@@ -1,6 +1,18 @@
 """Dua app ve trang thai case doi, TRUOC khi patch config.
 
-Ba muc do, chon theo Precondition - luat de o `data/reset_rules.yaml`:
+Cot "User State" cua file TC quyet TRUOC (user chot 2026-10-02, khop sheet
+"Automation Convention" cua bo TC 3.5.0):
+
+    new_user   : `pm clear` that roi mo app
+    old_user   : `pm clear`, lai het FO toi Home, tat app - lan mo SAU moi la
+                 lan do. Vi tri `_o_` (106...) chi chay voi old user: chay nham
+                 nhanh user moi thi khong bao gio co request, PASS gia.
+
+Reset mem KHONG dung cho hai truong hop tren: no ep app ve luong user moi ma
+van giu ngon ngu da chon - khong phai "clear data", cang khong phai old user.
+
+File TC cu khong co cot do -> ba muc do, chon theo Precondition - luat de o
+`data/reset_rules.yaml`:
 
     force-stop : mac dinh. Case chi doi mot co config -> khong dong vao du lieu
     reset mem  : lat `ARG_KEY_SHOW_ONBOARDING` = true -> app vao lai onboarding
@@ -26,7 +38,7 @@ import asyncio
 import logging
 from pathlib import Path
 
-from . import app_sandbox, device_app, mirror_xml, rc_baseline, rc_write
+from . import app_sandbox, device_app, fo_flow, mirror_xml, rc_baseline, rc_write
 from .adb_parsers import AdbError
 from .models import RcBaseline, RcError
 
@@ -36,6 +48,8 @@ DATA = Path(__file__).parent / "data" / "reset_rules.yaml"
 PREFS_DIR = "shared_prefs"
 WAIT_FRC = 45.0      # may yeu qua splash ad rat lau moi fetch xong lan dau
 POLL_INTERVAL = 1.5
+# Sau khi dong paywall, Home co the hien cham hon vong lai cua fo_flow.
+CHO_HOME = 10.0
 
 
 def rules() -> dict:
@@ -109,12 +123,52 @@ async def _clear_and_wait(client, baseline: RcBaseline) -> None:
     )
 
 
-async def prepare(client, baseline: RcBaseline, precondition: str = "") -> dict:
+async def _make_old_user(client, baseline: RcBaseline, log_fn) -> None:
+    """Mot session di het FO toi Home roi tat app -> lan mo sau la old user.
+
+    Khong toi duoc Home thi RAISE: chay tiep la do luong user moi ma report
+    van ghi old user.
+    """
+    serial, package = baseline.serial, baseline.package
+    await device_app.launch(client, serial, package)
+    await device_app.wait_foreground(client, serial, package)
+    log_fn("  tao old user: lai het FO toi Home...")
+    walk = await fo_flow.walk_to(client, serial, package, "", log_fn=log_fn)
+    home = fo_flow.rules().get("home_match", "MainActivity")
+    waited = 0.0
+    while not walk["reached"] and waited < CHO_HOME:
+        _, activity = await device_app.focus(client, serial)
+        if home in activity:
+            walk = {"reached": True, "activity": activity}
+            break
+        await asyncio.sleep(POLL_INTERVAL)
+        waited += POLL_INTERVAL
+    if not walk["reached"]:
+        raise RcError(
+            f"Khong tao duoc old user: lai FO khong toi {home} "
+            f"(dung o {walk.get('activity') or '?'}). Case old_user khong chay tiep."
+        )
+    await device_app.force_stop(client, serial, package)
+    log_fn(f"  da toi {walk['activity'].split('.')[-1]} -> tat app, lan mo sau la old user")
+
+
+async def prepare(client, baseline: RcBaseline, precondition: str = "",
+                  user_state: str = "", log_fn=lambda _m: None) -> dict:
     """Dua app ve trang thai case doi. Tra ve da lam gi.
 
     `baseline_stale=True` nghia la file config da bi sinh lai -> NGUOI GOI phai
     doc lai baseline truoc khi patch, ban cu tro toi noi dung khong con nua.
     """
+    if user_state == "new_user":
+        await device_app.force_stop(client, baseline.serial, baseline.package)
+        await _clear_and_wait(client, baseline)
+        return {"mode": "clear", "matched": "User State: new_user", "baseline_stale": True}
+    if user_state == "old_user":
+        await device_app.force_stop(client, baseline.serial, baseline.package)
+        await _clear_and_wait(client, baseline)
+        await _make_old_user(client, baseline, log_fn)
+        return {"mode": "old_user", "matched": "User State: old_user", "baseline_stale": True}
+
     data = rules()
     matched = needs_clean(precondition, data)
     if not matched:

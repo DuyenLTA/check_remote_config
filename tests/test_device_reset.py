@@ -133,3 +133,51 @@ def test_app_chua_sinh_lai_file_config_thi_khong_patch_bua(monkeypatch):
     monkeypatch.setattr(device_reset, "POLL_INTERVAL", 0.01)
     with pytest.raises(RcError, match="chua sinh lai file remote config"):
         asyncio.run(device_reset.prepare(adb, bl, "Fresh install"))
+
+
+# --- cot User State cua file TC (user chot 2026-10-02) ------------------------
+
+def test_new_user_la_pm_clear_that_ke_ca_khi_co_co_onboarding():
+    """Co co onboarding van KHONG reset mem: new_user nghia la clear data."""
+    adb = fake(fails={"pm clear": ("Success\n", "", 0)})
+    out = asyncio.run(device_reset.prepare(adb, baseline_of(adb), "", "new_user"))
+    assert out["mode"] == "clear" and out["baseline_stale"] is True
+    assert adb.cmds_with("pm clear")
+
+
+def test_old_user_clear_roi_lai_toi_home_roi_tat_app(monkeypatch):
+    adb = fake(fails={"pm clear": ("Success\n", "", 0)})
+    di: list[str] = []
+
+    async def walk_to(client, serial, package, target, log_fn=None, **k):
+        di.append(target)
+        return {"reached": True, "activity": f"{PKG}.MainActivity", "trail": []}
+
+    monkeypatch.setattr(device_reset.fo_flow, "walk_to", walk_to)
+    out = asyncio.run(device_reset.prepare(adb, baseline_of(adb), "Clear data app", "old_user"))
+    assert out["mode"] == "old_user" and di == [""]       # "" = toi Home
+    assert adb.cmds_with("pm clear")
+    # tat app SAU khi toi Home: lan mo do moi la lan cua old user
+    assert adb.calls[-1].endswith(f"force-stop {PKG}")
+
+
+def test_old_user_khong_toi_duoc_home_thi_dung_case(monkeypatch):
+    """Chay tiep la do luong user moi ma report ghi old user - PASS gia."""
+    adb = fake(fails={"pm clear": ("Success\n", "", 0),
+                      "dumpsys window": (f"  mCurrentFocus=Window{{1 u0 {PKG}/.LanguageActivity}}\n", "", 0)})
+
+    async def walk_to(*a, **k):
+        return {"reached": False, "activity": f"{PKG}.LanguageActivity", "trail": []}
+
+    monkeypatch.setattr(device_reset.fo_flow, "walk_to", walk_to)
+    monkeypatch.setattr(device_reset, "CHO_HOME", 0.02)
+    monkeypatch.setattr(device_reset, "POLL_INTERVAL", 0.01)
+    with pytest.raises(RcError, match="old user"):
+        asyncio.run(device_reset.prepare(adb, baseline_of(adb), "", "old_user"))
+
+
+@pytest.mark.parametrize("raw,ra", [("new_user", "new_user"), ("Old user", "old_user"),
+                                    ("old-user", "old_user"), ("", ""), ("guest", "")])
+def test_doc_cot_user_state(raw, ra):
+    from rcr import tc_loader
+    assert tc_loader.user_state(raw) == ra

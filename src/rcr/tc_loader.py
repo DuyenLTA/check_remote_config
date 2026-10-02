@@ -35,6 +35,7 @@ COLUMNS = {
     "test_data": ("test data", "data", "du lieu"),
     "actions": ("action", "actions", "steps", "thao tac"),
     "expects": ("expected result", "expected", "ket qua mong doi"),
+    "user_state": ("user state", "user_state", "trang thai user"),
 }
 REQUIRED = ("n", "actions", "expects")
 # Key RC nam o Test Data HOAC Precondition (bo TC tu SDK 3.2.0 bo han cot Test Data,
@@ -101,6 +102,7 @@ def parse_rows(rows: list[tuple], source: str = "") -> list[Case]:
                 test_data=_cell(cells, idx, "test_data"),
                 actions=split_steps(_cell(cells, idx, "actions")),
                 expects=split_steps(_cell(cells, idx, "expects")),
+                user_state=user_state(_cell(cells, idx, "user_state")),
             )
         )
     if not out:
@@ -109,6 +111,12 @@ def parse_rows(rows: list[tuple], source: str = "") -> list[Case]:
             f"(cot {_label(idx, 'n')!r} phai la so)."
         )
     return out
+
+
+def user_state(text: str) -> str:
+    """"new_user" / "Old user" / "old-user" -> `new_user` | `old_user`. La -> ""."""
+    low = re.sub(r"[\s-]+", "_", (text or "").strip().casefold())
+    return low if low in ("new_user", "old_user") else ""
 
 
 def split_steps(text: str) -> tuple[str, ...]:
