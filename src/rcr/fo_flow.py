@@ -121,6 +121,9 @@ async def walk_to(client, serial: str, package: str, target: str,
 
     want_activity, _, want_page = target.partition("#")
     page = int(want_page) if want_page.isdigit() else 0
+    # (trang vua vuot di, co vuot that) va dump truoc cu vuot - de nhan trang
+    # dich khong co cham chi trang (OB3).
+    vua_vuot, xml_truoc = (0, False), ""
 
     while waited < timeout and idle < STUCK_POLLS:
         pkg, activity = await device_app.focus(client, serial)
@@ -128,11 +131,21 @@ async def walk_to(client, serial: str, package: str, target: str,
             if not page:
                 return {"reached": True, "activity": activity, "trail": trail}
             # Cac trang OB dung chung activity -> vuot cho toi dung trang.
-            nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)))
+            xml = await ui_dump.dump(client, serial)
+            nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml))
             now = fo_steps.onboarding_page(nodes)
             if now == page:
                 return {"reached": True, "activity": f"{activity} (trang {now})", "trail": trail}
+            if not now and vua_vuot == (page - 1, True) and xml != xml_truoc:
+                # OB3 la trang native full man, KHONG co cham chi trang (do tren
+                # Pixel 4 + Pixel 7). Vua vuot tu trang lien truoc va man da doi
+                # that -> dang o trang dich. Khong nhan thi roi xuong luat lai
+                # chung, vuot tiep toi tan Home (do 2026-10-02, ca nhom OB3).
+                return {"reached": True, "activity": f"{activity} (trang {page}, suy ra)",
+                        "trail": trail}
+            vua_vuot = (0, False)
             if now and now < page:
+                vua_vuot, xml_truoc = (now, True), xml
                 await do_step(client, serial, {"swipe": "left"}, nodes, screen)
                 trail.append({"activity": activity.split(".")[-1], "did": f"vuot: trang {now} -> {now + 1}"})
                 log_fn(f"      onboarding: vuot sang trang {now + 1}")

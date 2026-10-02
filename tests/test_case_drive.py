@@ -185,3 +185,24 @@ def test_khong_suy_trang_khi_man_khong_doi():
     cuoi = asyncio.run(drive_probes._chup_ket(fake(), "29301FDH2006K7", PKG, 9,
                                     trang_cu=2, vuot=1, dump_cu=APP_XML))
     assert cuoi["page"] == 0
+
+
+def test_buoc_toi_dung_man_vua_lai_theo_precondition_thi_khong_lai_lai(monkeypatch):
+    """Lai lai tu OB3 (khong co cham chi trang) la vuot tiep toi Home."""
+    async def cam(*a, **k):
+        raise AssertionError("khong duoc lai lai")
+
+    monkeypatch.setattr(fo_flow, "walk_to", cam)
+    out = asyncio.run(case_drive.drive(fake(), "29301FDH2006K7", PKG,
+                                       ["Chạy luồng FO lần 1 đến OB3."],
+                                       da_toi="OnboardingActivity#3"))
+    assert out["steps"][0]["action"]["kind"] == "noop"
+    assert "precondition" in out["steps"][0]["action"]["reason"]
+
+
+def test_xoa_log_ads_thi_nang_buffer_truoc():
+    """Buffer 256 KiB cua Pixel 4 lam mat log ads som -> log trong tron."""
+    from rcr import ad_log
+    adb = fake()
+    asyncio.run(ad_log.clear(adb, "29301FDH2006K7"))
+    assert adb.cmds_with("logcat -G 16M") and adb.cmds_with("logcat -c")

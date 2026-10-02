@@ -41,9 +41,17 @@ MASK_RE = re.compile(r"^\*+(?P<tail>\d{2,})$")
 IMPRESSION_RE = re.compile(r"occurred for ad unit\s+(?P<id>[*\w]+)")
 
 
+# Ring buffer mac dinh cua Pixel 4 chi 256 KiB: mot luot lai FO kem dump UI
+# day het cac dong request ads som ra khoi buffer truoc khi `logcat -d` doc ->
+# log ads TRONG TRON, cau "khong request" ra PASS rong (do 2026-10-02). 16M du
+# cho ca luot dai nhat; khong can root.
+BUFFER = "16M"
+
+
 async def clear(client, serial: str) -> None:
     """Xoa buffer truoc khi mo app - khong thi nhat log cua luot truoc."""
     guard(serial)
+    await client._run("-s", serial, "logcat", "-G", BUFFER, timeout=LOGCAT_TIMEOUT)
     await client._run("-s", serial, "logcat", "-c", timeout=LOGCAT_TIMEOUT)
 
 

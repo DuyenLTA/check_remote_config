@@ -158,3 +158,55 @@ def test_moi_man_trong_bang_ma_deu_co_trong_bang_thu_tu():
 
     for man in set(fo_screens.MAN_THEO_MA.values()):
         assert man in fo_screens.THU_TU
+
+
+# --- lai toi OB3: trang khong co cham chi trang -------------------------------
+
+def _walk_qua(monkeypatch, dumps):
+    """Lai toi OB3 voi day dump cho truoc (moi lan dump lay phan tu ke)."""
+    import asyncio
+
+    from rcr import device_app, fo_flow
+
+    con = list(dumps)
+    vuot: list[str] = []
+
+    async def focus(*a):
+        return "com.ai.app", "com.ai.app.VslTemplate4OnboardingActivity"
+
+    async def dump(*a, **k):
+        return con.pop(0) if len(con) > 1 else con[0]
+
+    async def swipe(client, serial, direction, *a, **k):
+        vuot.append(direction)
+
+    async def size(*a):
+        return 1080, 2400
+
+    async def ngu(*a):
+        return None
+
+    monkeypatch.setattr(device_app, "focus", focus)
+    monkeypatch.setattr(device_app, "swipe", swipe)
+    monkeypatch.setattr(device_app, "screen_size", size)
+    monkeypatch.setattr(fo_flow.ui_dump, "dump", dump)
+    monkeypatch.setattr(fo_flow.asyncio, "sleep", ngu)
+    monkeypatch.setattr(fo_flow, "guard", lambda *a: None)
+    from conftest import FakeAdb
+
+    out = asyncio.run(fo_flow.walk_to(FakeAdb(), "29301FDH2006K7", "com.ai.app",
+                                      "OnboardingActivity#3", timeout=30))
+    return out, vuot
+
+
+def test_vuot_tu_trang_2_sang_trang_khong_cham_la_da_toi_OB3(monkeypatch):
+    """OB3 la native full man khong co cham - truoc day tool vuot tiep toi Home."""
+    out, vuot = _walk_qua(monkeypatch, [INDICATOR, ONBOARDING])
+    assert out["reached"] and "suy ra" in out["activity"]
+    assert vuot == ["left"]                      # dung mot cu vuot, khong vuot tiep
+
+
+def test_khong_vuot_ma_khong_co_cham_thi_khong_suy_bua(monkeypatch):
+    """Chua vuot tu trang 2 thi man khong cham KHONG duoc coi la OB3."""
+    out, _ = _walk_qua(monkeypatch, [ONBOARDING])
+    assert "suy ra" not in out.get("activity", "")

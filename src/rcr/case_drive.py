@@ -61,7 +61,8 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
 
 
 async def drive(client, serial: str, package: str, steps, log_fn=_noop,
-                man_can: str | None = None, thu_vuot: bool = False) -> dict:
+                man_can: str | None = None, thu_vuot: bool = False,
+                da_toi: str | None = None) -> dict:
     """Chay lan luot cac buoc. Tra nhat ky tung buoc + dump de phase 5 cham.
 
     Man hinh bi che CHI chan buoc phai cham vao man hinh. Buoc quan sat va buoc
@@ -122,6 +123,17 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                + (f" (man hinh bi che: {activity})" if blocked else ""))
         done.append(record)
 
+        if isinstance(action, act_resolver.GoTo) and action.target == da_toi:
+            # Buoc lai theo Precondition da dua app toi DUNG man nay roi. Lai lai
+            # tu cho dang dung la hong: OB3 khong co cham chi trang, lan lai thu
+            # hai khong suy duoc trang va vuot tiep toi Home (do 2026-10-02).
+            record["action"] = {"kind": "noop", "target": action.target,
+                                "reason": f"đã ở {action.target} từ bước lái theo precondition"}
+            da_toi = None
+            t0 = time.monotonic()
+            if action.cho:
+                await asyncio.sleep(action.cho)
+            continue
         if isinstance(action, act_resolver.GoTo) and _di_qua(man_can, action.target):
             # Buoc TC bao di tiep, nhung key cua case nam o man truoc do roi:
             # doc log o day la du. 16 thao tac de toi Home ton ~90 giay va

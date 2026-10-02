@@ -112,8 +112,10 @@ async def apply_case(
         # Dong "user co the vuot sang man ke" doi mot cu vuot that de chung
         # minh - bao case_drive lam sau khi moi dong khac da co bang chung.
         thu_vuot = any(assert_check.DOI_VUOT_RE.search(e or "") for e in expects)
+        da_toi = goto if (out.get("walk") or {}).get("reached") else None
         driven = await case_drive.drive(
-            client, baseline.serial, baseline.package, steps, log_fn, man_can, thu_vuot
+            client, baseline.serial, baseline.package, steps, log_fn, man_can, thu_vuot,
+            da_toi=da_toi,
         )
         # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
         driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]
