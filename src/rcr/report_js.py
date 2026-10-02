@@ -15,7 +15,8 @@ const LABEL = {PASS: "PASS", FAIL: "FAIL", BLOCKED: "BLOCKED", NA: "N/A"};
 const THAOTAC = {
   tap: "bấm", swipe: "vuốt", wait: "chờ", goto: "lái qua luồng FO",
   net: "đổi trạng thái mạng", noop: "không cần thao tác",
-  needs_human: "tool không tự làm được",
+  needs_human: "tool không tự làm được", background: "đưa app xuống nền",
+  resume: "đưa app lên lại", rotate: "xoay màn hình", seq: "chuỗi thao tác",
 };
 const TILE = {
   FAIL: "sai so với Expected", BLOCKED: "chưa test được",

@@ -129,8 +129,11 @@ _SWIPE_ENDS = {
 }
 
 
-async def swipe(client, serial: str, direction: str, screen=None) -> None:
-    """Vuot mot chieu. `screen` co san thi truyen vao, khong thi tu do."""
+async def swipe(client, serial: str, direction: str, screen=None, ms: int = SWIPE_MS) -> None:
+    """Vuot mot chieu. `screen` co san thi truyen vao, khong thi tu do.
+
+    `ms` ngan hon cho cu vuot lien tuc ("vuot nhanh 3-4 lan trong <1s").
+    """
     ends = _SWIPE_ENDS.get(direction)
     if ends is None:
         raise AdbError(f"Huong vuot khong hieu: {direction!r}")
@@ -140,7 +143,7 @@ async def swipe(client, serial: str, direction: str, screen=None) -> None:
     out, err, _ = await client.shell(
         serial, "input", "swipe",
         str(int(width * x1)), str(int(height * y1)),
-        str(int(width * x2)), str(int(height * y2)), str(SWIPE_MS))
+        str(int(width * x2)), str(int(height * y2)), str(int(ms)))
     problem = output_error(out, err)
     if problem:
         raise AdbError(f"Vuot {direction} that bai: {problem}")

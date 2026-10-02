@@ -14,15 +14,19 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class Tap:
+    """`lan` > 1: bam lien tuc ("Tap button X nhanh lien tuc 4-5 lan")."""
+
     node_label: str
     x: int
     y: int
     matched: str
+    lan: int = 1
 
     @property
     def summary(self) -> dict:
-        return {"kind": "tap", "node": self.node_label, "x": self.x, "y": self.y,
-                "matched": self.matched}
+        ra = {"kind": "tap", "node": self.node_label, "x": self.x, "y": self.y,
+              "matched": self.matched}
+        return ra | {"lan": self.lan} if self.lan > 1 else ra
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,10 +35,12 @@ class Swipe:
 
     direction: str
     matched: str
+    lan: int = 1
 
     @property
     def summary(self) -> dict:
-        return {"kind": "swipe", "direction": self.direction, "matched": self.matched}
+        ra = {"kind": "swipe", "direction": self.direction, "matched": self.matched}
+        return ra | {"lan": self.lan} if self.lan > 1 else ra
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,4 +101,44 @@ class NeedsHuman:
         return {"kind": "needs_human", "reason": self.reason}
 
 
-Action = Tap | Swipe | Wait | NoOp | GoTo | Net | NeedsHuman
+@dataclass(frozen=True, slots=True)
+class Background:
+    """Nhan Home, de app nam nen `seconds` giay. Buoc "Mo lai app" sau do moi
+    dua app len lai - TC hoi ca luc o nen lan luc resume, nen khong gop lam mot."""
+
+    seconds: float
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "background", "seconds": self.seconds, "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
+class Rotate:
+    """Xoay man lan luot theo `orientations` ("ngang"/"doc"), xong tra lai che
+    do xoay cua may nhu cu."""
+
+    orientations: tuple[str, ...]
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "rotate", "orientations": list(self.orientations),
+                "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
+class Seq:
+    """Nhieu thao tac trong mot cau: "Vuot phai ve OB2, roi vuot trai lai OB3"."""
+
+    actions: tuple
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "seq", "actions": [a.summary for a in self.actions],
+                "reason": self.reason}
+
+
+Action = Tap | Swipe | Wait | NoOp | GoTo | Net | NeedsHuman | Background | Rotate | Seq

@@ -110,12 +110,27 @@ def case_record(key: str, row: dict, result: dict) -> dict:
              # Ly do la thu DUY NHAT giai thich mot buoc "khong thao tac":
              # bo no di thi buoc lai-roi-dung-dung-cho va buoc that su khong
              # lam gi trong y het nhau tren report.
-             "r": s["action"].get("reason", ""),
+             "r": _ly_do(s),
              "blocked": bool(s.get("screen_blocked")),
              "shot": s.get("shot", ""), "shot_warning": s.get("shot_warning", "")}
             for s in drive.get("steps", [])
         ],
     }
+
+
+def _ly_do(step: dict) -> str:
+    """Ly do cua buoc, kem moc t0 va so cu lien tuc neu co - nguoi doc can
+    biet thao tac lam LUC NAO va bao nhieu lan, khong chi "vuot"."""
+    phan = [step["action"].get("reason", "")]
+    moc = step.get("moc")
+    if moc:
+        phan.append(f"làm lúc t0+{moc['lam_luc']:g}s (TC ghi t0+{moc['t0_cong']:g}s; {moc['ghi_chu']})")
+    lt = step.get("lien_tuc")
+    if lt:
+        phan.append(f"{lt['lan']} lần trong {lt['giay']:g}s")
+    if step.get("xoay"):
+        phan.append("đã xoay " + " → ".join("ngang" if h == "ngang" else "dọc" for h in step["xoay"]))
+    return " · ".join(p for p in phan if p)
 
 
 def page_data(baseline, tc: dict, records: list[dict], app_label: str = "") -> dict:

@@ -172,3 +172,16 @@ def test_report_khong_ro_ma_thao_tac_noi_bo_ra_ngoai():
     for ma, chu in (("noop", "không cần thao tác"), ("goto", "lái qua luồng FO"),
                     ("net", "đổi trạng thái mạng"), ("tap", "bấm")):
         assert f"{ma}: \"{chu}\"" in JS
+
+
+def test_moi_loai_thao_tac_deu_co_nhan_tieng_viet():
+    """Them loai thao tac moi ma quen nhan la ma noi bo lai lot ra report."""
+    import re
+
+    from rcr import act_types
+    from rcr.report_js import JS
+
+    kinds = set(re.findall(r'"kind": "(\w+)"', open(act_types.__file__, encoding="utf-8").read()))
+    kinds |= {"resume"}          # case_drive gan khi dua app tu nen len
+    thieu = [k for k in kinds if not re.search(rf"\b{k}: \"", JS)]
+    assert not thieu, f"thieu nhan cho: {thieu}"

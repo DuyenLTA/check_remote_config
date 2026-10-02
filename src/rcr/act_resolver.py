@@ -32,12 +32,14 @@ from __future__ import annotations
 
 import re
 
-from .act_types import Action, GoTo, Net, NeedsHuman, NoOp, Swipe, Tap, Wait
-from . import net_ctl
+from .act_types import (Action, Background, GoTo, Net, NeedsHuman, NoOp, Rotate, Seq,
+                        Swipe, Tap, Wait)
+from . import act_compound, net_ctl
+from .act_nodes import find, tap_by_text
 from .ui_dump import DeviceNode
 
-__all__ = ["Action", "GoTo", "Net", "NeedsHuman", "NoOp", "Swipe", "Tap", "Wait",
-           "resolve", "find"]
+__all__ = ["Action", "Background", "GoTo", "Net", "NeedsHuman", "NoOp", "Rotate", "Seq",
+           "Swipe", "Tap", "Wait", "resolve", "find"]
 
 # Buoc doi soat tren console ngoai (AdMob, Firebase, dashboard). Tool cham ads
 # bang log cua may, khong mo console - nhung day KHONG phai cho phai dung lai:
@@ -91,6 +93,9 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     text = (step or "").strip()
     if not text:
         return NoOp("bước rỗng")
+    ghep = act_compound.resolve(text, nodes, resolve)
+    if ghep is not None:
+        return ghep
     if OBSERVE_RE.match(text):
         return NoOp("bước quan sát — không thao tác, chuyển thẳng sang chấm")
     # Cau ve MANG phai xet truoc cau mo app: "Mo app khong mang" khop ca hai,
@@ -117,7 +122,8 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
 
     wait = WAIT_RE.match(text)
     if wait and not QUOTED_RE.search(text):
-        seconds = float(wait.group(1)) if wait.group(1) else DEFAULT_WAIT
+        seconds = act_compound.so_giay(text) or (
+            float(wait.group(1)) if wait.group(1) else DEFAULT_WAIT)
         if seconds > MAX_WAIT:
             return NeedsHuman(f"chờ {seconds:g}s — quá {MAX_WAIT:g}s, TC có vẻ viết nhầm")
         return Wait(seconds)
@@ -127,15 +133,15 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
 
     quoted = QUOTED_RE.search(text)
     if quoted:
-        return _tap_by_text(quoted.group(1).strip(), nodes, f'chuoi trong ngoac: "{quoted.group(1)}"')
+        return tap_by_text(quoted.group(1).strip(), nodes, f'chuoi trong ngoac: "{quoted.group(1)}"')
 
     tab = TAB_RE.match(text)
     if tab:
-        return _tap_by_text(tab.group(1).strip(), nodes, f"ten tab: {tab.group(1)}")
+        return tap_by_text(tab.group(1).strip(), nodes, f"ten tab: {tab.group(1)}")
 
     word = TAP_WORD_RE.match(text)
     if word and len(word.group(1)) <= 40:
-        return _tap_by_text(word.group(1).strip(), nodes, f"chu sau dong tu: {word.group(1)}")
+        return tap_by_text(word.group(1).strip(), nodes, f"chu sau dong tu: {word.group(1)}")
 
     goto = _goto(text)
     if goto:
@@ -185,54 +191,9 @@ def _cho_bao_lau(ve: str) -> float | None:
     m = WAIT_RE.match(ve)
     if not m:
         return None
+    giay = act_compound.so_giay(ve)
+    if giay:
+        return giay
     if m.group(1):
         return float(m.group(1))
     return CHO_TIMEOUT_ADS if TIMEOUT_RE.search(ve) else DEFAULT_WAIT
-
-
-def _tap_by_text(wanted: str, nodes: list[DeviceNode], matched: str) -> Action:
-    """Tim node theo text/content-desc. Phai DUY NHAT moi tap."""
-    hits = find(wanted, nodes)
-    if not hits:
-        return NeedsHuman(f"không thấy phần tử nào khớp {wanted!r} trên màn hình")
-    if len(hits) > 1:
-        names = ", ".join(n.label for n in hits[:4])
-        return NeedsHuman(
-            f"{len(hits)} node cung khop {wanted!r} ({names}) - khong doan node nao la dung"
-        )
-    node = hits[0]
-    x, y = node.bounds.center
-    return Tap(node.label, x, y, matched)
-
-
-def find(wanted: str, nodes: list[DeviceNode]) -> list[DeviceNode]:
-    """Node khop text/content-desc. Uu tien khop DUNG HAN truoc khi khop mot phan.
-
-    Chi xet node bam duoc: chu tren man hinh thuong nam o TextView khong
-    clickable, con cai bam duoc la cha no - tap vao chu van trung vao cha.
-    """
-    want = wanted.casefold()
-    pool = [n for n in nodes if n.visible and not n.bounds.empty]
-    exact = [n for n in pool if want in (n.text.casefold(), n.content_desc.casefold())]
-    if exact:
-        return _outermost(exact)
-    partial = [
-        n for n in pool
-        if want in n.text.casefold() or want in n.content_desc.casefold()
-    ]
-    return _outermost(partial)
-
-
-def _outermost(hits: list[DeviceNode]) -> list[DeviceNode]:
-    """Bo node nam TRONG node khac cung khop - cung mot chu, dung dem 2 lan."""
-    ids = {n.node_id for n in hits}
-    return [n for n in hits if not _has_ancestor(n, ids)]
-
-
-def _has_ancestor(node: DeviceNode, ids: set[str]) -> bool:
-    parent = node.parent_id
-    while parent:
-        if parent in ids:
-            return True
-        parent = parent.rsplit(".", 1)[0] if "." in parent else None
-    return False

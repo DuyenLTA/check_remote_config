@@ -24,15 +24,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
-from . import (act_resolver, device_app, drive_probes, fo_flow, fo_steps, net_ctl,
-               screencap, ui_dump)
+from . import (act_compound, act_exec, act_resolver, device_app, drive_probes, fo_flow,
+               fo_steps, screencap, ui_dump)
 
 log = logging.getLogger(__name__)
 
 AD_HINTS = ("adactivity", "com.google.android.gms.ads")
-# Cho SDK co co hoi retry sau khi mang len lai, truoc khi doc log.
-CHO_SAU_KHI_CO_MANG = 6.0
 
 
 def _noop(_msg: str) -> None:
@@ -68,29 +67,45 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
     Man hinh bi che CHI chan buoc phai cham vao man hinh. Buoc quan sat va buoc
     cho van di tiep: case ads cham bang log request/load, va inter thuong de len
     truoc khi kip nhin thay banner - dung o day la bao hong mot case dang chay dung.
+
+    Moc "Tai t0+Ns": t0 la luc vua toi man cua case (dau luot lai, hoac sau
+    buoc di toi man gan nhat) - CHUA phai luc ad show, viec do can do log rieng.
     """
     done: list[dict] = []
     blocked_steps: list[int] = []
-    trang_cu, vuot_sau, dump_cu = 0, 0, ""
-    for index, step in enumerate(steps, 1):
+    ctx, dump_cu = act_exec.ctx_moi(), ""
+    t0 = time.monotonic()
+    for index, raw in enumerate(steps, 1):
+        moc = act_compound.moc_t0(raw)
+        step = moc[1] if moc else raw
+        if moc:
+            await asyncio.sleep(max(0.0, t0 + moc[0] - time.monotonic()))
         pkg, activity = await device_app.focus(client, serial)
         blocked = blocking_screen(package, pkg, activity)
-
-        xml = await ui_dump.dump(client, serial)
-        # Chup cung luc voi dump -> anh va cay node ta CUNG mot man hinh.
-        shot = await screencap.capture(client, serial)
-        nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
-        anim = await drive_probes._do_animation(client, serial, nodes)
-        trang = fo_steps.onboarding_page(nodes)
-        if trang:                      # doc duoc thi lay lam moc, bo so dem cu
-            trang_cu, vuot_sau = trang, 0
-        dump_cu = xml
-        action = act_resolver.resolve(step, nodes)
-        record = {"n": index, "step": step, "action": action.summary,
-                  "activity": activity, "dump": xml,
-                  "shot": shot["thumb"], "shot_warning": shot["warning"]}
-        if anim:
-            record["anim"] = anim
+        action = act_resolver.resolve(step, [])
+        if moc and not isinstance(action, (act_resolver.Tap, act_resolver.NeedsHuman)):
+            # Buoc co moc gio va KHONG can cay node: lam ngay, khong dump/chup
+            # truoc (mat 2-5s) - tre la lech khoi moc ma case dang do.
+            record = {"n": index, "step": raw, "action": action.summary, "activity": activity}
+        else:
+            xml = await ui_dump.dump(client, serial)
+            # Chup cung luc voi dump -> anh va cay node ta CUNG mot man hinh.
+            shot = await screencap.capture(client, serial)
+            nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
+            anim = {} if moc else await drive_probes._do_animation(client, serial, nodes)
+            trang = fo_steps.onboarding_page(nodes)
+            if trang:                      # doc duoc thi lay lam moc, bo so dem cu
+                ctx["trang_cu"], ctx["vuot_sau"] = trang, 0
+            dump_cu = xml
+            action = act_resolver.resolve(step, nodes)
+            record = {"n": index, "step": raw, "action": action.summary,
+                      "activity": activity, "dump": xml,
+                      "shot": shot["thumb"], "shot_warning": shot["warning"]}
+            if anim:
+                record["anim"] = anim
+        if moc:
+            record["moc"] = {"t0_cong": moc[0], "lam_luc": round(time.monotonic() - t0, 1),
+                             "ghi_chu": "t0 = lúc vừa tới màn, chưa đo lúc ad show"}
         if blocked:
             # Ghi lai de phase 5 biet dump nay KHONG phai UI cua app.
             record["screen_blocked"] = blocked
@@ -103,7 +118,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,
                     "blocked_steps": blocked_steps}
 
-        log_fn(f"    buoc {index}: {step!r} -> {action.summary['kind']}"
+        log_fn(f"    buoc {index}: {raw!r} -> {action.summary['kind']}"
                + (f" (man hinh bi che: {activity})" if blocked else ""))
         done.append(record)
 
@@ -131,35 +146,18 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                         "blocked_steps": blocked_steps}
             record["action"] = {"kind": "goto", "target": action.target,
                                 "activity": walk["activity"], "reason": action.reason}
+            t0 = time.monotonic()
             if action.cho:
                 await asyncio.sleep(action.cho)
             continue
         if isinstance(action, act_resolver.NeedsHuman):
             return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,
                     "blocked_steps": blocked_steps}
-        if isinstance(action, act_resolver.Tap):
-            await device_app.tap(client, serial, action.x, action.y)
-            await asyncio.sleep(1.0)  # cho man hinh kip doi truoc khi chup buoc sau
-        elif isinstance(action, act_resolver.Swipe):
-            await device_app.swipe(client, serial, action.direction)
-            if action.direction == "left":
-                vuot_sau += 1          # vuot trai = sang trang ke
-            await asyncio.sleep(1.0)
-        elif isinstance(action, act_resolver.Net):
-            ket = await (net_ctl.bat(client, serial) if action.on
-                         else net_ctl.tat(client, serial))
-            record["net"] = ket
-            log_fn(f"    buoc {index}: mang -> {ket['mang']}"
-                   + (" (ping thong)" if ket["thong"] else " (ping khong di)"))
-            if action.on:
-                # Ca cau hoi cua case la "mang len lai thi SDK co request len
-                # unit da tat khong". Doc log ngay luc vua co mang la doc truoc
-                # khi SDK kip retry - khong thay gi roi bao PASS.
-                await asyncio.sleep(CHO_SAU_KHI_CO_MANG)
-        elif isinstance(action, act_resolver.Wait):
-            await asyncio.sleep(action.seconds)
+        if await act_exec.resume_neu_o_nen(client, serial, package, step, record, ctx):
+            continue
+        await act_exec.lam(client, serial, action, record, ctx, log_fn)
     cuoi = await drive_probes._chup_ket(client, serial, package, len(done) + 1,
-                           trang_cu, vuot_sau, dump_cu)
+                           ctx["trang_cu"], ctx["vuot_sau"], dump_cu)
     done.append(cuoi)
     ra = {"steps": done, "status": "DONE", "stopped_at": 0,
           "blocked_steps": blocked_steps, "final": cuoi}

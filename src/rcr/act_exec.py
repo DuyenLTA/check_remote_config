@@ -1,0 +1,105 @@
+"""Lam mot thao tac da dich tren may that. Tach khoi `case_drive` de file duoi
+200 dong: `case_drive` lo trinh tu buoc va cac cho dung, file nay lo LAM.
+
+`ctx` la trang thai mang qua cac buoc cua mot case:
+    vuot_sau   so trang da vuot sang ke tu lan doc cham chi trang gan nhat
+    trang_cu   trang doc duoc gan nhat (0 = khong biet)
+    o_nen      app dang nam nen sau buoc nhan Home -> buoc "Mo lai app" phai
+               dua no len that, khong duoc coi la "app da mo san"
+"""
+
+from __future__ import annotations
+
+import asyncio
+import time
+
+from . import act_resolver, device_app, device_motion, net_ctl
+
+# Cho SDK co co hoi retry sau khi mang len lai, truoc khi doc log.
+CHO_SAU_KHI_CO_MANG = 6.0
+# Cu vuot / tap lien tuc: ngan de du nhieu cu trong ~1s nhu TC doi.
+VUOT_NHANH_MS = 120
+GIUA_HAI_CU = 0.05
+CHO_SAU_THAO_TAC = 1.0
+
+
+def _noop(_msg: str) -> None:
+    pass
+
+
+def ctx_moi() -> dict:
+    return {"vuot_sau": 0, "trang_cu": 0, "o_nen": False}
+
+
+async def resume_neu_o_nen(client, serial: str, package: str, step: str, record: dict,
+                           ctx: dict) -> bool:
+    """Buoc "Mo lai app" sau khi app xuong nen -> dua app len that. Tra True neu da lam.
+
+    Luat co ban dich "Mo lai app" thanh "app da mo san" - dung voi luc vua
+    patch config, SAI khi app dang nam nen: bo qua thi case cham man launcher.
+    """
+    if not ctx["o_nen"] or not act_resolver.LAUNCH_RE.match(step):
+        return False
+    await device_app.launch(client, serial, package)
+    await device_app.wait_foreground(client, serial, package)
+    ctx["o_nen"] = False
+    record["action"] = {"kind": "resume", "reason": "đưa app từ nền lên lại (như bấm icon app)"}
+    await asyncio.sleep(CHO_SAU_THAO_TAC)
+    return True
+
+
+async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop) -> None:
+    """Lam `action`. GoTo va NeedsHuman do `case_drive` lo, khong toi day."""
+    if isinstance(action, act_resolver.Seq):
+        for con in action.actions:
+            await lam(client, serial, con, record, ctx, log_fn)
+        return
+    if isinstance(action, act_resolver.Tap):
+        bat_dau = time.monotonic()
+        for i in range(action.lan):
+            await device_app.tap(client, serial, action.x, action.y)
+            if i + 1 < action.lan:
+                await asyncio.sleep(GIUA_HAI_CU)
+        if action.lan > 1:
+            record["lien_tuc"] = {"lan": action.lan, "giay": round(time.monotonic() - bat_dau, 2)}
+        await asyncio.sleep(CHO_SAU_THAO_TAC)
+    elif isinstance(action, act_resolver.Swipe):
+        await _vuot(client, serial, action, record, ctx)
+    elif isinstance(action, act_resolver.Net):
+        ket = await (net_ctl.bat(client, serial) if action.on else net_ctl.tat(client, serial))
+        record["net"] = ket
+        log_fn(f"    mang -> {ket['mang']}" + (" (ping thong)" if ket["thong"] else " (ping khong di)"))
+        if action.on:
+            # Ca cau hoi cua case la "mang len lai thi SDK co request len unit
+            # da tat khong". Doc log ngay luc vua co mang la doc truoc khi SDK
+            # kip retry - khong thay gi roi bao PASS.
+            await asyncio.sleep(CHO_SAU_KHI_CO_MANG)
+    elif isinstance(action, act_resolver.Wait):
+        await asyncio.sleep(action.seconds)
+    elif isinstance(action, act_resolver.Background):
+        await device_motion.home(client, serial)
+        ctx["o_nen"] = True
+        await asyncio.sleep(action.seconds)
+    elif isinstance(action, act_resolver.Rotate):
+        record["xoay"] = await device_motion.xoay(client, serial, action.orientations)
+
+
+async def _vuot(client, serial: str, action, record: dict, ctx: dict) -> None:
+    if action.lan == 1:
+        await device_app.swipe(client, serial, action.direction)
+        # Trai = sang trang ke, phai = lui mot trang: de suy trang OB3 (khong
+        # co cham chi trang) cho dung ca khi case vuot qua lai.
+        ctx["vuot_sau"] += {"left": 1, "right": -1}.get(action.direction, 0)
+        await asyncio.sleep(CHO_SAU_THAO_TAC)
+        return
+    man = await device_app.screen_size(client, serial)
+    bat_dau = time.monotonic()
+    for i in range(action.lan):
+        await device_app.swipe(client, serial, action.direction, man, VUOT_NHANH_MS)
+        if i + 1 < action.lan:
+            await asyncio.sleep(GIUA_HAI_CU)
+    record["lien_tuc"] = {"lan": action.lan, "giay": round(time.monotonic() - bat_dau, 2)}
+    # Vuot lien tuc la de xem app co nhay NHIEU trang khong - khong duoc suy
+    # trang bang so lan vuot (ra dung cai bug dang tim). Chi tin cham chi trang.
+    ctx["vuot_sau"], ctx["trang_cu"] = 0, 0
+    await asyncio.sleep(CHO_SAU_THAO_TAC)

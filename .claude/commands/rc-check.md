@@ -39,6 +39,16 @@ Lái được app qua các bước Action của case: `Quan sát…` (không tha
 đến Home`, `Vào màn Onboarding 2`) — chỗ này `fo_flow` lo, OB1/2/3 sang màn bằng
 **vuốt** chứ không bấm Next, vì chính nút Next là thứ đang được test.
 
+Câu ghép (bộ TC 3.5.0) cũng lái được — trước đây chúng bị làm **sai im lặng**:
+`Vuốt trái nhanh liên tục 3-4 lần` (vuốt đủ 4 lần, không suy trang theo số lần
+vuốt), `Vuốt phải về OB2, rồi vuốt trái…` (đúng thứ tự), `Chờ quá 10s` (chờ quá
+mốc, không phải 3s mặc định), `Ở OB3, chờ thêm 5s`, `Sau đó vuốt…`, `Nhấn Home
+(background 10s)` rồi `Mở lại app` (đưa app lên thật), `Xoay ngang rồi xoay dọc`
+(xong luôn trả chế độ xoay của máy về như cũ), `Tại t0+2s: <thao tác>`.
+**t0 = lúc vừa tới màn của case, CHƯA phải lúc ad show** — report ghi rõ thao
+tác làm lúc t0+bao nhiêu. `Bấm giờ` dừng với lý do "chưa đo được thời gian":
+đo timer từ lúc ad show là phần làm riêng.
+
 Câu khác — hoặc **nhiều hơn một node cùng khớp** — thì dừng kèm lý do, **không
 tap bừa**: tap sai chỗ trên máy thật là bấm vào quảng cáo hoặc mua hàng thật.
 
