@@ -73,7 +73,7 @@ lặp"* chấm bằng cách chụp nhiều khung rồi so vùng node, dòng *"us
 kế"* chấm bằng **một cú vuốt thật**, dòng *"app bắn event X"* chấm bằng log
 `FA-SVC`, dòng *"luồng FO thông suốt"* chấm bằng nhật ký lái. Dòng thật sự phải
 nhìn mắt (đúng design, đúng màu) ra `NOT_VERIFIABLE` — **không được đoán thành
-PASS**.
+PASS**. Đó là giới hạn của tool, không phải của lượt chạy: Claude tự đo tiếp theo mục 5b.
 
 **Verdict của case = dòng xấu nhất trong MỌI dòng**, trừ dòng của PO. Dòng chưa
 chấm được cũng kéo case xuống: trước đây chúng bị loại khỏi verdict, nên một case
@@ -216,11 +216,13 @@ mới biết giá trị thật.
   không fill là chuyện của kho quảng cáo, logic app vẫn đúng. Đừng báo như lỗi
 - `FAIL` — lệch Expected, kèm số đo thật (unit nào đã request, log ra sao)
 - `NEEDS_HUMAN` — tool chưa lái tới được màn cần, hoặc quảng cáo che màn nên không đọc
-  được chữ trên app. **Không kết luận gì về app** — đóng ad rồi chạy lại
+  được chữ trên app. **Không kết luận gì về app** từ verdict này, và **không trả về cho
+  người dùng** — đi tiếp mục 5b, tự làm trên máy cho ra PASS/FAIL
 - `NOT_VERIFIABLE` — dòng đòi nhìn mắt (đúng design, đúng màu), hoặc
   dòng hỏi số liệu trên **AdMob/Firebase console**. Dòng console là việc của **PO**:
   tester không có quyền vào console, nên báo cáo đếm riêng (`po`), **không** gộp vào
-  `pending`. Bước Action bảo mở console cũng bỏ qua, không dừng case lại
+  `pending`. Bước Action bảo mở console cũng bỏ qua, không dừng case lại.
+  Dòng nhìn mắt (màu, vị trí, animation) **không** dừng ở đây — làm mục 5b
 - `CONFIG_OK` / `BLOCKED` — case không có Expected: đặt được config, hoặc config không
   sống qua lần mở app (build dev đặt `minimumFetchInterval = 0`). `BLOCKED` còn
   dùng khi **precondition chưa thành hiện thực** (xem mục dưới) hoặc khi điều kiện
@@ -278,8 +280,8 @@ onboarding) / `clear` (`pm clear` — **mất login và data của app trên má
 nói cho người dùng biết, đừng để họ phát hiện sau).
 
 Sau reset mềm, **màn onboarding nằm sau splash ad** và ad không tự đóng. Tool cố
-tình không tap để đóng — tap sai chỗ là bấm quảng cáo thật. Bảo người dùng tự đóng
-ad rồi xem, đừng báo như app không vào được onboarding.
+tình không tap để đóng — tap sai chỗ là bấm quảng cáo thật. Đừng báo như app không
+vào được onboarding, và đừng bảo người dùng tự đóng ad: lấy bằng chứng theo mục 5b.
 
 Bảng `tc.cases`, đọc ba cột:
 
@@ -300,8 +302,44 @@ Bộ TC hay viết vị trí ads bằng **mã** thay vì tên key thật: *"tắ
 key đọc từ máy, và giá trị phải lấy được từ chính câu đó. Không có key thì bỏ, không
 đặt bừa. Đây là thứ gỡ oan 13/16 case của tab 3.5.0.
 
-Case `needs_human` **không phải lỗi tool và không phải bug app** — báo tách hẳn
-khỏi phần chạy được, kèm nguyên văn lý do.
+Case `needs_human` **không phải lỗi tool và không phải bug app**. Nếu lý do là giá trị
+còn chỗ trống mà server của chính app đang có giá trị thật cùng loại (vd
+`splash_ui_config` type gif có `media_url` thật) thì dùng giá trị đó, chạy theo mục 5b,
+ghi rõ trên report là đã thay. Không có giá trị thật nào thì báo tách hẳn khỏi phần
+chạy được, kèm nguyên văn lý do.
+
+## 5b. Còn dòng NEEDS_HUMAN / NOT_VERIFIABLE → tự làm trên máy, KHÔNG hỏi, KHÔNG giao lại
+
+User đã nhắc **hai lần** (28/09 và 03/10/2026): *"cái nào need_human hoặc not_verify
+thì phải tự mà action để trả ra pass/fail"*. Verdict của tool chỉ là điểm xuất phát.
+Lượt chạy **chưa xong** khi còn dòng `NEEDS_HUMAN` / `NOT_VERIFIABLE` (trừ dòng console
+của PO). Không báo kết quả, không publish, không viết "bạn tự mở app xem" trước khi
+làm hết các bước dưới đây:
+
+1. Đặt config của case bằng `--set '<key>=<value>' --keep` (cùng reset như tool:
+   `pm clear` + mở app 1 lần cho fetch nếu case là new_user). **Giữa hai lượt `--keep`
+   phải `--restore`**: `--keep` lần 2 ghi đè snapshot, restore khi đó ra giá trị bẩn
+2. Tự lái bằng adb (`am start`, `am force-stop`, `input swipe`, `svc wifi`) theo đúng
+   câu Action. **Vẫn không tap vào vùng ad**: lấy bằng chứng trước khi ad hiện, hoặc
+   từ log
+3. Lấy bằng chứng, chọn theo loại dòng:
+   - màn qua nhanh / bị ad che: `screenrecord` rồi tách khung. Máy không có ffmpeg:
+     `python3 -m venv <scratchpad>/fv && <scratchpad>/fv/bin/pip install imageio-ffmpeg pillow`.
+     Splash thật thường chỉ đứng 1–2s trước "Loading Ads…"
+   - màu / chữ / vị trí: `screencap -p` (PNG, **không** lấy màu từ video) + `uiautomator
+     dump`. Màu chữ = pixel không đổi giữa hai khung khác nền
+   - thời điểm, chớp trắng, animation: timestamp từng khung thật
+     (`-fps_mode passthrough` + `showinfo`), đừng đếm khung đã nội suy
+   - "cold start lần 2", "kill app": `am force-stop` + `am start`, đo **ít nhất 3 lượt**
+   - log app thường trả lời thẳng: `adb logcat -d | grep <Activity>` (vd
+     `Splash media ready … source=DATA_DISK_CACHE view=1080x2280`)
+4. Chấm từng dòng với **số đo thật** làm lý do. Chỉ để `BLOCKED` khi điều kiện đã thử
+   tạo mà vẫn không xảy ra (vd GIF dài 5,5s mà splash chỉ đứng 2s), và ghi cách đã thử
+5. Trả máy về sạch: `--restore`, rồi đọc lại key đã đổi để đối chiếu với giá trị gốc.
+   Lệch (snapshot bị ghi đè) thì `pm clear` + mở app cho fetch lại từ server.
+   Mạng đã ngắt thì bật lại và chờ ping thông
+6. Dựng report theo đúng bố cục mục 6, ghi rõ dòng nào Claude chấm tay và đo bằng gì,
+   rồi publish
 
 ## 6. Xuất report
 
@@ -325,8 +363,8 @@ Trên report chỉ có **4 nhãn**, dịch từ verdict của tool qua `report_r
 
 Lượt đã **đo được thật** (có case ra PASS/FAIL/BLOCKED) thì publish trang đó thành
 artifact **rồi tự mở link** cho người dùng — tool chạy ở máy, không tự lên claude.ai
-được. Lượt mà mọi case đều `NEEDS_HUMAN` (chưa lái tới màn nào) thì **đừng publish**:
-trang đó không nói được gì về app, mở ra rồi đóng lại.
+được. Report của tool mà mọi case đều `NEEDS_HUMAN` thì **đừng publish trang đó**,
+vì nó không nói được gì về app. Làm mục 5b trước, rồi publish report đã chấm tay.
 
 Publish xong thì ghi link lại, lấy `generated_at` từ **chính dòng JSON của lượt vừa chạy**:
 
@@ -343,8 +381,10 @@ một lượt cũ — gửi nhầm báo cáo cũ cho team là sai một cách im
 ## 7. Báo lại
 
 Nói rõ: app + máy đã chạy, số key remote config và số key bị mirror, số case
-chạy được / cần người, `verdict` của case đã chạy, và **người dùng cần tự làm gì
-tiếp** (mở app, nhìn cái gì trên màn hình). Có `--keep` thì nhắc restore.
+chạy được / cần người, verdict cuối của từng case (sau mục 5b) kèm số đo chính, việc
+cần báo dev/PO, và trạng thái máy (đã restore chưa, có `pm clear` không). **Không
+liệt kê "bạn tự kiểm tiếp" cho dòng mà mục 5b làm được.** Chỉ nêu phần thật sự ngoài
+tầm (console PO, điều kiện đã thử mà không tạo được) và nói đã thử gì.
 
 **Đưa link artifact ngay trong câu trả lời**, đừng bắt người dùng đi tìm. Report
 local (`<repo>/out/…html`) vẫn mở được bằng nháy đôi nếu publish hỏng.
