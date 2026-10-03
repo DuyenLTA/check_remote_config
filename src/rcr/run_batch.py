@@ -15,6 +15,7 @@ from . import (
     case_run,
     precond_guards,
     fo_flow,
+    rc_guards,
     rc_patch,
     report_data,
     report_html,
@@ -74,7 +75,13 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             if them:
                 log_fn(f"  ép ad fail ({', '.join(ep)}): "
                        + ", ".join(f"{k}=…/{v.rsplit('/', 1)[-1]}" for k, v in them.items()))
-            runs = [dict(luot) | them for luot in chosen["runs"]]
+            # Cong tac tong ads luon BAT lam nen (user chot 2026-10-03): sau
+            # `pm clear` app fetch config moi co `enable_all_ads*=false` -> khong
+            # ads nao chay, moi dong ve ads thanh "khong do duoc". Truoc do reset
+            # mem giu cache cu (ads bat) nen khong ai thay. Key case tu ghi thi
+            # case thang.
+            nen = {k: "true" for k in rc_guards.NEN_ADS if k in baseline.configs}
+            runs = [nen | dict(luot) | them for luot in chosen["runs"]]
             result, baseline = await case_run.run_case(
                 client, baseline, runs, chosen["precondition"],
                 () if args.no_actions else chosen["actions"], chosen["expects"], goto,

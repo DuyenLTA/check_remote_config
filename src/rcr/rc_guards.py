@@ -57,3 +57,10 @@ def mentioned(text: str, whitelist) -> set[str]:
     """Key cua app xuat hien nhu mot tu rieng trong van ban."""
     words = set(re.findall(r"[A-Za-z][A-Za-z0-9_]*", text))
     return words & set(whitelist)
+
+
+# Cong tac tong ads cua SDK - tool dat `true` lam NEN o moi case (run_batch).
+# La moi truong, khong phai thu dang test: khong dua vao buoc soi DEX
+# (`enable_all_ads_tutorial` khong co trong DEX cua Piclux - soi thi chan oan
+# moi case).
+NEN_ADS = ("enable_all_ads", "enable_all_ads_in_app", "enable_all_ads_tutorial")

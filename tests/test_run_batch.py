@@ -93,3 +93,26 @@ def test_go_nham_ten_case_khong_lam_mat_ket_qua_da_chay(monkeypatch):
         run_batch.run_cases(None, FakeBaseline(), ARGS, RUNNABLE, ROWS, {"sdk": "3.5.0"})
     )
     assert [r["verdict"] for r in recs] == ["PASS", "BLOCKED", "PASS"]
+
+
+def test_cong_tac_tong_ads_luon_bat_lam_nen_tru_khi_case_tu_dat(monkeypatch):
+    """Sau `pm clear` config moi co enable_all_ads=false -> khong ads nao chay."""
+    nhan: list[dict] = []
+
+    async def run_case(client, baseline, runs, *a, **kw):
+        nhan.extend(runs)
+        return {"verdict": "PASS", "runs": [{"overrides": {}, "verdict": "PASS"}]}, baseline
+
+    class Bl(FakeBaseline):
+        configs = {"k": "v", "enable_all_ads": "false", "enable_all_ads_tutorial": "false"}
+
+    runnable = {"a": {"runs": ({"k": "v"},), "precondition": "", "actions": (), "expects": ()},
+                "b": {"runs": ({"enable_all_ads": "false"},), "precondition": "",
+                      "actions": (), "expects": ()}}
+    monkeypatch.setattr(case_run, "run_case", run_case)
+    monkeypatch.setattr(run_batch.tc_select, "pick", lambda r, k: k)
+    args = types.SimpleNamespace(**{**vars(ARGS), "case": "a,b"})
+    asyncio.run(run_batch.run_cases(None, Bl(), args, runnable, ROWS, {"sdk": "3.5.0"}))
+    assert nhan[0] == {"enable_all_ads": "true", "enable_all_ads_tutorial": "true", "k": "v"}
+    assert nhan[1]["enable_all_ads"] == "false"          # case tu dat thi case thang
+    assert "enable_all_ads_in_app" not in nhan[0]        # app khong co key thi khong them

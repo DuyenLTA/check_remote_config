@@ -31,6 +31,7 @@ from . import (
     dex_check,
     net_ctl,
     rc_baseline,
+    rc_guards,
     rc_patch,
     rc_snapshot,
     rc_verify,
@@ -156,7 +157,8 @@ async def run_case(
     Baseline tra ve co the KHAC cai truyen vao: `pm clear` sinh lai file config,
     ban cu tro toi noi dung khong con nua.
     """
-    keys = sorted({k for r in runs for k in r})
+    # Key nen (cong tac tong ads) la moi truong, khong soi DEX - xem rc_guards.
+    keys = sorted({k for r in runs for k in r} - set(rc_guards.NEN_ADS))
     if dex:
         log_fn(f"Soi {len(keys)} key trong DEX cua app...")
         used = await dex_check.check(client, baseline.serial, baseline.package, keys, out_dir)
