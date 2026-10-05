@@ -144,3 +144,12 @@ def test_phu_dinh_voi_log_trong_tron_khong_duoc_PASS():
     co_ads = {"units": {"x": {"unit": "x", "type": "interstitial", "requested": 1,
                               "loaded": 0, "shown": 0, "rc_keys": []}}}
     assert assert_ads.ad_line("KHÔNG có log loadAd native nào", "native", co_ads, {})["verdict"] == "PASS"
+
+
+def test_tc_nhan_link_sheet_va_duong_dan_file():
+    from rcr import tc_source
+    link = ("https://docs.google.com/spreadsheets/d/"
+            "1sNFXM7oGzx_addpimZL7RYk2rXpRs_We6YUHpdtWSqU/edit?gid=1012602089#gid=1012602089")
+    assert tc_source.la_link(link)
+    assert not tc_source.la_link("/home/u/Downloads/tc.xlsx")
+    assert tc_source.tai_ve("/home/u/Downloads/tc.xlsx", ".") == "/home/u/Downloads/tc.xlsx"

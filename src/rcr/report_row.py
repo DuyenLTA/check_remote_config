@@ -48,9 +48,9 @@ def nhan_cua(verdict: str) -> str:
     return NHAN.get(verdict, "BLOCKED")
 
 
-def _so_case(key: str) -> int:
-    n = (key or "").rsplit("#", 1)[-1]
-    return int(n) if n.isdigit() else 0
+def _so_case(key: str) -> str:
+    """Ma case sau dau '#': so (`17`) hoac TC ID (`SDK340-SPL-001`)."""
+    return (key or "").rsplit("#", 1)[-1]
 
 
 def _tieu_de(rec: dict) -> str:

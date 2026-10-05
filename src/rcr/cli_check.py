@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import case_run, rc_baseline, run_batch, sdk_probe, tc_select
+from . import case_run, rc_baseline, run_batch, sdk_probe, tc_select, tc_source
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .models import RcError
@@ -92,6 +92,10 @@ async def run(args: argparse.Namespace) -> dict:
     if args.set:
         runs = (parse_sets(args.set),)
     if args.tc:
+        if tc_source.la_link(args.tc):
+            _log("Tai bo TC moi nhat tu Google Sheet...")
+            out["tc_link"] = args.tc
+            args.tc = tc_source.tai_ve(args.tc, args.out_dir)
         sdk, source = args.sdk, "tham so --sdk"
         # Bo TC mot sheet khong can ban SDK de CHON tab, nhung report van phai
         # noi duoc no do ban nao - do tu logcat roi chi dung de hien.
@@ -155,7 +159,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--package", required=True, help="package id cua app")
     p.add_argument("--serial", help="serial may (bat buoc khi cam nhieu may)")
-    p.add_argument("--tc", help="file testcase .xlsx (bo chung nhieu tab hoac 1 sheet)")
+    p.add_argument("--tc", help="file testcase .xlsx, hoac link Google Sheet (tu tai ban moi nhat)")
     p.add_argument("--sdk", default="",
                    help="ban SDK FO cua app, vd 3.2.0 - mac dinh tu do tu logcat")
     p.add_argument("--tab", default="",

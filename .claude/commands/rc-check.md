@@ -1,6 +1,6 @@
 ---
 description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, trên máy thật
-argument-hint: "<package> [--tc <bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
+argument-hint: "<package> [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
 ---
 
 Chạy `rcr-check` một lượt: đọc baseline remote config, nạp file testcase, đặt
@@ -127,13 +127,26 @@ Ba kiểu gọi, chọn theo `$ARGUMENTS`:
 cd <repo> && .venv/bin/rcr-check --package <pkg> [--serial <S>]
 
 # b. nap bo testcase - xem case nao tool chay duoc, case nao can nguoi
-cd <repo> && .venv/bin/rcr-check --package <pkg> --tc <bo-tc.xlsx>
+cd <repo> && .venv/bin/rcr-check --package <pkg> --tc "<link sheet TC>"
 
 # c. chay 1 hay nhieu case, xuat report HTML kem anh tung buoc
-cd <repo> && .venv/bin/rcr-check --package <pkg> --tc <bo-tc.xlsx> --tab 3.4.0 \
-  --case 3.4.0#1,3.4.0#3 --report out/run.html
+cd <repo> && .venv/bin/rcr-check --package <pkg> --tc "<link sheet TC>" --tab 3.4.0 \
+  --case 3.4.0#SDK340-SPL-001,3.4.0#SDK340-SPL-003 --report out/run.html
 cd <repo> && .venv/bin/rcr-check --package <pkg> --set splash_banner_change=false
 ```
+
+**Bộ TC lấy từ Google Sheet, KHÔNG tìm file trong Downloads** (user dặn 2026-10-03).
+Mặc định `--tc` là link workbook chung mọi bản SDK:
+
+```
+https://docs.google.com/spreadsheets/d/1sNFXM7oGzx_addpimZL7RYk2rXpRs_We6YUHpdtWSqU/edit
+```
+
+Tool tự tải bản **mới nhất** về `out/tc-<id>.xlsx` mỗi lần chạy. File tải tay trong
+Downloads dễ lệch bản: ngày 02/10 tôi chạy cả buổi bằng `(2).xlsx` trong khi đã có
+`(3).xlsx` mới hơn. Người dùng đưa link sheet khác hoặc chỉ định một file `.xlsx` cụ
+thể thì dùng đúng cái đó. Tải không được (sheet riêng tư) thì dừng và báo, **đừng lùi
+về file cũ trong Downloads**.
 
 **Người dùng nêu bản SDK nào thì chỉ chạy đúng tab đó** — `sdk 3.4.0` → `--tab 3.4.0`.
 **Mặc định tool tự chọn sheet, đừng chỉ định thừa.** Tool đọc bản SDK First Open từ
@@ -158,7 +171,9 @@ Người dùng không nhắc thì **đừng tự chạy**; chạy chúng thì c�
 hai con số không liên quan. Lấy nhầm tab là chấm bằng TC của bản khác mà không ai biết.
 
 `--case` nhận nhiều case ngăn bằng dấu phẩy; case định danh bằng **`<tên tab>#<số>`**
-(`3.5.0#12`, `rating#4`) vì số case trùng nhau giữa các tab. Gõ mỗi con số vẫn được nếu
+(`3.5.0#12`, `rating#4`) vì số case trùng nhau giữa các tab. Tab viết theo format mới
+(3.4.0 trở đi) dùng cột `TC ID` thay cho `N°` → mã case là chính TC ID
+(`3.4.0#SDK340-SPL-001`). Gõ mỗi con số vẫn được nếu
 nó chỉ có ở một tab; mơ hồ thì tool dừng và liệt kê — **đừng chọn bừa một cái**.
 
 Chạy cả tab thì lấy danh sách case chạy được từ lượt `--tc` không kèm `--case`, rồi

@@ -27,7 +27,9 @@ SHEET_NAME = "Test Cases"
 # Ten cot can, sau khi chuan hoa (lower + gop khoang trang). Moi muc la cac
 # bien the chap nhan duoc cua cung mot cot.
 COLUMNS = {
-    "n": ("n°", "no", "no.", "stt", "#", "id"),
+    # Tab 3.4.0 tro di dung `TC ID` (SDK340-SPL-001) thay cho N° - quy uoc bo TC:
+    # ID co dinh, khong doi khi chen/xoa dong.
+    "n": ("n°", "no", "no.", "stt", "#", "id", "tc id"),
     "feature": ("feature", "tinh nang"),
     "description": ("test description", "description", "mo ta"),
     "sub_scenario": ("sub-scenario", "sub scenario", "scenario", "kich ban"),
@@ -45,6 +47,8 @@ KEY_COLUMNS = ("test_data", "precondition")
 # Buoc duoc danh so: "1. ...", "2) ...". Tach theo dau dong.
 STEP_SPLIT = re.compile(r"(?m)^\s*\d+\s*[.)]\s*")
 CASE_NO = re.compile(r"(\d+)(?:\.0+)?")
+# `TC ID` dang SDK340-SPL-001: giu nguyen lam ma case.
+TC_ID_RE = re.compile(r"[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+")
 HEADER_SCAN_ROWS = 12  # header cua file that nam o dong 2; quet du rong
 
 
@@ -81,11 +85,15 @@ def load(path: str | Path) -> list[Case]:
 def parse_rows(rows: list[tuple], source: str = "") -> list[Case]:
     """Tach khoi `load` de test bang bang du lieu, khong can file that."""
     idx, header_at = _find_header(rows, source)
+    # Cot so case la `TC ID` (SDK340-SPL-001) thi giu nguyen ma; cot N° thi chi
+    # nhan so - "TC-01" trong cot N° la dong nhom, khong phai case.
+    la_tc_id = _norm(_text(rows[header_at][idx["n"]])) == "tc id"
     out: list[Case] = []
     inherit = {"feature": "", "description": ""}
     for row in rows[header_at + 1 :]:
         cells = [_text(c) for c in row]
-        n = _case_no(_cell(cells, idx, "n"))
+        raw_n = _cell(cells, idx, "n")
+        n = (raw_n if TC_ID_RE.fullmatch(raw_n) else "") if la_tc_id else _case_no(raw_n)
         if not n:
             continue  # dong nhom / dong trong / dong tong
         for key in ("feature", "description"):

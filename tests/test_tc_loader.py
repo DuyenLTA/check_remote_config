@@ -189,3 +189,12 @@ def test_thieu_ca_test_data_lan_precondition_thi_bao_loi():
     header = ("N°", "Feature", "Action", "Expected Result")
     with pytest.raises(RcError, match="precondition"):
         parse_rows([header, ("1", "x", "a", "b")])
+
+
+def test_cot_TC_ID_giu_nguyen_ma_case():
+    """Tab 3.4.0 tro di: cot `TC ID` (SDK340-SPL-001) thay cho N°."""
+    hdr = ("TC ID",) + HEADER[1:]
+    out = parse_rows([hdr,
+                      ("▌ Splash", "", "", "", "", "", "", "", ""),
+                      ("SDK340-SPL-001", "x", "y", "s", "", "k_a = false", "1. Mo app", "1. ok", "")])
+    assert [c.n for c in out] == ["SDK340-SPL-001"]

@@ -75,7 +75,7 @@ def test_moi_case_mang_verdict_de_loc():
 def test_moi_case_co_id_de_nhay_toi():
     """Renderer dung id `c<so case>`; so case phai ra dung tu khoa co tab."""
     rec, out = page()
-    assert report_row.build(rec)["n"] == 1
+    assert report_row.build(rec)["n"] == "1"
 
 
 def test_nhom_theo_tinh_nang_cua_file_TC():

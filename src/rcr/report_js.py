@@ -45,13 +45,13 @@ function todo() {
   put("todoFail", DATA.filter(d => d.status === "FAIL").map(d => li(d, d.title)));
   put("todoBlock", DATA.filter(d => d.status === "BLOCKED").map(d => li(d, d.actual)));
   put("todoPo", DATA.filter(d => d.po).map(d => li(d, d.title)));
-  document.querySelectorAll(".jump").forEach(b => b.onclick = () => openCase(+b.dataset.n));
+  document.querySelectorAll(".jump").forEach(b => b.onclick = () => openCase(b.dataset.n));
 }
 function match(d) {
   if (filter !== "ALL" && d.status !== filter) return false;
   if (!q) return true;
   const hay = [d.n, d.title, d.group, d.cfg, d.actual, d.pre, ...d.expects].join(" ").toLowerCase();
-  return /^\\d+$/.test(q) ? String(d.n) === q : hay.includes(q);
+  return String(d.n).toLowerCase() === q || hay.includes(q);
 }
 function render() {
   const list = document.getElementById("list");
@@ -151,5 +151,5 @@ document.getElementById("expandAll").onclick = e => {
   e.target.textContent = open ? "Thu gọn tất cả" : "Mở tất cả";
 };
 tally(); todo(); render();
-const h = location.hash.match(/^#c(\\d+)$/); if (h) openCase(+h[1]);
+const h = location.hash.match(/^#c(.+)$/); if (h) openCase(decodeURIComponent(h[1]));
 """
