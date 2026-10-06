@@ -46,8 +46,11 @@ mốc, không phải 3s mặc định), `Ở OB3, chờ thêm 5s`, `Sau đó vu�
 (background 10s)` rồi `Mở lại app` (đưa app lên thật), `Xoay ngang rồi xoay dọc`
 (xong luôn trả chế độ xoay của máy về như cũ), `Tại t0+2s: <thao tác>`.
 **t0 = lúc vừa tới màn của case, CHƯA phải lúc ad show** — report ghi rõ thao
-tác làm lúc t0+bao nhiêu. `Bấm giờ` dừng với lý do "chưa đo được thời gian":
-đo timer từ lúc ad show là phần làm riêng.
+tác làm lúc t0+bao nhiêu. `Bấm giờ` / `ghi nhận thời điểm ad show` = tool **đứng
+yên quan sát**: đo mốc vào/rời trang OB3 + ad show/fail bằng `logcat -v epoch`
+(chính xác tới ms), và chụp liên tục để thấy nút X (`btnSkip`) / số đếm
+(`btnTimeoutSkip`). Vào tới OB3 là **nhìn ngay**, không dump + chụp trước bước
+(mất 3–5s, timer 3s là trang đã đi mất — đo 06/10/2026).
 
 Câu khác — hoặc **nhiều hơn một node cùng khớp** — thì dừng kèm lý do, **không
 tap bừa**: tap sai chỗ trên máy thật là bấm vào quảng cáo hoặc mua hàng thật.
@@ -64,8 +67,8 @@ Hai chỗ nới lỏng có chủ ý, vì cái giá sai khác hẳn cái giá sai
 - **Vế sau dấu phẩy nếu chỉ là quan sát, đối soát console, hoặc một cú chờ thì
   không chặn bước đi tới màn**: `Chạy luồng FO đến OB3, quan sát banner` lái được;
   `Vào màn OB2, chờ hết timeout load ad` lái tới rồi **đứng yên 12s** tại đó. Vế
-  sau là việc khác (`Vào OB3, ghi nhận thời điểm ad show`) thì vẫn dừng — lái tới
-  nơi rồi coi như xong bước là bỏ im vế sau, case đó có thể ra PASS giả
+  sau là việc khác mà tool không làm được thì vẫn dừng — lái tới nơi rồi coi như
+  xong bước là bỏ im vế sau, case đó có thể ra PASS giả
 
 **Chấm được PASS/FAIL** từng dòng Expected: dòng về quảng cáo chấm bằng log
 request/load/show, dòng về chữ và node chấm bằng cây UI, dòng *"icon là animation
@@ -227,8 +230,10 @@ mới biết giá trị thật.
 
 `run.verdict` — đừng dịch thành PASS/FAIL của app khi case không có dòng Expected:
 
-- `PASS` — chấm rồi và khớp Expected. **Ad request đúng mà không fill cũng là PASS**:
-  không fill là chuyện của kho quảng cáo, logic app vẫn đúng. Đừng báo như lỗi
+- `PASS` — chấm rồi và khớp Expected. **Ad không fill mà có request ĐÚNG unit của
+  vị trí trong câu (hoặc vị trí case bật) cũng là PASS** (user chốt 25/09, nhắc lại
+  06/10/2026): không fill là chuyện của kho quảng cáo. Không có request nào của vị
+  trí đó → FAIL. **Đừng tự đổi luật này sang BLOCKED**
 - `FAIL` — lệch Expected, kèm số đo thật (unit nào đã request, log ra sao)
 - `NEEDS_HUMAN` — tool chưa lái tới được màn cần, hoặc quảng cáo che màn nên không đọc
   được chữ trên app. **Không kết luận gì về app** từ verdict này, và **không trả về cho
@@ -356,13 +361,59 @@ làm hết các bước dưới đây:
      GIF gốc (centerCrop + autocontrast): chỉ số khung tăng rồi rơi về đầu = một lần lặp
    - log app thường trả lời thẳng: `adb logcat -d | grep <Activity>` (vd
      `Splash media ready … source=DATA_DISK_CACHE view=1080x2280`)
-4. Chấm từng dòng với **số đo thật** làm lý do. Chỉ để `BLOCKED` khi điều kiện đã thử
-   tạo mà vẫn không xảy ra (vd GIF dài 5,5s mà splash chỉ đứng 2s), và ghi cách đã thử
+4. Chấm từng dòng với **số đo thật** làm lý do. Report gửi đi **chỉ có PASS / FAIL**
+   (user nhắc lần 3, 06/10/2026: *"không được phép need_human với not_verifiable
+   blocked"*). Điều kiện chưa đạt thì tự ép, tự chạy lại; lỗi đọc/race của tool thì
+   tool tự thử lại (`run_batch` chạy lại case tối đa 3 lần khi verdict lơ lửng)
 5. Trả máy về sạch: `--restore`, rồi đọc lại key đã đổi để đối chiếu với giá trị gốc.
    Lệch (snapshot bị ghi đè) thì `pm clear` + mở app cho fetch lại từ server.
    Mạng đã ngắt thì bật lại và chờ ping thông
 6. Dựng report theo đúng bố cục mục 6, ghi rõ dòng nào Claude chấm tay và đo bằng gì,
    rồi publish
+
+## 5c. Rà PASS giả TRƯỚC khi báo — bắt buộc
+
+06/10/2026 báo "35 PASS / 1 FAIL", user hỏi *"liệu có pass giả không"* → rà lại thì 3
+case PASS bằng **ad của vị trí khác**. Từ giờ, trước khi báo số, đọc `reason` của
+**từng dòng PASS** (`lines[].r` trong JSON) và kiểm:
+
+1. **Dòng ads phải đúng unit của vị trí.** Reason phải nêu unit (`*****993`) thuộc
+   đúng vị trí trong câu. Thấy unit của vị trí khác (đòi 302 mà reason là 201 …394)
+   = PASS giả, sửa tool. Tra unit ↔ vị trí: `src/rcr/data/ad_units.yaml` (lấy từ sheet
+   "Check thông số KT")
+2. **Không fill = PASS chỉ khi có request đúng unit.** Không phải "có ad nào đó được
+   request"
+3. **Dòng nút X / số đếm OB3** khi ad không fill: phải có request native 303
+   (…989 / …765) và khung chụp không thấy X. ID 303 **nằm cứng trong app** — RC không
+   có `id_303_*`, **không ép fill được** bằng cách đổi ID; đừng tốn lượt thử
+4. **Timer OB3 không có ad** tính từ lúc ad **fail** (SDK đếm từ đó): đo ra 3.0/4.0/
+   5.0/6.0s là đúng. Nói rõ trong báo cáo là nhánh không-ad
+5. **Câu khẳng định có vế phủ định** (`Button X hiển thị NGAY (không có số đếm ngược)`)
+   không phải câu phủ định. PASS với lý do "không thấy X" cho câu đòi X hiện = sai
+6. **Dòng PASS nhờ luật** (TBD ghi nhận thực tế, `[Assume]`) — nêu riêng trong báo cáo
+   để PO chốt, đừng gộp im vào PASS
+7. Soi được **offline**: JSON lượt cũ có `cases[].ads` (`u`, `req`, `load`, `show`,
+   `keys`). Kiểm request đúng unit từ đó trước, **chỉ chạy lại case thật sự PASS giả**
+
+### Chạy lại: chỉ case chưa PASS / PASS giả, rồi gộp
+
+User: *"chạy lại case chưa chạy được thôi chứ case pass rồi thì đừng chạy lại"*,
+*"chạy lại case pass giả thôi"*. Lấy key từ JSON lượt trước, chạy `--case` đúng các
+key đó, rồi gộp: record của lượt sau đè lượt trước theo `key`, dựng lại trang bằng
+`report_html.build(report_data.page_data(baseline, tc, records, app_label))` (baseline
+chỉ cần `serial`, `package`, `configs`, `mirrored_keys`). Publish đè **cùng link**.
+
+### Bẫy đã gặp (06/10/2026, Piclux 2.8.0) — tool đã xử lý, đừng đi tìm bug app
+
+- `activate.json không phải JSON hợp lệ` ngay sau `pm clear`: đọc trúng lúc SDK đang
+  ghi. Tool tự đọc lại (4 lần) — không phải lỗi app, không BLOCKED
+- Mã vị trí viết tắt `302` phải khớp `302_onb2_n_native` — so nguyên văn thì dòng
+  "không load ad 302" luôn không chấm được
+- TC ghi `layout_native_ads_language_1`, APK chỉ có `layout_ad_native_lfo_1` (shimmer
+  chung bộ id) → chấm bằng đủ bộ `nativeAdView, ad_headline, ad_media, ad_call_to_action`
+  (`data/ui_names.yaml`, trường `ids_all`)
+- Sau `pm clear` config mới có `enable_all_ads*=false` → tool tự đặt nền `true`; log ads
+  trống thì đọc 3 key này trước khi nghi app
 
 ## 6. Xuất report
 
