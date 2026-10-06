@@ -123,6 +123,20 @@ khoá rồi chạy lại, đừng đi tìm bug trong app.
 
 ## 4. Chạy
 
+**Người dùng chỉ cần gửi package** (user chốt 06/10/2026). Còn lại tự lấy, không hỏi:
+
+| Cần gì | Lấy ở đâu (mặc định) |
+|---|---|
+| Bản SDK First Open | log app `VslTemplate4FirstOpenSDK: Using version …` (lọc PID) → tab số lớn nhất ≤ bản đó |
+| Bộ TC | sheet TC `https://docs.google.com/spreadsheets/d/1sNFXM7oGzx_addpimZL7RYk2rXpRs_We6YUHpdtWSqU/edit` — tool tải bản mới nhất |
+| ID ads từng vị trí | sheet "Check thông số KT" `https://docs.google.com/spreadsheets/d/14XivZl9VPAnyf8hYICgRh-TOUmkGTZDCqoyWmPM57hM/edit` — tool tải mỗi lượt, chọn tab theo dòng `Package name` |
+| Version app (tiêu đề report) | `dumpsys package <pkg> \| grep versionName` → `--app-label "<tên> <version>"` |
+| User state / test data | cột `User State` (new = `pm clear`, old = đã vào Home) và cột `Test Data` của TC |
+
+Chỉ hỏi khi: log không in bản SDK (hỏi bản SDK), sheet ID không có tab của package
+(báo user bổ sung tab), hoặc cắm nhiều máy. SDK riêng `rating` / `widget` /
+`daily checkin` chỉ chạy khi user nhắc tên.
+
 Ba kiểu gọi, chọn theo `$ARGUMENTS`:
 
 ```
@@ -379,8 +393,13 @@ case PASS bằng **ad của vị trí khác**. Từ giờ, trước khi báo s�
 
 1. **Dòng ads phải đúng unit của vị trí.** Reason phải nêu unit (`*****993`) thuộc
    đúng vị trí trong câu. Thấy unit của vị trí khác (đòi 302 mà reason là 201 …394)
-   = PASS giả, sửa tool. Tra unit ↔ vị trí: `src/rcr/data/ad_units.yaml` (lấy từ sheet
-   "Check thông số KT")
+   = PASS giả, sửa tool. Tra unit ↔ vị trí: sheet **"Check thông số KT"** (mặc định
+   `https://docs.google.com/spreadsheets/d/14XivZl9VPAnyf8hYICgRh-TOUmkGTZDCqoyWmPM57hM/edit`).
+   Mỗi lượt tool **tự tải bản mới nhất**, chọn tab theo dòng `Package name` (không theo
+   tên tab ADA895/AIP916…), đọc mục ID ads FO + resume. Log in `ID ads tung vi tri: …
+   N vị trí` — **ra 0 / "không có tab nào ghi package"** thì app chưa có trong sheet:
+   báo user bổ sung tab, đừng chạy tiếp như thể có ID. `data/ad_units.yaml` chỉ là bản
+   dự phòng; ID đọc từ RC của máy vẫn thắng
 2. **Không fill = PASS chỉ khi có request đúng unit.** Không phải "có ad nào đó được
    request"
 3. **Dòng nút X / số đếm OB3** khi ad không fill: phải có request native 303

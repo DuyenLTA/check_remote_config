@@ -6,8 +6,9 @@ may - nhung app chi khai `id_*` cho tier goc va `_high`, trong khi bo TC test
 chu yeu vao `high1`/`high2`. Thieu ID thi moi dong ve vi tri do deu ra
 NOT_VERIFIABLE du log co du so lieu.
 
-File `data/ad_units.yaml` bu vao cho thieu do. RC VAN THANG: ID doc tu may la
-cai app THAT SU dung, con checklist chi la so team khai.
+Nguon chinh: sheet "Check thong so KT" tai moi luot (`ad_units_sheet`), chon tab
+theo package. `data/ad_units.yaml` la ban chep tay du phong. RC VAN THANG: ID doc
+tu may la cai app THAT SU dung, con checklist chi la so team khai.
 """
 
 from __future__ import annotations
@@ -37,8 +38,25 @@ def bang(path: Path | None = None) -> dict[str, dict[str, str]]:
     return {pkg: dict(ids) for pkg, ids in data.items() if isinstance(ids, dict)}
 
 
+# Bang doc tu sheet "Check thong so KT" o dau luot (`nap_sheet`). Rong khi chua
+# nap - test khong goi nap nen khong bao gio cham mang.
+_SHEET: dict[str, dict[str, str]] = {}
+
+
+def nap_sheet(package: str, out_dir, log_fn=lambda _m: None) -> int:
+    """Tai sheet, giu bang ID cua `package` cho ca luot. Tra so vi tri doc duoc."""
+    from . import ad_units_sheet
+
+    ids, ghi_chu = ad_units_sheet.tai(package, out_dir)
+    log_fn(f"ID ads tung vi tri: {ghi_chu}")
+    if ids:
+        _SHEET[package] = ids
+    return len(ids)
+
+
 def cho_package(package: str, path: Path | None = None) -> dict[str, str]:
-    return bang(path).get(package, {})
+    """Sheet (ban moi nhat) de len file yaml chep tay; RC cua may de len ca hai (o noi goi)."""
+    return bang(path).get(package, {}) | _SHEET.get(package, {})
 
 
 def loai_cua(key: str) -> str:

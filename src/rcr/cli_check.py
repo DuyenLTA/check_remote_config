@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import case_run, rc_baseline, run_batch, sdk_probe, tc_select, tc_source
+from . import ad_units, case_run, rc_baseline, run_batch, sdk_probe, tc_select, tc_source
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .models import RcError
@@ -76,6 +76,12 @@ async def run(args: argparse.Namespace) -> dict:
         f"  {len(baseline.configs)} key remote config, "
         f"{len(baseline.mirrored_keys)} key bi mirror, duong ghi {baseline.write_mode}"
     )
+
+    if args.case or args.set:
+        # ID ads tung vi tri (ca tier high1/high2 RC khong khai) doc thang tu
+        # sheet "Check thong so KT", tab chon theo package - de quy request
+        # trong log ve DUNG vi tri, khong de ad cua vi tri khac tinh nham.
+        ad_units.nap_sheet(args.package, args.out_dir, _log)
 
     out: dict = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
