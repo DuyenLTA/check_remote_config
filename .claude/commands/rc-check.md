@@ -346,6 +346,14 @@ làm hết các bước dưới đây:
    - thời điểm, chớp trắng, animation: timestamp từng khung thật
      (`-fps_mode passthrough` + `showinfo`), đừng đếm khung đã nội suy
    - "cold start lần 2", "kill app": `am force-stop` + `am start`, đo **ít nhất 3 lượt**
+   - màn đứng quá ngắn để thấy hết (GIF lặp, timeout, animation dài): **giữ splash bằng
+     Private DNS hỏng** — `settings put global private_dns_specifier invalid-dns.example.invalid`
+     + `private_dns_mode hostname`. Máy vẫn báo có Wi-Fi nên app không bỏ qua ads,
+     request ad treo tới timeout → splash Photomaker đứng ~18s (đo 05/10/2026). Xong
+     **luôn** `settings delete global private_dns_mode` + `private_dns_specifier` rồi
+     chờ ping tên miền thông. Ngắt hẳn wifi/data thì KHÔNG được: app bỏ qua ads, splash
+     còn ngắn hơn. GIF lặp chấm bằng cách khớp từng khung quay được với khung của file
+     GIF gốc (centerCrop + autocontrast): chỉ số khung tăng rồi rơi về đầu = một lần lặp
    - log app thường trả lời thẳng: `adb logcat -d | grep <Activity>` (vd
      `Splash media ready … source=DATA_DISK_CACHE view=1080x2280`)
 4. Chấm từng dòng với **số đo thật** làm lý do. Chỉ để `BLOCKED` khi điều kiện đã thử
