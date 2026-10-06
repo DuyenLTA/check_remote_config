@@ -738,3 +738,11 @@ def test_ep_fail_giu_nguyen_publisher_va_chi_doi_slot():
     assert not ra["id_302_onb2_n_native"].endswith("2409093993")
     # Vi tri khong khai ID thi khong bia ra mot ID nao.
     assert g.khoa_ep_fail(("999_khong_co",), cfg) == {}
+
+
+def test_dong_animation_co_chu_vuot_van_cham_bang_animation():
+    """Cau hoi icon co chuyen dong lap; "vuot ... chuyen man" chi la huong goi y."""
+    drive = {"steps": [], "thu_vuot": {"doi": True, "trang_truoc": 2, "trang_sau": 3}}
+    res = a.check("Icon là animation lặp, gợi ý rõ hướng vuốt ngang theo hướng chuyển màn "
+                  "onboarding.", {}, drive, OK_CRASH)
+    assert "trang 2 → 3" not in res["reason"]

@@ -62,7 +62,8 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
 
 async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                 man_can: str | None = None, thu_vuot: bool = False,
-                da_toi: str | None = None) -> dict:
+                da_toi: str | None = None, do_anim: bool = False,
+                man_dau: str = "") -> dict:
     """Chay lan luot cac buoc. Tra nhat ky tung buoc + dump de phase 5 cham.
 
     Man hinh bi che CHI chan buoc phai cham vao man hinh. Buoc quan sat va buoc
@@ -71,11 +72,20 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
 
     Moc "Tai t0+Ns": t0 la luc vua toi man cua case (dau luot lai, hoac sau
     buoc di toi man gan nhat) - CHUA phai luc ad show, viec do can do log rieng.
+
+    Toi uu thoi gian (do 2026-10-06, 1 case OB2 = 112s, 35s nam o 2 buoc Action):
+      - `do_anim`: chi chup 10 khung do animation khi case co dong Expected hoi
+        animation. Truoc day man nao co lottie la chup, moi buoc ~10s.
+      - man CHUA DOI ke tu lan chup truoc (buoc truoc khong thao tac gi, hoac
+        `man_dau` = dump vua chup sau buoc lai theo precondition) -> dung lai
+        dump do, khong dump + chup lai (~5s).
     """
     done: list[dict] = []
     blocked_steps: list[int] = []
     ctx, dump_cu = act_exec.ctx_moi(), ""
     t0 = time.monotonic()
+    man_cu = man_dau          # dump con dung duoc vi man chua doi ("" = phai chup moi)
+    da_do = None              # dump cua man da do animation (khong do lai cung mot man)
     for index, raw in enumerate(steps, 1):
         moc = act_compound.moc_t0(raw)
         step = moc[1] if moc else raw
@@ -89,11 +99,22 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             # truoc (mat 2-5s) - tre la lech khoi moc ma case dang do.
             record = {"n": index, "step": raw, "action": action.summary, "activity": activity}
         else:
-            xml = await ui_dump.dump(client, serial)
-            # Chup cung luc voi dump -> anh va cay node ta CUNG mot man hinh.
-            shot = await screencap.capture(client, serial)
+            dung_lai = bool(man_cu) and not moc
+            if dung_lai:
+                # Anh da co o buoc truoc - khong nhan doi anh trong report.
+                xml, shot = man_cu, {"thumb": "", "warning": ""}
+            else:
+                xml = await ui_dump.dump(client, serial)
+                # Chup cung luc voi dump -> anh va cay node ta CUNG mot man hinh.
+                shot = await screencap.capture(client, serial)
             nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
-            anim = {} if moc else await drive_probes._do_animation(client, serial, nodes)
+            # Dung lai dump van PHAI do animation neu man nay chua do lan nao:
+            # bo do theo dump la dong "icon la animation lap" roi sang luat khac
+            # ma khong ai hay (do 2026-10-06, case OB2-001).
+            can_do = do_anim and not moc and not (dung_lai and da_do == xml)
+            anim = await drive_probes._do_animation(client, serial, nodes) if can_do else {}
+            if can_do:
+                da_do = xml
             trang = fo_steps.onboarding_page(nodes)
             if trang:                      # doc duoc thi lay lam moc, bo so dem cu
                 ctx["trang_cu"], ctx["vuot_sau"] = trang, 0
@@ -119,6 +140,8 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,
                     "blocked_steps": blocked_steps}
 
+        # Buoc khong thao tac gi -> man buoc sau van y nhu dump nay.
+        man_cu = record.get("dump", "") if isinstance(action, act_resolver.NoOp) else ""
         log_fn(f"    buoc {index}: {raw!r} -> {action.summary['kind']}"
                + (f" (man hinh bi che: {activity})" if blocked else ""))
         done.append(record)
@@ -130,6 +153,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             record["action"] = {"kind": "noop", "target": action.target,
                                 "reason": f"đã ở {action.target} từ bước lái theo precondition"}
             da_toi = None
+            man_cu = record.get("dump", "")
             t0 = time.monotonic()
             if action.cho:
                 await asyncio.sleep(action.cho)
@@ -142,6 +166,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                                 "reason": f"key của case nằm ở {man_can or 'splash'}, "
                                           f"không cần đi tiếp tới {action.target}"}
             log_fn(f"    buoc {index}: dung o {man_can or 'splash'}, bo buoc di toi {action.target}")
+            man_cu = record.get("dump", "")
             continue
         if isinstance(action, act_resolver.GoTo):
             # Quang cao dang che van lai duoc: `fo_flow` co luat rieng cho

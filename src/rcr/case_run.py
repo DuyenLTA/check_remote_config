@@ -117,6 +117,8 @@ async def apply_case(
         driven = await case_drive.drive(
             client, baseline.serial, baseline.package, steps, log_fn, man_can, thu_vuot,
             da_toi=da_toi,
+            do_anim=any(assert_check.ANIM_RE.search(e or "") for e in expects),
+            man_dau=((out.get("drive") or {}).get("steps") or [{}])[-1].get("dump", ""),
         )
         # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
         driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]

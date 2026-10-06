@@ -98,7 +98,10 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         if ket:
             return ket
 
-    if DOI_VUOT_RE.search(text):
+    # "Icon la animation lap, goi y huong vuot ngang theo huong chuyen man":
+    # cau hoi icon CO CHUYEN DONG khong; chu "vuot ... chuyen man" chi ta huong
+    # goi y. Cham bang cu vuot la PASS ma khong ai do animation (do 2026-10-06).
+    if DOI_VUOT_RE.search(text) and not ANIM_RE.search(text):
         ket = assert_ui.vuot_duoc(drive)
         if ket:
             return ket

@@ -33,10 +33,13 @@ from .app_sandbox import guard
 log = logging.getLogger(__name__)
 
 DATA = Path(__file__).parent / "data" / "fo_flow.yaml"
-POLL_SECONDS = 2.0
+# Nhip giua hai lan doc man. 2s -> 1s (do 2026-10-06: moi thao tac lai FO mat
+# ~5s, trong do 2s la cho cung; dump UI da ton ~2s nen man kip doi).
+POLL_SECONDS = 1.0
 # Vong poll lien tiep ma man khong doi va khong con buoc nao de lam -> coi nhu
-# ket. 10 vong ~20s, doi lai 300s cua mot luot ket cung.
-STUCK_POLLS = 10
+# ket. Giu NGUONG THOI GIAN ~20s (splash tu load mat ~20s), khong giu so vong:
+# nhip ngan lai ma giu 10 vong la bao ket oan luc splash chua xong.
+STUCK_POLLS = int(20 / POLL_SECONDS)
 DEFAULT_TIMEOUT = 180.0
 
 

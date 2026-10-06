@@ -206,3 +206,45 @@ def test_xoa_log_ads_thi_nang_buffer_truoc():
     adb = fake()
     asyncio.run(ad_log.clear(adb, "29301FDH2006K7"))
     assert adb.cmds_with("logcat -G 16M") and adb.cmds_with("logcat -c")
+
+
+def test_khong_hoi_animation_thi_khong_chup_khung_do(monkeypatch):
+    """Moi lan do animation ~10s: chi lam khi Expected hoi animation."""
+    from rcr import drive_probes
+    goi: list[int] = []
+
+    async def do(*a, **k):
+        goi.append(1)
+        return {}
+
+    monkeypatch.setattr(drive_probes, "_do_animation", do)
+    asyncio.run(case_drive.drive(fake(), "29301FDH2006K7", PKG, ["Quan sát màn hình"]))
+    assert not goi
+    asyncio.run(case_drive.drive(fake(), "29301FDH2006K7", PKG, ["Quan sát màn hình"],
+                                 do_anim=True))
+    assert goi
+
+
+def test_buoc_quan_sat_lien_tiep_dung_lai_dump_cu():
+    """Buoc truoc khong thao tac gi thi man y nguyen - khong dump + chup lai."""
+    adb = fake()
+    out = asyncio.run(case_drive.drive(adb, "29301FDH2006K7", PKG,
+                                       ["Quan sát vùng ad.", "Quan sát icon SWIPE."]))
+    assert len(adb.cmds_with("uiautomator dump")) == 2      # buoc 1 + man cuoi
+    assert out["steps"][1]["dump"] == out["steps"][0]["dump"]
+
+
+def test_dung_lai_dump_van_do_animation_neu_man_do_chua_do(monkeypatch):
+    """Man dau (lai theo precondition) chua do animation -> buoc dung lai dump van do."""
+    from rcr import drive_probes
+    goi: list[int] = []
+
+    async def do(*a, **k):
+        goi.append(1)
+        return {"lottie": {"chuyen_dong": True}}
+
+    monkeypatch.setattr(drive_probes, "_do_animation", do)
+    out = asyncio.run(case_drive.drive(fake(), "29301FDH2006K7", PKG,
+                                       ["Quan sát icon.", "Quan sát tiếp."],
+                                       do_anim=True, man_dau=APP_XML))
+    assert len(goi) == 1 and out["steps"][0].get("anim")      # do 1 lan, khong do lai
