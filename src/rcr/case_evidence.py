@@ -6,7 +6,7 @@ case, file nay lo doc du lieu tu may ve cho khau cham.
 
 from __future__ import annotations
 
-from . import ad_log, ad_units, fa_log, screencap, sdk_probe, ui_dump
+from . import ad_log, ad_units, fa_log, ob3_log, screencap, sdk_probe, ui_dump
 from .models import RcBaseline
 
 
@@ -44,3 +44,11 @@ async def _read_ads(client, baseline: RcBaseline, overrides=None) -> dict:
     # duoc request, ket luan duoc. Khong biet ID thi im lang khong noi len gi.
     return {"pid": pid, "units": units, "banner_states": parsed["banner_states"],
             "positions": sorted(k[3:] for k in rc_ids if k.startswith("id_"))}
+
+
+async def _dong_thoi_gian(client, baseline: RcBaseline, drive: dict) -> dict:
+    """Dong thoi gian trang OB3 (ob3_log) + khung nhin lien tuc + moc tool thao tac."""
+    pid = await sdk_probe.pid_of(client, baseline.serial, baseline.package)
+    luot = ob3_log.luot_ghe(ob3_log.su_kien(await ob3_log.doc(client, baseline.serial, pid))) \
+        if pid else []
+    return {"luot": luot, "khung": drive.get("khung") or [], "thao_tac": drive.get("thao_tac") or []}

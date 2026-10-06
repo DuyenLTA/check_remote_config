@@ -116,8 +116,6 @@ def test_buoc_di_toi_mot_man_hinh_giao_cho_bo_lai_FO(step, target):
 
 
 @pytest.mark.parametrize("step", [
-    # Cau con ve them mot y khac: lai toi noi roi coi nhu xong la bo im ve sau.
-    "Vào OB3, ghi nhận thời điểm ad show (t0).",
     # Khong man nao trong bo luat khop.
     "Trigger popup Rating.",
 ])

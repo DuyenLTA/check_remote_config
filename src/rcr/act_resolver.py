@@ -33,13 +33,13 @@ from __future__ import annotations
 import re
 
 from .act_types import (Action, Background, GoTo, Net, NeedsHuman, NoOp, Rotate, Seq,
-                        Swipe, Tap, Wait)
+                        Swipe, Tap, TapId, Wait, Watch)
 from . import act_compound, net_ctl
 from .act_nodes import find, tap_by_text
 from .ui_dump import DeviceNode
 
 __all__ = ["Action", "Background", "GoTo", "Net", "NeedsHuman", "NoOp", "Rotate", "Seq",
-           "Swipe", "Tap", "Wait", "resolve", "find"]
+           "Swipe", "Tap", "TapId", "Wait", "Watch", "resolve", "find"]
 
 # Buoc doi soat tren console ngoai (AdMob, Firebase, dashboard). Tool cham ads
 # bang log cua may, khong mo console - nhung day KHONG phai cho phai dung lai:

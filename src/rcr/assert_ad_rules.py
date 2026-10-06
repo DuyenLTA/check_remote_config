@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 
+from .ad_positions import da_biet
 from .verdict_levels import FAIL, NEEDS_HUMAN, NOT_VERIFIABLE, PASS, out
 
 # "Impression fire dung 1 lan khi ad show" - dem dong "occurred for ad unit".
@@ -59,9 +60,10 @@ def impression(text: str, units: list[dict], actual: dict, token: str, khop,
     if fired == 0 and not requested:
         return out(NEEDS_HUMAN, "chưa thấy unit nào được request nên không có impression", actual)
     if fired == 0 and not shown:
-        # Khong co ad nao show thi khong co impression la DUNG, khong phai loi app.
-        return out(PASS, "không có ad nào show (không fill) nên chưa có impression — "
-                         "tính đạt theo luật không-fill", actual)
+        # Khong co ad nao show thi khong co impression la DUNG (user chot: khong
+        # fill ma request dung la dat).
+        return out(PASS, "ad được request đúng nhưng không fill nên chưa có impression — "
+                         "request đúng là đạt", actual)
     if ("1 lần" in text or "đúng 1" in text.lower()) and fired != 1:
         return out(FAIL, f"impression bắn {fired} lần, kỳ vọng đúng 1",
                    actual | {"impressions": fired})
@@ -141,11 +143,11 @@ def negative_theo_case(text: str, kind: str, requested: list[dict], actual: dict
     if ban:
         return out(FAIL, f"vẫn có request {kind} của {', '.join(sorted(set(vi_tri)))}",
                    actual | {"charged": ban})
-    if all(t in biet for t in vi_tri):
+    if all(da_biet(t, biet) for t in vi_tri):
         return out(PASS,
                    f"không request {kind} nào của {', '.join(vi_tri)} — ID các vị trí này đã "
                    f"biết nên đối chiếu được, {len(requested)} request còn lại thuộc vị trí khác",
                    actual)
     return out(NOT_VERIFIABLE,
                f"có {len(requested)} request {kind} nhưng chưa biết ID của "
-               f"{', '.join(t for t in vi_tri if t not in biet)} nên không quy được", actual)
+               f"{', '.join(t for t in vi_tri if not da_biet(t, biet))} nên không quy được", actual)

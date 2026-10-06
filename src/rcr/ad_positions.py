@@ -40,6 +40,15 @@ def _khop_vi_tri(unit: dict, token: str) -> bool:
 
 
 
+def da_biet(token: str, biet) -> bool:
+    """Vi tri `token` co ID da biet khong. "302" phai khop `302_onb2_n_native`:
+    so nguyen van thi vi tri viet tat KHONG BAO GIO khop, dong phu dinh ve 302
+    thanh khong cham duoc du bang ID co du (do 2026-10-06, OB2-002/008).
+    """
+    sau = re.compile(r"(?<![a-z0-9])" + re.escape(token) + "(?![a-z0-9])")
+    return bool(token) and any(sau.search(p.lower()) for p in biet)
+
+
 def case_position(lines) -> str:
     """Vi tri unit ma CA case noi toi, "" neu cac dong noi ve nhieu vi tri.
 

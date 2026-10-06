@@ -33,16 +33,21 @@ class FakeBaseline:
     mirrored_keys = frozenset()
 
 
-def run(monkeypatch, outcomes):
+def run(monkeypatch, outcomes, lan=1):
     """outcomes: {key: Exception | verdict}"""
     async def run_case(client, baseline, runs, pre, steps, expects, goto="", **kw):
         key = run.order.pop(0)
         got = outcomes[key]
+        if isinstance(got, list):          # ket qua tung lan chay lai
+            got = got.pop(0)
+            if outcomes[key]:
+                run.order.insert(0, key)
         if isinstance(got, Exception):
             raise got
         return {"verdict": got, "runs": [{"overrides": {}, "verdict": got}]}, baseline
 
     run.order = ["a", "b", "c"]
+    monkeypatch.setattr(run_batch, "LAN_CHAY_LAI", lan)
     monkeypatch.setattr(case_run, "run_case", run_case)
     monkeypatch.setattr(rc_patch, "restore", _noop_restore)
     monkeypatch.setattr(run_batch.tc_select, "pick", lambda runnable, k: k)
@@ -116,3 +121,10 @@ def test_cong_tac_tong_ads_luon_bat_lam_nen_tru_khi_case_tu_dat(monkeypatch):
     assert nhan[0] == {"enable_all_ads": "true", "enable_all_ads_tutorial": "true", "k": "v"}
     assert nhan[1]["enable_all_ads"] == "false"          # case tu dat thi case thang
     assert "enable_all_ads_in_app" not in nhan[0]        # app khong co key thi khong them
+
+
+def test_ket_qua_lo_lung_thi_tu_chay_lai_toi_khi_ra_PASS_FAIL(monkeypatch):
+    """Report chi PASS/FAIL: doc file trung luc SDK ghi -> chay lai, khong BLOCKED."""
+    recs = run(monkeypatch, {"a": [RcError("activate.json khong phai JSON"), "PASS"],
+                             "b": ["NEEDS_HUMAN", "FAIL"], "c": "PASS"}, lan=3)
+    assert [r["verdict"] for r in recs] == ["PASS", "FAIL", "PASS"]

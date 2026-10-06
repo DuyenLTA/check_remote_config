@@ -197,3 +197,20 @@ def vuot_duoc(drive: dict) -> dict | None:
     return out(PASS, "vuốt sang trái thì màn đổi sang màn kế"
                      + (f" (trang {truoc} → {sau})" if truoc and sau else ""),
                f"trang {truoc} → {sau}")
+
+
+def layout_tren_man(element: dict, drive: dict) -> dict:
+    """Du bo id cua mot layout trong CUNG mot dump -> layout do dang hien."""
+    can = element["ids_all"]
+    dumps = [s.get("dump", "") for s in (drive.get("steps") or [])]
+    dumps.append((drive.get("final") or {}).get("dump", ""))
+    thieu_it = can
+    for dump in dumps:
+        thieu = [i for i in can if f":id/{i}" not in dump]
+        if not thieu:
+            return out(PASS, f"màn có đủ bộ view của {element['name']}: {', '.join(can)}",
+                       ", ".join(can))
+        if dump and len(thieu) < len(thieu_it):
+            thieu_it = thieu
+    return out(FAIL, f"không màn nào có đủ bộ view của {element['name']} — thiếu "
+                     f"{', '.join(thieu_it)}", "")

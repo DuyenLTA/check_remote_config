@@ -141,4 +141,33 @@ class Seq:
                 "reason": self.reason}
 
 
-Action = Tap | Swipe | Wait | NoOp | GoTo | Net | NeedsHuman | Background | Rotate | Seq
+@dataclass(frozen=True, slots=True)
+class Watch:
+    """Dung yen va THEO DOI man trong mot khoang: dump lien tuc, ghi luc nut X /
+    so dem nguoc hien. Thay cho buoc "bam gio" - nguoi bam dong ho de do timer,
+    tool do bang moc gio cua log va cac khung dump."""
+
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "watch", "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
+class TapId:
+    """Cho node mang mot trong `ids` HIEN roi moi tap (nut X OB3 chi hien sau
+    `timer_button_x` giay). Khong hien trong cua so theo doi -> ghi lai, khong tap."""
+
+    ids: tuple[str, ...]
+    reason: str
+    lan: int = 1
+
+    @property
+    def summary(self) -> dict:
+        ra = {"kind": "tap", "node": "/".join(self.ids), "reason": self.reason}
+        return ra | {"lan": self.lan} if self.lan > 1 else ra
+
+
+Action = (Tap | Swipe | Wait | NoOp | GoTo | Net | NeedsHuman | Background | Rotate | Seq
+          | Watch | TapId)

@@ -25,6 +25,10 @@ from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
 
 
+# Case ra ket qua lo lung (khong PASS/FAIL) -> chay lai toi da bay nhieu lan.
+LAN_CHAY_LAI = 3
+
+
 def _noop(_msg: str) -> None:
     pass
 
@@ -82,13 +86,29 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # case thang.
             nen = {k: "true" for k in rc_guards.NEN_ADS if k in baseline.configs}
             runs = [nen | dict(luot) | them for luot in chosen["runs"]]
-            result, baseline = await case_run.run_case(
-                client, baseline, runs, chosen["precondition"],
-                () if args.no_actions else chosen["actions"], chosen["expects"], goto,
-                keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
-                log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
-                runtime=chosen.get("runtime", False),
-            )
+            # Report chi duoc co PASS/FAIL (user chot 2026-10-06): ket qua lo
+            # lung (doc file trung luc SDK ghi, ad chua fill...) -> tu chay lai.
+            toi_da = LAN_CHAY_LAI
+            for lan in range(1, toi_da + 1):
+                try:
+                    result, baseline = await case_run.run_case(
+                        client, baseline, runs, chosen["precondition"],
+                        () if args.no_actions else chosen["actions"], chosen["expects"], goto,
+                        keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
+                        log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
+                        runtime=chosen.get("runtime", False),
+                    )
+                except (RcError, AdbError) as exc:
+                    if lan == toi_da or isinstance(exc, AdbTransportError):
+                        raise
+                    log_fn(f"    LOI (lan {lan}): {exc} -> chay lai case")
+                    await _try_restore(client, baseline, log_fn)
+                    continue
+                ro = result.get("verdict") in ("PASS", "FAIL", "KEY_NOT_USED")
+                if ro:
+                    break
+                if lan < toi_da:
+                    log_fn(f"    lan {lan}: verdict {result.get('verdict')} -> chay lai case")
         except AdbTransportError:
             raise  # mat ket noi may: chay tiep la vo nghia
         except (RcError, AdbError) as exc:

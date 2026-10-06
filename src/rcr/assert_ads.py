@@ -101,6 +101,31 @@ def where(drive: dict) -> str:
 REQUEST_RE = re.compile(r"requests?\b|ph[áa]t\s*sinh\s*request", re.I)
 
 
+# "Logcat co log load & show thanh cong cho unit nay" - khong neu loai ad, khong
+# neu ten unit: unit la vi tri cua CA case (scope).
+LOG_ADS_RE = re.compile(r"\blog\b.{0,30}\b(?:load|show)|loadAd", re.I)
+
+
+def log_cua_vi_tri(text: str, ads: dict, token: str) -> dict | None:
+    """Unit cua vi tri `token` co load + show trong log khong. Khong map duoc -> None."""
+    units = [u for u in (ads.get("units") or {}).values()
+             if ad_positions._khop_vi_tri(u, token)]
+    if not units:
+        if ad_positions.da_biet(token, ads.get("positions") or ()):
+            return out(FAIL, f"không có log nào của `{token}` (ID vị trí này đã biết)", text)
+        return None
+    load = [u["unit"] for u in units if u["loaded"]]
+    show = [u["unit"] for u in units if u["shown"]]
+    if show:
+        return out(PASS, f"`{token}` có log load + show ({', '.join(show)})", text)
+    req = sum(u["requested"] for u in units)
+    if load:
+        return out(FAIL, f"`{token}` load được nhưng không có log show", text)
+    # Request dung ma kho khong tra ad: dat (user chot 2026-09-25, nhac lai 2026-10-06).
+    return out(PASS, f"`{token}` được request đúng {req} lần nhưng kho không fill — request đúng "
+                     "là đạt", text)
+
+
 def routes(text: str) -> bool:
     """Dong nay phai do bang log ads du khong neu ten loai ad."""
     return bool(assert_ad_rules.IMPRESSION_RE.search(text) or EXTERNAL_RE.search(text)
@@ -144,7 +169,7 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
     if assert_ad_rules.IMPRESSION_RE.search(text):
         token = ad_positions._position_token(text) or scope
         return assert_ad_rules.impression(
-            text, units, actual, token, ad_positions._khop_vi_tri, token in biet)
+            text, units, actual, token, ad_positions._khop_vi_tri, ad_positions.da_biet(token, biet))
 
     # Cau PHU DINH co chu "alternate" ("khong duoc goi ke ca trong alternate")
     # khong phai cau ta thu tu preload - kiem NEGATIVE truoc.
@@ -164,22 +189,41 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
         token = ad_positions._position_token(text)
         if token:
             return assert_ad_rules.negative(
-                text, kind, requested, actual, token, ad_positions._khop_vi_tri, token in biet)
+                text, kind, requested, actual, token, ad_positions._khop_vi_tri, ad_positions.da_biet(token, biet))
         return assert_ad_rules.negative_theo_case(
             text, kind, requested, actual, tuple(vi_tri), ad_positions._khop_vi_tri, biet)
 
     if not SHOW_RE.search(text):
         return out(NOT_VERIFIABLE, f"câu nói về {kind} nhưng không nêu rõ kỳ vọng", actual)
 
+    # "Show" phai la ad CUA VI TRI trong cau: tinh ad bat ky la PASS gia (do
+    # 2026-10-06: OB2-007 doi 302 thi 201 show, RMT-013 doi 106 thi 301 show).
+    # Cau khong neu vi tri -> vi tri cua CA case (scope, hoac cac vi tri case bat).
+    token = ad_positions._position_token(text) or scope
+    cac = [token] if token else list(vi_tri)
+    if cac:
+        cua = [u for u in units if any(ad_positions._khop_vi_tri(u, t) for t in cac)]
+        if not cua and not any(ad_positions.da_biet(t, biet) for t in cac):
+            # ID vi tri chua biet: khong quy duoc unit nao la cua vi tri trong cau.
+            return out(NOT_VERIFIABLE, f"không map được unit nào về `{', '.join(cac)}` (ID vị trí "
+                                       "chưa biết) nên không quy được request cho vị trí này", actual)
+        requested = [u for u in cua if u["requested"]]
+        loaded = [u for u in cua if u["loaded"]]
+        shown = [u for u in cua if u["shown"]]
+        token = token or ", ".join(cac)
+        actual = actual | {"vi_tri": token}
+    ten = f" của `{token}`" if token else ""
     if shown:
-        return out(PASS, f"{kind} đã show", actual)
+        return out(PASS, f"{kind}{ten} đã show ({', '.join(u['unit'] for u in shown)})", actual)
     if loaded:
         # User chot: co log load la du. Inter de len truoc khi kip nhin banner.
-        return out(PASS, f"{kind} load được — chấm ở tầng load, không đòi nhìn thấy ad", actual)
+        return out(PASS, f"{kind}{ten} load được ({', '.join(u['unit'] for u in loaded)}) — chấm "
+                         "ở tầng load, không đòi nhìn thấy ad", actual)
     if requested:
-        # Khong fill van tinh dat: unit duoc request dung la logic app dung. Ghi ro
-        # trong reason de nguoi doc biet la chua thay ad tren man hinh.
-        return out(PASS, f"{kind} request đúng nhưng kho quảng cáo không trả ad — logic đúng, tính đạt", actual)
+        # Khong fill van tinh dat (user chot 2026-09-25, nhac lai 2026-10-06): chi
+        # can request DUNG unit cua vi tri. Unit vi tri khac khong tinh (da loc o tren).
+        return out(PASS, f"{kind}{ten} được request đúng ({', '.join(u['unit'] for u in requested)}) "
+                         "nhưng kho không fill — request đúng là đạt", actual)
     if not tapped(drive):
         # Chua tap gi = van o man mo dau. Ads cua man phai lai toi thi tat nhien
         # chua request - bao FAIL o day la bao oan app thieu ads.

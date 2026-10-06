@@ -27,3 +27,10 @@ elements:
   - name: progress bar
     aliases: ["progress bar", "thanh tiến trình"]
     ids: [progressBar, pbLoading, progress_splash]
+
+  # TC goi "layout_native_ads_language_1", APK 2.8.0 khong co layout ten do: man
+  # Language 1 (LFO1) dung `layout_ad_native_lfo_1` (shimmer luc dang load cung
+  # bo id). Cham theo CA BO id cua layout trong mot dump, khong phai mot id le.
+  - name: layout native Language 1
+    aliases: ["layout_native_ads_language_1", "layout native language 1", "layout_ad_native_lfo_1"]
+    ids_all: [nativeAdView, ad_headline, ad_media, ad_call_to_action]

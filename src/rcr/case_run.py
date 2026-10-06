@@ -24,6 +24,7 @@ from . import (
     fo_flow,
     screencap,
     assert_check,
+    assert_timing,
     crash_log,
     case_drive,
     device_app,
@@ -119,6 +120,7 @@ async def apply_case(
             da_toi=da_toi,
             do_anim=any(assert_check.ANIM_RE.search(e or "") for e in expects),
             man_dau=((out.get("drive") or {}).get("steps") or [{}])[-1].get("dump", ""),
+            **dict(zip(("cua_so", "ghi_khung"), assert_timing.cach_quan_sat(overrides, expects))),
         )
         # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
         driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]
@@ -126,6 +128,8 @@ async def apply_case(
         out["drive"] = driven
     # Cham case ads bang LOG, khong bang mat: inter load nhanh hon banner nen no
     # de len truoc khi kip nhin thay banner.
+    if out.get("drive"):
+        out["drive"]["timeline"] = await case_evidence._dong_thoi_gian(client, baseline, out["drive"])
     out["ads"] = await case_evidence._read_ads(client, baseline, overrides)
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
     out["events"] = await fa_log.doc(client, baseline.serial)

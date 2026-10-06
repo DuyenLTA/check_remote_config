@@ -36,7 +36,8 @@ HOW = [
     "Ảnh chụp cùng lúc với dump UI nên ảnh và cây node tả cùng một màn hình. Ảnh là bằng chứng "
     "ngữ cảnh (màn nào đang hiện), kết luận lấy từ log và cây node.",
     "Case ads chấm ở tầng request/load, không đòi nhìn thấy ad: inter load nhanh hơn banner nên "
-    "nó đè lên trước khi kịp nhìn. Request đúng mà kho quảng cáo không trả ad vẫn tính đạt.",
+    "nó đè lên trước khi kịp nhìn. Ad phải là ad của ĐÚNG vị trí trong câu. Kho không fill mà "
+    "request đúng unit của vị trí đó thì vẫn tính đạt; không có request của vị trí đó là FAIL.",
     "ID quảng cáo trong log bị che còn 3 số cuối → chỉ map được về key remote config khi đuôi "
     "khớp duy nhất. Bảng ID từng vị trí lấy từ sheet 'Check thông số KT' của team QA.",
     "N/A = ngoài phạm vi tester: số liệu trên AdMob/Firebase console (việc của PO), hoặc dòng "

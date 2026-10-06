@@ -14,6 +14,7 @@ trang thai app. Ten file khong dang tin: `vsl_rating_remote_prefs.xml` co chu
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 
@@ -27,6 +28,10 @@ log = logging.getLogger(__name__)
 FILES_DIR = "files"
 PREFS_DIR = "shared_prefs"
 MIRROR_PREFIX = "vsl_"
+
+
+DOC_LAI = 4
+CHO_DOC_LAI = 1.5
 
 
 def _q(path: str) -> str:
@@ -53,12 +58,22 @@ async def read(client, serial: str, package: str) -> RcBaseline:
         )
     activate_name, app_id = found
 
-    activate_raw, problem = await app_sandbox.cat(
-        client, serial, package, _q(f"{FILES_DIR}/{activate_name}"), mode=mode
-    )
-    if problem:
-        raise RcError(f"Khong doc duoc {activate_name}: {problem}")
-    configs, fetch_ms, tpl = _parse_activate(activate_raw, activate_name)
+    # Ngay sau `pm clear` + mo app, SDK dang ghi file nay: doc trung luc do ra
+    # chuoi rong -> "khong phai JSON hop le" va case BLOCKED oan (do 2026-10-06,
+    # OB2-002, OB3X-001). Doc lai vai lan truoc khi bao loi.
+    for lan in range(DOC_LAI):
+        activate_raw, problem = await app_sandbox.cat(
+            client, serial, package, _q(f"{FILES_DIR}/{activate_name}"), mode=mode
+        )
+        if problem:
+            raise RcError(f"Khong doc duoc {activate_name}: {problem}")
+        try:
+            configs, fetch_ms, tpl = _parse_activate(activate_raw, activate_name)
+            break
+        except RcError:
+            if lan + 1 == DOC_LAI:
+                raise
+            await asyncio.sleep(CHO_DOC_LAI)
 
     settings_name = f"frc_{app_id}_firebase_settings.xml"
     settings_raw, problem = await app_sandbox.cat(

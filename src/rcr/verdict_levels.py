@@ -1,7 +1,7 @@
 """Cac trang thai cham va thang bac giua chung. Khong logic, khong I/O.
 
-KHONG co trang thai rieng cho "ad khong fill": user chot 2026-09-25 rang request
-dung ma khong fill thi van tinh PASS - khong fill la chuyen cua kho quang cao.
+KHONG co trang thai rieng cho "ad khong fill": user chot 2026-09-25 (nhac lai
+2026-10-06) rang khong fill thi khong sao, chi can request DUNG unit cua vi tri.
 
 De rieng vi ca `assert_check` lan `assert_ads` deu can, ma hai module do thi
 goi lan nhau khong duoc (vong import).

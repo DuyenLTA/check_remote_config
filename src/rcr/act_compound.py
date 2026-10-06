@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from .act_types import Background, NeedsHuman, NoOp, Rotate, Seq, Swipe, Tap, Wait
+from .act_types import Background, NeedsHuman, NoOp, Rotate, Seq, Swipe, Tap, TapId, Wait, Watch
 
 # "Tai t0+2s: vuot trai" - moc tinh tu luc vua toi man. `case_drive` cho toi
 # moc roi moi lam ve sau dau hai cham.
@@ -27,7 +27,8 @@ SO_GIAY_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:s|giây|giay|sec)\b", re.I)
 QUA_RE = re.compile(r"\bqu[áa]\s+\d", re.I)
 # "Cho qua 10s" phai cho QUA moc, khong phai dung moc: cong them cho chac.
 VUOT_MOC = 2.0
-BAM_GIO_RE = re.compile(r"\bb[ấa]m\s*gi[ờo]\b", re.I)
+# "Bam gio", "ghi nhan thoi diem ad show (t0)": cau DO THOI GIAN, khong phai tim nut.
+BAM_GIO_RE = re.compile(r"\bb[ấa]m\s*gi[ờo]\b|ghi\s*nh[ậa]n\s+(?:th[ờo]i\s*đi[ểe]m|m[ốo]c|t0)", re.I)
 KHONG_THAO_TAC_RE = re.compile(r"^\s*kh[ôo]ng\s+thao\s+t[áa]c\b", re.I)
 NOI_TIEP_RE = re.compile(r"^\s*(?:sau\s+[đd][óo]|r[ồo]i|ti[ếe]p\s+(?:theo|[đd][óo]))\s*,?\s+", re.I)
 # "O OB3, cho 3s", "O man ke cho them 5s" - ve dau chi noi dang o dau.
@@ -43,6 +44,11 @@ SPLASH_XONG_RE = re.compile(r"^\s*ho[àa]n\s*th[àa]nh\s+splash\b", re.I)
 X_HIEN_RE = re.compile(r"^\s*(?:n[úu]t\s+|button\s+)?X\s+(?:xu[ấa]t\s+)?hi[ệe]n\b", re.I)
 # Cho het splash: phu het timeout load inter (~10s) - giong `CHO_TIMEOUT_ADS`.
 CHO_SPLASH = 12.0
+# "Bam button X", "Tai t0+3s: bam X". Nut X cua trang native full OB3 la ImageView
+# `btnSkip` KHONG co chu (doc tu layout fragment_onboarding_3 trong APK) -> tim
+# theo id, luat tap theo chu khong bao gio thay.
+TAP_X_RE = re.compile(r"^\s*(?:b[ấa]m|nh[ấa]n|tap|click)\s+(?:v[àa]o\s+)?(?:button\s+|n[úu]t\s+)?X\b", re.I)
+from .quan_sat import X_IDS  # noqa: E402 - ten node doc tu layout trong APK
 CHO_NEN_MAC_DINH = 10.0
 TEN_HUONG = {"left": "trái", "right": "phải", "up": "lên", "down": "xuống"}
 
@@ -66,8 +72,11 @@ def moc_t0(step: str) -> tuple[float, str] | None:
 
 def resolve(text: str, nodes, base):
     if BAM_GIO_RE.search(text):
-        return NeedsHuman("bước bấm giờ: case cần đo khoảng thời gian từ lúc ad show — "
-                          "tool chưa đo được thời gian (phần đo timer làm riêng)")
+        return Watch("bấm giờ → tool đứng yên theo dõi màn, đo mốc ad show / nút X / "
+                     "chuyển màn bằng giờ trong log và các khung chụp liên tục")
+    x = TAP_X_RE.match(text)
+    if x:
+        return _bam_x(nodes)
     if MOC_T0_RE.match(text):
         # `case_drive` da tach moc ra truoc; con toi day la cau goi thang.
         return base(moc_t0(text)[1], nodes)
@@ -111,6 +120,8 @@ def _lien_tuc(text: str, nhanh, nodes, base):
         return Swipe(act.direction, act.matched, lan)
     if isinstance(act, Tap):
         return Tap(act.node_label, act.x, act.y, act.matched, lan)
+    if isinstance(act, TapId):
+        return TapId(act.ids, act.reason, lan)
     return act
 
 
@@ -127,3 +138,8 @@ def _chuoi(text: str, nodes, base):
     if len(acts) < 2 or not all(isinstance(a, Swipe) for a in acts):
         return None
     return Seq(acts, "vuốt " + " rồi ".join(TEN_HUONG.get(a.direction, a.direction) for a in acts))
+
+
+def _bam_x(nodes):
+    """Nut X: cho no hien roi tap theo id (xem TapId)."""
+    return TapId(X_IDS, "bấm nút X (btnSkip) — chờ nút hiện rồi mới bấm")

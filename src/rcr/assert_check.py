@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from . import ad_positions, assert_ad_area, assert_ads, assert_ui, ui_names
+from . import ad_positions, assert_ad_area, assert_ads, assert_timing, assert_ui, ui_names
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -32,13 +32,16 @@ from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
 # "[Inferred ...]". Chua co chuan thi khong ai sai - cham la cham voi mot ky
 # vong do chinh nguoi viet TC doan ra.
 TBD_RE = re.compile(r"\[\s*(?:tbd|assume|inferred|todo)|spec ch[ưu]a n[êe]u|ch[ưu]a c[óo] spec", re.I)
+# Nhan "[Assume — ...]" / "[Inferred — ...]": bo nhan di la con ky vong cham duoc.
+GIA_DINH_RE = re.compile(r"\[\s*(?:assume|inferred)[^\]]*\]", re.I)
 
 # "Icon la animation lap", "hieu ung chay lien tuc" - do bang cach chup vai
 # khung roi so vung cua node, KHONG phai dong "phai nhin mat".
 # "User co the vuot sang man ke tiep" - chung minh bang mot cu vuot that.
 DOI_VUOT_RE = re.compile(
     r"(?:c[óo]\s*th[ểe]|\bcan\b|\bable\b).{0,20}(?:vu[ốo]t|swipe)|"
-    r"(?:vu[ốo]t|swipe).{0,24}(?:sang|qua|t[ớo]i|to|chuy[ểe]n)\s*(?:m[àa]n|trang|next)", re.I)
+    r"(?:vu[ốo]t|swipe).{0,24}(?:sang|qua|t[ớo]i|to|chuy[ểe]n)\s*(?:m[àa]n|trang|next)|"
+    r"chuy[ểe]n\s+(?:đ[ưu][ợo]c\s+)?sang\s+m[àa]n.{0,20}(?:vu[ốo]t|swipe)", re.I)
 ANIM_RE = re.compile(r"animation|animated|hi[ệe]u\s*[ứu]ng|l[ặa]p\s*l[ạa]i|\bl[ặa]p\b|loop|"
                      r"nh[áa]y|chuy[ểe]n\s*[đd][ộo]ng", re.I)
 # "Luong FO thong suot", "flow tiep tuc binh thuong", "khong bi ket o man nao".
@@ -59,7 +62,7 @@ TOI_MAN_RE = re.compile(
 
 
 def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str = "",
-          vi_tri=(), events=()) -> dict:
+          vi_tri=(), events=(), cfg=None) -> dict:
     """Cham mot dong Expected -> {verdict, reason, actual}.
 
     `scope` la vi tri unit ma ca case noi toi, cho dong khong tu nhac ten unit.
@@ -69,8 +72,21 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         return out(NOT_VERIFIABLE, "dòng trống", "")
 
     if TBD_RE.search(text):
-        return out(NOT_VERIFIABLE,
-                   "TC tự đánh dấu dòng này là chưa có spec — không có chuẩn để chấm", text)
+        noi_dung = GIA_DINH_RE.sub("", text).strip(" .:")
+        if TBD_RE.search(noi_dung) or not noi_dung:
+            return _tbd(drive or {}, crash)
+        # "[Assume]/[Inferred]": nguoi viet TC VAN ghi ky vong (doan theo
+        # pattern) -> cham noi dung do nhu dong thuong, ghi chu la gia dinh.
+        ket = check(noi_dung, ads, drive, crash, rc_keys, scope, vi_tri, events, cfg)
+        return ket | {"reason": f"{ket['reason']} (kỳ vọng do TC giả định, chưa có spec)"}
+
+    # Dong ve THOI GIAN / nut X tren trang native full OB3: cham bang dong thoi
+    # gian do duoc (log co moc ms + khung nhin lien tuc), khong day cho nguoi.
+    req_303 = [u["unit"] for u in (ads.get("units") or {}).values()
+               if u.get("requested") and ad_positions._khop_vi_tri(u, "303")]
+    ket = assert_timing.cham(text, (drive or {}).get("timeline"), dict(cfg or {}), req_303)
+    if ket:
+        return ket
 
     # Dong ve VUNG AD phai cham truoc luat "khong crash": cau "Phan ads khong
     # load duoc de TRONG (..., khong crash)" co ca hai ve, ma luat crash tra
@@ -89,7 +105,16 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
             return out(FAIL, "app crash trong lượt chạy", crash.get("lines", [])[:3])
         return out(PASS, "không thấy crash nào của app trong buffer crash", "")
 
+    # "Layout theo layout_X": cau co chu native nhung hoi BO CUC, cham bang cay UI.
+    bo_cuc = ui_names.find_in(text)
+    if bo_cuc and bo_cuc.get("ids_all"):
+        return assert_ui.layout_tren_man(bo_cuc, drive or {})
+
     kind = assert_ads.ad_type_in(text) or assert_ads.type_from_position(text, rc_keys)
+    if not kind and scope and assert_ads.LOG_ADS_RE.search(text):
+        ket = assert_ads.log_cua_vi_tri(text, ads, scope)
+        if ket:
+            return ket
     if kind or assert_ads.routes(text):
         return assert_ads.ad_line(text, kind, ads, drive, scope, vi_tri)
 
@@ -149,7 +174,8 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     # Cau phu dinh chung chung noi ve cac vi tri chinh case nay bat/tat.
     vi_tri = assert_ads.vi_tri_cua_case(overrides)
     for index, line in enumerate(expects, 1):
-        row = check(line, ads or {}, drive or {}, crash or {}, rc_keys, scope, vi_tri, events)
+        row = check(line, ads or {}, drive or {}, crash or {}, rc_keys, scope, vi_tri, events,
+                    overrides if isinstance(overrides, dict) else None)
         lines.append({"n": index, "expected": " ".join(line.split()), **row})
     if not lines:
         return {"verdict": NOT_VERIFIABLE, "lines": [], "note": "case không có dòng Expected nào"}
@@ -167,3 +193,20 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     verdict = worst(ke) if ke else worst(r["verdict"] for r in lines)
     return {"verdict": verdict, "lines": lines, "measured": len(measured),
             "pending": pending, "po": po}
+
+
+def _tbd(drive: dict, crash: dict) -> dict:
+    """Dong TC tu danh dau TBD: spec chua chot nen KHONG co chuan dung/sai cho
+    noi dung hien thi. Cham phan do duoc (app khong crash, man van ve UI cua
+    app) va GHI LAI dung cai dang hien de PO chot - khong de dong treo lo lung.
+    """
+    if crash.get("crashed"):
+        return out(FAIL, "spec chưa chốt (TBD) nhưng app crash trong lượt", crash.get("lines", [])[:3])
+    vung = ui_names.find_in("vùng ad") or {}
+    dumps = [st.get("dump", "") for st in drive.get("steps") or []]
+    thay = ui_names.seen_in(vung, dumps) if vung else ""
+    icon = ui_names.seen_in(ui_names.find_in("icon SWIPE") or {}, dumps)
+    hien = ", ".join(x for x in (thay and f"vùng ad `{thay}`", icon and f"icon swipe `{icon}`") if x) \
+        or "vùng ad để trống (không có view ad, không có icon swipe)"
+    return out(PASS, f"spec chưa chốt (TBD) — app chạy bình thường, không crash; thực tế đang hiện: "
+                     f"{hien}. Gửi PO chốt nội dung này", hien)

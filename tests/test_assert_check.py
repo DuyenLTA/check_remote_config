@@ -15,8 +15,9 @@ from rcr import assert_check as a
 
 # Do that tren may: case bat banner -> 2 unit request, 1 unit fail No fill
 ADS_BANNER = {"units": {
-    "banner:*****495": {"type": "banner", "unit": "*****495", "requested": 1,
-                        "loaded": 1, "load_failed": 0, "shown": 0, "impressions": 0, "errors": []},
+    "banner:*****495": {"type": "banner", "unit": "*****495", "requested": 1, "loaded": 1,
+                        "load_failed": 0, "shown": 0, "impressions": 0, "errors": [],
+                        "rc_keys": ["id_101_spl_a_banner_high"]},
     "banner:*****825": {"type": "banner", "unit": "*****825", "requested": 1,
                         "loaded": 0, "load_failed": 1, "shown": 0, "impressions": 0, "errors": ["No fill."]},
     "interstitial:*****588": {"type": "interstitial", "unit": "*****588", "requested": 1,
@@ -26,9 +27,10 @@ ADS_NO_BANNER = {"units": {
     "interstitial:*****588": ADS_BANNER["units"]["interstitial:*****588"],
 }}
 ADS_NO_FILL = {"units": {
-    "native:*****394": {"type": "native", "unit": "*****394", "requested": 1,
-                        "loaded": 0, "load_failed": 1, "shown": 0, "impressions": 0, "errors": ["No fill."]},
-}}
+    "native:*****394": {"type": "native", "unit": "*****394", "requested": 1, "loaded": 0,
+                        "load_failed": 1, "shown": 0, "impressions": 0, "errors": ["No fill."],
+                        "rc_keys": ["id_105_spl_n_native"]},
+}, "positions": ["105_spl_n_native"]}
 OK_CRASH = {"crashed": False, "lines": []}
 NO_DRIVE = {"steps": []}
 
@@ -75,10 +77,23 @@ def test_banner_load_duoc_nhung_chua_kip_show_van_PASS():
     assert out["verdict"] == a.PASS and "tầng load" in out["reason"]
 
 
-def test_co_request_ma_khong_fill_van_tinh_dat():
-    """User chot: khong fill la chuyen cua kho quang cao, logic app van dung."""
+def test_co_request_dung_unit_ma_khong_fill_van_dat():
+    """User chot 2026-09-25, nhac lai 2026-10-06: khong fill khong sao, chi can request dung."""
     out = check("Native 105-spl-n-native hiển thị trên Splash", ads=ADS_NO_FILL)
-    assert out["verdict"] == a.PASS and "không trả ad" in out["reason"]
+    assert out["verdict"] == a.PASS and "*****394" in out["reason"]
+
+
+def test_ad_vi_tri_khac_show_khong_tinh_cho_vi_tri_trong_cau():
+    """Do 2026-10-06 OB2-007: doi native 302, thuc te 201 show -> truoc kia PASS gia."""
+    ads = {"units": {"native:*****394": {"type": "native", "unit": "*****394", "requested": 1,
+                                         "loaded": 1, "shown": 1, "impressions": 1,
+                                         "rc_keys": ["id_201_lfo1_n_native_high"]},
+                     "native:*****993": {"type": "native", "unit": "*****993", "requested": 0,
+                                         "loaded": 0, "shown": 0, "impressions": 0,
+                                         "rc_keys": ["id_302_onb2_n_native"]}},
+           "positions": ["201_lfo1_n_native_high", "302_onb2_n_native"]}
+    out = a.check("Native 302 hiển thị ở vùng ad.", ads, DA_TAP, OK_CRASH)
+    assert out["verdict"] == a.FAIL
 
 
 DA_TAP = {"steps": [{"n": 1, "action": {"kind": "tap"}, "activity": "HomeActivity", "dump": ""}]}
@@ -210,7 +225,7 @@ def test_dong_ta_UI_man_chua_toi_thi_la_can_nguoi_chu_khong_phai_khong_do_duoc()
 
 
 def test_ad_khong_show_thi_0_impression_la_dung():
-    """"Impression fire dung 1 lan khi ad show" ma ad khong fill -> khong phai loi app."""
+    """"Impression fire dung 1 lan khi ad show" ma ad khong fill -> request dung la dat."""
     out = check("Impression fire đúng 1 lần khi ad show.", ads=ADS_NO_FILL)
     assert out["verdict"] == a.PASS and "không fill" in out["reason"]
 
@@ -291,13 +306,16 @@ def test_da_lai_toi_dung_man_thi_cham_that_chu_khong_bao_can_nguoi():
     assert out["verdict"] == a.PASS
 
 
-def test_dong_TC_tu_danh_dau_chua_co_spec_thi_khong_cham():
-    """"[TBD - spec chua neu]" - cham la cham voi ky vong do nguoi viet TC doan."""
-    for line in ("[TBD — spec chưa nêu]: vùng ad hiển thị gì khi cả ad và swipe đều tắt",
-                 "Fallback về UI cũ. [Assume — theo pattern config sai]",
-                 "Title hiển thị màu default. [Inferred — spec không định nghĩa]"):
-        out = check(line)
-        assert out["verdict"] == a.NOT_VERIFIABLE and "chưa có spec" in out["reason"]
+def test_dong_TBD_ghi_nhan_thuc_te_va_ra_PASS_FAIL():
+    """User chot 2026-10-06: report chi PASS/FAIL. TBD -> cham phan do duoc
+    (crash) va ghi lai dung cai dang hien de PO chot."""
+    out = check("[TBD — spec chưa nêu]: vùng ad hiển thị gì khi cả ad và swipe đều tắt")
+    assert out["verdict"] == a.PASS and "TBD" in out["reason"]
+
+
+def test_dong_gia_dinh_cham_theo_ky_vong_con_lai():
+    out = check("Không crash. [Assume — theo pattern config sai]")
+    assert out["verdict"] == a.PASS and "giả định" in out["reason"]
 
 
 # --- quy trach nhiem phai DUNG vi tri, khong phai "map duoc ve key bat ky" ---
@@ -746,3 +764,17 @@ def test_dong_animation_co_chu_vuot_van_cham_bang_animation():
     res = a.check("Icon là animation lặp, gợi ý rõ hướng vuốt ngang theo hướng chuyển màn "
                   "onboarding.", {}, drive, OK_CRASH)
     assert "trang 2 → 3" not in res["reason"]
+
+
+def test_cau_khong_neu_vi_tri_loc_theo_vi_tri_case_bat():
+    """Do 2026-10-06 OB2-007: "Native ad hien thi binh thuong", case bat 302 -> 201 show khong tinh."""
+    ads = {"units": {"native:*****394": {"type": "native", "unit": "*****394", "requested": 1,
+                                         "loaded": 1, "shown": 1, "impressions": 1,
+                                         "rc_keys": ["id_201_lfo1_n_native_high"]},
+                     "native:*****993": {"type": "native", "unit": "*****993", "requested": 2,
+                                         "loaded": 0, "shown": 0, "impressions": 0,
+                                         "rc_keys": ["id_302_onb2_n_native"]}},
+           "positions": ["201_lfo1_n_native_high", "302_onb2_n_native", "302_onb2_n_native_high"]}
+    out = a.check("Native ad hiển thị bình thường.", ads, DA_TAP, OK_CRASH,
+                  vi_tri=("302_onb2_n_native", "302_onb2_n_native_high"))
+    assert out["verdict"] == a.PASS and "*****993" in out["reason"] and "*****394" not in out["reason"]

@@ -67,10 +67,13 @@ def test_cho_qua_moc_thi_cho_hon_moc():
 
 
 @pytest.mark.parametrize("step", ["Bấm giờ từ t0.", "Không thao tác gì, bấm giờ.",
-                                  "Vào OB3, ad show tại t0, bấm giờ."])
-def test_bam_gio_la_do_thoi_gian_khong_phai_tap(step):
+                                  "Vào OB3, ad show tại t0, bấm giờ.",
+                                  # Ve sau "ghi nhan t0" la viec DO, khong phai bo qua.
+                                  "Vào OB3, ghi nhận thời điểm ad show (t0)."])
+def test_bam_gio_la_theo_doi_man_khong_phai_tap(step):
+    """Bam gio = do timer: tool dung yen theo doi, do bang log + khung chup."""
     act = kind(step)
-    assert isinstance(act, act_resolver.NeedsHuman) and "thời gian" in act.reason
+    assert isinstance(act, act_resolver.Watch)
 
 
 def test_sau_do_chi_la_chu_noi():
@@ -153,3 +156,19 @@ def test_ctx_vuot_phai_lui_mot_trang(khong_cho):
     ctx = act_exec.ctx_moi()
     asyncio.run(act_exec.lam(fake(), "29301FDH2006K7", kind("Vuốt phải"), {}, ctx))
     assert ctx["vuot_sau"] == -1
+
+
+def test_buoc_vao_man_da_toi_thi_nhin_ngay_khong_dump_truoc(khong_cho, monkeypatch):
+    """Timer OB3 3s: dump + chup truoc buoc ton 3-5s, trang tu chuyen truoc khi kip nhin."""
+    from rcr import quan_sat
+    nhin: list[float] = []
+
+    async def theo_doi(client, serial, package, giay, khung, dung_khi=None):
+        nhin.append(giay)
+
+    monkeypatch.setattr(quan_sat, "theo_doi", theo_doi)
+    adb = fake()
+    asyncio.run(case_drive.drive(adb, "29301FDH2006K7", PKG, ["Vào OB3, chờ quá 10s quan sát."],
+                                 da_toi="OnboardingActivity#3", cua_so=8.0, ghi_khung=True))
+    assert nhin and nhin[0] > 10
+    assert len(adb.cmds_with("uiautomator dump")) <= 1       # chi lan chup ket cuoi luot

@@ -115,6 +115,7 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         "ep_ad_fail": result.get("ep_ad_fail", ""),
         "reset": (result.get("reset") or {}).get("mode", ""),
         "drive": (dau.get("drive") or {}).get("status", "—"),
+        "ob3": _ob3_tom((dau.get("drive") or {}).get("timeline")),
         "keys_not_used": result.get("keys_not_used") or [],
         "lines": lines,
         "pending": sum((r.get("assert") or {}).get("pending", 0) for r in runs),
@@ -174,3 +175,23 @@ def page_data(baseline, tc: dict, records: list[dict], app_label: str = "") -> d
         },
         "cases": records,
     }
+
+
+def _ob3_tom(tl: dict | None) -> dict:
+    """Dong thoi gian OB3 da do, moc tinh bang giay tu luc vao trang lan dau.
+
+    Giu lai trong JSON de soi lai vi sao mot dong thoi gian ra PASS/FAIL ma
+    khong phai chay lai case.
+    """
+    luot = (tl or {}).get("luot") or []
+    if not luot:
+        return {}
+    goc = luot[0]["vao"]
+
+    def rel(t):
+        return round(t - goc, 2) if t else None
+
+    return {"luot": [{k: rel(v[k]) for k in ("vao", "roi", "show", "loaded", "fail", "t0")}
+                     for v in luot],
+            "khung": [[rel(k["t"]), int(k["x"]), k["dem"]] for k in (tl.get("khung") or [])],
+            "thao_tac": [rel(t) for t in (tl.get("thao_tac") or [])]}
