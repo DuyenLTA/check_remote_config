@@ -48,9 +48,17 @@ mốc, không phải 3s mặc định), `Ở OB3, chờ thêm 5s`, `Sau đó vu�
 **t0 = lúc vừa tới màn của case, CHƯA phải lúc ad show** — report ghi rõ thao
 tác làm lúc t0+bao nhiêu. `Bấm giờ` / `ghi nhận thời điểm ad show` = tool **đứng
 yên quan sát**: đo mốc vào/rời trang OB3 + ad show/fail bằng `logcat -v epoch`
-(chính xác tới ms), và chụp liên tục để thấy nút X (`btnSkip`) / số đếm
-(`btnTimeoutSkip`). Vào tới OB3 là **nhìn ngay**, không dump + chụp trước bước
-(mất 3–5s, timer 3s là trang đã đi mất — đo 06/10/2026).
+(chính xác tới ms), và nhìn liên tục để thấy nút X / số đếm. Vào tới OB3 là
+**nhìn ngay**, không dump + chụp trước bước (mất 3–5s, timer 3s là trang đã đi mất —
+đo 06/10/2026). Nhìn bằng `dumpsys activity top` (~0,15s/khung) xen `uiautomator`
+(~2,5s, đọc được chữ): chỉ dùng uiautomator thì khung đầu trễ ~7s, cả cụm OB3X ra
+FAIL oan (07/10/2026).
+
+**Không gắn cứng theo một app** (user chốt 07/10/2026 — tool dùng cho nhiều app).
+Nút X / số đếm nhận theo **vai trò**: gợi ý id trong `data/ui_names.yaml` + nghĩa
+tên id (skip/close/dismiss… — timeout/countdown/timer) + content-desc + chữ chỉ là số
+ở vùng trên màn. App mới đặt tên id lạ thì **thêm vào yaml**, không sửa code, không
+viết id của một app vào code hay vào workflow này.
 
 Câu khác — hoặc **nhiều hơn một node cùng khớp** — thì dừng kèm lý do, **không
 tap bừa**: tap sai chỗ trên máy thật là bấm vào quảng cáo hoặc mua hàng thật.
@@ -433,6 +441,29 @@ chỉ cần `serial`, `package`, `configs`, `mirrored_keys`). Publish đè **cù
   (`data/ui_names.yaml`, trường `ids_all`)
 - Sau `pm clear` config mới có `enable_all_ads*=false` → tool tự đặt nền `true`; log ads
   trống thì đọc 3 key này trước khi nghi app
+
+## 5d. Rà FAIL giả TRƯỚC khi báo — bắt buộc
+
+07/10/2026 báo 12 FAIL, user hỏi lại thì 8 FAIL là sai (tool nhìn trễ + video Claude
+quay rơi đúng lượt config bị fetch đè). User chốt: *"fail thì phải tìm cách check lại
+xem có fail thật hay không trước khi xuất report"*. Mỗi case FAIL, trước khi publish:
+
+1. **FAIL phải lặp lại.** Tool tự chạy lại case FAIL; chỉ giữ FAIL khi lần sau cũng
+   FAIL (`lich_su_verdict`). FAIL rồi PASS → chạy thêm phân xử, report ghi "KHÔNG ỔN
+   ĐỊNH" kèm các lần — không được giấu
+2. **Config còn sống tới cuối lượt.** App fetch Firebase lúc mở; lần fetch thật (log
+   `Fetch firebase successfully in` > ~400ms, đọc cache ~280ms) kích hoạt lại giá trị
+   server và đè patch. Tool đọc lại config sau khi chấm, lệch → BLOCKED + chạy lại.
+   Claude đo tay thì **luôn ghi `logcat -v epoch`** và kiểm dòng fetch trước khi tin
+   kết quả. Ad đã tắt mà vẫn chạy / X đã bật mà không hiện → nghi config bị đè trước
+3. **Đối chiếu bằng chứng của chính tool.** Mở ảnh chụp của case: ảnh thấy thứ dòng
+   FAIL bảo "không thấy" (vd nút X) → tool nhìn sai, không phải app sai
+4. **Nguyên nhân phải giải thích được bằng số đo** của lượt có config đúng. Một video
+   / một lượt ngược với tool chưa đủ kết luận bug — lặp ít nhất 2 lượt
+5. **Thao tác tay canh giờ theo đồng hồ MÁY** (`adb shell 'echo $EPOCHREALTIME'`),
+   không theo đồng hồ máy tính (lệch ~0,8s). Chỉ tap khi đã thấy node trong cây UI —
+   tap mù theo tọa độ trúng ad (07/10/2026: mở Chrome)
+6. FAIL nào đã rà xong mới được ghi "cần báo dev". Ghi rõ đã kiểm gì ở mục thực tế
 
 ## 6. Xuất report
 
