@@ -40,7 +40,7 @@ from . import (
     sdk_probe,
     ui_dump,
 )
-from .models import RcBaseline
+from .models import RcBaseline, RcError
 
 log = logging.getLogger(__name__)
 
@@ -140,6 +140,26 @@ async def apply_case(
         )
         # Config khong song thi chua test duoc gi - dung ket luan tu dong Expected.
         out["verdict"] = out["verdict"] if not result.ok else out["assert"]["verdict"]
+    # Doc lai config SAU KHI cham: app fetch Firebase luc mo, lan fetch that
+    # (khong phai doc cache) kich hoat lai gia tri server va de mat patch - verify
+    # o tren doc qua som (foreground +0,8s, fetch xong sau do) nen van ra OK. Do
+    # 2026-10-07: 3/3 luot fetch that ~450-510ms thi ad da tat van chay, 8/8 luot
+    # doc cache ~280ms thi khong. Lech -> BLOCKED de run_batch chay lai, khong
+    # duoc de verdict tren config cua server len report.
+    if result.ok:
+        try:
+            cuoi = await rc_verify.verify(client, baseline, overrides)
+        except RcError as exc:
+            cuoi = None
+            out["verify_cuoi"] = {"ok": None, "loi": str(exc)}
+        if cuoi is not None:
+            out["verify_cuoi"] = cuoi.summary
+            if not cuoi.ok:
+                out["verdict"] = "BLOCKED"
+                out["config_bi_de"] = [m.summary for m in cuoi.mismatches]
+                log_fn("    config bi app fetch de giua luot ("
+                       + ", ".join(f"{m.key}={m.got!r}" for m in cuoi.mismatches[:4])
+                       + ") -> BLOCKED, chay lai")
     if mat_mang:
         # May phai duoc tra ve co mang du buoc nao trong case da bat lai: luot
         # sau chay tren may mat mang la hong het ma khong ai biet vi sao.

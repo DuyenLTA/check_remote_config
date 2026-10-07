@@ -126,5 +126,25 @@ def test_cong_tac_tong_ads_luon_bat_lam_nen_tru_khi_case_tu_dat(monkeypatch):
 def test_ket_qua_lo_lung_thi_tu_chay_lai_toi_khi_ra_PASS_FAIL(monkeypatch):
     """Report chi PASS/FAIL: doc file trung luc SDK ghi -> chay lai, khong BLOCKED."""
     recs = run(monkeypatch, {"a": [RcError("activate.json khong phai JSON"), "PASS"],
-                             "b": ["NEEDS_HUMAN", "FAIL"], "c": "PASS"}, lan=3)
+                             "b": ["NEEDS_HUMAN", "FAIL", "FAIL"], "c": "PASS"}, lan=3)
     assert [r["verdict"] for r in recs] == ["PASS", "FAIL", "PASS"]
+
+
+def test_fail_chi_len_report_khi_lap_lai(monkeypatch):
+    """Mot lan FAIL co the do config bi fetch de / tool nhin tre: phai chay lai xac nhan."""
+    recs = run(monkeypatch, {"a": ["FAIL", "FAIL"], "b": "PASS", "c": "PASS"}, lan=3)
+    assert recs[0]["verdict"] == "FAIL"
+    assert recs[0]["lich_su_verdict"] == ["FAIL", "FAIL"]
+    assert not recs[0]["khong_on_dinh"]
+
+
+def test_fail_roi_pass_thi_phan_xu_va_danh_dau_khong_on_dinh(monkeypatch):
+    recs = run(monkeypatch, {"a": ["FAIL", "PASS", "PASS"], "b": "PASS", "c": "PASS"}, lan=3)
+    assert recs[0]["verdict"] == "PASS"
+    assert recs[0]["lich_su_verdict"] == ["FAIL", "PASS", "PASS"]
+    assert recs[0]["khong_on_dinh"] and "KHÔNG ỔN ĐỊNH" in recs[0]["actual"]
+
+
+def test_pass_ngay_lan_dau_khong_chay_lai(monkeypatch):
+    recs = run(monkeypatch, {"a": "PASS", "b": "PASS", "c": "PASS"}, lan=3)
+    assert [r["lich_su_verdict"] for r in recs] == [["PASS"]] * 3

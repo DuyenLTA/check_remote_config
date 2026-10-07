@@ -44,11 +44,11 @@ SPLASH_XONG_RE = re.compile(r"^\s*ho[àa]n\s*th[àa]nh\s+splash\b", re.I)
 X_HIEN_RE = re.compile(r"^\s*(?:n[úu]t\s+|button\s+)?X\s+(?:xu[ấa]t\s+)?hi[ệe]n\b", re.I)
 # Cho het splash: phu het timeout load inter (~10s) - giong `CHO_TIMEOUT_ADS`.
 CHO_SPLASH = 12.0
-# "Bam button X", "Tai t0+3s: bam X". Nut X cua trang native full OB3 la ImageView
-# `btnSkip` KHONG co chu (doc tu layout fragment_onboarding_3 trong APK) -> tim
-# theo id, luat tap theo chu khong bao gio thay.
+# "Bam button X", "Tai t0+3s: bam X". Nut X thuong la icon KHONG co chu -> luat tap
+# theo chu khong bao gio thay; tim theo VAI TRO nut X (quan_sat: goi y id trong
+# ui_names.yaml + nghia ten id + content-desc), khong gan id cua mot app.
 TAP_X_RE = re.compile(r"^\s*(?:b[ấa]m|nh[ấa]n|tap|click)\s+(?:v[àa]o\s+)?(?:button\s+|n[úu]t\s+)?X\b", re.I)
-from .quan_sat import X_IDS  # noqa: E402 - ten node doc tu layout trong APK
+from .quan_sat import VAI_NUT_X  # noqa: E402
 CHO_NEN_MAC_DINH = 10.0
 TEN_HUONG = {"left": "trái", "right": "phải", "up": "lên", "down": "xuống"}
 
@@ -141,5 +141,5 @@ def _chuoi(text: str, nodes, base):
 
 
 def _bam_x(nodes):
-    """Nut X: cho no hien roi tap theo id (xem TapId)."""
-    return TapId(X_IDS, "bấm nút X (btnSkip) — chờ nút hiện rồi mới bấm")
+    """Nut X: cho no hien roi tap (xem TapId)."""
+    return TapId(VAI_NUT_X, "bấm nút X — chờ nút hiện rồi mới bấm")

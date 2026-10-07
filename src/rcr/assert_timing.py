@@ -206,7 +206,9 @@ def _khong_fill(text: str, v: dict, khung: list, req_303=()) -> dict:
 
 
 def _x_man_ke(text: str, v: dict, khung: list) -> dict:
-    sau = [k for k in khung if k["t"] > v["roi"]]
+    # Chi khung uiautomator: khung "nhanh" (dumpsys) van thay nut X cua trang OB3
+    # nam canh ben trong ViewPager du trang do da khuat -> bao "con X" sai.
+    sau = [k for k in khung if k["t"] > v["roi"] and k.get("nguon") != "nhanh"]
     if not sau:
         return out(NEEDS_HUMAN, "không có khung nào chụp sau lúc rời OB3", text)
     thay = [k for k in sau if k["x"] or k["dem"]]

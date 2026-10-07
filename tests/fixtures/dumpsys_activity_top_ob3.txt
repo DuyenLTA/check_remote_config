@@ -1,0 +1,369 @@
+TASK 10181:com.android.chrome id=2027 userId=0
+  ACTIVITY com.android.chrome/org.chromium.chrome.browser.ChromeTabbedActivity 687849e pid=30469
+    View Hierarchy:
+      DecorView@4de8bf9[ChromeTabbedActivity]
+        android.widget.LinearLayout{1056016 V.E...... .......D 0,0-1080,2280 aid=1073741824}
+          android.view.ViewStub{9eef1f0 G.E...... ......I. 0,0-0,0 #10201b0 android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{6b0c131 V.E...... .......D 0,0-1080,2280 aid=1073741825}
+            androidx.appcompat.widget.FitWindowsFrameLayout{bf4d9d8 V.E...... .......D 0,0-1080,2280 #7f010082 app:id/action_bar_root aid=1073741826}
+              androidx.appcompat.widget.ContentFrameLayout{522e0bb V.E...... .......D 0,0-1080,2280 #1020002 android:id/content aid=1073741827}
+    Looper (main, tid 2) {1}
+TASK 14710:com.ai.aiimage.aivideogenerator id=2029 userId=0
+  ACTIVITY com.ai.aiimage.aivideogenerator/com.visionlab.tutorial.vsltemplate4.onboarding.VslTemplate4OnboardingActivity d5ce44f pid=16060
+    Local Activity bc09000 State:
+      mResumed=true mStopped=false mFinished=false
+      mIsInMultiWindowMode=false mIsInPictureInPictureMode=false
+      mChangingConfigurations=false
+      mCurrentConfig={1.0 ?mcc?mnc [en_US,in_ID,es_US,vi_VN,zh_HK_#Hant,ar_BH,cs_CZ,pt_BR,az_AZ_#Latn,ko_KR,en_CA,fr_FR,hi_IN] ldltr sw360dp w360dp h688dp 480dpi nrml long hdr widecg port finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 1080, 2280) mAppBounds=Rect(0, 0 - 1080, 2148) mMaxBounds=Rect(0, 0 - 1080, 2280) mWindowingMode=fullscreen mDisplayWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_0} as.2 s.1 fontWeightAdjustment=0}
+      mLoadersStarted=true
+      Active Fragments in 9c9bef7:
+        #0: ReportFragment{d1fc164 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+          mFragmentId=#0 mContainerId=#0 mTag=androidx.lifecycle.LifecycleDispatcher.report_fragment_tag
+          mState=5 mIndex=0 mWho=android:fragment:0 mBackStackNesting=0
+          mAdded=true mRemoving=false mFromLayout=false mInLayout=false
+          mHidden=false mDetached=false mMenuVisible=true mHasMenu=false
+          mRetainInstance=false mRetaining=false mUserVisibleHint=true
+          mFragmentManager=FragmentManager{9c9bef7 in HostCallbacks{ac9ffcd}}
+          mHost=android.app.Activity$HostCallbacks@ac9ffcd
+          Child FragmentManager{9809082 in ReportFragment{d1fc164}}:
+            FragmentManager misc state:
+              mHost=android.app.Activity$HostCallbacks@ac9ffcd
+              mContainer=android.app.Fragment$1@e515393
+              mParent=ReportFragment{d1fc164 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+              mCurState=5 mStateSaved=false mDestroyed=false
+      Added Fragments:
+        #0: ReportFragment{d1fc164 #0 androidx.lifecycle.LifecycleDispatcher.report_fragment_tag}
+      FragmentManager misc state:
+        mHost=android.app.Activity$HostCallbacks@ac9ffcd
+        mContainer=android.app.Activity$HostCallbacks@ac9ffcd
+        mCurState=5 mStateSaved=false mDestroyed=false
+    ViewRoot:
+      mAdded=true
+      mRemoved=false
+      mStopped=false
+      mPausedForTransition=false
+      mConsumeBatchedInputScheduled=false
+      mConsumeBatchedInputImmediatelyScheduled=false
+      mPendingInputEventCount=0
+      mProcessInputEventsScheduled=false
+      mTraversalScheduled=false
+      mIsAmbientMode=false
+      mUnbufferedInputSource=0
+      mAttachInfo=       AttachInfo:
+        mHasWindowFocus=true
+        mWindowVisibility=0
+        mInTouchMode=true
+        mUnbufferedDispatchRequested=false
+      android.view.ViewRootImpl$NativePreImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$ImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$NativePostImeInputStage: mQueueLength=0
+      android.view.ViewRootImpl$WindowInputEventReceiver
+       mInputChannel: bee97ba com.ai.aiimage.aivideogenerator/com.visionlab.tutorial.vsltemplate4.onboarding.VslTemplate4OnboardingActivity (client)
+       mSeqMap: {}
+       mReceiverPtr:
+        mInputConsumer:
+          mResampleTouch = true
+          mChannel = bee97ba com.ai.aiimage.aivideogenerator/com.visionlab.tutorial.vsltemplate4.onboarding.VslTemplate4OnboardingActivity (client)
+          mMsgDeferred: false
+          Batches:
+              <empty>
+          mSeqChains:
+              <empty>
+          mConsumeTimes:
+              <empty>
+          
+        mBatchedInputEventPending: false
+        mOutboundQueue:
+          <empty>
+        
+    Choreographer:
+      mFrameScheduled=true
+      mLastFrameTime=193690809 (14 ms ago)
+    InsetsController:
+      InsetsState
+        mDisplayFrame=Rect(0, 0 - 1080, 2280)
+        mDisplayCutout=DisplayCutout{insets=Rect(0, 0 - 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=0 displayHeight=0 density={0.0} cutoutSpec={} rotation={0} scale={0.0}}}}
+        mRoundedCorners=RoundedCorners{[RoundedCorner{position=TopLeft, radius=132, center=Point(132, 132)}, RoundedCorner{position=TopRight, radius=132, center=Point(948, 132)}, RoundedCorner{position=BottomRight, radius=132, center=Point(948, 2148)}, RoundedCorner{position=BottomLeft, radius=132, center=Point(132, 2148)}]}
+        mPrivacyIndicatorBounds=PrivacyIndicatorBounds {static bounds=Rect(792, 0 - 1038, 90) rotation=0}
+          InsetsSource type=ITYPE_STATUS_BAR frame=[0,0][1080,83] visible=false
+          InsetsSource type=ITYPE_NAVIGATION_BAR frame=[0,2148][1080,2280] visible=false
+          InsetsSource type=ITYPE_LEFT_GESTURES frame=[0,0][0,2280] visible=true
+          InsetsSource type=ITYPE_RIGHT_GESTURES frame=[1080,0][1080,2280] visible=true
+          InsetsSource type=ITYPE_TOP_MANDATORY_GESTURES frame=[0,0][1080,83] visible=true
+          InsetsSource type=ITYPE_BOTTOM_MANDATORY_GESTURES frame=[0,2148][1080,2280] visible=true
+          InsetsSource type=ITYPE_TOP_TAPPABLE_ELEMENT frame=[0,0][1080,83] visible=true
+          InsetsSource type=ITYPE_BOTTOM_TAPPABLE_ELEMENT frame=[0,2148][1080,2280] visible=true
+          InsetsSource type=ITYPE_IME frame=[0,0][0,0] visible=false
+    View Hierarchy:
+      DecorView@e8ed8ce[VslTemplate4OnboardingActivity]
+        android.widget.LinearLayout{cb649c9 V.E...... ........ 0,0-1080,2280}
+          android.view.ViewStub{6c98fd0 G.E...... ......I. 0,0-0,0 #10201b0 android:id/action_mode_bar_stub}
+          android.widget.FrameLayout{65f45d0 V.E...... ........ 0,0-1080,2280}
+            androidx.appcompat.widget.FitWindowsLinearLayout{8742193 V.E...... ........ 0,0-1080,2280 #7f0a0046 app:id/action_bar_root}
+              androidx.appcompat.widget.ViewStubCompat{883cbc9 G.E...... ......I. 0,0-0,0 #7f0a0052 app:id/action_mode_bar_stub}
+              androidx.appcompat.widget.ContentFrameLayout{a55d682 V.E...... ........ 0,0-1080,2280 #1020002 android:id/content}
+                androidx.constraintlayout.widget.ConstraintLayout{c309dcd V.E...... ........ 0,0-1080,2280}
+                  androidx.viewpager.widget.ViewPager{ef6f308 VFED..... ........ 0,0-1080,2280 #7f0a05f2 app:id/viewPagerOnboarding}
+                    androidx.constraintlayout.widget.ConstraintLayout{5312c1e V.E...... ........ 0,0-1080,2280}
+                      androidx.media3.ui.PlayerView{407e68d VFE...C.. ........ 0,0-1080,1368 #7f0a04e5 app:id/playerView}
+                        androidx.media3.ui.AspectRatioFrameLayout{b047853 V.E...... ........ 0,0-1080,1368 #7f0a01f7 app:id/exo_content_frame}
+                          android.view.TextureView{daa5042 V.ED..... ........ 0,0-1080,1368}
+                          android.view.View{c2b590 V.ED..... ........ 0,0-1080,1368 #7f0a021a app:id/exo_shutter}
+                          androidx.appcompat.widget.AppCompatImageView{3995e89 V.ED..... ........ 0,0-1080,1368 #7f0a0203 app:id/exo_image}
+                          androidx.appcompat.widget.AppCompatImageView{a112e8e V.ED..... ........ 0,0-1080,1368 #7f0a01f0 app:id/exo_artwork}
+                          androidx.media3.ui.SubtitleView{cc59abc V.E...... ........ 0,0-1080,1368 #7f0a021d app:id/exo_subtitles}
+                            androidx.media3.ui.CanvasSubtitleOutput{55446af V.ED..... ........ 0,0-1080,1368}
+                          android.widget.ProgressBar{eab32ce G.ED..... ......ID 0,0-0,0 #7f0a01f4 app:id/exo_buffering}
+                          androidx.appcompat.widget.AppCompatTextView{1b395ef G.ED..... ......I. 0,0-0,0 #7f0a01fc app:id/exo_error_message}
+                        android.widget.FrameLayout{eb05a45 V.E...... ........ 0,0-1080,1368 #7f0a01ef app:id/exo_ad_overlay}
+                        android.widget.FrameLayout{2f5a59a V.E...... ........ 0,0-1080,1368 #7f0a020b app:id/exo_overlay}
+                        androidx.media3.ui.PlayerControlView{6ffd8fc G.E...... ......I. 0,0-0,0 #7f0a01f8 app:id/exo_controller}
+                          android.view.View{df45b85 V.ED..... ......I. 0,0-0,0 #7f0a01fa app:id/exo_controls_background}
+                          android.widget.FrameLayout{2cbadda V.E...... ......I. 0,0-0,0 #7f0a01f3 app:id/exo_bottom_bar}
+                            android.widget.LinearLayout{4da20b V.E...... ......I. 0,0-0,0 #7f0a021f app:id/exo_time}
+                              androidx.appcompat.widget.AppCompatTextView{7ef88e8 V.ED..... ......I. 0,0-0,0 #7f0a0210 app:id/exo_position}
+                              androidx.appcompat.widget.AppCompatTextView{8242b01 V.ED..... ......I. 0,0-0,0}
+                              androidx.appcompat.widget.AppCompatTextView{46cda6 V.ED..... ......I. 0,0-0,0 #7f0a01fb app:id/exo_duration}
+                            android.widget.LinearLayout{53253e7 V.E...... ......I. 0,0-0,0 #7f0a01f2 app:id/exo_basic_controls}
+                              androidx.appcompat.widget.AppCompatImageButton{7a84b94 GF.D..C.. ......I. 0,0-0,0 #7f0a0222 app:id/exo_vr}
+                              androidx.appcompat.widget.AppCompatImageButton{227763d GFED..C.. ......I. 0,0-0,0 #7f0a0219 app:id/exo_shuffle}
+                              androidx.appcompat.widget.AppCompatImageButton{1021e32 GFED..C.. ......I. 0,0-0,0 #7f0a0214 app:id/exo_repeat_toggle}
+                              androidx.appcompat.widget.AppCompatImageButton{fc64783 GF.D..C.. ......I. 0,0-0,0 #7f0a021c app:id/exo_subtitle}
+                              androidx.appcompat.widget.AppCompatImageButton{3888d00 VF.D..C.. ......I. 0,0-0,0 #7f0a0217 app:id/exo_settings}
+                              androidx.appcompat.widget.AppCompatImageButton{a1a3939 GFED..C.. ......I. 0,0-0,0 #7f0a0201 app:id/exo_fullscreen}
+                              androidx.appcompat.widget.AppCompatImageButton{5afeb7e VFED..C.. ......I. 0,0-0,0 #7f0a020a app:id/exo_overflow_show}
+                            android.widget.HorizontalScrollView{71bd8df IFEDH.... ......I. 0,0-0,0 #7f0a01fe app:id/exo_extra_controls_scroll_view}
+                              android.widget.LinearLayout{e69792c V.E...... ......I. 0,0-0,0 #7f0a01fd app:id/exo_extra_controls}
+                                androidx.appcompat.widget.AppCompatImageButton{9dc2ff5 VFED..C.. ......I. 0,0-0,0 #7f0a0209 app:id/exo_overflow_hide}
+                          androidx.media3.ui.DefaultTimeBar{5db418a VFED..... ......I. 0,0-0,0 #7f0a0212 app:id/exo_progress}
+                          android.widget.LinearLayout{70f23fb V.E...... ......I. 0,0-0,0 #7f0a0206 app:id/exo_minimal_controls}
+                            androidx.appcompat.widget.AppCompatImageButton{d8afc18 GFED..C.. ......I. 0,0-0,0 #7f0a0207 app:id/exo_minimal_fullscreen}
+                          android.widget.LinearLayout{f8cd671 V.E...... ......I. 0,0-0,0 #7f0a01f5 app:id/exo_center_controls}
+                            androidx.appcompat.widget.AppCompatImageButton{4b3ec56 VFED..C.. ......I. 0,0-0,0 #7f0a0211 app:id/exo_prev}
+                            androidx.appcompat.widget.AppCompatButton{32204d7 VFED..C.. ......I. 0,0-0,0 #7f0a0216 app:id/exo_rew_with_amount}
+                            androidx.appcompat.widget.AppCompatImageButton{83fc1c4 VFED..C.. ......I. 0,0-0,0 #7f0a020e app:id/exo_play_pause}
+                            androidx.appcompat.widget.AppCompatButton{1c768ad VFED..C.. ......I. 0,0-0,0 #7f0a0200 app:id/exo_ffwd_with_amount}
+                            androidx.appcompat.widget.AppCompatImageButton{69a77e2 VFED..C.. ......I. 0,0-0,0 #7f0a0208 app:id/exo_next}
+                          android.widget.LinearLayout{b181773 V.E...... ......I. 0,0-0,0 #7f0a0220 app:id/exo_top_controls}
+                            android.view.View{6593630 G.ED..... ......I. 0,0-0,0 #7f0a0205 app:id/exo_media_route_button_placeholder}
+                      androidx.appcompat.widget.AppCompatImageView{a289ecb V.ED..... ........ 0,0-1080,1368 #7f0a0360 app:id/ivBackground}
+                      android.widget.LinearLayout{b9ee2a9 G.E...... ......I. 0,0-0,0 #7f0a04b6 app:id/ob2Bb2SwipeLottie}
+                        com.airbnb.lottie.LottieAnimationView{36c302e V.ED..... ......I. 0,0-0,0}
+                        androidx.appcompat.widget.AppCompatTextView{d52b7cf V.ED..... ......ID 0,0-0,0}
+                      androidx.constraintlayout.widget.ConstraintLayout{ba61764 V.E...... ........ 36,969-1044,1321 #7f0a01aa app:id/ctlContent}
+                        androidx.appcompat.widget.AppCompatTextView{bbbacf7 V.ED..... ........ 36,36-972,114 #7f0a05cb app:id/tvTitle}
+                        androidx.appcompat.widget.AppCompatTextView{63543ef V.ED..... ........ 36,114-972,209 #7f0a05c6 app:id/tvDescription}
+                        com.visionlab.tutorial.vsltemplate4.VslOnboardingNextButton{93aeefc VFED..C.. ........ 749,209-914,316 #7f0a00fe app:id/btnNextOnboarding}
+                      android.widget.FrameLayout{bd73046 V.E...... ........ 0,1368-1080,2280 #7f0a0239 app:id/flFake}
+                        android.widget.LinearLayout{953855c G.E...... ......I. 0,0-0,0 #7f0a04b7 app:id/ob2NoAdsSwipeLottie}
+                          com.airbnb.lottie.LottieAnimationView{c5a0065 V.ED..... ......I. 0,0-0,0}
+                          androidx.appcompat.widget.AppCompatTextView{18f213a V.ED..... ......ID 0,0-0,0}
+                      android.widget.FrameLayout{cac8554 V.E...... ........ 0,1368-1080,2280 #7f0a048c app:id/nativeAdView}
+                        com.google.android.gms.ads.nativead.NativeAdView{e822555 VFE...C.. ........ 0,0-1080,912}
+                          androidx.constraintlayout.widget.ConstraintLayout{f9b5779 V.E...... ........ 0,0-1080,912}
+                            com.google.android.gms.ads.nativead.MediaView{27e3c40 VFE...C.. ........ 47,129-1033,681 #7f0a0063 app:id/ad_media}
+                              android.widget.ImageView{a614cbe V.ED..... ........ 0,0-986,552}
+                            androidx.appcompat.widget.AppCompatButton{9c3c11f VFED..C.. ........ 47,724-1033,854 #7f0a005b app:id/ad_call_to_action}
+                            android.widget.LinearLayout{af0f235 V.E...... ........ 0,43-1080,100 #7f0a0380 app:id/linearLayoutTitle}
+                              androidx.appcompat.widget.AppCompatTextView{a2adc6c V.ED..... ........ 42,7-99,49 #7f0a05d6 app:id/txtAds}
+                              android.widget.LinearLayout{91f5358 V.E...... ........ 141,0-1080,57 #7f0a037f app:id/linearLayout4}
+                                android.widget.LinearLayout{1ed503b V.E...... ........ 0,0-939,57}
+                                  androidx.appcompat.widget.AppCompatTextView{c6176ca VFED..C.. ........ 0,0-903,57 #7f0a0061 app:id/ad_headline}
+                          android.view.View{bcb7cb1 V.ED..... ........ 0,0-1080,0}
+                          android.widget.FrameLayout{fe24d04 V.E...... ........ 0,0-1080,912}
+                            com.google.android.gms.ads.formats.a{d56b517 V.E...... ........ 0,0-1080,912}
+                              com.google.android.gms.ads.internal.formats.b{7883596 VFE...C.. ........ 1035,0-1080,45}
+                                android.widget.ImageView{bea32ed V.ED..... ........ 0,0-45,45 #47470002}
+                            android.widget.FrameLayout{e8a1522 V.E...... ........ 0,0-1080,912}
+                    androidx.constraintlayout.widget.ConstraintLayout{91df345 V.E...... .......D 1080,0-2160,2280}
+                      androidx.media3.ui.PlayerView{e19fbf9 VFE...C.. ........ 0,0-1080,1368 #7f0a04e5 app:id/playerView}
+                        androidx.media3.ui.AspectRatioFrameLayout{3aa399f V.E...... ........ 0,0-1080,1368 #7f0a01f7 app:id/exo_content_frame}
+                          android.view.TextureView{76c573e V.ED..... ........ 0,0-1080,1368}
+                          android.view.View{d032aec V.ED..... ........ 0,0-1080,1368 #7f0a021a app:id/exo_shutter}
+                          androidx.appcompat.widget.AppCompatImageView{ff55eb5 V.ED..... ........ 0,0-1080,1368 #7f0a0203 app:id/exo_image}
+                          androidx.appcompat.widget.AppCompatImageView{352a94a V.ED..... ........ 0,0-1080,1368 #7f0a01f0 app:id/exo_artwork}
+                          androidx.media3.ui.SubtitleView{f6e09d8 V.E...... ........ 0,0-1080,1368 #7f0a021d app:id/exo_subtitles}
+                            androidx.media3.ui.CanvasSubtitleOutput{302d0bb V.ED..... ........ 0,0-1080,1368}
+                          android.widget.ProgressBar{2ed01eb G.ED..... ......ID 0,0-0,0 #7f0a01f4 app:id/exo_buffering}
+                          androidx.appcompat.widget.AppCompatTextView{c419b48 G.ED..... ......I. 0,0-0,0 #7f0a01fc app:id/exo_error_message}
+                        android.widget.FrameLayout{dea3131 V.E...... ........ 0,0-1080,1368 #7f0a01ef app:id/exo_ad_overlay}
+                        android.widget.FrameLayout{49a1016 V.E...... ........ 0,0-1080,1368 #7f0a020b app:id/exo_overlay}
+                        androidx.media3.ui.PlayerControlView{6ef3de1 G.E...... ......I. 0,0-0,0 #7f0a01f8 app:id/exo_controller}
+                          android.view.View{5be1706 V.ED..... ......I. 0,0-0,0 #7f0a01fa app:id/exo_controls_background}
+                          android.widget.FrameLayout{197d1c7 V.E...... ......I. 0,0-0,0 #7f0a01f3 app:id/exo_bottom_bar}
+                            android.widget.LinearLayout{67923f4 V.E...... ......I. 0,0-0,0 #7f0a021f app:id/exo_time}
+                              androidx.appcompat.widget.AppCompatTextView{d40d71d V.ED..... ......I. 0,0-0,0 #7f0a0210 app:id/exo_position}
+                              androidx.appcompat.widget.AppCompatTextView{3949d92 V.ED..... ......I. 0,0-0,0}
+                              androidx.appcompat.widget.AppCompatTextView{f35c363 V.ED..... ......I. 0,0-0,0 #7f0a01fb app:id/exo_duration}
+                            android.widget.LinearLayout{cfe8b60 V.E...... ......I. 0,0-0,0 #7f0a01f2 app:id/exo_basic_controls}
+                              androidx.appcompat.widget.AppCompatImageButton{318c819 GF.D..C.. ......I. 0,0-0,0 #7f0a0222 app:id/exo_vr}
+                              androidx.appcompat.widget.AppCompatImageButton{adb00de GFED..C.. ......I. 0,0-0,0 #7f0a0219 app:id/exo_shuffle}
+                              androidx.appcompat.widget.AppCompatImageButton{33732bf GFED..C.. ......I. 0,0-0,0 #7f0a0214 app:id/exo_repeat_toggle}
+                              androidx.appcompat.widget.AppCompatImageButton{eb0fd8c GF.D..C.. ......I. 0,0-0,0 #7f0a021c app:id/exo_subtitle}
+                              androidx.appcompat.widget.AppCompatImageButton{4e4ccd5 VF.D..C.. ......I. 0,0-0,0 #7f0a0217 app:id/exo_settings}
+                              androidx.appcompat.widget.AppCompatImageButton{d924cea GFED..C.. ......I. 0,0-0,0 #7f0a0201 app:id/exo_fullscreen}
+                              androidx.appcompat.widget.AppCompatImageButton{1b63bdb VFED..C.. ......I. 0,0-0,0 #7f0a020a app:id/exo_overflow_show}
+                            android.widget.HorizontalScrollView{7366678 IFEDH.... ......I. 0,0-0,0 #7f0a01fe app:id/exo_extra_controls_scroll_view}
+                              android.widget.LinearLayout{e326151 V.E...... ......I. 0,0-0,0 #7f0a01fd app:id/exo_extra_controls}
+                                androidx.appcompat.widget.AppCompatImageButton{ac04db6 VFED..C.. ......I. 0,0-0,0 #7f0a0209 app:id/exo_overflow_hide}
+                          androidx.media3.ui.DefaultTimeBar{c52bab7 VFED..... ......I. 0,0-0,0 #7f0a0212 app:id/exo_progress}
+                          android.widget.LinearLayout{4a77224 V.E...... ......I. 0,0-0,0 #7f0a0206 app:id/exo_minimal_controls}
+                            androidx.appcompat.widget.AppCompatImageButton{beac18d GFED..C.. ......I. 0,0-0,0 #7f0a0207 app:id/exo_minimal_fullscreen}
+                          android.widget.LinearLayout{9fb8f42 V.E...... ......I. 0,0-0,0 #7f0a01f5 app:id/exo_center_controls}
+                            androidx.appcompat.widget.AppCompatImageButton{4ce4b53 VFED..C.. ......I. 0,0-0,0 #7f0a0211 app:id/exo_prev}
+                            androidx.appcompat.widget.AppCompatButton{bfb8c90 VFED..C.. ......I. 0,0-0,0 #7f0a0216 app:id/exo_rew_with_amount}
+                            androidx.appcompat.widget.AppCompatImageButton{64ee989 VFED..C.. ......I. 0,0-0,0 #7f0a020e app:id/exo_play_pause}
+                            androidx.appcompat.widget.AppCompatButton{3b75d8e VFED..C.. ......I. 0,0-0,0 #7f0a0200 app:id/exo_ffwd_with_amount}
+                            androidx.appcompat.widget.AppCompatImageButton{d6849af VFED..C.. ......I. 0,0-0,0 #7f0a0208 app:id/exo_next}
+                          android.widget.LinearLayout{834e1bc V.E...... ......I. 0,0-0,0 #7f0a0220 app:id/exo_top_controls}
+                            android.view.View{eb39545 G.ED..... ......I. 0,0-0,0 #7f0a0205 app:id/exo_media_route_button_placeholder}
+                      androidx.appcompat.widget.AppCompatImageView{d83bd97 V.ED..... ........ 0,0-1080,1368 #7f0a0360 app:id/ivBackground}
+                      android.widget.LinearLayout{e7445fd V.E...... .......D 686,487-1058,926 #7f0a04b6 app:id/ob2Bb2SwipeLottie}
+                        com.airbnb.lottie.LottieAnimationView{ea5eb84 V.ED..... ......ID 6,0-366,360}
+                        androidx.appcompat.widget.AppCompatTextView{67faf6d V.ED..... ........ 0,360-372,439}
+                      androidx.constraintlayout.widget.ConstraintLayout{6af7ec1 V.E...... ........ 36,969-1044,1321 #7f0a01aa app:id/ctlContent}
+                        androidx.appcompat.widget.AppCompatTextView{88d3a8 V.ED..... ........ 36,36-972,114 #7f0a05cb app:id/tvTitle}
+                        androidx.appcompat.widget.AppCompatTextView{b9df666 V.ED..... ........ 36,114-972,209 #7f0a05c6 app:id/tvDescription}
+                        com.visionlab.tutorial.vsltemplate4.VslOnboardingNextButton{c392da7 VFED..C.. ........ 749,209-914,316 #7f0a00fe app:id/btnNextOnboarding}
+                      android.widget.FrameLayout{7791207 V.E...... ........ 0,1368-1080,2280 #7f0a0239 app:id/flFake}
+                        android.widget.LinearLayout{24fc49a G.E...... ......I. 0,0-0,0 #7f0a04b7 app:id/ob2NoAdsSwipeLottie}
+                          com.airbnb.lottie.LottieAnimationView{2f9d1cb V.ED..... ......I. 0,0-0,0}
+                          androidx.appcompat.widget.AppCompatTextView{4c5da8 V.ED..... ......ID 0,0-0,0}
+                      android.widget.FrameLayout{5fb0bee V.E...... ........ 0,1368-1080,2280 #7f0a048c app:id/nativeAdView}
+                        com.google.android.gms.ads.nativead.NativeAdView{6721dfe VFE...C.. ........ 0,0-1080,912}
+                          androidx.constraintlayout.widget.ConstraintLayout{56f7be3 V.E...... ........ 0,0-1080,912}
+                            com.google.android.gms.ads.nativead.MediaView{937e812 VFE...C.. ........ 47,129-1033,681 #7f0a0063 app:id/ad_media}
+                              android.widget.ImageView{cc919e0 V.ED..... ........ 0,0-986,552}
+                            androidx.appcompat.widget.AppCompatButton{ac27499 VFED..C.. ........ 47,724-1033,854 #7f0a005b app:id/ad_call_to_action}
+                            android.widget.LinearLayout{293f33f V.E...... ........ 0,43-1080,100 #7f0a0380 app:id/linearLayoutTitle}
+                              androidx.appcompat.widget.AppCompatTextView{ba8735e V.ED..... ........ 42,7-99,49 #7f0a05d6 app:id/txtAds}
+                              android.widget.LinearLayout{604676a V.E...... ........ 141,0-1080,57 #7f0a037f app:id/linearLayout4}
+                                android.widget.LinearLayout{ebcc155 V.E...... ........ 0,0-939,57}
+                                  androidx.appcompat.widget.AppCompatTextView{ed5f40c VFED..C.. ........ 0,0-903,57 #7f0a0061 app:id/ad_headline}
+                          android.view.View{d5e845b V.ED..... ........ 0,0-1080,0}
+                          android.widget.FrameLayout{4799036 V.E...... ........ 0,0-1080,912}
+                            com.google.android.gms.ads.formats.a{2d51dd1 V.E...... ........ 0,0-1080,912}
+                              com.google.android.gms.ads.internal.formats.b{6f444f8 VFE...C.. ........ 1035,0-1080,45}
+                                android.widget.ImageView{1770b37 V.ED..... ........ 0,0-45,45 #47470002}
+                            android.widget.FrameLayout{8a4b8a4 V.E...... ........ 0,0-1080,912}
+                    androidx.constraintlayout.widget.ConstraintLayout{c9aac4c V.E...... ........ 2160,0-3240,2280}
+                      android.widget.FrameLayout{c93647f V.E...... ........ 0,0-1080,2280}
+                        androidx.constraintlayout.widget.ConstraintLayout{1a5e19e G.E...... ......ID 0,0-0,0 #7f0a0245 app:id/fullScreenDefaultView}
+                          androidx.cardview.widget.CardView{cfd40c1 V.E...... ......I. 0,0-0,0 #7f0a0112 app:id/cardView}
+                            androidx.appcompat.widget.AppCompatImageView{7d59066 V.ED..... ......ID 0,0-0,0 #7f0a0281 app:id/img_ob}
+                          androidx.constraintlayout.widget.ConstraintLayout{833b3d9 V.E...... ......I. 0,0-0,0 #7f0a05d4 app:id/tv_title}
+                            androidx.appcompat.widget.AppCompatTextView{cd1bfa7 V.ED..... ......ID 0,0-0,0 #7f0a05cd app:id/tvTitleText}
+                            androidx.appcompat.widget.AppCompatTextView{fddac54 V.ED..... ......ID 0,0-0,0 #7f0a05c8 app:id/tvDescriptionText}
+                            com.visionlab.tutorial.vsltemplate4.VslOnboardingNextButton{4c6ce20 VFED..C.. ......ID 0,0-0,0 #7f0a00fe app:id/btnNextOnboarding}
+                          android.widget.FrameLayout{d713866 V.E...... ......I. 0,0-0,0 #7f0a048d app:id/nativePlaceHolder}
+                            com.facebook.shimmer.ShimmerFrameLayout{e9e88c1 G.ED..... ......I. 0,0-0,0 #7f0a0535 app:id/shimmer_container_native}
+                        android.widget.FrameLayout{54aac6 V.E...... ........ 0,0-1080,2280 #7f0a048c app:id/nativeAdView}
+                          com.google.android.gms.ads.nativead.NativeAdView{bdf6ba VFE...C.. ........ 0,0-1080,2280}
+                            androidx.constraintlayout.widget.ConstraintLayout{decb1b7 V.E...... ........ 0,0-1080,2280}
+                              com.google.android.gms.ads.nativead.MediaView{13bc0b6 VFE...C.. ........ 0,0-1080,2266 #7f0a0063 app:id/ad_media}
+                                android.widget.ImageView{6779d24 V.ED..... ........ 0,0-1080,2266}
+                              androidx.appcompat.widget.AppCompatTextView{a7108d V.ED..... ........ 0,86-129,156 #7f0a05d6 app:id/txtAds}
+                              android.view.View{83b3242 V.ED..... ........ 0,1741-1080,2653}
+                              androidx.appcompat.widget.AppCompatTextView{b90b253 VFED..C.. ........ 48,1825-1032,1907 #7f0a0061 app:id/ad_headline}
+                              androidx.appcompat.widget.AppCompatTextView{2236790 VFED..C.. ........ 48,1913-1032,2060 #7f0a005a app:id/ad_body}
+                              androidx.appcompat.widget.AppCompatButton{c012889 VFED..C.. ........ 48,2114-1032,2244 #7f0a005b app:id/ad_call_to_action}
+                            android.view.View{9ce308e V.ED..... ........ 0,0-1080,0}
+                            android.widget.FrameLayout{6cac445 V.E...... ........ 0,0-1080,2280}
+                              com.google.android.gms.ads.formats.a{87f6cbc V.E...... ........ 0,0-1080,2280}
+                                com.google.android.gms.ads.internal.formats.b{b6a20af VFE...C.. ........ 1035,0-1080,45}
+                                  android.widget.ImageView{e80c79a V.ED..... ........ 0,0-45,45 #47470002}
+                              android.widget.FrameLayout{4c218cb V.E...... ........ 0,0-1080,2280}
+                      androidx.appcompat.widget.AppCompatTextView{56ddc35 G.ED..... ......I. 955,180-1051,276 #7f0a0103 app:id/btnTimeoutSkip}
+                      androidx.appcompat.widget.AppCompatImageView{d22b495 GFED..C.. ......I. 930,180-1051,301 #7f0a0102 app:id/btnSkip}
+                    androidx.constraintlayout.widget.ConstraintLayout{ea095b V.E...... ........ 3240,0-4320,2280}
+                      androidx.media3.ui.PlayerView{a64f823 VFE...C.. ........ 0,0-1080,1368 #7f0a04e5 app:id/playerView}
+                        androidx.media3.ui.AspectRatioFrameLayout{b0ead9 V.E...... ........ 0,0-1080,1368 #7f0a01f7 app:id/exo_content_frame}
+                          android.view.TextureView{eaa8120 V.ED..... ........ 0,0-1080,1368}
+                          android.view.View{fb84c9e V.ED..... ........ 0,0-1080,1368 #7f0a021a app:id/exo_shutter}
+                          androidx.appcompat.widget.AppCompatImageView{904f37f V.ED..... ........ 0,0-1080,1368 #7f0a0203 app:id/exo_image}
+                          androidx.appcompat.widget.AppCompatImageView{c868f4c V.ED..... ........ 0,0-1080,1368 #7f0a01f0 app:id/exo_artwork}
+                          androidx.media3.ui.SubtitleView{f5894aa V.E...... ........ 0,0-1080,1368 #7f0a021d app:id/exo_subtitles}
+                            androidx.media3.ui.CanvasSubtitleOutput{5bc5b95 V.ED..... ........ 0,0-1080,1368}
+                          android.widget.ProgressBar{8dc27fd G.ED..... ......ID 0,0-0,0 #7f0a01f4 app:id/exo_buffering}
+                          androidx.appcompat.widget.AppCompatTextView{49a4cf2 G.ED..... ......I. 0,0-0,0 #7f0a01fc app:id/exo_error_message}
+                        android.widget.FrameLayout{b7f489b V.E...... ........ 0,0-1080,1368 #7f0a01ef app:id/exo_ad_overlay}
+                        android.widget.FrameLayout{335438 V.E...... ........ 0,0-1080,1368 #7f0a020b app:id/exo_overlay}
+                        androidx.media3.ui.PlayerControlView{e50af43 G.E...... ......I. 0,0-0,0 #7f0a01f8 app:id/exo_controller}
+                          android.view.View{e9339c0 V.ED..... ......I. 0,0-0,0 #7f0a01fa app:id/exo_controls_background}
+                          android.widget.FrameLayout{ac846f9 V.E...... ......I. 0,0-0,0 #7f0a01f3 app:id/exo_bottom_bar}
+                            android.widget.LinearLayout{a7c463e V.E...... ......I. 0,0-0,0 #7f0a021f app:id/exo_time}
+                              androidx.appcompat.widget.AppCompatTextView{644fc9f V.ED..... ......I. 0,0-0,0 #7f0a0210 app:id/exo_position}
+                              androidx.appcompat.widget.AppCompatTextView{25231ec V.ED..... ......I. 0,0-0,0}
+                              androidx.appcompat.widget.AppCompatTextView{bd59b5 V.ED..... ......I. 0,0-0,0 #7f0a01fb app:id/exo_duration}
+                            android.widget.LinearLayout{8f2884a V.E...... ......I. 0,0-0,0 #7f0a01f2 app:id/exo_basic_controls}
+                              androidx.appcompat.widget.AppCompatImageButton{806c3bb GF.D..C.. ......I. 0,0-0,0 #7f0a0222 app:id/exo_vr}
+                              androidx.appcompat.widget.AppCompatImageButton{82680d8 GFED..C.. ......I. 0,0-0,0 #7f0a0219 app:id/exo_shuffle}
+                              androidx.appcompat.widget.AppCompatImageButton{2b6dc31 GFED..C.. ......I. 0,0-0,0 #7f0a0214 app:id/exo_repeat_toggle}
+                              androidx.appcompat.widget.AppCompatImageButton{dd8df16 GF.D..C.. ......I. 0,0-0,0 #7f0a021c app:id/exo_subtitle}
+                              androidx.appcompat.widget.AppCompatImageButton{a53e097 VF.D..C.. ......I. 0,0-0,0 #7f0a0217 app:id/exo_settings}
+                              androidx.appcompat.widget.AppCompatImageButton{feed284 GFED..C.. ......I. 0,0-0,0 #7f0a0201 app:id/exo_fullscreen}
+                              androidx.appcompat.widget.AppCompatImageButton{2ec0a6d VFED..C.. ......I. 0,0-0,0 #7f0a020a app:id/exo_overflow_show}
+                            android.widget.HorizontalScrollView{6fbd6a2 IFEDH.... ......I. 0,0-0,0 #7f0a01fe app:id/exo_extra_controls_scroll_view}
+                              android.widget.LinearLayout{7ebef33 V.E...... ......I. 0,0-0,0 #7f0a01fd app:id/exo_extra_controls}
+                                androidx.appcompat.widget.AppCompatImageButton{6c892f0 VFED..C.. ......I. 0,0-0,0 #7f0a0209 app:id/exo_overflow_hide}
+                          androidx.media3.ui.DefaultTimeBar{5cbe069 VFED..... ......I. 0,0-0,0 #7f0a0212 app:id/exo_progress}
+                          android.widget.LinearLayout{64baee V.E...... ......I. 0,0-0,0 #7f0a0206 app:id/exo_minimal_controls}
+                            androidx.appcompat.widget.AppCompatImageButton{dec4b8f GFED..C.. ......I. 0,0-0,0 #7f0a0207 app:id/exo_minimal_fullscreen}
+                          android.widget.LinearLayout{c3bee1c V.E...... ......I. 0,0-0,0 #7f0a01f5 app:id/exo_center_controls}
+                            androidx.appcompat.widget.AppCompatImageButton{db91a25 VFED..C.. ......I. 0,0-0,0 #7f0a0211 app:id/exo_prev}
+                            androidx.appcompat.widget.AppCompatButton{b6597fa VFED..C.. ......I. 0,0-0,0 #7f0a0216 app:id/exo_rew_with_amount}
+                            androidx.appcompat.widget.AppCompatImageButton{3ec11ab VFED..C.. ......I. 0,0-0,0 #7f0a020e app:id/exo_play_pause}
+                            androidx.appcompat.widget.AppCompatButton{e27d008 VFED..C.. ......I. 0,0-0,0 #7f0a0200 app:id/exo_ffwd_with_amount}
+                            androidx.appcompat.widget.AppCompatImageButton{68633a1 VFED..C.. ......I. 0,0-0,0 #7f0a0208 app:id/exo_next}
+                          android.widget.LinearLayout{a6539c6 V.E...... ......I. 0,0-0,0 #7f0a0220 app:id/exo_top_controls}
+                            android.view.View{9d81d87 G.ED..... ......I. 0,0-0,0 #7f0a0205 app:id/exo_media_route_button_placeholder}
+                      androidx.appcompat.widget.AppCompatImageView{4d41c11 V.ED..... ........ 0,0-1080,1368 #7f0a0360 app:id/ivBackground}
+                      android.widget.LinearLayout{76de4b4 G.E...... ......I. 0,0-0,0 #7f0a04b6 app:id/ob2Bb2SwipeLottie}
+                        com.airbnb.lottie.LottieAnimationView{cb168dd V.ED..... ......I. 0,0-0,0}
+                        androidx.appcompat.widget.AppCompatTextView{d6b2c52 V.ED..... ......ID 0,0-0,0}
+                      androidx.constraintlayout.widget.ConstraintLayout{2b5e037 V.E...... ........ 36,969-1044,1321 #7f0a01aa app:id/ctlContent}
+                        androidx.appcompat.widget.AppCompatTextView{cca9936 V.ED..... ........ 36,36-972,114 #7f0a05cb app:id/tvTitle}
+                        androidx.appcompat.widget.AppCompatTextView{34b69a4 V.ED..... ........ 36,114-972,209 #7f0a05c6 app:id/tvDescription}
+                        com.visionlab.tutorial.vsltemplate4.VslOnboardingNextButton{a24230d VFED..C.. ........ 603,209-914,316 #7f0a00fe app:id/btnNextOnboarding}
+                      android.widget.FrameLayout{a74ff34 V.E...... ........ 0,1368-1080,2280 #7f0a0239 app:id/flFake}
+                        android.widget.LinearLayout{78f0b23 G.E...... ......I. 0,0-0,0 #7f0a04b7 app:id/ob2NoAdsSwipeLottie}
+                          com.airbnb.lottie.LottieAnimationView{d5e9820 V.ED..... ......I. 0,0-0,0}
+                          androidx.appcompat.widget.AppCompatTextView{c60b5d9 V.ED..... ......ID 0,0-0,0}
+                      android.widget.FrameLayout{dcb0f02 V.E...... ........ 0,1368-1080,2280 #7f0a048c app:id/nativeAdView}
+                        com.google.android.gms.ads.nativead.NativeAdView{c490ed8 VFE...C.. ........ 0,0-1080,912}
+                          androidx.constraintlayout.widget.ConstraintLayout{d89399e V.E...... ........ 0,0-1080,912}
+                            com.google.android.gms.ads.nativead.MediaView{2ad6bd9 VFE...C.. ........ 47,129-1033,681 #7f0a0063 app:id/ad_media}
+                              android.widget.ImageView{12fdc7f V.ED..... ........ 0,0-986,552}
+                            androidx.appcompat.widget.AppCompatButton{fc9c44c VFED..C.. ........ 47,724-1033,854 #7f0a005b app:id/ad_call_to_action}
+                            android.widget.LinearLayout{dcb51aa V.E...... ........ 0,43-1080,100 #7f0a0380 app:id/linearLayoutTitle}
+                              androidx.appcompat.widget.AppCompatTextView{17fec95 V.ED..... ........ 42,7-99,49 #7f0a05d6 app:id/txtAds}
+                              android.widget.LinearLayout{7bfbd11 V.E...... ........ 141,0-1080,57 #7f0a037f app:id/linearLayout4}
+                                android.widget.LinearLayout{cf4d938 V.E...... ........ 0,0-939,57}
+                                  androidx.appcompat.widget.AppCompatTextView{5efc19b VFED..C.. ........ 0,0-903,57 #7f0a0061 app:id/ad_headline}
+                          android.view.View{464de76 V.ED..... ........ 0,0-1080,0}
+                          android.widget.FrameLayout{552194d V.E...... ........ 0,0-1080,912}
+                            com.google.android.gms.ads.formats.a{1ba50e4 V.E...... ........ 0,0-1080,912}
+                              com.google.android.gms.ads.internal.formats.b{ffedc77 VFE...C.. ........ 1035,0-1080,45}
+                                android.widget.ImageView{6386c02 V.ED..... ........ 0,0-45,45 #47470002}
+                            android.widget.FrameLayout{27ac913 V.E...... ........ 0,0-1080,912}
+                  com.tbuonomo.viewpagerdotsindicator.DotsIndicator{a6e8676 V.E...... ........ 137,1225-333,1246 #7f0a0286 app:id/indicatorPageOnboarding}
+                    android.widget.LinearLayout{1131c4f V.E...... ........ 0,0-196,21}
+                      android.widget.FrameLayout{b1556ae VFE...C.. ........ 0,0-41,21}
+                        androidx.appcompat.widget.AppCompatImageView{bdd4fdc V.ED..... ........ 10,0-31,21 #7f0a01cf app:id/dot}
+                      android.widget.FrameLayout{bb838e5 VFE...C.. ........ 41,0-82,21}
+                        androidx.appcompat.widget.AppCompatImageView{4e42fba V.ED..... ........ 10,0-31,21 #7f0a01cf app:id/dot}
+                      android.widget.FrameLayout{f8f2e6b VFE...C.. ........ 82,0-123,21}
+                        androidx.appcompat.widget.AppCompatImageView{1dd8dc8 V.ED..... ........ 10,0-31,21 #7f0a01cf app:id/dot}
+                      android.widget.FrameLayout{d387e61 VFE...C.. ........ 123,0-196,21}
+                        androidx.appcompat.widget.AppCompatImageView{7958d86 V.ED..... ........ 10,0-63,21 #7f0a01cf app:id/dot}
+                  android.widget.FrameLayout{e7f8e8b V.E...... ........ 0,1368-1080,2280 #7f0a0238 app:id/flEmptyNative}
+                    com.facebook.shimmer.ShimmerFrameLayout{9177c5a I.ED..... ......ID 0,0-1080,912 #7f0a05f0 app:id/viewEmptyNativeNew}
+                      androidx.constraintlayout.widget.ConstraintLayout{aec5405 V.E...... ......ID 0,0-1080,912}
+                        androidx.constraintlayout.widget.ConstraintLayout{a72637c V.E...... ......ID 0,36-1080,887}
+                          androidx.appcompat.widget.AppCompatButton{987ba6f VFED..C.. ......ID 36,0-1044,133 #7f0a005b app:id/ad_call_to_action}
+                          com.google.android.gms.ads.nativead.MediaView{4403b68 V.E...... ......ID 0,176-1080,832 #7f0a0063 app:id/ad_media}
+                          androidx.appcompat.widget.LinearLayoutCompat{dc10426 V.E...... ......ID 36,861-1044,913 #7f0a01ac app:id/ctlHeader}
+                            androidx.appcompat.widget.AppCompatTextView{be32b81 V.ED..... ......ID 0,0-60,52 #7f0a05d6 app:id/txtAds}
+                            androidx.appcompat.widget.AppCompatTextView{5d68867 V.ED..... ......ID 85,2-1008,49 #7f0a0061 app:id/ad_headline}
+        androidx.activity.EdgeToEdge$enableEdgeToEdge$1$2{b6bbb9e G.E...... ......I. 0,0-0,0}
+    Looper (main, tid 2) {a3d367f}

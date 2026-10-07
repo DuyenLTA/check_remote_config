@@ -88,7 +88,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             runs = [nen | dict(luot) | them for luot in chosen["runs"]]
             # Report chi duoc co PASS/FAIL (user chot 2026-10-06): ket qua lo
             # lung (doc file trung luc SDK ghi, ad chua fill...) -> tu chay lai.
-            toi_da = LAN_CHAY_LAI
+            toi_da = LAN_CHAY_LAI + 1     # +1: cho lan xac nhan / phan xu FAIL
+            lich_su: list[str] = []
+            result = None
             for lan in range(1, toi_da + 1):
                 try:
                     result, baseline = await case_run.run_case(
@@ -99,16 +101,35 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                         runtime=chosen.get("runtime", False),
                     )
                 except (RcError, AdbError) as exc:
-                    if lan == toi_da or isinstance(exc, AdbTransportError):
+                    if lan >= LAN_CHAY_LAI or isinstance(exc, AdbTransportError):
                         raise
                     log_fn(f"    LOI (lan {lan}): {exc} -> chay lai case")
                     await _try_restore(client, baseline, log_fn)
                     continue
-                ro = result.get("verdict") in ("PASS", "FAIL", "KEY_NOT_USED")
-                if ro:
-                    break
-                if lan < toi_da:
-                    log_fn(f"    lan {lan}: verdict {result.get('verdict')} -> chay lai case")
+                v = result.get("verdict")
+                lich_su.append(v)
+                if v not in ("PASS", "FAIL", "KEY_NOT_USED"):
+                    if lan >= LAN_CHAY_LAI:
+                        break
+                    log_fn(f"    lan {lan}: verdict {v} -> chay lai case")
+                    continue
+                # FAIL KHONG duoc len report khi chi thay mot lan (user chot
+                # 2026-10-07): mot lan FAIL co the do config bi fetch de, ad
+                # fill khac, tool nhin tre. Chay lai xac nhan; lech nhau thi
+                # chay them mot lan phan xu va danh dau khong on dinh.
+                if v == "FAIL" and lich_su.count("FAIL") < 2 and lan < toi_da:
+                    log_fn(f"    lan {lan}: FAIL -> chay lai de xac nhan truoc khi bao")
+                    continue
+                if (v == "PASS" and "FAIL" in lich_su and lich_su.count("PASS") < 2
+                        and lan < toi_da):
+                    log_fn(f"    lan {lan}: PASS sau khi lan truoc FAIL -> chay them de phan xu")
+                    continue
+                break
+            if result is not None:
+                result["lich_su_verdict"] = lich_su
+                if "FAIL" in lich_su and "PASS" in lich_su:
+                    result["khong_on_dinh"] = True
+                    log_fn(f"    KHONG ON DINH qua cac lan: {', '.join(lich_su)}")
         except AdbTransportError:
             raise  # mat ket noi may: chay tiep la vo nghia
         except (RcError, AdbError) as exc:

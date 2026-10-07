@@ -10,7 +10,9 @@ Khong tai duoc thi dung han, khong lui ve file cu nao ca.
 
 from __future__ import annotations
 
+import http.client
 import re
+import time
 import urllib.request
 from pathlib import Path
 
@@ -18,6 +20,7 @@ from .models import RcError
 
 SHEET_RE = re.compile(r"docs\.google\.com/spreadsheets/d/([A-Za-z0-9_-]{20,})")
 TIMEOUT = 60
+LAN_TAI = 3
 
 
 def la_link(tc: str) -> bool:
@@ -33,12 +36,18 @@ def tai_ve(tc: str, out_dir) -> str:
     dich = Path(out_dir) / f"tc-{sheet_id}.xlsx"
     dich.parent.mkdir(parents=True, exist_ok=True)
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
-    try:
-        with urllib.request.urlopen(url, timeout=TIMEOUT) as resp:
-            kieu = resp.headers.get("Content-Type", "")
-            data = resp.read()
-    except OSError as exc:
-        raise RcError(f"Khong tai duoc sheet testcase {sheet_id}: {exc}") from exc
+    # Google cat ngang luong tai (IncompleteRead, do 2026-10-07) -> tai lai: loi
+    # mang thoang qua khong duoc giet ca luot 50 phut truoc khi no kip chay.
+    for lan in range(1, LAN_TAI + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=TIMEOUT) as resp:
+                kieu = resp.headers.get("Content-Type", "")
+                data = resp.read()
+            break
+        except (OSError, http.client.HTTPException) as exc:
+            if lan == LAN_TAI:
+                raise RcError(f"Khong tai duoc sheet testcase {sheet_id}: {exc}") from exc
+            time.sleep(2 * lan)
     if "spreadsheetml" not in kieu or not data.startswith(b"PK"):
         # Sheet rieng tu -> Google tra trang dang nhap HTML, khong phai xlsx.
         raise RcError(

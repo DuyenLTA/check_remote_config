@@ -104,12 +104,23 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         "group": row.get("feature") or (row.get("tab") or "").replace("TC SDK", "").strip(),
         "label": row.get("label", ""),
         "precondition": row.get("precondition", ""),
-        "actual": " · ".join(actual) if len(actual) == 1 else " | ".join(actual),
+        "actual": (" · ".join(actual) if len(actual) == 1 else " | ".join(actual)) + (
+            f" · Các lần chạy: {' → '.join(result['lich_su_verdict'])}"
+            + (" — KHÔNG ỔN ĐỊNH" if result.get("khong_on_dinh") else "")
+            if len(result.get("lich_su_verdict") or []) > 1 else ""),
         "overrides": report_runs.overrides_gop(runs),
         "verdict": result.get("verdict", ""),
         # Dieu kien precondition doi ma may nay khong tao duoc - phai hien tren
         # report, khong thi doc vao tuong case da chay dung nhanh TC mo ta.
-        "precondition_thieu": result.get("precondition_thieu") or [],
+        "precondition_thieu": (result.get("precondition_thieu") or []) + [
+            "config bị app fetch Firebase đè giữa lượt ("
+            + ", ".join(f"{m['key']}={m['got']!r} thay vì {m['want']!r}" for m in de[:4])
+            + ") — kết quả lượt này chạy trên config của server"
+            for de in (r.get("config_bi_de") for r in runs) if de],
+        # Moi lan chay lai cua case: FAIL phai lap lai moi duoc bao, lech nhau
+        # (PASS/FAIL) thi nguoi doc phai thay - khong duoc an trong verdict cuoi.
+        "lich_su_verdict": result.get("lich_su_verdict") or [],
+        "khong_on_dinh": bool(result.get("khong_on_dinh")),
         # Ep ad fail bang cach nao - loi mang va no-fill that cho cung mot
         # man hinh nhung khac ma loi, nguoi doc phai biet la cach nao.
         "ep_ad_fail": result.get("ep_ad_fail", ""),

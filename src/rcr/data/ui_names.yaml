@@ -34,3 +34,16 @@ elements:
   - name: layout native Language 1
     aliases: ["layout_native_ads_language_1", "layout native language 1", "layout_ad_native_lfo_1"]
     ids_all: [nativeAdView, ad_headline, ad_media, ad_call_to_action]
+
+  # Nut X / so dem nguoc tren trang native full (OB3). `quan_sat` con tu nhan
+  # theo nghia ten id (skip/close... - timeout/countdown...), content-desc, va
+  # chu chi la so o vung tren man -> app moi thuong khong can them gi. Them id
+  # o day khi app dat ten khong mang nghia (vd `iv1`). Do that: SDK VslTemplate4
+  # (Piclux 2.8.0, AI Video Generator 1.6.0) dung btnSkip / btnTimeoutSkip.
+  - name: nút X
+    aliases: ["nút X", "button X", "nút đóng", "nút close"]
+    ids: [btnSkip, btnClose, ivClose, imgClose, closeButton, ivCancel]
+
+  - name: số đếm ngược
+    aliases: ["số đếm ngược", "countdown", "đếm ngược"]
+    ids: [btnTimeoutSkip, tvCountdown, tvTimer]

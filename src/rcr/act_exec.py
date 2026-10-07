@@ -127,6 +127,16 @@ async def _vuot(client, serial: str, action, record: dict, ctx: dict) -> None:
 
 async def _bam_khi_hien(client, serial: str, action, record: dict, ctx: dict) -> None:
     """Cho node hien (nhin lien tuc, toi da `cua_so` giay) roi tap. Ghi luc bam."""
+    if tuple(action.ids) == quan_sat.VAI_NUT_X:
+        # Nut X: nhin bang khung nhanh va tap NGAY khi hien - cho uiautomator
+        # (~2,5s) thi "X hien 2s, bam luc 3s" da tre, timer auto chuyen trang truoc.
+        tam = await quan_sat.cho_nut_x(client, serial, ctx["package"], ctx["cua_so"], ctx["khung"])
+        if not tam:
+            record["action"] = {"kind": "needs_human", "reason":
+                                f"nút X không hiện trong {ctx['cua_so']:g}s theo dõi"}
+            return
+        await _tap_ghi_luc(client, serial, tam, action, record, ctx)
+        return
     nodes = await quan_sat.theo_doi(
         client, serial, ctx["package"], ctx["cua_so"], ctx["khung"],
         dung_khi=lambda ns: len(quan_sat.tim(ns, action.ids)) == 1)
@@ -134,7 +144,12 @@ async def _bam_khi_hien(client, serial: str, action, record: dict, ctx: dict) ->
         record["action"] = {"kind": "needs_human", "reason":
                             f"{'/'.join(action.ids)} không hiện trong {ctx['cua_so']:g}s theo dõi"}
         return
-    x, y = quan_sat.tim(nodes, action.ids)[0].bounds.center
+    await _tap_ghi_luc(client, serial, quan_sat.tim(nodes, action.ids)[0].bounds.center,
+                       action, record, ctx)
+
+
+async def _tap_ghi_luc(client, serial: str, tam, action, record: dict, ctx: dict) -> None:
+    x, y = tam
     record["bam_luc"] = await quan_sat.gio_may(client, serial)
     ctx["thao_tac"].append(record["bam_luc"])
     for i in range(action.lan):
