@@ -471,6 +471,10 @@ xem có fail thật hay không trước khi xuất report"*. Mỗi case FAIL, tr
    không theo đồng hồ máy tính (lệch ~0,8s). Chỉ tap khi đã thấy node trong cây UI —
    tap mù theo tọa độ trúng ad (07/10/2026: mở Chrome)
 6. FAIL nào đã rà xong mới được ghi "cần báo dev". Ghi rõ đã kiểm gì ở mục thực tế
+7. **Bằng chứng trên report phải cùng lượt với kết luận.** Vá kết quả chấm tay vào report
+   thì thay luôn bảng ads / ảnh / config bằng bản ghi của lượt hợp lệ. Lượt điều kiện
+   không thành (vd 202 đã show ở LFO2) hoặc config bị đè thì ghi rõ "không dùng làm bằng
+   chứng" — 07/10/2026 user đọc bảng ads của lượt sai điều kiện và bắt được FAIL mâu thuẫn
 
 ## 6. Xuất report
 
