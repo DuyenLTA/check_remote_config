@@ -17,7 +17,7 @@ import re
 from .verdict_levels import FAIL, NEEDS_HUMAN, PASS, out
 
 SAI_SO_LOG = 1.0
-SAI_SO_KHUNG = 1.5
+SAI_SO_KHUNG = 1.0           # khung nhanh cach nhau ~0,2s -> dung sai so cua TC (±1s)
 
 KHONG_TU_RE = re.compile(r"kh[ôo]ng\s+(?:t[ựu]\s+|auto[\s-]*)?(?:chuy[ểe]n|swipe)|"
                          r"[ởo]\s+l[ạa]i\s+(?:m[àa]n\s+)?OB3", re.I)
@@ -226,4 +226,5 @@ def cach_quan_sat(overrides: dict, expects) -> tuple[float, bool]:
     timers = [x for x in (_so(overrides, "timer_auto_swipe"), _so(overrides, "timer_button_x"))
               if x is not None]
     giay = min(25.0, max(8.0, max(timers, default=7.0) + 5.0))
-    return giay, any(X_RE.search(e or "") or DEM_RE.search(e or "") for e in expects)
+    return giay, any(X_RE.search(e or "") or DEM_RE.search(e or "") or BAM_X_RE.search(e or "")
+                     for e in expects)

@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 
 from . import (
+    act_compound,
     ad_log,
     case_evidence,
     fa_log,
@@ -101,19 +102,25 @@ async def apply_case(
         out["net"] = net
     # Case noi ve man khac splash -> lai toi do TRUOC khi cham, khong thi moi
     # dong ta UI cua man ay deu ra "chua lai toi noi".
+    # Case co dong Expected ve nut X / so dem -> phai nhin NGAY khi toi trang:
+    # khong dump xac nhan, khong chup bang chung truoc (chup sau khi nhin xong).
+    nhin_ngay = assert_timing.cach_quan_sat(overrides, expects)[1]
     if goto and result.ok:
         log_fn(f"    lai toi {goto}...")
         out["walk"] = await fo_flow.walk_to(
-            client, baseline.serial, baseline.package, goto, log_fn=log_fn
+            client, baseline.serial, baseline.package, goto, log_fn=log_fn,
+            vao_la_tra=nhin_ngay,
         )
         log_fn(f"    {'da toi' if out['walk']['reached'] else 'KHONG toi duoc'} "
                f"{out['walk']['activity'].split('.')[-1]}")
-        if out["walk"]["reached"]:
+        if out["walk"]["reached"] and not nhin_ngay:
             out["drive"] = await case_evidence._snapshot(client, baseline, out["walk"]["activity"])
     if steps and result.ok:
         # Dong "user co the vuot sang man ke" doi mot cu vuot that de chung
         # minh - bao case_drive lam sau khi moi dong khac da co bang chung.
         thu_vuot = any(assert_check.DOI_VUOT_RE.search(e or "") for e in expects)
+        thu_bam_x = (any(assert_timing.BAM_X_RE.search(e or "") for e in expects)
+                     and not any(act_compound.TAP_X_RE.search(st or "") for st in steps))
         da_toi = goto if (out.get("walk") or {}).get("reached") else None
         driven = await case_drive.drive(
             client, baseline.serial, baseline.package, steps, log_fn, man_can, thu_vuot,
@@ -121,6 +128,7 @@ async def apply_case(
             do_anim=any(assert_check.ANIM_RE.search(e or "") for e in expects),
             man_dau=((out.get("drive") or {}).get("steps") or [{}])[-1].get("dump", ""),
             **dict(zip(("cua_so", "ghi_khung"), assert_timing.cach_quan_sat(overrides, expects))),
+            thu_bam_x=thu_bam_x,
         )
         # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
         driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]

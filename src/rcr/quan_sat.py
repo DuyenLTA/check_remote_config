@@ -106,9 +106,15 @@ async def gio_may(client, serial: str) -> float:
 
 
 async def mot_khung(client, serial: str, package: str) -> tuple[dict, list]:
-    """Mot lan nhin bang uiautomator: (khung, nodes). Moc gio lay TRUOC dump."""
+    """Mot lan nhin bang uiautomator: (khung, nodes).
+
+    Moc gio lay SAU dump: uiautomator chup cay o CUOI lan dump (~2,5s sau khi
+    bat dau). Lay moc truoc dump thi khung "thay X" bi ghi som ~2,5s - do
+    2026-10-07: X hien that o ~5s ma tool ghi 3,7s, so dem "3" ghi o 0,14s.
+    """
+    xml = await ui_dump.dump(client, serial)
     t = await gio_may(client, serial)
-    nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)), package)
+    nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
     dem = tim_dem(nodes)
     khung = {"t": t, "x": bool(tim_x(nodes)),
              "dem": (dem[0].text or "hiện").strip() if dem else "",

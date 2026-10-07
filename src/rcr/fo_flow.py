@@ -107,11 +107,18 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
 
 
 async def walk_to(client, serial: str, package: str, target: str,
-                  timeout: float = DEFAULT_TIMEOUT, log_fn=lambda _m: None) -> dict:
+                  timeout: float = DEFAULT_TIMEOUT, log_fn=lambda _m: None,
+                  vao_la_tra: bool = False) -> dict:
     """Lai app cho toi khi activity chua `target`. Tra nhat ky duong di.
 
     Khong raise khi khong toi duoc: tra `reached=False` kem man dang dung va
     cac buoc da lam, de nguoi doc biet ket o dau.
+
+    `vao_la_tra`: case can NHIN THEO THOI GIAN tren trang dich (so dem / nut X
+    OB3 song vai giay) -> vuot tu trang lien truoc xong la tra ve NGAY, khong
+    dump xac nhan (~2,5s mu dung luc so dem dang chay - do 2026-10-07, khung dau
+    tien tre ~7s). Moc vao trang that lay tu log; khong vao duoc thi log khong co
+    moc, case khong ra PASS/FAIL va duoc chay lai.
     """
     guard(serial, package)
     data = rules()
@@ -152,6 +159,9 @@ async def walk_to(client, serial: str, package: str, target: str,
                 await do_step(client, serial, {"swipe": "left"}, nodes, screen)
                 trail.append({"activity": activity.split(".")[-1], "did": f"vuot: trang {now} -> {now + 1}"})
                 log_fn(f"      onboarding: vuot sang trang {now + 1}")
+                if vao_la_tra and now + 1 == page:
+                    return {"reached": True, "activity": f"{activity} (trang {page}, vừa vuốt tới)",
+                            "trail": trail}
                 await asyncio.sleep(POLL_SECONDS)
                 waited += POLL_SECONDS
                 continue

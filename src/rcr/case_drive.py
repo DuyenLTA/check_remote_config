@@ -60,11 +60,15 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
     return ""
 
 
+# Nhin tiep bay nhieu giay sau cu bam X tool tu lam: du thay trang roi di + man ke.
+SAU_TU_BAM_X = 6.0
+
+
 async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                 man_can: str | None = None, thu_vuot: bool = False,
                 da_toi: str | None = None, do_anim: bool = False,
                 man_dau: str = "", cua_so: float = act_exec.CUA_SO_MAC_DINH,
-                ghi_khung: bool = False) -> dict:
+                ghi_khung: bool = False, thu_bam_x: bool = False) -> dict:
     """Chay lan luot cac buoc. Tra nhat ky tung buoc + dump de phase 5 cham.
 
     Man hinh bi che CHI chan buoc phai cham vao man hinh. Buoc quan sat va buoc
@@ -160,7 +164,19 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             da_toi = None
             man_cu = record.get("dump", "")
             t0 = time.monotonic()
-            if ctx["ghi_khung"]:
+            if ctx["ghi_khung"] and thu_bam_x:
+                # Dong Expected "bam X hoat dong / chuyen man ngay" ma TC khong co
+                # buoc bam: tool tu bam X MOT lan ngay khi no hien (giong dong "user
+                # vuot sang man ke" duoc cham bang mot cu vuot that), roi nhin tiep.
+                thu_bam_x = False
+                tam = await quan_sat.cho_nut_x(client, serial, package,
+                                               max(action.cho, ctx["cua_so"]), ctx["khung"])
+                if tam:
+                    await act_exec._tap_ghi_luc(client, serial, tam, act_resolver.TapId(
+                        quan_sat.VAI_NUT_X, "tool tự bấm X để chấm dòng 'bấm X'"), record, ctx)
+                    record["tu_bam_x"] = True
+                    await quan_sat.theo_doi(client, serial, package, SAU_TU_BAM_X, ctx["khung"])
+            elif ctx["ghi_khung"]:
                 # "Vao OB3, quan sat ..." ma app da o OB3: nhin lien tuc ngay tu
                 # luc nay, khong ngu - dong Expected ve nut X can khung tren OB3.
                 await quan_sat.theo_doi(client, serial, package, max(action.cho, ctx["cua_so"]),
