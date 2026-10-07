@@ -27,6 +27,7 @@ import logging
 import time
 
 from . import (act_compound, act_exec, act_resolver, device_app, drive_probes, fo_flow,
+               fo_screens,
                fo_steps, quan_sat, screencap, ui_dump)
 
 log = logging.getLogger(__name__)
@@ -197,7 +198,8 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
         if isinstance(action, act_resolver.GoTo):
             # Quang cao dang che van lai duoc: `fo_flow` co luat rieng cho
             # AdActivity (cho ad chay xong roi dong), khong phai tu mo nut X.
-            walk = await fo_flow.walk_to(client, serial, package, action.target, log_fn=log_fn)
+            walk = await fo_flow.walk_to(client, serial, package, action.target, log_fn=log_fn,
+                                         qua_lfo_nhanh=fo_screens.can_qua_lfo_nhanh(step))
             if not walk["reached"]:
                 # Lai hut thi phai noi ket o dau: "khong dich duoc buoc" se lam
                 # nguoi doc di sua cau TC, trong khi loi nam o bo luat fo_flow.

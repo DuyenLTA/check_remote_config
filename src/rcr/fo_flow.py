@@ -106,9 +106,62 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
     return f"bam {node.label}", True
 
 
+# Giua hai cu bam lien tiep khi qua LFO nhanh (giay). Do 2026-10-07: tap - tap -
+# 0,4s - tap qua LFO1 -> LFO2 -> Next trong ~1,2s, 9/9 luot 202 ve SAU khi roi LFO2.
+QUA_NHANH_GIUA = 0.15
+QUA_NHANH_DOI_LFO2 = 0.5
+
+
+# Toa do da tinh cho (serial, package): lan dau phai dump (~2,5s) moi biet hang
+# ngon ngu nam dau - qua cham, ad LFO2 da kip show. Nho lai trong luot chay, cac
+# lan sau bam NGAY khi vao LFO1. Hoc tu chinh app tren chinh may, khong gan tay.
+_TOA_DO_LFO: dict[tuple[str, str], list[tuple[int, int]]] = {}
+
+
+async def _bam_lien(client, serial: str, taps: list[tuple[int, int]]) -> None:
+    *chon, nut = taps
+    for i, (tx, ty) in enumerate(chon):
+        if i:
+            await asyncio.sleep(QUA_NHANH_GIUA)
+        await device_app.tap(client, serial, tx, ty)
+    await asyncio.sleep(QUA_NHANH_DOI_LFO2)
+    await device_app.tap(client, serial, *nut)
+
+
+async def _qua_lfo_nhanh(client, serial: str, nodes: list, rule: dict) -> str:
+    """Chon ngon ngu + bam Next qua ca LFO1 lan LFO2 tu MOT lan dump.
+
+    Case "202 da load nhung CHUA show o LFO2": 202 load xong ~2,3s sau khi vao
+    LFO1 va show ngay khi vao LFO2. Lai tung buoc (dump ~2,5s + nghi 1s moi buoc)
+    thi ~10s, 202 luon show o LFO2 -> case khong bao gio chay dung nhanh TC ta.
+
+    Khong gan toa do cua app nao: hang ngon ngu va id nut Next lay tu luat
+    `fo_flow.yaml`; hang bien the (English (US)...) bung ra ngay DUOI hang cha,
+    cach mot buoc hang do tu chinh danh sach; nut Next o LFO2 nam cung cho LFO1.
+    """
+    lang = next((st["language"] for st in rule["steps"] if "language" in st), "")
+    nut_ids = [st["tap"]["resource_id"] for st in rule["steps"]
+               if (st.get("tap") or {}).get("resource_id")]
+    rows = sorted((n for n in nodes if n.resource_id == fo_steps.TITLE_ID and n.visible),
+                  key=lambda n: n.bounds.top)
+    row = next((n for n in rows if n.text.casefold().startswith(lang.casefold())), None)
+    nut = next((n for rid in nut_ids for n in nodes if n.resource_id == rid and n.visible), None)
+    buoc = [b.bounds.top - a.bounds.top for a, b in zip(rows, rows[1:]) if b.bounds.top > a.bounds.top]
+    if not lang or row is None or nut is None or not buoc:
+        return ""
+    x, y = row.bounds.center
+    taps = [(x, y)]
+    if len(fo_steps.language_targets(nodes, lang)) > 1:        # hang bung -> bien the dau tien
+        taps.append((x, y + min(buoc)))
+    taps.append(nut.bounds.center)
+    await _bam_lien(client, serial, taps)
+    _TOA_DO_LFO["_moi"] = taps
+    return f"qua LFO nhanh: chọn {lang} + bấm Next trong một lượt (để ad LFO2 chưa kịp show)"
+
+
 async def walk_to(client, serial: str, package: str, target: str,
                   timeout: float = DEFAULT_TIMEOUT, log_fn=lambda _m: None,
-                  vao_la_tra: bool = False) -> dict:
+                  vao_la_tra: bool = False, qua_lfo_nhanh: bool = False) -> dict:
     """Lai app cho toi khi activity chua `target`. Tra nhat ky duong di.
 
     Khong raise khi khong toi duoc: tra `reached=False` kem man dang dung va
@@ -176,6 +229,27 @@ async def walk_to(client, serial: str, package: str, target: str,
             await asyncio.sleep(POLL_SECONDS)
             waited += POLL_SECONDS
             continue
+
+        if qua_lfo_nhanh and any("language" in st for st in rule["steps"]):
+            qua_lfo_nhanh = False                 # chi mot lan, lan sau lai binh thuong
+            khoa = (serial, package)
+            try:
+                if khoa in _TOA_DO_LFO:
+                    await _bam_lien(client, serial, _TOA_DO_LFO[khoa])
+                    did = "qua LFO nhanh: bấm theo tọa độ đã học ở lượt trước (không dump)"
+                else:
+                    nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)))
+                    did = await _qua_lfo_nhanh(client, serial, nodes, rule)
+                    if did:
+                        _TOA_DO_LFO[khoa] = _TOA_DO_LFO.pop("_moi")
+            except AdbError:
+                did = ""
+            if did:
+                trail.append({"activity": activity.split(".")[-1], "did": did})
+                log_fn(f"      {activity.split('.')[-1]}: {did}")
+                await asyncio.sleep(POLL_SECONDS)
+                waited += POLL_SECONDS
+                continue
 
         steps = rule["steps"]
         index = progress.get(rule["match"], 0)

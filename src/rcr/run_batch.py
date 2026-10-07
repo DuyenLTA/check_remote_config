@@ -11,6 +11,7 @@ from pathlib import Path
 
 from . import (
     ad_positions,
+    fo_screens,
     assert_ads,
     case_run,
     precond_guards,
@@ -91,6 +92,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             toi_da = LAN_CHAY_LAI + 1     # +1: cho lan xac nhan / phan xu FAIL
             lich_su: list[str] = []
             result = None
+            ro_gan_nhat = None
             for lan in range(1, toi_da + 1):
                 try:
                     result, baseline = await case_run.run_case(
@@ -101,13 +103,25 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                         runtime=chosen.get("runtime", False),
                     )
                 except (RcError, AdbError) as exc:
-                    if lan >= LAN_CHAY_LAI or isinstance(exc, AdbTransportError):
+                    if isinstance(exc, AdbTransportError):
                         raise
+                    if lan >= LAN_CHAY_LAI:
+                        if ro_gan_nhat is None:
+                            raise
+                        # Lan chay lai de xac nhan bi loi doc file (vd ngay sau
+                        # pm clear) -> giu ket qua da do duoc, khong bao BLOCKED
+                        # mat ca hai lan FAIL (do 2026-10-07, H202-006).
+                        log_fn(f"    LOI (lan {lan}): {exc} -> giu ket qua lan truoc")
+                        await _try_restore(client, baseline, log_fn)
+                        result = ro_gan_nhat
+                        break
                     log_fn(f"    LOI (lan {lan}): {exc} -> chay lai case")
                     await _try_restore(client, baseline, log_fn)
                     continue
                 v = result.get("verdict")
                 lich_su.append(v)
+                if v in ("PASS", "FAIL", "KEY_NOT_USED"):
+                    ro_gan_nhat = result
                 if v not in ("PASS", "FAIL", "KEY_NOT_USED"):
                     if lan >= LAN_CHAY_LAI:
                         break
@@ -125,6 +139,12 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                     log_fn(f"    lan {lan}: PASS sau khi lan truoc FAIL -> chay them de phan xu")
                     continue
                 break
+            if (result is not None and ro_gan_nhat is not None
+                    and result.get("verdict") not in ("PASS", "FAIL", "KEY_NOT_USED")):
+                # Het so lan ma lan cuoi khong ra ket luan (BLOCKED / chua cham duoc):
+                # giu ket qua do duoc gan nhat, khong de mat no (do 2026-10-07, H202-006
+                # FAIL roi lan cuoi NOT_VERIFIABLE -> report tung ghi NOT_VERIFIABLE).
+                result = ro_gan_nhat
             if result is not None:
                 result["lich_su_verdict"] = lich_su
                 if "FAIL" in lich_su and "PASS" in lich_su:
@@ -143,6 +163,11 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         # thong, mediation test mode): case KHONG duoc ra PASS im lang - no
         # chua he chay dung nhanh ma TC mo ta.
         thieu = precond_guards.khong_ep_duoc(chosen["precondition"])
+        if fo_screens.can_qua_lfo_nhanh(chosen["precondition"]):
+            # Precondition cho phep "di qua LFO2 nhanh HOAC throttle": fo_flow da qua
+            # LFO nhanh va case_run da kiem bang log (ad LFO2 chua show) -> khong doi
+            # throttle nua.
+            thieu = [t for t in thieu if "throttle" not in t]
         if ep:
             # Dieu kien dat hay khong la do TRANG THAI THAT: kiem bang log, du
             # da ep hay khong. Ep roi ma ad van fill thi ep hong.

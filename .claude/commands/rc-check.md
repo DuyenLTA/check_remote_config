@@ -441,6 +441,13 @@ chỉ cần `serial`, `package`, `configs`, `mirrored_keys`). Publish đè **cù
   (`data/ui_names.yaml`, trường `ids_all`)
 - Sau `pm clear` config mới có `enable_all_ads*=false` → tool tự đặt nền `true`; log ads
   trống thì đọc 3 key này trước khi nghi app
+- (07/10/2026) "Ad vị trí X show / KHÔNG show tại màn Y": tool chấm bằng event `ad_show`
+  gán theo `<màn>_view` gần nhất (`assert_ad_screen`), không bằng request — request ở màn
+  nhà là đúng chỗ. Log `ad_show` có thể có mà màn trống → dòng khẳng định "hiển thị" vẫn
+  phải mở ảnh đối chiếu (5d)
+- (07/10/2026) "Đi qua LFO2 nhanh" / "chưa kịp show ở LFO2": tool học tọa độ ở lượt đầu
+  rồi bấm qua LFO trong ~0,8s; log cho thấy ad LFO2 vẫn show ở LFO2 → BLOCKED và tự chạy
+  lại. Không đạt sau các lần chạy lại thì đó là giới hạn thời gian của máy, nói rõ
 
 ## 5d. Rà FAIL giả TRƯỚC khi báo — bắt buộc
 

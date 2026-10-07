@@ -6,6 +6,8 @@ tra loi "cau nay noi ve man nao" va "man nao nam sau man nao".
 
 from __future__ import annotations
 
+import re
+
 # Case noi ve man nao -> lai toi activity nao. Doc tu nhan/Precondition cua
 # case, vi bo TC khong co cot nao khai man hinh.
 # `#N` la trang thu N trong cung mot activity (cac trang OB dung chung activity).
@@ -88,3 +90,14 @@ def target_for(text: str) -> str:
         if word in low:
             return activity
     return ""
+
+
+# "Di qua LFO2 nhanh", "202 da load nhung chua (kip) show o LFO2": case can ad
+# LFO2 CHUA show luc roi LFO2 -> fo_flow phai qua LFO trong mot lan bam.
+QUA_LFO_NHANH_RE = re.compile(
+    r"(?:đi|di)\s+qua\s+LFO\s*\d?\s+nhanh|ch[ưu]a\s+(?:k[ịi]p\s+)?show\s+(?:ở|o|tại|tai)\s+LFO",
+    re.I)
+
+
+def can_qua_lfo_nhanh(*texts: str) -> bool:
+    return any(QUA_LFO_NHANH_RE.search(t or "") for t in texts)

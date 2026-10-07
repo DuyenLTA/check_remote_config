@@ -70,6 +70,7 @@ GOTO_RE = re.compile(
 # sai huong chi lam man khong doi - khac han mot cu tap sai (bam quang cao, mua
 # hang that). Khong neu huong thi lay huong sang trang ke, dung huong ma
 # `fo_flow` dung de di qua OB1/2/3.
+TU_MAN_RE = re.compile(r"^\s*t[ừu]\s+(?:OB|LFO|onb)\s*\d\s*,?\s+(?=\S)", re.I)
 SWIPE_RE = re.compile(r"^\s*(?:vuốt|vuot|swipe|lướt|luot|kéo|keo)\b", re.I)
 DIRECTION_WORDS = (
     (re.compile(r"\b(?:trái|trai|left)\b", re.I), "left"),
@@ -93,6 +94,9 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     text = (step or "").strip()
     if not text:
         return NoOp("bước rỗng")
+    # "Tu OB1 vuot sang OB2": ve "Tu <man>" chi noi app dang dung o dau (buoc
+    # truoc da lai toi) - bo di de cau con lai dich nhu cau vuot thuong.
+    text = TU_MAN_RE.sub("", text, count=1) or text
     ghep = act_compound.resolve(text, nodes, resolve)
     if ghep is not None:
         return ghep
@@ -157,9 +161,20 @@ def _swipe(text: str) -> Action:
     return Swipe(DEFAULT_SWIPE, "TC không nêu hướng — lấy hướng sang trang kế")
 
 
+# "Di qua LFO2 nhanh sang OB1", "Di qua LFO2 nhanh → vao OB2": cau di chuyen voi
+# dieu kien qua LFO nhanh (fo_flow lam khi case bat co nay). Man dich nam SAU chu "nhanh".
+QUA_NHANH_RE = re.compile(r"^\s*(?:đi|di)\s+qua\s+LFO\s*\d?\s+nhanh\b(?P<rest>.*)$", re.I)
+
+
 def _goto(text: str) -> Action | None:
     """Buoc thuan di chuyen -> GoTo. Khong phai thi tra None."""
     from . import fo_flow  # noi day de tranh vong import khi fo_flow lon len
+
+    m = QUA_NHANH_RE.match(text)
+    if m:
+        target = fo_flow.target_for(m.group("rest"))
+        if target:
+            return GoTo(target, f"đi qua LFO nhanh (ad LFO2 chưa kịp show) rồi tới {target}", 0.0)
 
     head, *rest = CLAUSE_RE.split(text)
     if not GOTO_RE.match(head):

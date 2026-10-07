@@ -19,6 +19,8 @@ import logging
 
 from . import (
     act_compound,
+    assert_ad_screen,
+    fo_screens,
     ad_log,
     case_evidence,
     fa_log,
@@ -110,6 +112,7 @@ async def apply_case(
         out["walk"] = await fo_flow.walk_to(
             client, baseline.serial, baseline.package, goto, log_fn=log_fn,
             vao_la_tra=nhin_ngay,
+            qua_lfo_nhanh=fo_screens.can_qua_lfo_nhanh(precondition, *steps),
         )
         log_fn(f"    {'da toi' if out['walk']['reached'] else 'KHONG toi duoc'} "
                f"{out['walk']['activity'].split('.')[-1]}")
@@ -141,6 +144,10 @@ async def apply_case(
     out["ads"] = await case_evidence._read_ads(client, baseline, overrides)
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
     out["events"] = await fa_log.doc(client, baseline.serial)
+    qua_nhanh = fo_screens.can_qua_lfo_nhanh(precondition, *steps)
+    da_show = (assert_ad_screen.ad_man_nha_da_show(
+        out["events"], list(((out.get("ads") or {}).get("units") or {}).values()), "lfo2")
+        if qua_nhanh else [])
     if expects:
         out["assert"] = assert_check.check_all(
             expects, out["ads"], out.get("drive") or {}, out["crash"],
@@ -148,6 +155,14 @@ async def apply_case(
         )
         # Config khong song thi chua test duoc gi - dung ket luan tu dong Expected.
         out["verdict"] = out["verdict"] if not result.ok else out["assert"]["verdict"]
+    if da_show:
+        # Case doi ad LFO2 CHUA show luc roi LFO2 ma log cho thay da show ngay o
+        # LFO2 -> luot nay chay sai nhanh, khong duoc ra PASS/FAIL. run_batch chay
+        # lai (lan sau fo_flow da hoc toa do, qua LFO kip).
+        out["verdict"] = "BLOCKED"
+        out["precondition_thieu"] = [f"ad LFO2 ({', '.join(da_show)}) đã show ngay ở LFO2 — chưa tạo "
+                                     "được điều kiện 'chưa kịp show ở LFO2'"]
+        log_fn("    ad LFO2 da show o LFO2 -> chua tao duoc precondition, BLOCKED")
     # Doc lai config SAU KHI cham: app fetch Firebase luc mo, lan fetch that
     # (khong phai doc cache) kich hoat lai gia tri server va de mat patch - verify
     # o tren doc qua som (foreground +0,8s, fetch xong sau do) nen van ra OK. Do

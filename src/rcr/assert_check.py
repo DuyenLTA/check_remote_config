@@ -15,7 +15,8 @@ from __future__ import annotations
 
 import re
 
-from . import ad_positions, assert_ad_area, assert_ads, assert_timing, assert_ui, ui_names
+from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_ads, assert_timing, assert_ui,
+               ui_names)
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -85,6 +86,12 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     req_303 = [u["unit"] for u in (ads.get("units") or {}).values()
                if u.get("requested") and ad_positions._khop_vi_tri(u, "303")]
     ket = assert_timing.cham(text, (drive or {}).get("timeline"), dict(cfg or {}), req_303)
+    if ket:
+        return ket
+
+    # "Vi tri X co / KHONG show tai man Y" (Y khong phai man cua X): cham bang
+    # event ad_show gan man, khong bang request - request o man nha la dung cho.
+    ket = assert_ad_screen.cham(text, events, list((ads.get("units") or {}).values()))
     if ket:
         return ket
 

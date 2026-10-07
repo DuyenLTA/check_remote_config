@@ -148,3 +148,9 @@ def test_fail_roi_pass_thi_phan_xu_va_danh_dau_khong_on_dinh(monkeypatch):
 def test_pass_ngay_lan_dau_khong_chay_lai(monkeypatch):
     recs = run(monkeypatch, {"a": "PASS", "b": "PASS", "c": "PASS"}, lan=3)
     assert [r["lich_su_verdict"] for r in recs] == [["PASS"]] * 3
+
+
+def test_lan_cuoi_khong_ro_thi_giu_ket_qua_da_do(monkeypatch):
+    recs = run(monkeypatch, {"a": ["NEEDS_HUMAN", "FAIL", "NEEDS_HUMAN", "NEEDS_HUMAN"],
+                             "b": "PASS", "c": "PASS"}, lan=3)
+    assert recs[0]["verdict"] == "FAIL"

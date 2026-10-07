@@ -112,7 +112,8 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         "verdict": result.get("verdict", ""),
         # Dieu kien precondition doi ma may nay khong tao duoc - phai hien tren
         # report, khong thi doc vao tuong case da chay dung nhanh TC mo ta.
-        "precondition_thieu": (result.get("precondition_thieu") or []) + [
+        "precondition_thieu": (result.get("precondition_thieu") or [])
+        + [t for r in runs for t in (r.get("precondition_thieu") or [])] + [
             "config bị app fetch Firebase đè giữa lượt ("
             + ", ".join(f"{m['key']}={m['got']!r} thay vì {m['want']!r}" for m in de[:4])
             + ") — kết quả lượt này chạy trên config của server"
