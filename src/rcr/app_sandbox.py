@@ -20,11 +20,27 @@ from .adb_parsers import PACKAGE_RE, SERIAL_RE, AdbError, output_error, parse_ls
 
 RUN_AS = "run-as"
 SU = "su"
+# `adb shell` da chay uid 0 san (`adb root` - emulator ban Google APIs, may
+# userdebug). O do `su` la ban AOSP, cu phap `su 0 <cmd>`: `su -c` bao
+# "invalid uid/gid '-c'" (do tren emulator API 35, 10/10/2026).
+ROOT = "root"
+DATA_DIR = "/data/data/{}"
 
 
 def quote(s: str) -> str:
     """Boc nhay don cho 1 doi so di qua `sh` tren device."""
     return "'" + s.replace("'", "'\\''") + "'"
+
+
+def root_line(package: str, mode: str, inner: str) -> str:
+    """Dong lenh cho duong root (SU | ROOT), chay TRONG thu muc du lieu app.
+
+    `run-as` tu dat cwd = thu muc du lieu app nen ca tool dung duong dan tuong
+    doi (`files/frc_...`). Root thi cwd la `/` -> phai `cd` vao truoc, khong thi
+    doc/ghi nham cho.
+    """
+    line = f"cd {quote(DATA_DIR.format(package))} && {inner}"
+    return f"su -c {quote(line)}" if mode == SU else line
 
 
 def guard(serial: str, package: str | None = None) -> None:
@@ -39,10 +55,13 @@ async def run(
 ) -> tuple[str, str, int]:
     """Chay `cmd` trong danh tinh app. Tra (stdout, stderr, code) - khong raise."""
     guard(serial, package)
-    if mode == SU:
-        # `su -c` nhan MOT chuoi -> phai boc nhay 2 lop.
-        inner = " ".join(quote(c) for c in cmd)
-        return await client.shell_line(serial, f"su -c {quote(inner)}", timeout=timeout)
+    if mode in (SU, ROOT):
+        # Doi so da san sang cho `sh` tren device (nguoi goi tu boc nhay duong
+        # dan, nhu duong run-as - adb noi argv thanh mot dong). Boc them o day la
+        # `cat` nhan ten file co dinh ca dau nhay (do tren emulator 10/10/2026).
+        # `su -c` nhan MOT chuoi -> root_line boc dung mot lop cho no.
+        inner = " ".join(cmd)
+        return await client.shell_line(serial, root_line(package, mode, inner), timeout=timeout)
     return await client.shell(serial, RUN_AS, package, *cmd, timeout=timeout)
 
 
@@ -70,7 +89,7 @@ async def cat(
 
 
 async def detect_mode(client, serial: str, package: str) -> str:
-    """Dò duong vao sandbox: RUN_AS | SU. Raise AdbError neu ca hai deu khong duoc.
+    """Dò duong vao sandbox: RUN_AS | ROOT | SU. Raise AdbError neu khong duong nao duoc.
 
     Goi 1 lan luc doc baseline; phase 2 dung lai ket qua thay vi do lai.
     """
@@ -79,6 +98,9 @@ async def detect_mode(client, serial: str, package: str) -> str:
     if "uid=" in out:
         return RUN_AS
     run_as_err = (err or out).strip() or "that bai"
+    out_root, _, _ = await client.shell_line(serial, "id")
+    if "uid=0" in out_root:
+        return ROOT
     out2, _, _ = await client.shell_line(serial, "su -c id")
     if "uid=0" in out2:
         return SU

@@ -111,11 +111,13 @@ class FakeAdb:
     `fails` khop theo chuoi con trong dong lenh -> tra (stdout, stderr, code).
     """
 
-    def __init__(self, *, files=None, fails=None, debuggable=True, rooted=False):
+    def __init__(self, *, files=None, fails=None, debuggable=True, rooted=False, adb_root=False):
         self.calls: list[str] = []
         self.fails = fails or {}
         self.debuggable = debuggable
         self.rooted = rooted
+        # `adb root`: shell da la uid 0 (emulator Google APIs), khong co `su -c`.
+        self.adb_root = adb_root
         self.tmp: dict[str, str] = {}  # /data/local/tmp/... -> noi dung
         self.files = dict(files) if files is not None else {
             f"files/{ACTIVATE}": ACTIVATE_JSON,
@@ -189,8 +191,22 @@ class FakeAdb:
         if "su -c" in cmd:
             if not self.rooted:
                 return "", "/system/bin/sh: su: not found", 127
-            return self._as_app(cmd)
+            return self._as_root(cmd)
+        if self.adb_root:
+            if cmd.endswith(" shell id"):
+                return "uid=0(root) gid=0(root)\n", "", 0
+            if " shell cd " in cmd:
+                return self._as_root(cmd)
         return "", "", 0
+
+    def _as_root(self, cmd: str) -> tuple[str, str, int]:
+        """Root co cwd `/` (khac run-as) -> lenh doc/ghi bang duong dan tuong
+        doi ma khong `cd` vao thu muc app la trung cho khac, giong may that."""
+        if " id" in self._unquote(cmd) and "/data/data/" not in cmd:
+            return self._as_app(cmd)
+        if f"cd /data/data/{PKG} &&" not in self._unquote(cmd):
+            return "", "No such file or directory (cwd la /)", 1
+        return self._as_app(cmd)
 
     @staticmethod
     def _unquote(cmd: str) -> str:

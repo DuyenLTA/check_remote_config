@@ -78,15 +78,13 @@ async def _copy_in(
     client, serial: str, package: str, mode: str, remote_tmp: str, dest_rel: str
 ) -> None:
     dest = app_sandbox.quote(dest_rel)
-    if mode == app_sandbox.SU:
+    if mode in (app_sandbox.SU, app_sandbox.ROOT):
         # root: redirect giu nguyen owner + nhan SELinux cua file dich san co.
-        inner = f"cat {remote_tmp} > {dest}"
-        out, err, _ = await client.shell_line(
-            serial, f"su -c {app_sandbox.quote(inner)}", timeout=PUSH_TIMEOUT
-        )
+        line = app_sandbox.root_line(package, mode, f"cat {remote_tmp} > {dest}")
+        out, err, _ = await client.shell_line(serial, line, timeout=PUSH_TIMEOUT)
         problem = _problem(out, err)
         if problem:
-            raise RcError(f"su ghi {dest_rel} that bai: {problem}")
+            raise RcError(f"{mode} ghi {dest_rel} that bai: {problem}")
         return
 
     # run-as: app tu doc file cua shell (nhanh), that bai thi day qua stdin.

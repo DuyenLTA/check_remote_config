@@ -225,6 +225,16 @@ def test_may_root_thi_ghi_qua_su(adb):
     assert not any(" run-as " in c and "cat" in c for c in adb.calls)
 
 
+def test_adb_root_thi_ghi_trong_thu_muc_app(adb):
+    adb.debuggable = False
+    adb.adb_root = True
+    res = do_patch(adb, {"ad_load_timeout": "99"})
+    assert res.written
+    writes = [c for c in adb.calls if "cat /data/local/tmp/rcr_" in c]
+    assert writes and all("cd '/data/data/" in c for c in writes)
+    assert not any("su -c" in c for c in adb.calls)
+
+
 # ---- restore -------------------------------------------------------------
 
 

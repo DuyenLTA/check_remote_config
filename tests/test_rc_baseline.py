@@ -124,6 +124,16 @@ def test_may_root_thi_dung_duong_su(adb):
     assert any("su -c" in c for c in adb.calls)
 
 
+def test_adb_root_thi_dung_duong_root_khong_goi_su(adb):
+    """Emulator Google APIs: shell da la uid 0, `su -c` khong ton tai."""
+    adb.debuggable = False
+    adb.adb_root = True
+    bl = read(adb)
+    assert bl.write_mode == "root"
+    assert bl.app_id == APP_ID
+    assert not any("su -c" in c for c in adb.calls)
+
+
 def test_khong_co_file_frc_thi_loi_huong_dan_mo_app():
     adb = FakeAdb(files={})
     adb.files = {}  # cat luon that bai

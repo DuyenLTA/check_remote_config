@@ -45,7 +45,7 @@ class RcBaseline:
     mirror_raw: dict[str, str] = field(default_factory=dict)
     # file vsl_* co 0 key giao -> state noi bo app, TUYET DOI khong ghi vao.
     non_mirror_files: tuple[str, ...] = ()
-    write_mode: str = "run-as"  # run-as | su
+    write_mode: str = "run-as"  # run-as | root | su
 
     @property
     def mirrored_keys(self) -> frozenset[str]:
