@@ -135,6 +135,17 @@ def test_app_chua_sinh_lai_file_config_thi_khong_patch_bua(monkeypatch):
         asyncio.run(device_reset.prepare(adb, bl, "Fresh install"))
 
 
+def test_file_config_moi_tao_con_rong_thi_chua_tat_app(monkeypatch):
+    """App tao file 0 byte truoc roi moi ghi - tat app luc do la baseline hong."""
+    files = {**files_with(NO_FLAG), f"files/{ACTIVATE}": ""}
+    adb = fake(files=files, fails={"pm clear": ("Success\n", "", 0)})
+    bl = baseline_of(FakeAdb(files=files_with(NO_FLAG), fails=dict(UI)))
+    monkeypatch.setattr(device_reset, "WAIT_FRC", 0.02)
+    monkeypatch.setattr(device_reset, "POLL_INTERVAL", 0.01)
+    with pytest.raises(RcError, match="chua sinh lai file remote config"):
+        asyncio.run(device_reset.prepare(adb, bl, "Fresh install"))
+
+
 # --- cot User State cua file TC (user chot 2026-10-02) ------------------------
 
 def test_new_user_la_pm_clear_that_ke_ca_khi_co_co_onboarding():

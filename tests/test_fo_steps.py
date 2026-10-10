@@ -162,7 +162,7 @@ def test_moi_man_trong_bang_ma_deu_co_trong_bang_thu_tu():
 
 # --- lai toi OB3: trang khong co cham chi trang -------------------------------
 
-def _walk_qua(monkeypatch, dumps):
+def _walk_qua(monkeypatch, dumps, nghi=None):
     """Lai toi OB3 voi day dump cho truoc (moi lan dump lay phan tu ke)."""
     import asyncio
 
@@ -183,8 +183,9 @@ def _walk_qua(monkeypatch, dumps):
     async def size(*a):
         return 1080, 2400
 
-    async def ngu(*a):
-        return None
+    async def ngu(giay, *a):
+        if nghi is not None:
+            nghi.append(giay)
 
     monkeypatch.setattr(device_app, "focus", focus)
     monkeypatch.setattr(device_app, "swipe", swipe)
@@ -210,3 +211,33 @@ def test_khong_vuot_ma_khong_co_cham_thi_khong_suy_bua(monkeypatch):
     """Chua vuot tu trang 2 thi man khong cham KHONG duoc coi la OB3."""
     out, _ = _walk_qua(monkeypatch, [ONBOARDING])
     assert "suy ra" not in out.get("activity", "")
+
+
+def _trang(so: int, tong: int = 4) -> str:
+    """Dump co `tong` cham, cham thu `so` keo dai = dang o trang do."""
+    dots = "".join(
+        f'<node index="{i}" class="android.view.View" package="com.ai.app" '
+        f'resource-id="com.ai.app:id/dot" text="" content-desc="" '
+        f'bounds="[{100 + i * 60},1297][{100 + i * 60 + (53 if i + 1 == so else 21)},1318]" '
+        f'clickable="false" enabled="true" />'
+        for i in range(tong))
+    return ("<?xml version='1.0' encoding='UTF-8'?><hierarchy rotation=\"0\">"
+            f"{dots}</hierarchy>")
+
+
+def test_da_qua_trang_dich_thi_dung_khong_lai_tiep_toi_Home(monkeypatch):
+    """OB3 tu chuyen trang sau 3s, nhanh hon mot lan dump -> doc ra trang 4."""
+    out, vuot = _walk_qua(monkeypatch, [_trang(2), _trang(4)])
+    assert out["reached"] is False
+    assert "da qua trang 3" in out["reason"]
+    assert vuot == ["left"]                      # khong vuot them cu nao
+
+
+def test_vuot_sang_trang_dich_thi_doc_lai_som(monkeypatch):
+    """Cho 2s sau cu vuot cuoi la lo OB3 khi no tu chuyen trang sau 3s."""
+    from rcr import fo_flow
+
+    nghi: list[float] = []
+    out, _ = _walk_qua(monkeypatch, [_trang(1), _trang(2), _trang(3)], nghi)
+    assert out["reached"]
+    assert nghi == [fo_flow.POLL_SECONDS, fo_flow.SETTLE_SECONDS]

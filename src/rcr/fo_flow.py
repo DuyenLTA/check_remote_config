@@ -36,6 +36,10 @@ DATA = Path(__file__).parent / "data" / "fo_flow.yaml"
 # Nhip giua hai lan doc man. 2s -> 1s (do 2026-10-06: moi thao tac lai FO mat
 # ~5s, trong do 2s la cho cung; dump UI da ton ~2s nen man kip doi).
 POLL_SECONDS = 1.0
+# Sau cu vuot SANG trang dich: doc lai som. OB3 co the tu chuyen trang sau 3s
+# (`timer_auto_swipe=3`) ma mot lan dump UI tren Pixel 4 da mat 2.6-4s -
+# cho them mot nhip POLL nua la de lo trang dich.
+SETTLE_SECONDS = 0.8
 # Vong poll lien tiep ma man khong doi va khong con buoc nao de lam -> coi nhu
 # ket. Giu NGUONG THOI GIAN ~20s (splash tu load mat ~20s), khong giu so vong:
 # nhip ngan lai ma giu 10 vong la bao ket oan luc splash chua xong.
@@ -207,6 +211,13 @@ async def walk_to(client, serial: str, package: str, target: str,
                 return {"reached": True, "activity": f"{activity} (trang {page}, suy ra)",
                         "trail": trail}
             vua_vuot = (0, False)
+            if now and now > page:
+                # Da QUA trang dich (app tu chuyen trang nhanh hon tool doc man).
+                # Luat lai chung chi biet di toi -> roi xuong do la vuot toi tan
+                # Home (do 2026-10-02, SDK350-OB3X-013). Dung lai, noi ro.
+                return {"reached": False, "activity": f"{activity} (trang {now})", "trail": trail,
+                        "reason": f"da qua trang {page}: app tu chuyen sang trang {now} "
+                                  "truoc khi tool kip doc man (auto-swipe nhanh hon mot lan dump UI)"}
             if now and now < page:
                 vua_vuot, xml_truoc = (now, True), xml
                 await do_step(client, serial, {"swipe": "left"}, nodes, screen)
@@ -215,8 +226,9 @@ async def walk_to(client, serial: str, package: str, target: str,
                 if vao_la_tra and now + 1 == page:
                     return {"reached": True, "activity": f"{activity} (trang {page}, vừa vuốt tới)",
                             "trail": trail}
-                await asyncio.sleep(POLL_SECONDS)
-                waited += POLL_SECONDS
+                nghi = SETTLE_SECONDS if now + 1 == page else POLL_SECONDS
+                await asyncio.sleep(nghi)
+                waited += nghi
                 continue
 
         rule = rule_for(activity, ruleset)

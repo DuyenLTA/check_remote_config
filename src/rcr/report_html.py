@@ -52,7 +52,9 @@ def _thu_tu(d: dict):
     Khong xep theo trang thai: case cung mot tinh nang nam canh nhau thi moi
     doi chieu duoc "bat key nay thi the nay, tat thi the kia".
     """
-    return (d["group"], d["n"], d["key"])
+    # So va ma case (`SDK350-...`) khong so sanh duoc voi nhau -> tach hai nhom.
+    n = d["n"]
+    return (d["group"], (0, n, "") if isinstance(n, int) else (1, 0, str(n)), d["key"])
 
 
 def _chips() -> str:

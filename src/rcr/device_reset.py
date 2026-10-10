@@ -24,8 +24,10 @@ patch truoc roi clear la mat trang.
 
 Sau `pm clear` phai cho app tu sinh lai `frc_*.json` roi moi patch duoc: tool ghi
 bang redirect (`cat tmp > dest`) de giu owner + nhan SELinux, ma redirect can
-file dich TON TAI SAN. Cho theo trang thai that (file da xuat hien chua), khong
-`sleep` cung.
+file dich TON TAI SAN. Cho theo trang thai that, khong `sleep` cung - va "co
+file" CHUA du: app tao file rong truoc roi moi ghi config vao. Tat app ngay luc
+file vua xuat hien la de lai file 0 byte, baseline doc ra khong phai JSON (do
+tren Pixel 4, 2026-10-02). Phai cho toi khi file la JSON co `configs_key`.
 
 Reset mem ghi vao `vsl_template4_prefs.xml` - dung file ma `rc_patch` tuyet doi
 cam ghi. Khong mau thuan: day la THAO TAC RESET, khac han doi config. Cam o
@@ -35,6 +37,7 @@ rc_patch la de khong ai nham file state noi bo voi file mirror config.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from pathlib import Path
 
@@ -96,6 +99,20 @@ async def _flip_onboarding(client, baseline: RcBaseline, data: dict) -> str:
     return ""
 
 
+async def _activate_filled(client, baseline: RcBaseline, name: str) -> bool:
+    """File activate da co config that chua - khong chi la da ton tai."""
+    raw, problem = await app_sandbox.cat(
+        client, baseline.serial, baseline.package,
+        rc_baseline._q(f"files/{name}"), mode=baseline.write_mode,
+    )
+    if problem or not raw.strip():
+        return False
+    try:
+        return isinstance(json.loads(raw).get("configs_key"), dict)
+    except (json.JSONDecodeError, AttributeError):
+        return False  # app dang ghi do -> cho vong sau
+
+
 async def _clear_and_wait(client, baseline: RcBaseline) -> None:
     """`pm clear` roi mo app cho SDK sinh lai file config, sau do tat han app."""
     serial, package = baseline.serial, baseline.package
@@ -110,7 +127,8 @@ async def _clear_and_wait(client, baseline: RcBaseline) -> None:
         names, problem = await app_sandbox.ls(
             client, serial, package, "files", mode=baseline.write_mode
         )
-        if not problem and rc_baseline.find_activate_file(names):
+        found = None if problem else rc_baseline.find_activate_file(names)
+        if found and await _activate_filled(client, baseline, found[0]):
             await device_app.force_stop(client, serial, package)
             return
         await asyncio.sleep(POLL_INTERVAL)

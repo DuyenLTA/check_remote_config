@@ -13,18 +13,20 @@ Command chạy được từ thư mục bất kỳ — **đừng giả định C
 
 1. `git rev-parse --show-toplevel` (nếu CWD đang nằm trong chính repo này)
 2. biến môi trường `$RC_RUNNER_REPO`
-3. `~/projects/check_remote_config` (clone của github.com/LuuThiAnDuyen/check_remote_config)
+3. `~/projects/check_remote_config`
+4. `~/.claude/check_remote_config`
 
-Repo có **hai remote**, và máy này chỉ có credential của một tài khoản:
-`luu` (LuuThiAnDuyen) **chỉ đọc** — `git pull luu main` để lấy code người khác đẩy lên;
-`origin` (DuyenLTA) là chỗ **ghi**. Push URL của `luu` đã đặt thành `no_push` để một cú
-push nhầm chết ngay tại chỗ thay vì đi hỏi mật khẩu.
+Repo có **hai remote** (github.com/DuyenLTA và github.com/LuuThiAnDuyen), nhưng
+**tên remote mỗi máy đặt một kiểu** — đọc `git remote -v`, đừng giả định `origin`
+là repo nào. Mỗi máy thường chỉ có credential của một tài khoản.
 
 Không thấy thì dừng, nói rõ đã tìm ở đâu. Gọi đường dẫn tìm được là `<repo>`.
 
-Luôn gọi `<repo>/.venv/bin/rcr-check` — **đường dẫn tuyệt đối**. `rcr-check`
-không có trong PATH toàn cục. Báo `command not found` thì
-`cd <repo> && .venv/bin/python -m pip install -e ".[dev]"` rồi thử lại: venv cài
+Gọi `<bin>` là thư mục lệnh của venv: `<repo>/.venv/bin` trên macOS/Linux,
+`<repo>/.venv/Scripts` trên **Windows** (file là `rcr-check.exe`). Luôn gọi
+`<bin>/rcr-check` — **đường dẫn tuyệt đối**. `rcr-check` không có trong PATH
+toàn cục. Báo `command not found` thì
+`cd <repo> && <bin>/python -m pip install -e ".[dev]"` rồi thử lại: venv cài
 trước khi CLI được thêm thì thiếu file lệnh.
 
 ## 1. Tool này làm được tới đâu — nói trước, đừng để người dùng tưởng nhầm
@@ -149,15 +151,15 @@ Ba kiểu gọi, chọn theo `$ARGUMENTS`:
 
 ```
 # a. chi doc baseline - xem app co bao nhieu key, key nao bi mirror
-cd <repo> && .venv/bin/rcr-check --package <pkg> [--serial <S>]
+cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>]
 
 # b. nap bo testcase - xem case nao tool chay duoc, case nao can nguoi
-cd <repo> && .venv/bin/rcr-check --package <pkg> --tc "<link sheet TC>"
+cd <repo> && <bin>/rcr-check --package <pkg> --tc "<link sheet TC>"
 
 # c. chay 1 hay nhieu case, xuat report HTML kem anh tung buoc
-cd <repo> && .venv/bin/rcr-check --package <pkg> --tc "<link sheet TC>" --tab 3.4.0 \
+cd <repo> && <bin>/rcr-check --package <pkg> --tc "<link sheet TC>" --tab 3.4.0 \
   --case 3.4.0#SDK340-SPL-001,3.4.0#SDK340-SPL-003 --report out/run.html
-cd <repo> && .venv/bin/rcr-check --package <pkg> --set splash_banner_change=false
+cd <repo> && <bin>/rcr-check --package <pkg> --set splash_banner_change=false
 ```
 
 **Bộ TC lấy từ Google Sheet, KHÔNG tìm file trong Downloads** (user dặn 2026-10-03).
@@ -200,6 +202,8 @@ hai con số không liên quan. Lấy nhầm tab là chấm bằng TC của bả
 (3.4.0 trở đi) dùng cột `TC ID` thay cho `N°` → mã case là chính TC ID
 (`3.4.0#SDK340-SPL-001`). Gõ mỗi con số vẫn được nếu
 nó chỉ có ở một tab; mơ hồ thì tool dừng và liệt kê — **đừng chọn bừa một cái**.
+File có cột **`TC ID`** (`SDK350-OB3X-013`) thay cho cột số thì truyền thẳng mã đó:
+`--case SDK350-OB3X-013,SDK350-OB3X-014` — đừng đánh số lại file.
 
 Chạy cả tab thì lấy danh sách case chạy được từ lượt `--tc` không kèm `--case`, rồi
 truyền hết vào `--case`. Mỗi case khoảng một phút trên máy thật: 53 case ≈ 50 phút →
@@ -238,7 +242,7 @@ Chạy xong với `--keep` thì tool **lưu snapshot config gốc** ra `<repo>/o
 Test xong, trả máy về nguyên trạng bằng đúng một lệnh:
 
 ```
-cd <repo> && .venv/bin/rcr-check --package <pkg> [--serial <S>] --restore
+cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>] --restore
 ```
 
 **Đừng trả về bằng cách patch tay giá trị cũ.** Lượt sau đọc baseline sẽ ra bản
@@ -504,8 +508,8 @@ vì nó không nói được gì về app. Làm mục 5b trước, rồi publish
 Publish xong thì ghi link lại, lấy `generated_at` từ **chính dòng JSON của lượt vừa chạy**:
 
 ```
-cd <repo> && .venv/bin/rcr-artifact --url <link> --generated-at <generated_at cua luot>
-cd <repo> && .venv/bin/rcr-artifact          # in link da luu cua luot truoc
+cd <repo> && <bin>/rcr-artifact --url <link> --generated-at <generated_at cua luot>
+cd <repo> && <bin>/rcr-artifact          # in link da luu cua luot truoc
 ```
 
 URL artifact **cố định**: republish cùng file thì giữ nguyên link. Nên lượt sau cứ đọc

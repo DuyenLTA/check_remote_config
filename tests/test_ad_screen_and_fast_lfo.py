@@ -63,7 +63,7 @@ class TapAdb:
 
 
 def test_qua_lfo_nhanh_bam_hang_bien_the_va_next_tu_mot_dump(monkeypatch):
-    xml = (Path(__file__).parent / "fixtures" / "uidump_lfo1_collapsed.xml").read_text()
+    xml = (Path(__file__).parent / "fixtures" / "uidump_lfo1_collapsed.xml").read_text(encoding="utf-8")
     nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml))
     taps = []
 
