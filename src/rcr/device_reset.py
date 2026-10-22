@@ -113,6 +113,27 @@ async def _activate_filled(client, baseline: RcBaseline, name: str) -> bool:
         return False  # app dang ghi do -> cho vong sau
 
 
+NOTIFICATION_PERMISSION = "android.permission.POST_NOTIFICATIONS"
+
+
+async def _grant_notifications(client, serial: str, package: str) -> None:
+    """Cap san quyen thong bao de app mo len KHONG bi dialog he thong che.
+
+    `pm clear` xoa ca quyen da cap. Tu Android 13, app khai POST_NOTIFICATIONS
+    mo lan dau la hien dialog cua permissioncontroller de tren app: app khong
+    bao gio len foreground, case nao cung het gio cho roi chay lai (do 10/10/2026,
+    Sorapix 1.6.0 tren Pixel 6: 20/23 case ket, 2 tieng cho suong). Cap bang
+    `pm grant` thay vi bam Allow: khong tap gi tren man, luong FO dang test
+    khong doi.
+
+    Loi thi bo qua: Android < 13 hoac app khong khai quyen nay thi `pm grant`
+    tu choi, ma cung khong co dialog nao de chan.
+    """
+    out, err, code = await client.shell(serial, "pm", "grant", package, NOTIFICATION_PERMISSION)
+    if code or (err or "").strip():
+        log.debug("pm grant %s bo qua: %s", NOTIFICATION_PERMISSION, (err or out).strip())
+
+
 async def _clear_and_wait(client, baseline: RcBaseline) -> None:
     """`pm clear` roi mo app cho SDK sinh lai file config, sau do tat han app."""
     serial, package = baseline.serial, baseline.package
@@ -121,6 +142,7 @@ async def _clear_and_wait(client, baseline: RcBaseline) -> None:
     if "Success" not in out:
         raise AdbError(f"pm clear {package} that bai: {(err or out).strip()}")
 
+    await _grant_notifications(client, serial, package)
     await device_app.launch(client, serial, package)
     waited = 0.0
     while waited < WAIT_FRC:

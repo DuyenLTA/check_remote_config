@@ -116,6 +116,28 @@ def test_khong_co_co_thi_pm_clear_va_bao_baseline_het_gia_tri():
     assert adb.cmds_with("pm clear") and adb.cmds_with("am start")
 
 
+def test_pm_clear_xong_cap_quyen_thong_bao_truoc_khi_mo_app():
+    """Android 13+: pm clear xoa quyen thong bao, app mo len bi dialog he thong
+    de len - app khong len foreground, case nao cung het gio cho."""
+    adb = fake(files=files_with(NO_FLAG), fails={"pm clear": ("Success\n", "", 0)})
+    asyncio.run(device_reset.prepare(adb, baseline_of(adb), "Fresh install"))
+    grant = [i for i, c in enumerate(adb.calls)
+             if f"pm grant {PKG} android.permission.POST_NOTIFICATIONS" in c]
+    clear = [i for i, c in enumerate(adb.calls) if "pm clear" in c]
+    start = [i for i, c in enumerate(adb.calls) if "am start" in c]
+    assert grant and clear[0] < grant[0] < start[0], adb.calls
+
+
+def test_app_khong_khai_quyen_thong_bao_thi_van_reset_binh_thuong():
+    """`pm grant` bi tu choi (Android < 13, app khong khai quyen) khong chan reset."""
+    adb = fake(files=files_with(NO_FLAG), fails={
+        "pm clear": ("Success\n", "", 0),
+        "pm grant": ("", "Exception: has not requested permission", 255),
+    })
+    out = asyncio.run(device_reset.prepare(adb, baseline_of(adb), "Fresh install"))
+    assert out["mode"] == "clear" and adb.cmds_with("am start")
+
+
 def test_pm_clear_that_bai_thi_dung_lai():
     adb = fake(files=files_with(NO_FLAG), fails={"pm clear": ("", "Failed", 1)})
     with pytest.raises(AdbError, match="pm clear"):
