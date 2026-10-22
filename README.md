@@ -54,6 +54,29 @@ RCR_NO_BROWSER=1 ./start.sh   # không tự mở browser
 Lần đầu ~30 giây (tự tạo venv + cài thư viện). Các lần sau ~1 giây. Cổng bận thì tự nhảy
 cổng trống kế tiếp.
 
+**Windows:** chạy `./start.sh` trong Git Bash, script tự nhận ra Windows. Venv nằm ở
+`.venv/Scripts` thay vì `.venv/bin`. Muốn cài tay, không qua `start.sh`:
+
+```bash
+python -m venv .venv
+.venv/Scripts/python -m pip install -e .
+.venv/Scripts/rcr-check --help
+```
+
+Sheet ID ads từng vị trí ("Check thông số KT") mặc định là sheet của team QA. Team khác
+dùng sheet cùng khuôn thì đặt `RC_AD_UNITS_SHEET=<link sheet>`, không cần sửa code. Bộ TC
+thì truyền bằng `--tc <link sheet>` như thường.
+
+### Cài lệnh `/rc-check` cho Claude Code (mỗi máy một lần)
+
+Claude Code chỉ đọc lệnh trong `~/.claude/commands/`. Tạo file
+`~/.claude/commands/rc-check.md` là một file trỏ về repo: nội dung chỉ bảo Claude tìm repo
+theo thứ tự `git rev-parse --show-toplevel` → `$RC_RUNNER_REPO` →
+`~/Desktop/check_remote_config` → `~/check_remote_config`, rồi đọc
+`<repo>/.claude/commands/rc-check.md`. Clone repo về chỗ khác thì đặt biến
+`RC_RUNNER_REPO=<đường dẫn repo>`. Không chép nguyên file lệnh sang: hai bản sẽ lệch nhau sau
+mỗi lần `git pull`. Lệnh mới chỉ hiện ở phiên Claude Code mở sau đó.
+
 Chỉ bind `127.0.0.1`. Tool **không có auth** mà điều khiển được adb → không được expose ra
 LAN. Có middleware chặn thêm trong code, không phụ thuộc cách khởi động.
 
