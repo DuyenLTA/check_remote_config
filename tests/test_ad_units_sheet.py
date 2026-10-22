@@ -42,3 +42,23 @@ def test_sheet_de_len_yaml_chep_tay(tmp_path, monkeypatch):
     yaml_p.write_text("pkg.a:\n  id_302_onb2_n_native: cu\n  id_301_onb1_n_native: x\n")
     assert ad_units.cho_package("pkg.a", yaml_p) == {"id_302_onb2_n_native": "moi",
                                                      "id_301_onb1_n_native": "x"}
+
+
+def test_bien_moi_truong_doi_duoc_sheet(tmp_path, monkeypatch):
+    """Team khac dung sheet khac: dat RC_AD_UNITS_SHEET la doi, khong sua code."""
+    da_tai = []
+
+    def tai_ve(link, out_dir):
+        da_tai.append(link)
+        return _wb(tmp_path)
+
+    monkeypatch.setattr(ad_units_sheet.tc_source, "tai_ve", tai_ve)
+    khac = "https://docs.google.com/spreadsheets/d/SheetCuaTeamKhac123/edit"
+    monkeypatch.setenv("RC_AD_UNITS_SHEET", khac)
+    bang, _ = ad_units_sheet.tai("photomaker.image.editor.ai", tmp_path)
+    assert da_tai == [khac]
+    assert bang == {"id_302_onb2_n_native": "ca-app-pub-1/2409093993"}
+
+    monkeypatch.delenv("RC_AD_UNITS_SHEET")
+    ad_units_sheet.tai("photomaker.image.editor.ai", tmp_path)
+    assert da_tai[-1] == ad_units_sheet.LINK

@@ -13,12 +13,15 @@ nguoc `ca-app-pub-... | <vi tri>` -> doc cap o theo noi dung, khong theo cot.
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
 from . import tc_source
 from .models import RcError
 
+# Sheet cua team QA. Team/du an khac dung sheet khac thi dat bien RC_AD_UNITS_SHEET
+# (link sheet cung khuon) thay vi sua code.
 LINK = "https://docs.google.com/spreadsheets/d/14XivZl9VPAnyf8hYICgRh-TOUmkGTZDCqoyWmPM57hM/edit"
 VI_TRI_RE = re.compile(r"^\d{3}[-_][a-z0-9_-]+$", re.I)
 ID_RE = re.compile(r"^ca-app-pub-\d+/\d+$")
@@ -49,8 +52,10 @@ def doc_tab(path, package: str) -> dict[str, str]:
         wb.close()
 
 
-def tai(package: str, out_dir, link: str = LINK) -> tuple[dict[str, str], str]:
+def tai(package: str, out_dir, link: str | None = None) -> tuple[dict[str, str], str]:
     """-> (bang ID, ghi chu). Tai hong thi dung ban da tai lan truoc (neu co)."""
+    # Doc env luc goi chu khong luc import: dat bien trong phien dang chay van an.
+    link = link or os.environ.get("RC_AD_UNITS_SHEET") or LINK
     try:
         path = tc_source.tai_ve(link, out_dir)
         nguon = "sheet Check thông số KT (bản mới tải)"
