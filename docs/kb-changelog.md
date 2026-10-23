@@ -14,7 +14,8 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 | 07/10/2026 | 8/12 FAIL là sai, do app tự fetch Firebase ghi đè giá trị đã patch | Chạy lại mọi FAIL, đọc lại config sau khi chấm, §5d (`09d23ee`) | 8 FAIL sai → BLOCKED kèm lý do |
 | 07/10/2026 | Luật viết riêng cho từng app (ID nút X) | Bỏ, dùng luật chung (`12e2be3`) | Quy tắc cũ đã xóa |
 | 07/10/2026 | Bằng chứng trong report lấy từ lượt khác lượt ra verdict | Bằng chứng phải cùng lượt (`a8de060`) | — |
-| 10/10/2026 | Sorapix 1.6.0: 11 FAIL lặp lại, nghi do tool bắt thiếu frame (OB3X) và chưa đủ tiền đề | Chưa sửa, lượt đang dừng | Cần audit xong |
+| 10/10/2026 | Sorapix 1.6.0: 11 FAIL lặp lại, nghi do tool bắt thiếu frame (OB3X) và chưa đủ tiền đề | Xem dòng 23/10 | — |
+| 23/10/2026 | Sorapix 1.6.0 OB3X-001/002/004/005: "nút X không hiện" trong khi OB3 đứng 8,6s mà tool chỉ có 1–2 khung. `dumpsys activity top` treo cả cửa sổ, uiautomator chỉ được gọi lại sau mỗi khung nhanh nên dừng theo. OB3X-013: khung uiautomator ghi 0,12s sau lúc rời OB3 bị tính là màn kế | Hai vòng nhìn chạy độc lập, dumpsys quá 2s thì bỏ khung đó. Có quãng >3s không nhìn được màn thì không kết luận "không hiện", trả NEEDS_HUMAN. Khung uiautomator trong 0,5s sau lúc rời OB3 không tính là màn kế | Chấm lại offline dữ liệu 10/10: 6 FAIL OB3X → 5 cần chạy lại, 1 PASS. Chưa chạy lại trên máy |
 
 ## Commit đụng tới KB
 

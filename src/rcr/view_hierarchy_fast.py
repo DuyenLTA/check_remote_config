@@ -97,6 +97,7 @@ def parse(text: str, package: str) -> list[FastView]:
     return out
 
 
-async def read(client, serial: str, package: str) -> list[FastView]:
-    out, _, _ = await client.shell(serial, "dumpsys", "activity", "top")
+async def read(client, serial: str, package: str, timeout: float | None = None) -> list[FastView]:
+    """Qua `timeout` giay thi adb_client raise AdbError (va giet tien trinh adb)."""
+    out, _, _ = await client.shell(serial, "dumpsys", "activity", "top", timeout=timeout)
     return parse(out, package)

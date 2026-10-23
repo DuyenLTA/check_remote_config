@@ -92,6 +92,12 @@ def khung(*cap):
     return [{"t": V0 + t, "x": x, "dem": d, "trang": 0} for t, x, d in cap]
 
 
+def khung_deu(den: float, tu: float = 0.5, nhip: float = 1.0):
+    """Khung trong, cach deu `nhip` giay tu `tu` toi `den`: phu kin luc o OB3."""
+    so = int((den - tu) / nhip) + 1
+    return khung(*((tu + i * nhip, False, "") for i in range(so)))
+
+
 def test_nut_x_hien_dung_timer():
     k = khung((2.0, False, "4"), (4.5, False, "1"), (6.5, True, ""))
     r = at.cham("Button X hiển thị tại ~t0+5s.", tl(roi=12, show=1.0, khung=k),
@@ -100,7 +106,7 @@ def test_nut_x_hien_dung_timer():
 
 
 def test_khong_hien_x_va_dem_nguoc_khi_tat_skip():
-    k = khung((2.0, False, ""), (4.0, False, ""), (7.0, False, ""))
+    k = khung_deu(11.5)
     r = at.cham("KHÔNG hiển thị số đếm ngược, KHÔNG hiển thị button X", tl(roi=12, show=1.0, khung=k),
                 {"ob3_show_button_skip": "false"})
     assert v(r) == "PASS"
@@ -179,7 +185,40 @@ def test_ad_moi_khong_fill_request_dung_thi_dat():
 
 def test_x_hien_ngay_co_ve_khong_dem_nguoc_khong_phai_cau_phu_dinh():
     """Do 2026-10-06 OB3X-004: cau khang dinh X hien bi doc thanh phu dinh -> PASS sai."""
-    k = khung((1.5, False, ""), (3.0, False, ""))
+    k = khung_deu(11.5)
     r = at.cham("Button X hiển thị NGAY từ đầu (không có số đếm ngược).", tl(roi=12, show=1.0, khung=k),
                 {"timer_button_x": "0"})
     assert v(r) == "FAIL"
+
+
+def test_khung_thua_khong_ket_luan_x_khong_hien():
+    """Do 10/10/2026 Sorapix OB3X-001: vong nhin treo, OB3 8,6s chi co 2 khung -> FAIL oan."""
+    k = khung((0.28, False, ""), (3.74, False, "3"))
+    r = at.cham("Đúng ~5s kể từ t0: button X (đóng) hiển thị trên native full screen.",
+                tl(roi=8.63, show=0.01, khung=k), {"timer_button_x": "5"})
+    assert v(r) == "NEEDS_HUMAN" and "quãng" in r["reason"]
+
+
+def test_khung_thua_khong_cho_pass_cau_phu_dinh():
+    """Khong thay X vi khong nhin, khong phai vi X khong co -> khong duoc PASS."""
+    k = khung((0.5, False, ""), (6.0, False, ""))
+    r = at.cham("KHÔNG hiển thị số đếm ngược, KHÔNG hiển thị button X", tl(roi=12, show=1.0, khung=k),
+                {"ob3_show_button_skip": "false"})
+    assert v(r) == "NEEDS_HUMAN"
+
+
+def test_khung_thua_khong_ket_luan_x_khong_hien_de_bam():
+    """OB3X-002: tool khong bam duoc X vi vong nhin treo, chi 1 khung tren OB3 10,6s."""
+    k = khung((4.36, False, ""))
+    r = at.cham("Native full screen đóng, chuyển sang màn kế tiếp ngay.",
+                tl(roi=10.64, show=0.01, khung=k), {"timer_button_x": "5"})
+    assert v(r) == "NEEDS_HUMAN"
+
+
+def test_khung_uia_sat_luc_roi_khong_tinh_la_man_ke():
+    """OB3X-013: khung uiautomator ghi 0,12s sau luc roi OB3 van la anh chup truoc luc roi."""
+    k = [{"t": V0 + 3.75, "x": False, "dem": "3", "trang": 0, "nguon": "uia"},
+         *({"t": V0 + t, "x": False, "dem": "", "trang": 0, "nguon": "uia"} for t in (6.8, 9.74, 12.58))]
+    r = at.cham("Countdown X bị hủy khi rời màn — không hiện X/không crash ở màn kế.",
+                tl(roi=3.63, show=0.01, khung=k), {"timer_button_x": "5"})
+    assert v(r) == "PASS"

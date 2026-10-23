@@ -18,6 +18,14 @@ from .verdict_levels import FAIL, NEEDS_HUMAN, PASS, out
 
 SAI_SO_LOG = 1.0
 SAI_SO_KHUNG = 1.0           # khung nhanh cach nhau ~0,2s -> dung sai so cua TC (±1s)
+# Ket luan "KHONG thay X / so dem" chi khi khung phu kin luc o OB3: hai khung (ke ca
+# luc vao / roi trang) cach nhau qua muc nay la co quang mu. uiautomator mot minh
+# ~2,5s/khung van du. Do 10/10/2026 Sorapix OB3X-001/004/005: vong nhin treo, OB3
+# 8,6s chi co 1-2 khung -> FAIL oan "nut X khong hien".
+KHE_TOI_DA = 3.0
+# Moc gio khung uiautomator lay sau dump + cat + rm (moi lenh adb ~0,11s, do 23/10/2026
+# tren Pixel 4) -> khung ghi trong khoang nay sau luc roi OB3 co the chup TRUOC luc roi.
+TRE_UIA = 0.5
 
 KHONG_TU_RE = re.compile(r"kh[ôo]ng\s+(?:t[ựu]\s+|auto[\s-]*)?(?:chuy[ểe]n|swipe)|"
                          r"[ởo]\s+l[ạa]i\s+(?:m[àa]n\s+)?OB3", re.I)
@@ -95,6 +103,11 @@ def cham(text: str, tl: dict | None, cfg: dict, req_303=()) -> dict | None:
         # Tool chi bam X khi X hien; ad khong fill thi X khong bao gio hien.
         if not dau["co_ad"]:
             return _khong_fill(text, dau, (tl or {}).get("khung") or [], req_303)
+        tren = [k for k in (tl or {}).get("khung") or []
+                if k["t"] >= dau["vao"] and (dau["roi"] is None or k["t"] <= dau["roi"])]
+        mu = "" if thao_tac else _quang_mu(tren, dau)
+        if mu:
+            return out(NEEDS_HUMAN, mu, text)
         return out(FAIL, "nút X đã hiện nhưng trang OB3 không rời trong 2s sau khi tool bấm"
                    if thao_tac else "ad đã show nhưng nút X không hiện để bấm", text)
     if TU_CHUYEN_RE.search(text) and X_CHUA_RE.search(text):
@@ -152,6 +165,16 @@ def _khong_tu_chuyen(text: str, v: dict, cfg: dict, tool_roi: bool) -> dict:
                      "tool thao tác", text)
 
 
+def _quang_mu(tren: list, v: dict) -> str:
+    """Ly do khung tren OB3 qua thua de ket luan dieu gi KHONG hien, hoac ""."""
+    moc = [v["vao"], *sorted(k["t"] for k in tren)] + ([v["roi"]] if v["roi"] is not None else [])
+    khe = max((b - a for a, b in zip(moc, moc[1:])), default=0.0)
+    if khe <= KHE_TOI_DA:
+        return ""
+    return (f"chỉ có {len(tren)} khung trên OB3, có quãng {khe:.1f}s không nhìn được màn — "
+            "không đủ để kết luận, cần chạy lại")
+
+
 def _nut_x(text: str, v: dict, khung: list, cfg: dict, req_303=()) -> dict:
     tren = [k for k in khung if k["t"] >= v["vao"] and (v["roi"] is None or k["t"] <= v["roi"])]
     if not v["co_ad"] and not _phu_dinh_x(text):
@@ -161,19 +184,25 @@ def _nut_x(text: str, v: dict, khung: list, cfg: dict, req_303=()) -> dict:
         return out(NEEDS_HUMAN, "không có khung nào chụp trên trang OB3 để soi nút X", text)
     x = [k for k in tren if k["x"]]
     dem = [k for k in tren if k["dem"]]
+    mu = _quang_mu(tren, v)
     if _phu_dinh_x(text):
         thay = ("nút X" if x else "") + (" và " if x and dem else "") + ("số đếm ngược" if dem else "")
+        if not thay and mu:
+            return out(NEEDS_HUMAN, mu, text)
         return out(FAIL if thay else PASS,
                    f"thấy {thay} trên trang OB3" if thay else
                    f"{len(tren)} khung trên OB3: không có nút X, không có số đếm ngược", text)
     if not v["co_ad"]:
         return _khong_fill(text, v, khung, req_303)
     if DEM_RE.search(text) and not X_RE.search(text):
+        if not dem and mu:
+            return out(NEEDS_HUMAN, mu, text)
         return out(PASS if dem else FAIL,
                    f"số đếm ngược hiện: {', '.join(k['dem'] for k in dem)}" if dem else
                    "không khung nào thấy số đếm ngược", text)
     if not x:
-        return out(FAIL, f"nút X không hiện trong {len(tren)} khung trên OB3", text)
+        return out(NEEDS_HUMAN if mu else FAIL,
+                   mu or f"nút X không hiện trong {len(tren)} khung trên OB3", text)
     luc = x[0]["t"] - v["t0"]
     if NGAY_RE.search(text):
         return out(PASS if luc <= SAI_SO_KHUNG and not dem else FAIL,
@@ -208,7 +237,7 @@ def _khong_fill(text: str, v: dict, khung: list, req_303=()) -> dict:
 def _x_man_ke(text: str, v: dict, khung: list) -> dict:
     # Chi khung uiautomator: khung "nhanh" (dumpsys) van thay nut X cua trang OB3
     # nam canh ben trong ViewPager du trang do da khuat -> bao "con X" sai.
-    sau = [k for k in khung if k["t"] > v["roi"] and k.get("nguon") != "nhanh"]
+    sau = [k for k in khung if k["t"] > v["roi"] + TRE_UIA and k.get("nguon") != "nhanh"]
     if not sau:
         return out(NEEDS_HUMAN, "không có khung nào chụp sau lúc rời OB3", text)
     thay = [k for k in sau if k["x"] or k["dem"]]

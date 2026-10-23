@@ -33,6 +33,7 @@ import re
 import time
 
 from . import device_app, fo_steps, ui_dump, ui_names, view_hierarchy_fast
+from .adb_parsers import AdbError, AdbTransportError
 
 # Vai tro (khong phai id): TapId mang vai tro nay thi tim theo luat chung ben duoi.
 VAI_NUT_X = ("@nut_x",)
@@ -46,6 +47,10 @@ NUT_TOI_DA = 400                   # px: nut X / so dem; lon hon la vung ad, kho
 VUNG_TREN = 0.35                   # so dem nguoc khong id: chi nhan o 35% tren cua man
 # Moi lan uiautomator toi thieu cach nhau bay nhieu giay (no chiem CPU may).
 GIUA_HAI_UIA = 1.0
+# Mot lan dumpsys lau hon muc nay thi bo khung do, nhin tiep. dumpsys can main
+# thread cua app; luc native OB3 vua gan vao man no co the treo ca cua so (do
+# 10/10/2026 Sorapix OB3X-001/004/005: 1 khung o 0,27s roi im toi het 8,6s).
+NHANH_TOI_DA = 2.0
 
 
 def _goi_y(ten: str) -> set[str]:
@@ -122,10 +127,19 @@ async def mot_khung(client, serial: str, package: str) -> tuple[dict, list]:
     return khung, nodes
 
 
-async def khung_nhanh(client, serial: str, package: str, rong: int) -> tuple[dict, tuple | None]:
-    """Mot lan nhin bang dumpsys: (khung, tam nut X tren man hoac None)."""
+async def khung_nhanh(client, serial: str, package: str,
+                      rong: int) -> tuple[dict | None, tuple | None]:
+    """Mot lan nhin bang dumpsys: (khung, tam nut X tren man hoac None).
+
+    dumpsys treo qua NHANH_TOI_DA -> (None, None): khong co khung, vong nhin di tiep.
+    """
     t = await gio_may(client, serial)
-    views = await view_hierarchy_fast.read(client, serial, package)
+    try:
+        views = await view_hierarchy_fast.read(client, serial, package, timeout=NHANH_TOI_DA)
+    except AdbTransportError:
+        raise                       # mat may: khong nhin tiep duoc, bao len
+    except AdbError:
+        return None, None
     xs = [v for v in views if v.visible and _nho(v.width, v.height) and la_id_x(v.rid)]
     dem = any(v.visible and _nho(v.width, v.height) and la_id_dem(v.rid) for v in views)
     tam = None
@@ -140,36 +154,42 @@ async def theo_doi(client, serial: str, package: str, giay: float, khung: list,
                    dung_khi=None) -> list | None:
     """Nhin lien tuc trong `giay` giay, them khung vao `khung`.
 
-    Khung nhanh lien tuc; song song moi lan mot uiautomator (khung "uia").
+    Hai vong DOC LAP chay song song: khung nhanh lien tuc, va uiautomator moi
+    GIUA_HAI_UIA giay. Truoc 23/10/2026 uiautomator chi duoc goi lai sau moi khung
+    nhanh -> dumpsys treo thi ca hai cung dung, OB3 8,6s chi con 1-2 khung.
     `dung_khi(nodes)` (nodes cua uiautomator) tra True thi dung som, tra `nodes`.
     """
     rong = (await device_app.screen_size(client, serial))[0]
     het = time.monotonic() + giay
-    uia: asyncio.Task | None = None
-    lan_uia = 0.0
-    try:
-        while time.monotonic() < het:
-            if uia is None and time.monotonic() - lan_uia >= GIUA_HAI_UIA:
-                uia, lan_uia = asyncio.create_task(mot_khung(client, serial, package)), time.monotonic()
+    xong = asyncio.Event()
+    thay: list = []
+
+    async def nhin_nhanh() -> None:
+        while time.monotonic() < het and not xong.is_set():
             k, _ = await khung_nhanh(client, serial, package, rong)
-            khung.append(k)
-            if uia is not None and uia.done():
-                ku, nodes = uia.result()
-                uia = None
-                khung.append(ku)
-                if dung_khi and dung_khi(nodes):
-                    return nodes
-        if uia is not None:
-            ku, nodes = await uia
-            uia = None
+            if k:
+                khung.append(k)
+
+    async def nhin_uia() -> None:
+        while time.monotonic() < het and not xong.is_set():
+            bat_dau = time.monotonic()
+            ku, nodes = await mot_khung(client, serial, package)
             khung.append(ku)
             if dung_khi and dung_khi(nodes):
-                return nodes
+                thay.append(nodes)
+                xong.set()
+                return
+            await asyncio.sleep(max(0.0, GIUA_HAI_UIA - (time.monotonic() - bat_dau)))
+
+    tasks = [asyncio.create_task(nhin_nhanh()), asyncio.create_task(nhin_uia())]
+    try:
+        await asyncio.gather(*tasks)
     finally:
-        if uia is not None and not uia.done():
-            uia.cancel()
+        for t in tasks:
+            if not t.done():
+                t.cancel()
         khung.sort(key=lambda k: k["t"])
-    return None
+    return thay[0] if thay else None
 
 
 async def cho_nut_x(client, serial: str, package: str, giay: float, khung: list) -> tuple | None:
@@ -178,7 +198,8 @@ async def cho_nut_x(client, serial: str, package: str, giay: float, khung: list)
     het = time.monotonic() + giay
     while time.monotonic() < het:
         k, tam = await khung_nhanh(client, serial, package, rong)
-        khung.append(k)
+        if k:
+            khung.append(k)
         if tam:
             return tam
     return None
