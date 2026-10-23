@@ -49,6 +49,14 @@ def nap_sheet(package: str, out_dir, log_fn=lambda _m: None) -> int:
 
     ids, ghi_chu = ad_units_sheet.tai(package, out_dir)
     log_fn(f"ID ads tung vi tri: {ghi_chu}")
+    if not ids and ad_units_sheet.THIEU_TAB in ghi_chu:
+        # App chua co tab trong sheet: moi luot chi goi nap_sheet mot lan -> mot tin.
+        from . import discord_notify
+
+        discord_notify.send(
+            "stop", f"App chưa có trong sheet thông số KT · {package}",
+            [f"Sheet Check thông số KT không có tab nào ghi package {package}"],
+            "Nhờ bổ sung tab cho package vào sheet Check thông số KT")
     if ids:
         _SHEET[package] = ids
     return len(ids)

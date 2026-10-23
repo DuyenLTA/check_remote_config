@@ -267,3 +267,9 @@ class FakeAdb:
 @pytest.fixture
 def adb():
     return FakeAdb()
+
+@pytest.fixture(autouse=True)
+def _no_discord(monkeypatch):
+    """Test khong bao gio duoc cham mang that: tat thong bao Discord mac dinh."""
+    monkeypatch.setenv("DISCORD_NOTIFY", "0")
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)

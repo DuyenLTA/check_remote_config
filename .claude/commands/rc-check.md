@@ -97,7 +97,8 @@ ai đụng tới — PASS hụt, người đọc tưởng đã test xong nên kh
 
 **Chỉ nhận package id**, không nhận tên app: khớp theo tên là khớp mờ, gõ thiếu
 một ký tự là patch nhầm app hàng xóm. `$ARGUMENTS` không có chuỗi nào trông như
-`com.abc.xyz` thì **dừng và hỏi**.
+`com.abc.xyz` thì **dừng và hỏi**. Trước khi hỏi, báo Discord (lỗi gửi thì bỏ qua):
+`<bin>/rcr-notify --kind stop --title "Thiếu / sai package" --line "<$ARGUMENTS>" --action "Gửi package id dạng com.abc.xyz"`
 
 App phải cho vào vùng dữ liệu riêng — một trong hai:
 
@@ -121,15 +122,18 @@ aapt dump badging <file.apk> | grep application-debuggable
 adb devices -l
 ```
 
-- 0 máy → **dừng**: cần máy Android thật, USB debugging, đã bấm Allow
+- 0 máy → **dừng**: cần máy Android thật, USB debugging, đã bấm Allow. Báo Discord:
+  `<bin>/rcr-notify --kind stop --title "Không có máy Android" --line "<package>" --action "Cắm máy, bật USB debugging, bấm Allow"`
 - đúng 1 máy → không truyền `--serial` (tool tự lấy)
 - nhiều máy → `--serial` lấy từ `$ARGUMENTS`; không có thì in danh sách và
-  **hỏi**. Patch bừa lên máy người khác đang dùng là hỏng data của họ
+  **hỏi**. Patch bừa lên máy người khác đang dùng là hỏng data của họ. Báo Discord:
+  `<bin>/rcr-notify --kind stop --title "Nhiều máy, cần chọn" --line "<danh sách serial>" --action "Chọn serial máy cần chạy"`
 - máy `unauthorized` không tính là dùng được
 
 **Máy phải đang mở khoá.** Máy khoá thì PMS không resolve được activity nào, tool
 báo không mở được app — nhìn y hệt app hỏng. Gặp lỗi đó thì bảo người dùng mở
-khoá rồi chạy lại, đừng đi tìm bug trong app.
+khoá rồi chạy lại, đừng đi tìm bug trong app. Báo Discord:
+`<bin>/rcr-notify --kind stop --title "Máy đang khoá màn hình" --line "<serial>" --action "Mở khoá máy rồi chạy lại"`
 
 ## 4. Chạy
 
@@ -173,7 +177,8 @@ Tool tự tải bản **mới nhất** về `out/tc-<id>.xlsx` mỗi lần chạ
 Downloads dễ lệch bản: ngày 02/10 tôi chạy cả buổi bằng `(2).xlsx` trong khi đã có
 `(3).xlsx` mới hơn. Người dùng đưa link sheet khác hoặc chỉ định một file `.xlsx` cụ
 thể thì dùng đúng cái đó. Tải không được (sheet riêng tư) thì dừng và báo, **đừng lùi
-về file cũ trong Downloads**.
+về file cũ trong Downloads**. Báo Discord:
+`<bin>/rcr-notify --kind stop --title "Không tải được sheet TC" --line "<link sheet>" --action "Chia sẻ sheet hoặc gửi file .xlsx"`
 
 **Người dùng nêu bản SDK nào thì chỉ chạy đúng tab đó** — `sdk 3.4.0` → `--tab 3.4.0`.
 **Mặc định tool tự chọn sheet, đừng chỉ định thừa.** Tool đọc bản SDK First Open từ
@@ -511,6 +516,11 @@ Publish xong thì ghi link lại, lấy `generated_at` từ **chính dòng JSON 
 cd <repo> && <bin>/rcr-artifact --url <link> --generated-at <generated_at cua luot>
 cd <repo> && <bin>/rcr-artifact          # in link da luu cua luot truoc
 ```
+
+Lệnh ghi link tự báo Discord "Report đã publish". Lần publish **đầu** của một lượt thì thêm
+`--app "<tên app>" --version <ver> --cases "<n (m nhóm)>" --result "<x PASS · y FAIL · …>"
+--bugs "<bug đã xác nhận>" --tool-minutes <phút máy chạy>` để ghi một dòng vào
+`docs/usage-log.md`; republish đè cùng link thì **bỏ `--app`** kẻo ghi trùng dòng.
 
 URL artifact **cố định**: republish cùng file thì giữ nguyên link. Nên lượt sau cứ đọc
 link cũ rồi republish đè, người dùng không phải đổi link đang mở. Bắt buộc kèm

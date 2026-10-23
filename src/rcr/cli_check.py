@@ -23,7 +23,10 @@ import sys
 import time
 from pathlib import Path
 
-from . import ad_units, case_run, rc_baseline, run_batch, sdk_probe, tc_select, tc_source
+from . import (
+    ad_units, case_run, rc_baseline, run_batch, sdk_probe, discord_notify, discord_run_message,
+    tc_select, tc_source,
+)
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .models import RcError
@@ -60,7 +63,22 @@ def parse_sets(pairs: list[str]) -> dict[str, str]:
     return out
 
 
+def _notify_run(args: argparse.Namespace, out: dict, started: float) -> None:
+    """Mot tin Discord cho ca luot. Hong gi cung khong duoc doi stdout / exit code."""
+    try:
+        tc = out.get("tc") or {}
+        summary = discord_run_message.summarize(
+            out.get("cases") or [], app=args.app_label, package=args.package,
+            sdk=tc.get("sdk") or "", duration_s=time.monotonic() - started,
+            report=args.report)
+        kind, title, lines, action = discord_run_message.build_run_message(summary)
+        discord_notify.send(kind, title, lines, action)
+    except Exception as exc:  # noqa: BLE001 - thong bao la tien nghi
+        _log(f"discord: không dựng được thông báo ({type(exc).__name__})")
+
+
 async def run(args: argparse.Namespace) -> dict:
+    started = time.monotonic()
     client = AdbClient(args.adb)
     serial = await pick_serial(client, args.serial)
     _log(f"May: {serial} · App: {args.package}")
@@ -144,6 +162,7 @@ async def run(args: argparse.Namespace) -> dict:
             # command /rc-check) publish file nay, ma stderr thi khong parse.
             if args.report:
                 out["report"] = args.report
+            _notify_run(args, out, started)
             return out
     elif args.case:
         raise RcError("--case can di kem --tc <file.xlsx>.")

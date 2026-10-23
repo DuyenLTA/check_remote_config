@@ -296,6 +296,22 @@ PYTHONPATH=src .venv/bin/python -m rcr.spec_sync --check  # chi xem, khong tai
 Tải 6.4.0 + mọi `visionlab:tutorial` ≥ 3.0.1 về `src/rcr/data/specs/` (gitignore — tài liệu nội bộ).
 Luật rút ra nằm ở `src/rcr/data/sdk_rules.yaml`, mỗi luật ghi `nguon` = pageId spec.
 
+## Thông báo Discord
+
+Tool gửi tin vào Discord khi một lượt chạy xong (có FAIL → ⛔, không FAIL → ✅), khi app thiếu
+trong sheet thông số KT, và khi report được publish. Gửi hỏng chỉ in một dòng cảnh báo ra
+stderr, không đổi kết quả hay exit code của lượt chạy.
+
+1. Discord → *Server Settings* → *Integrations* → *Webhooks* → *New Webhook* (chọn channel) → *Copy Webhook URL*.
+2. Đặt biến môi trường (đừng ghi URL vào file nào trong repo — repo này public):
+   ```bash
+   export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/<id>/<token>"
+   ```
+3. Tắt hẳn việc gửi: `DISCORD_NOTIFY=0`.
+
+Gửi tay một tin (slash command dùng cho các điểm dừng agent tự xử lý):
+`rcr-notify --kind stop --title "..." --line "..." [--action "..."] [--link URL]`.
+
 ## Test
 
 ```bash

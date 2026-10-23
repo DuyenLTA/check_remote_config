@@ -25,6 +25,8 @@ from .models import RcError
 LINK = "https://docs.google.com/spreadsheets/d/14XivZl9VPAnyf8hYICgRh-TOUmkGTZDCqoyWmPM57hM/edit"
 VI_TRI_RE = re.compile(r"^\d{3}[-_][a-z0-9_-]+$", re.I)
 ID_RE = re.compile(r"^ca-app-pub-\d+/\d+$")
+# Cum tu trong ghi chu khi sheet khong co tab cua package (ad_units.nap_sheet dua vao de bao Discord).
+THIEU_TAB = "không có tab nào ghi package"
 
 
 def doc_tab(path, package: str) -> dict[str, str]:
@@ -67,5 +69,5 @@ def tai(package: str, out_dir, link: str | None = None) -> tuple[dict[str, str],
         path, nguon = cu, "sheet Check thông số KT (bản tải lần trước — lần này tải hỏng)"
     bang = doc_tab(path, package)
     if not bang:
-        return {}, f"sheet Check thông số KT không có tab nào ghi package {package}"
+        return {}, f"sheet Check thông số KT {THIEU_TAB} {package}"
     return bang, f"{nguon}: {len(bang)} vị trí"
