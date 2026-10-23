@@ -469,3 +469,49 @@ def test_run_case_co_buoc_Action_thi_lai_that_tren_may(adb_ui, tmp_path):
         steps=["Quan sát màn hình"], keep=True, out_dir=tmp_path, dex=False, man_can="",
     ))
     assert out["runs"][0]["drive"]["steps"][0]["action"]["kind"] == "noop"
+
+
+# --- chay khong Claude ------------------------------------------------------
+
+
+def test_case_all_chay_moi_case_tool_chay_duoc(adb_ui, tmp_path, monkeypatch):
+    path = make_xlsx(tmp_path / "tc.xlsx", [
+        ("1", "Onb", "Config", "tat onb3", "", "enable_onb3_screen = false", "1. Mo app.", "1. Khong hien.", ""),
+        ("2", "Track", "Analytics", "param", "", "source = navigation", "", "", ""),
+    ])
+    monkeypatch.setattr(cli_check, "AdbClient", lambda _p=None: adb_ui)
+    chay: list[str] = []
+
+    async def run_cases(client, baseline, args, runnable, rows, tc, log_fn):
+        chay.append(args.case)
+        return []
+
+    monkeypatch.setattr(cli_check.run_batch, "run_cases", run_cases)
+    args = cli_check.build_parser().parse_args(
+        ["--package", PKG, "--serial", SERIAL, "--tc", str(path), "--case", "all"])
+    asyncio.run(cli_check.run(args))
+    # Case 2 khong co key RC nao -> tool khong chay duoc, khong duoc lot vao.
+    assert chay == ["1"]
+
+
+def test_khong_claude_dien_san_tc_va_report(tmp_path):
+    args = cli_check.build_parser().parse_args(
+        ["--package", PKG, "--case", "all", "--khong-claude", "--out-dir", str(tmp_path)])
+    cli_check.mac_dinh_khong_claude(args)
+    assert args.tc == cli_check.TC_MAC_DINH
+    assert args.report.startswith(str(tmp_path)) and PKG in args.report
+    assert args.report.endswith(".html")
+
+
+def test_khong_claude_khong_de_tham_so_nguoi_dung_da_truyen(tmp_path):
+    args = cli_check.build_parser().parse_args(
+        ["--package", PKG, "--case", "1", "--khong-claude", "--tc", "tc.xlsx",
+         "--report", "out/a.html"])
+    cli_check.mac_dinh_khong_claude(args)
+    assert (args.tc, args.report) == ("tc.xlsx", "out/a.html")
+
+
+def test_khong_co_co_thi_khong_dien_gi(tmp_path):
+    args = cli_check.build_parser().parse_args(["--package", PKG, "--case", "1"])
+    cli_check.mac_dinh_khong_claude(args)
+    assert args.tc is None and args.report == ""

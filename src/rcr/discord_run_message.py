@@ -11,10 +11,14 @@ from . import report_row
 
 TOI_DA_CASE = 10
 HANH_DONG_FAIL = "Chạy §5d: xác nhận lại từng FAIL trước khi báo dev"
+# Khong co agent chay §5d: tool da tu chay lai, FAIL con lai la FAIL lap lai.
+HANH_DONG_FAIL_KHONG_CLAUDE = ("FAIL đã lặp lại qua các lần tool tự chạy lại — tester "
+                               "xem ảnh trong report đính kèm rồi xác nhận trước khi báo dev")
+HANH_DONG_CAN_NGUOI = "Mở report đính kèm: chạy lại / làm tay các case BLOCKED, NOT_VERIFIABLE"
 
 
 def summarize(records: list[dict], *, app: str, package: str, sdk: str,
-              duration_s: float | None, report: str) -> dict:
+              duration_s: float | None, report: str, khong_claude: bool = False) -> dict:
     """records (report_data.case_record) -> summary dung cho build_run_message."""
     nhan = [report_row.nhan_cua(r.get("verdict", "")) for r in records]
     dem = Counter(nhan)
@@ -30,7 +34,7 @@ def summarize(records: list[dict], *, app: str, package: str, sdk: str,
         "counts": {k: dem.get(k, 0) for k in ("PASS", "FAIL", "BLOCKED", "NA")},
         "fail_ids": [str(r.get("key", "")) for r, n in zip(records, nhan) if n == "FAIL"],
         "blocked_reasons": ly_do,
-        "duration_s": duration_s, "report": report,
+        "duration_s": duration_s, "report": report, "khong_claude": khong_claude,
     }
 
 
@@ -59,8 +63,18 @@ def build_run_message(summary: dict) -> tuple[str, str, list[str], str | None]:
     if c["BLOCKED"] > 0:
         why = "; ".join(summary.get("blocked_reasons") or []) or "chưa rõ lý do, xem report"
         lines.append(f"BLOCKED: config bị ghi đè / chưa tạo được điều kiện — {why[:300]}")
+    khong_claude = bool(summary.get("khong_claude"))
+    can_nguoi = c["BLOCKED"] + c["NA"]
+    if khong_claude and can_nguoi:
+        # Khong co agent lam §5b: case chua ra PASS/FAIL la viec cua nguoi.
+        lines.append(f"Cần người xem: {can_nguoi} case ({c['BLOCKED']} BLOCKED — chạy lại "
+                     f"/ lái tay · {c['NA']} NOT_VERIFIABLE — nhìn mắt hoặc PO)")
     if summary.get("report"):
         lines.append(f"Report: {summary['report']}")
     if c["FAIL"] > 0:
-        return "stop", f"Có {c['FAIL']} FAIL cần audit lại", lines, HANH_DONG_FAIL
+        return ("stop", f"Có {c['FAIL']} FAIL cần audit lại", lines,
+                HANH_DONG_FAIL_KHONG_CLAUDE if khong_claude else HANH_DONG_FAIL)
+    if khong_claude and can_nguoi:
+        return ("stop", f"Xong, {can_nguoi} case cần người xem · {summary['app']}", lines,
+                HANH_DONG_CAN_NGUOI)
     return "done", f"Hoàn tất · {summary['app']}", lines, None

@@ -152,6 +152,30 @@ Trang gom nhóm theo **tính năng** (cột Feature của file TC), có ô đế
 dropdown trạng thái và ô tìm. Mỗi hàng mang `id="c-<mã case>"` để dán link nhảy thẳng tới
 một case khi log bug.
 
+### Chạy không cần Claude — `--khong-claude`
+
+Trên Windows, chạy đúng một lệnh trên máy đang cắm điện thoại:
+
+```bat
+rem tool tự đo bản SDK FO rồi chọn tab
+chay-khong-claude.bat com.example.app
+rem chỉ tab 3.4.0 (tab có dấu cách thì để trong ngoặc kép: "daily checkin")
+chay-khong-claude.bat com.example.app 3.4.0
+```
+
+Lệnh này tương đương `rcr-check --khong-claude --package … --case all [--tab …]`. Cờ này điền sẵn những gì agent vẫn tự lấy:
+
+| | Có Claude (`/rc-check`) | `--khong-claude` |
+|---|---|---|
+| Chọn case | agent chọn danh sách `--case` | `--case all` = mọi case tool chạy được trong tab |
+| Bộ TC, report | agent truyền | `--tc` mặc định sheet TC chung, `--report out/rc-<pkg>-<giờ>.html` |
+| Case chưa ra PASS/FAIL | agent tự đo trên máy (§5b) | tool vẫn tự chạy lại tối đa 3 lần như cũ; còn lại ghi **"Cần người xem"** trong tin Discord |
+| FAIL | agent rà FAIL giả (§5d) | tool vẫn bắt FAIL phải lặp lại, lệch nhau thì ghi "không ổn định" |
+| Gửi report | Claude publish artifact | tin Discord **đính kèm file HTML** (file > 9 MB thì chỉ ghi đường dẫn local) |
+
+Không cờ thì hành vi y như cũ. Những việc vẫn cần người (hoặc Claude) làm: các dòng phải nhìn
+bằng mắt (đúng design, đúng màu), rà PASS giả bằng ảnh chụp, case có thao tác tool chưa hiểu.
+
 ### Publish report thành artifact
 
 Report HTML đã sẵn khuôn artifact (mở đầu bằng `<title>`, không bọc `html/head/body`) nên

@@ -16,14 +16,24 @@ class _Hook:
     def __init__(self, status=204, delay=0.0):
         self.bodies: list[dict] = []
         self.agents: list[str] = []
+        self.raw: list[bytes] = []
+        self.types: list[str] = []
         outer = self
 
         class H(BaseHTTPRequestHandler):
             def do_POST(self):
                 n = int(self.headers.get("Content-Length", 0))
-                outer.bodies.append(json.loads(self.rfile.read(n)))
+                raw = self.rfile.read(n)
+                outer.raw.append(raw)
+                outer.types.append(self.headers.get("Content-Type", ""))
+                # Tin co dinh kem la multipart: JSON nam trong phan `payload_json`.
+                if outer.types[-1].startswith("multipart/form-data; boundary="):
+                    phan = raw.split(b'name="payload_json"', 1)[1]
+                    raw = phan.split(b"\r\n\r\n", 1)[1].split(b"\r\n--", 1)[0]
+                else:
+                    assert outer.types[-1] == "application/json"
+                outer.bodies.append(json.loads(raw))
                 outer.agents.append(self.headers.get("User-Agent", ""))
-                assert self.headers.get("Content-Type") == "application/json"
                 time.sleep(delay)
                 try:
                     self.send_response(status)
@@ -258,3 +268,78 @@ def test_rcr_artifact_khong_app_thi_khong_dong_vao_log(tmp_path):
     cli_artifact.main(["--url", "https://claude.ai/a/1", "--generated-at", "t",
                        "--out", str(tmp_path), "--usage-log", str(log)])
     assert log.read_text(encoding="utf-8") == LOG
+
+
+# --- chay khong Claude ---------------------------------------------------------
+
+def _msg_kc(records):
+    s = discord_run_message.summarize(records, app="Piclux 2.8.0", package="com.p", sdk="3.4.0",
+                                    duration_s=60, report="out/r.html", khong_claude=True)
+    return discord_run_message.build_run_message(s)
+
+
+def test_khong_claude_fail_khong_tro_toi_muc_cua_agent():
+    kind, _, _, action = _msg_kc([_rec("a", "FAIL"), _rec("b", "FAIL")])
+    assert kind == "stop"
+    assert "§5d" not in action and "lặp lại" in action
+
+
+def test_khong_claude_con_blocked_na_thi_stop_can_nguoi_xem():
+    kind, title, lines, action = _msg_kc([_rec("a", "PASS"), _rec("b", "BLOCKED"),
+                                          _rec("c", "NOT_VERIFIABLE")])
+    assert kind == "stop"
+    assert title == "Xong, 2 case cần người xem · Piclux 2.8.0"
+    assert any(l.startswith("Cần người xem: 2 case (1 BLOCKED") for l in lines)
+    assert "BLOCKED" in action
+
+
+def test_khong_claude_tat_ca_pass_van_done():
+    kind, _, lines, action = _msg_kc([_rec("a", "PASS")])
+    assert (kind, action) == ("done", None)
+    assert not any(l.startswith("Cần người xem") for l in lines)
+
+
+def test_co_claude_giu_nguyen_tin_cu():
+    kind, _, lines, action = _msg([_rec("a", "PASS"), _rec("b", "BLOCKED")])
+    assert (kind, action) == ("done", None)
+    assert not any(l.startswith("Cần người xem") for l in lines)
+
+
+def test_gui_kem_file_report_bang_multipart(hook, tmp_path):
+    h = hook()
+    report = tmp_path / "rc-x.html"
+    report.write_text("<h1>Báo cáo</h1>", encoding="utf-8")
+    assert discord_notify.send("done", "Xong", ["dòng 1"], file=report)
+    assert h.types[0].startswith("multipart/form-data; boundary=")
+    assert b'filename="rc-x.html"' in h.raw[0]
+    assert "<h1>Báo cáo</h1>".encode("utf-8") in h.raw[0]
+    assert "dòng 1" in h.bodies[0]["content"]
+
+
+def test_file_qua_lon_thi_gui_tin_khong_kem(hook, tmp_path, monkeypatch):
+    h = hook()
+    report = tmp_path / "to.html"
+    report.write_text("x" * 50, encoding="utf-8")
+    monkeypatch.setattr(discord_notify, "MAX_FILE", 10)
+    assert discord_notify.send("done", "Xong", [], file=report)
+    assert h.types[0] == "application/json"
+    assert "quá lớn" in h.bodies[0]["content"]
+
+
+def test_upload_hong_thi_van_gui_tin_chu_kem_duong_dan(tmp_path, monkeypatch):
+    from pathlib import Path
+    monkeypatch.setenv("DISCORD_NOTIFY", "1")
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", "http://127.0.0.1:9/hook")
+    report = tmp_path / "r.html"
+    report.write_text("x", encoding="utf-8")
+    gui: list = []
+
+    def post(url, payload, dinh_kem):
+        gui.append((payload["content"], dinh_kem is not None))
+        return dinh_kem is None
+
+    monkeypatch.setattr(discord_notify, "_post", post)
+    assert discord_notify.send("done", "Xong", [], file=report)
+    assert [co for _, co in gui] == [True, False]
+    assert "Không gửi kèm được report" in gui[1][0]
+    assert discord_notify._ten_file(Path('báo "cáo".html')) == "b_o__c_o_.html"

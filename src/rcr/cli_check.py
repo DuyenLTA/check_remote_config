@@ -31,6 +31,11 @@ from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .models import RcError
 
+# `--case all`: moi case tool chay duoc trong tab da chon.
+TAT_CA = "all"
+# Sheet TC chung moi ban SDK - mac dinh cua `--khong-claude` khi khong truyen --tc.
+TC_MAC_DINH = "https://docs.google.com/spreadsheets/d/1sNFXM7oGzx_addpimZL7RYk2rXpRs_We6YUHpdtWSqU/edit"
+
 # Snapshot config goc nam ngoai git (xem .gitignore) - no la anh chup mot may cu the.
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / "out"
 
@@ -70,9 +75,11 @@ def _notify_run(args: argparse.Namespace, out: dict, started: float) -> None:
         summary = discord_run_message.summarize(
             out.get("cases") or [], app=args.app_label, package=args.package,
             sdk=tc.get("sdk") or "", duration_s=time.monotonic() - started,
-            report=args.report)
+            report=args.report, khong_claude=args.khong_claude)
         kind, title, lines, action = discord_run_message.build_run_message(summary)
-        discord_notify.send(kind, title, lines, action)
+        # Khong co Claude publish artifact: dinh kem chinh file report.
+        dinh_kem = Path(args.report) if args.khong_claude and args.report else None
+        discord_notify.send(kind, title, lines, action, file=dinh_kem)
     except Exception as exc:  # noqa: BLE001 - thong bao la tien nghi
         _log(f"discord: không dựng được thông báo ({type(exc).__name__})")
 
@@ -154,6 +161,13 @@ async def run(args: argparse.Namespace) -> dict:
         _log(f"Bo TC: {len(rows)} case, {len(runnable)} case tool chay duoc")
         for note in notes:
             _log(f"  ghi chu: {note}")
+        if (args.case or "").strip().lower() == TAT_CA:
+            # Chay khong Claude: khong ai chon tung case, chay het case tool chay
+            # duoc theo dung thu tu trong bo TC.
+            args.case = ",".join(runnable)
+            _log(f"--case all: chay {len(runnable)} case")
+            if not runnable:
+                raise RcError("--case all: bo TC khong co case nao tool chay duoc.")
         if args.case:
             out["cases"] = await run_batch.run_cases(
                 client, baseline, args, runnable, rows, out["tc"], _log
@@ -190,7 +204,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--tab", default="",
                    help="chi chay dung mot tab, vd `--tab 3.4.0` (khong keo theo base + delta)")
     p.add_argument("--case",
-                   help="case can chay: `3.2.0#12` hoac `12` neu so do chi co o mot tab")
+                   help="case can chay: `3.2.0#12` hoac `12` neu so do chi co o mot tab; "
+                        "`all` = moi case tool chay duoc")
     p.add_argument("--set", action="append", metavar="KEY=VALUE",
                    help="dat thang key/value, khong can file TC (lap lai duoc)")
     p.add_argument("--keep", action="store_true",
@@ -213,8 +228,24 @@ def build_parser() -> argparse.ArgumentParser:
                    help="ten app hien tren tieu de report, vd `Piclux 2.8.0`")
     p.add_argument("--report", default="",
                    help="ghi report HTML tu chua (kem anh tung buoc) ra duong dan nay")
+    p.add_argument("--khong-claude", action="store_true",
+                   help="chay khong co agent: --tc mac dinh sheet TC chung, --report tu "
+                        "dat ten, Discord dinh kem report va ghi so case can nguoi xem")
     p.add_argument("--adb", help="duong dan adb neu khong nam trong PATH")
     return p
+
+
+def mac_dinh_khong_claude(args: argparse.Namespace) -> None:
+    """Dien san nhung gi agent tung tu lay (rc-check.md muc 4) khi chay khong Claude.
+
+    Chi dien cho duong chay case: doc baseline (`rcr-check --package`) khong can TC.
+    """
+    if not (args.khong_claude and args.case):
+        return
+    if not args.tc:
+        args.tc = TC_MAC_DINH
+    if not args.report:
+        args.report = str(Path(args.out_dir) / f"rc-{args.package}-{time.strftime('%y%m%d-%H%M%S')}.html")
 
 
 def _stdio_utf8() -> None:
@@ -233,6 +264,7 @@ def _stdio_utf8() -> None:
 def main(argv: list[str] | None = None) -> int:
     _stdio_utf8()
     args = build_parser().parse_args(argv)
+    mac_dinh_khong_claude(args)
     try:
         result = asyncio.run(run(args))
     except (AdbError, RcError) as exc:

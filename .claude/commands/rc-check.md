@@ -166,6 +166,10 @@ cd <repo> && <bin>/rcr-check --package <pkg> --tc "<link sheet TC>" --tab 3.4.0 
 cd <repo> && <bin>/rcr-check --package <pkg> --set splash_banner_change=false
 ```
 
+**Đừng truyền `--khong-claude`.** Cờ đó dành cho lượt chạy không có agent
+(`chay-khong-claude.bat`): tin Discord của nó để lại case BLOCKED / NOT_VERIFIABLE cho
+người, trong khi lượt có agent phải tự làm hết theo §5b–5d.
+
 **Bộ TC lấy từ Google Sheet, KHÔNG tìm file trong Downloads** (user dặn 2026-10-03).
 Mặc định `--tc` là link workbook chung mọi bản SDK:
 
