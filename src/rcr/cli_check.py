@@ -308,6 +308,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--dong", default="", help="so dong Expected cham tay, dem tu 1, vd 2 hoac 1,3")
     p.add_argument("--ket", default="", help="PASS | FAIL | NEEDS_HUMAN | NOT_VERIFIABLE")
     p.add_argument("--ly-do", default="", help="so do / cach do, hien tren report")
+    p.add_argument("--dieu-kien-dat", default="",
+                   help="kem --cham-tay: luot do tay DA tao duoc precondition ma tool khong tao duoc "
+                        "- ghi cach tao; bo precondition_thieu cua luot tool (khong go ad_click)")
     p.add_argument("--adb", help="duong dan adb neu khong nam trong PATH")
     return p
 

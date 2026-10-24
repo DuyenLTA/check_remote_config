@@ -465,7 +465,9 @@ làm hết các bước dưới đây:
    ```
    Tool tính lại verdict case (dòng xấu nhất, trừ PO; precondition thiếu / có ad_click thì
    vẫn BLOCKED), giữ dấu vết `cham_tay` (ai, lúc nào, lý do) và dựng lại report. Hạ PASS giả
-   cũng bằng lệnh này (`--ket NEEDS_HUMAN`). Rồi publish
+   cũng bằng lệnh này (`--ket NEEDS_HUMAN`). Lượt đo tay **đã tạo được** precondition mà lượt
+   tool không tạo được thì thêm `--dieu-kien-dat "<cách tạo>"`: bỏ `precondition_thieu` của lượt
+   tool, ghi cách tạo lên report (không gỡ `ad_click`). Rồi publish
 
 ## 5c. Rà PASS giả TRƯỚC khi báo — bắt buộc
 

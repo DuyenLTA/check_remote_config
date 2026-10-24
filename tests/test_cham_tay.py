@@ -38,6 +38,23 @@ def test_precondition_khong_dat_thi_van_blocked():
     assert ra["verdict"] == "BLOCKED"
 
 
+def test_luot_tay_tao_duoc_dieu_kien_thi_bo_precondition_thieu():
+    ra = cham_tay.cham({**REC, "precondition_thieu": ["chặn ad server"]}, [1, 4], "PASS", "ok",
+                       dieu_kien="chặn domain ad bằng Private DNS")
+    assert ra["verdict"] == "PASS" and ra["precondition_thieu"] == []
+    assert "Private DNS" in ra["ep_ad_fail"]
+
+
+def test_record_cu_ghi_cham_tay_true_van_cham_duoc():
+    ra = cham_tay.cham({**REC, "cham_tay": True}, [1, 4], "PASS", "ok")
+    assert [c["dong"] for c in ra["cham_tay"]] == [1, 4]
+
+
+def test_dieu_kien_dat_khong_go_ad_click():
+    ra = cham_tay.cham({**REC, "ad_click": 2}, [1, 4], "PASS", "ok", dieu_kien="x")
+    assert ra["verdict"] == "BLOCKED"
+
+
 @pytest.mark.parametrize("dong,ket,ly_do,loi", [
     ([9], "PASS", "x", "chỉ có 4 dòng"),
     ([1], "OK", "x", "--ket"),

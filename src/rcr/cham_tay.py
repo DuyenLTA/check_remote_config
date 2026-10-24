@@ -29,8 +29,18 @@ def so_dong(text: str) -> list[int]:
     return ra
 
 
-def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude") -> dict:
-    """Tra record moi: cac dong `dong` mang verdict `ket` + ly do, verdict case tinh lai."""
+def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude",
+         dieu_kien: str = "") -> dict:
+    """Tra record moi: cac dong `dong` mang verdict `ket` + ly do, verdict case tinh lai.
+
+    `dieu_kien`: cach luot do tay da TAO DUOC precondition ma luot tool khong tao
+    duoc (vd chan domain ad bang Private DNS). Co no thi bo `precondition_thieu`
+    cua luot tool va ghi cach tao vao `ep_ad_fail`. Khong go `ad_click`: click
+    tren unit that thi luot do khong dung duoc, do tay lai cung khong cuu.
+    """
+    if dieu_kien.strip():
+        record = {**record, "precondition_thieu": [],
+                  "ep_ad_fail": f"{ai} tạo điều kiện ở lượt đo tay: {' '.join(dieu_kien.split())}"}
     if ket not in KET_HOP_LE:
         raise RcError(f"--ket phải là một trong {', '.join(KET_HOP_LE)}")
     if not (ly_do or "").strip():
@@ -47,10 +57,11 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
     verdict = worst(ke) if ke else record.get("verdict", "")
     if record.get("precondition_thieu") or record.get("ad_click"):
         verdict = "BLOCKED"  # dieu kien lan chay khong dat thi cham dong nao cung khong cuu duoc case
+    cu = record.get("cham_tay")
+    cu = cu if isinstance(cu, list) else []  # file luot cu ghi `cham_tay: true`
     return {**record, "lines": lines, "verdict": verdict,
             "pending": sum(1 for l in lines if l["v"] not in (PASS, FAIL) and l.get("scope") != "po"),
-            "cham_tay": (record.get("cham_tay") or [])
-            + [{"dong": n, "v": ket, "ly_do": ly_do.strip(), "ai": ai, "luc": ngay} for n in dong]}
+            "cham_tay": cu + [{"dong": n, "v": ket, "ly_do": ly_do.strip(), "ai": ai, "luc": ngay} for n in dong]}
 
 
 def chay(args, log_fn) -> dict:
@@ -63,7 +74,8 @@ def chay(args, log_fn) -> dict:
         raise RcError(f"Không thấy đúng một case {args.case!r} trong {args.cham_tay} (có: {co}…)")
     i = vi_tri[0]
     truoc = records[i].get("verdict")
-    records[i] = cham(records[i], so_dong(args.dong), args.ket, args.ly_do)
+    records[i] = cham(records[i], so_dong(args.dong), args.ket, args.ly_do,
+                      dieu_kien=getattr(args, "dieu_kien_dat", "") or "")
     log_fn(f"{args.case}: dòng {args.dong} → {args.ket}; verdict case {truoc} → {records[i]['verdict']}")
     meta = {k: v for k, v in data.items() if k not in ("records", "phien_ban", "xong")}
     report = args.report or data.get("report") or ""
