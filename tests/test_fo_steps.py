@@ -233,6 +233,16 @@ def test_da_qua_trang_dich_thi_dung_khong_lai_tiep_toi_Home(monkeypatch):
     assert vuot == ["left"]                      # khong vuot them cu nao
 
 
+def test_vuot_ma_khong_qua_trang_thi_dung_som(monkeypatch):
+    """Tat OB1/OB2 -> pager chi con 2 trang, vuot mai van o trang 2 (Sorapix H202-008)."""
+    from rcr import fo_flow
+
+    out, vuot = _walk_qua(monkeypatch, [_trang(2, tong=2)])
+    assert out["reached"] is False
+    assert "trang cuoi" in out["reason"]
+    assert len(vuot) == fo_flow.VUOT_KET_TOI_DA
+
+
 def test_vuot_sang_trang_dich_thi_doc_lai_som(monkeypatch):
     """Cho 2s sau cu vuot cuoi la lo OB3 khi no tu chuyen trang sau 3s."""
     from rcr import fo_flow

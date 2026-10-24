@@ -45,6 +45,10 @@ SETTLE_SECONDS = 0.8
 # nhip ngan lai ma giu 10 vong la bao ket oan luc splash chua xong.
 STUCK_POLLS = int(20 / POLL_SECONDS)
 DEFAULT_TIMEOUT = 180.0
+# Vuot lien tiep ma van dung o cung trang -> trang cuoi cua pager (tat OB1/OB2
+# lam pager it trang hon so trang dich). Truoc day vuot ~540 lan toi het
+# DEFAULT_TIMEOUT (do 2026-10-23, Sorapix SDK353-H202-008).
+VUOT_KET_TOI_DA = 3
 
 
 def rules() -> dict:
@@ -191,6 +195,7 @@ async def walk_to(client, serial: str, package: str, target: str,
     # (trang vua vuot di, co vuot that) va dump truoc cu vuot - de nhan trang
     # dich khong co cham chi trang (OB3).
     vua_vuot, xml_truoc = (0, False), ""
+    vuot_ket = 0
 
     while waited < timeout and idle < STUCK_POLLS:
         pkg, activity = await device_app.focus(client, serial)
@@ -210,6 +215,11 @@ async def walk_to(client, serial: str, package: str, target: str,
                 # chung, vuot tiep toi tan Home (do 2026-10-02, ca nhom OB3).
                 return {"reached": True, "activity": f"{activity} (trang {page}, suy ra)",
                         "trail": trail}
+            vuot_ket = vuot_ket + 1 if now and vua_vuot == (now, True) else 0
+            if vuot_ket >= VUOT_KET_TOI_DA:
+                return {"reached": False, "activity": f"{activity} (trang {now})", "trail": trail,
+                        "reason": f"vuot {vuot_ket} lan van o trang {now}: day la trang cuoi, "
+                                  f"khong co trang {page} (OB truoc do bi tat lam pager it trang hon?)"}
             vua_vuot = (0, False)
             if now and now > page:
                 # Da QUA trang dich (app tu chuyen trang nhanh hon tool doc man).
