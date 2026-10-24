@@ -18,16 +18,13 @@ mark fo_launch
 adb shell monkey -p "$P" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 lang_step=0; skip_n=0
 for step in $(seq 1 90); do
-  sleep 1.5
+  sleep 0.7  # notice an ad fast: test ads log ad_click by themselves ~10 s after showing
   a=$(top)
   case $a in
     *Splash*|*permission*) tap 'permission_allow_button' ;;
     *AdActivity*)
-      # full-screen ad: wait for the close button, then try top-right, top-left, "Continue to app", BACK
-      sleep 6
-      tap 'dismiss-button'; sleep 1.5
-      for xy in "1031 83" "1032 214" "80 210" "1008 196"; do [ "$(top)" != "$a" ] && break; adb shell input tap $xy; sleep 1.5; done
-      # no BACK on a real ad: on Sorapix 1.6.0 (24/10/2026) BACK on the splash inter logged 2 ad_click; retry next loop instead
+      # tap only the ad's own close button (close-ad.sh); no blind coordinates, no BACK
+      bash "$D/close-ad.sh" 30 >/dev/null || mark close_not_found
       mark ad_closed ;;
     *Language*)
       # first pick a language, then its sub-variant if the list expands, then Next

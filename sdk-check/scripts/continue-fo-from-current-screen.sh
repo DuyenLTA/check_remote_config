@@ -14,10 +14,8 @@ for step in $(seq 1 60); do
   [ -n "$STOP" ] && echo "$a" | grep -qE "$STOP" && { mark "stop_at_$a"; exit 0; }
   case $a in
     *AdActivity*)
-      sleep 6
-      bash "$D/tap-by-id.sh" 'dismiss-button' >/dev/null; sleep 1.5
-      for xy in "1031 83" "1032 214" "80 210" "1008 196"; do [ "$(top)" != "$a" ] && break; adb shell input tap $xy; sleep 1.5; done
-      # no BACK on a real ad: on Sorapix 1.6.0 (24/10/2026) BACK on the splash inter logged 2 ad_click; retry next loop instead
+      # tap only the ad's own close button (close-ad.sh); no blind coordinates, no BACK
+      bash "$D/close-ad.sh" 30 >/dev/null || mark close_not_found
       mark ad_closed ;;
     *Language*)
       case $lang_step in

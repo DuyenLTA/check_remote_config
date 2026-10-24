@@ -19,6 +19,8 @@ nguyen ba bai hoc dat gia nhat cua no:
 
 from __future__ import annotations
 
+import re
+
 from .ui_dump import DeviceNode
 
 # Manh id noi "view nay thuoc ve quang cao". So theo doan cua id nen `btnAdd`
@@ -39,6 +41,12 @@ CONTINUE_IDS = (
 )
 CLOSE_IDS = ("btnClose", "ivClose", "imgClose", "closeButton", "btnSkip", "ivCancel")
 CLOSE_DESCS = ("close", "dismiss", "đóng")
+# Nut dong CUA QUANG CAO toan man (AdActivity): ca man la mot WebView cua ad, bam
+# trat nut dong la click vao ad. `dismiss-button` la id cua creative web GMA (nhan
+# "Đóng"/"Close"); chu dong phai KHOP TRON (khong lay "Close your eyes..." cua creative).
+AD_CLOSE_IDS = ("dismiss-button",)
+AD_CLOSE_WORDS = re.compile(r"^(close|close ad|đóng|skip|skip ad|bỏ qua|continue to app|tiếp tục.*ứng dụng|"
+                            r"interstitial close button|×)$", re.I)
 # Phan man hinh (theo ti le) de tim nut chinh: duoi bang cau hoi, khong phai ca man.
 BOTTOM_BAND = 0.45
 MIN_WIDTH = 0.20
@@ -134,6 +142,28 @@ def find_close(nodes: list[DeviceNode]) -> DeviceNode | None:
         if any(d in n.content_desc.casefold() for d in CLOSE_DESCS):
             return n
     return None
+
+
+def _trong(a, b) -> bool:
+    return (a.bounds.left >= b.bounds.left and a.bounds.top >= b.bounds.top
+            and a.bounds.right <= b.bounds.right and a.bounds.bottom <= b.bounds.bottom)
+
+
+def find_close_ad(nodes: list[DeviceNode]) -> DeviceNode | None:
+    """Node can bam de dong quang cao toan man, hoac None (KHONG bam gi thay vi bam mu).
+
+    Bam vao CHU dong ben trong nut, khong vao tam nut: Sorapix 24/10/2026 co node
+    "More" de len nua phai `dismiss-button`. Khong tru vung quang cao nhu `find_close`:
+    o AdActivity ca man la quang cao nen tru di thi khong con gi.
+    """
+    pool = [n for n in nodes if n.visible and not n.bounds.empty]
+    nut = next((n for n in pool if n.resource_id in AD_CLOSE_IDS), None)
+    if nut is None:
+        nut = next((n for n in pool if AD_CLOSE_WORDS.match(n.text.strip()) or AD_CLOSE_WORDS.match(n.content_desc.strip())), None)
+    if nut is None:
+        return None
+    chu = [n for n in pool if n is not nut and AD_CLOSE_WORDS.match(n.text.strip()) and _trong(n, nut)]
+    return chu[0] if chu else nut
 
 
 def language_targets(nodes: list[DeviceNode], language: str) -> list[DeviceNode]:

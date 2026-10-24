@@ -9,8 +9,7 @@ D=$(cd "$(dirname "$0")" && pwd)
 top() { adb shell dumpsys activity activities | grep -m1 -E "topResumedActivity|mResumedActivity" | grep -oE '/[a-zA-Z.0-9_$]+' | tail -1; }
 M=marks-DISP.txt; mark() { echo "$1 $(date +%T.%N | cut -c1-12)" >> $M; echo "$1 $(date +%T) $(top)"; }
 stack() { adb shell dumpsys activity activities | grep -E '^ +\* Hist +#' | grep "$P" | grep -c AdActivity; }
-close_ad() { bash $D/tap-by-id.sh 'dismiss-button' >/dev/null && { sleep 1.5; case "$(top)" in *AdActivity*) ;; *) return ;; esac; }
-  for xy in "1031 83" "1032 214" "80 210" "1008 196"; do adb shell input tap $xy; sleep 1.5; case "$(top)" in *AdActivity*) ;; *) return ;; esac; done; }  # no BACK on a real ad (logged ad_click, 24/10/2026)
+close_ad() { bash $D/close-ad.sh 30 >/dev/null; }  # only the ad's own close button, no blind taps / BACK
 launch_until_ad() { adb shell am force-stop $P; sleep 1; adb shell monkey -p $P -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
   for k in $(seq 1 40); do sleep 0.5; case "$(top)" in *AdActivity*) return 0 ;; *Language*|*Main*|*Question*|*Onboarding*) return 1 ;; esac; done; return 1; }
 adb logcat -v threadtime -T 1 > log-DISP.txt & LC=$!

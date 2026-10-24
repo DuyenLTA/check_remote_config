@@ -58,10 +58,10 @@ rules:
   - match: AdActivity
     repeat_from: 1
     steps:
-      # De quang cao load va show that - do chinh la thu can quan sat - roi moi dong.
-      - wait: 9
-      - tap_close: true
-      - key: KEYCODE_BACK
+      # Nut dong cua inter bam duoc sau ~5s. Chi bam DUNG nut dong cua ad (tap_close_ad);
+      # khong BACK, khong bam mu: ca man la WebView cua ad, bam trat la click vao ad.
+      - wait: 5
+      - tap_close_ad: true
 
   - match: BillingActivity
     repeat_from: 1

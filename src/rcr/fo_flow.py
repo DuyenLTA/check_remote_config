@@ -100,6 +100,12 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
             return "", True
         await _tap(client, serial, node)
         return f"nut tiep tuc ({node.label})", True
+    if step.get("tap_close_ad"):
+        node = fo_steps.find_close_ad(nodes)
+        if not node:
+            return "", True   # chua thay nut dong: vong sau cho them roi tim lai, khong bam mu
+        await _tap(client, serial, node)
+        return f"dong quang cao ({node.label})", True
     if step.get("tap_close"):
         node = fo_steps.find_close(nodes)
         if not node:
