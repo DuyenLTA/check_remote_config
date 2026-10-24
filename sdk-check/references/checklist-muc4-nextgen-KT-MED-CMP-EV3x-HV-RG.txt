@@ -1,0 +1,56 @@
+KT-01    Khởi tạo    Mở app khi không có mạng    "1. Gỡ app, cài mới
+2. Tắt wifi và 4G
+3. Mở app, đợi tối đa 30 giây
+4. Bật mạng lại, đi tiếp sang các màn sau"    Nhìn bằng mắt. Logcat tag AperoAdmob: dòng runWhenReady và MobileAds ready. Android Studio → Logcat → ô tìm: package:mine level:error    Splash không đứng mãi, vẫn vào được màn tiếp theo trong thời gian timeout của Splash. Sau khi bật mạng, quảng cáo ở màn sau load được. Không crash.    —
+KT-02    Khởi tạo    Mở app khi mạng chậm    "1. Gỡ app, cài mới
+2. Giới hạn mạng thật chậm (nhờ Dev chỉ cách, ví dụ dùng proxy hoặc giới hạn băng thông)
+3. Mở app, bấm giờ đến khi vào màn đầu"    Nhìn bằng mắt, bấm giờ. Logcat tag AperoAdmob: khoảng thời gian giữa dòng queued và dòng ready.    Splash không chờ quá thời gian timeout đã cấu hình. Nếu inter splash load không kịp thì bỏ qua và vào màn tiếp theo. Không crash.    —
+KT-03    Khởi tạo    Chạy trên máy Android 7.0 (API 24)    "1. Cài app lên máy thật Android 7.0
+2. Chạy hết luồng FO đến Home, hiện từng loại quảng cáo"    Nhìn bằng mắt. Android Studio → Logcat → ô tìm: package:mine level:error    App chạy bình thường, quảng cáo hiện được. Không crash.    —
+KT-04    Khởi tạo    Không cài được trên máy dưới Android 7.0    1. Cài file APK lên máy Android 6.0 (API 23) bằng adb install    Thông báo lỗi khi cài.    Báo INSTALL_FAILED_OLDER_SDK, không cài được. Ghi lại để PO xác nhận đây là hành vi mong muốn.    —
+KT-05    Consent    Form đồng ý (UMP) hiện trước quảng cáo đầu tiên    "1. Nhờ Dev bật debug geography = EEA và thêm máy test
+2. Gỡ app, cài mới, mở app"    Nhìn bằng mắt. DebugView: thời điểm track_ad_request đầu tiên so với lúc đóng form đồng ý.    Form đồng ý hiện trước. Không có track_ad_request nào trước khi user chọn trong form.    —
+KT-06    Consent    Từ chối đồng ý vẫn chạy bình thường    "1. Điều kiện như KT-05
+2. Trong form đồng ý, chọn từ chối
+3. Chạy hết luồng FO"    Nhìn bằng mắt. Android Studio → Logcat → ô tìm: package:mine level:error    Không crash. Quảng cáo vẫn load theo chế độ không cá nhân hóa (có thể ít fill hơn, ghi lại).    —
+KT-07    Nâng cấp    Cập nhật đè từ bản cũ lên bản Next-Gen    "1. Cài bản cũ (chưa lên Next-Gen), chạy hết luồng FO đến Home
+2. Cài đè bản Next-Gen (không gỡ app)
+3. Mở app"    Nhìn bằng mắt. Logcat tag FOR_TESTER_CONFIG: trạng thái user.    App nhận là user cũ: không chạy lại Language/Onboarding, đi đúng nhánh user cũ (native splash 106). Không crash.    —
+MED-01    Mediation    Tất cả adapter mediation báo sẵn sàng    "1. Nhờ Dev gửi danh sách các mạng mediation app đang dùng
+2. Mở app, đợi khởi tạo xong"    Logcat tag AperoAdmob: các dòng Adapter name, đọc phần Description của từng adapter.    Mỗi adapter trong danh sách đều có dòng báo khởi tạo xong, không báo lỗi hoặc not ready.    —
+MED-02    Mediation    Từng nguồn mediation có trả quảng cáo    "1. Mở Ad Inspector (nhờ Dev chỉ cách mở)
+2. Chọn từng ad unit, xem kết quả từng nguồn"    Ad Inspector: trạng thái từng ad source.    Mỗi nguồn trong danh sách có kết quả (fill hoặc no fill rõ ràng), không báo lỗi adapter. Nguồn nào lỗi ghi lại báo Dev.    —
+CMP-01    So với bản cũ    Số lần xin quảng cáo mỗi ad unit    "1. Gỡ app, cài bản cũ, chạy luồng FO đến Home
+2. Gỡ app, cài bản Next-Gen, chạy đúng luồng đó"    DebugView: đếm track_ad_request theo adunitid ở 2 lần chạy.    Số request mỗi ad unit bằng nhau giữa 2 bản. Bản mới nhiều hơn là có thể bị xin trùng (báo Dev).    —
+CMP-02    So với bản cũ    Tỉ lệ load thành công    1. Như CMP-01    DebugView: đếm ad_load thành công chia cho track_ad_request theo từng loại quảng cáo.    Tỉ lệ bản mới không thấp hơn rõ rệt so với bản cũ. Lệch nhiều thì ghi lại báo Dev.    —
+CMP-03    So với bản cũ    Thời gian mở app đến màn đầu    "1. Gỡ app, cài bản cũ, mở app 3 lần (cold start)
+2. Làm tương tự với bản Next-Gen"    Logcat tag ActivityTaskManager: dòng Displayed của màn Splash và màn đầu tiên. Hoặc bấm giờ.    Bản mới không chậm hơn bản cũ. Ghi lại thời gian trung bình 2 bản.    —
+EV-30    Event    Giá trị doanh thu với quảng cáo thật    "1. Nhờ Dev gửi bản nội bộ dùng ad unit thật
+2. Hiện vài quảng cáo, CHỈ XEM, KHÔNG BẤM"    DebugView: valuemicros, currency của paid_ad_impression và value của paid_ad_impression_value.    valuemicros lớn hơn 0. Nếu currency là USD thì value = valuemicros chia 1.000.000. Nếu currency khác USD, ghi lại để Dev xác nhận cách quy đổi.    —
+EV-31    Event    Nguồn doanh thu khớp nguồn thắng    "1. Hiện vài quảng cáo (nên có mediation)
+2. Mở ad_load và paid_ad_impression của cùng 1 lượt"    DebugView: so won_ad_source (ad_load) với ad_source (paid_ad_impression).    Hai giá trị trùng nhau cho cùng 1 lượt. Lệch là ghi doanh thu nhầm nguồn (báo Dev).    —
+EV-32    Event    Doanh thu gửi sang Adjust / AppsFlyer    "1. Hỏi Dev app có gửi doanh thu quảng cáo sang Adjust hoặc AppsFlyer không (không có thì ghi N/A)
+2. Hiện 5 lượt quảng cáo
+3. Mở trang test của Adjust / AppsFlyer"    Trang test của MMP: event doanh thu quảng cáo. So với paid_ad_impression trong DebugView.    Số lượt và giá trị khớp với paid_ad_impression.    —
+HV-01    App open    Không hiện app open khi quay lại sau khi bấm quảng cáo    "1. Hiện inter, bấm vào quảng cáo, sang trang đích
+2. Quay lại app
+3. Lặp lại với native và banner"    Nhìn bằng mắt. Logcat tag AppOpenManager.    Quay lại app KHÔNG hiện app open. Logcat ghi app open bị bỏ qua.    —
+HV-02    App open    Không hiện app open ngay sau khi đóng quảng cáo toàn màn hình    "1. Hiện inter, đóng bằng nút X
+2. Hiện rewarded, xem hết, đóng"    Nhìn bằng mắt. Logcat tag AppOpenManager.    Sau khi đóng, app quay lại màn cũ, không hiện app open.    —
+HV-03    Rewarded    Đóng sớm không nhận thưởng    "1. Mở rewarded
+2. Đóng trước khi xem hết (khi nút đóng xuất hiện)"    Nhìn bằng mắt: phần thưởng trong app.    Không nhận thưởng. Không crash.    —
+HV-04    Rewarded    Xem hết nhận thưởng đúng 1 lần    "1. Mở rewarded, xem hết
+2. Đóng quảng cáo"    Nhìn bằng mắt: phần thưởng trong app (số lượng trước và sau).    Nhận thưởng đúng 1 lần, không cộng 2 lần.    —
+HV-05    Rewarded interstitial    Chuỗi event và nhận thưởng    "1. Mở màn có rewarded interstitial (nhờ Dev chỉ màn)
+2. Xem hết và nhận thưởng"    DebugView theo thứ tự: track_ad_request → track_ad_matched_request → ad_load (thành công) → ad_show (thành công) → paid_ad_impression.    Đủ 5 event, mỗi event 1 lần. Nhận thưởng đúng 1 lần.    —
+HV-06    Toàn màn hình    Bấm Back khi đang xem quảng cáo toàn màn hình    "1. Hiện inter, bấm Back của điện thoại
+2. Lặp lại với rewarded và native toàn màn hình (OB3)"    Nhìn bằng mắt. Android Studio → Logcat → ô tìm: package:mine level:error    Quảng cáo xử lý Back đúng theo hành vi bản cũ (chặn hoặc đóng), app không thoát sai màn. Không crash.    —
+HV-07    Toàn màn hình    Quảng cáo về muộn khi đã rời màn    "1. Giới hạn mạng chậm
+2. Vào màn có quảng cáo, rời màn ngay trước khi quảng cáo load xong
+3. Đợi 10 giây ở màn mới"    Nhìn bằng mắt. Logcat tag AperoAdmob.    Quảng cáo về muộn KHÔNG hiện đè lên màn mới. Không crash.    —
+HV-08    Toàn màn hình    Bấm Home khi inter đang load    "1. Bấm nút gọi inter
+2. Trong lúc đang load (khung loading), bấm Home
+3. Đợi 5 giây, mở lại app"    Nhìn bằng mắt. Logcat tag AppOpenManager.    Không có 2 quảng cáo chồng nhau (inter và app open). App quay lại màn đúng. Không crash.    —
+HV-09    Banner    Collapsible banner    "1. Mở màn có collapsible banner (không có thì ghi N/A)
+2. Thu gọn banner, đợi qua 1 lần làm mới"    Nhìn bằng mắt. Android Studio → Logcat → ô tìm: package:mine level:error    Banner mở rộng và thu gọn đúng, làm mới không lỗi, không che nút của app.    —
+RG-01    Logic SDK cũ    Chạy lại bộ test case luồng FO    1. Chạy bộ TC SDK 3.5.x happy path (36 TC) trên bản Next-Gen    Theo từng TC trong bộ.    Tất cả Pass như trên bản cũ: vị trí hiện quảng cáo, bật/tắt bằng remote, 202 chưa hiện chuyển sang OB1, auto swipe và nút X ở OB3.    —

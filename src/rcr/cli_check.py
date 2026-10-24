@@ -132,7 +132,7 @@ async def run(args: argparse.Namespace) -> dict:
 
     if args.preflight:
         _log("Kiem dieu kien truoc khi chay...")
-        kq = await preflight.chay(client, serial, args.package, args.tc or TC_MAC_DINH, args.out_dir)
+        kq = await preflight.chay(client, serial, args.package, args.tc or TC_MAC_DINH, args.out_dir, args.sdk)
         preflight.in_bang(kq, _log)
         return {"serial": serial, "package": args.package, "preflight": kq}
 
@@ -197,6 +197,11 @@ async def run(args: argparse.Namespace) -> dict:
                     raise
                 source = "khong doc duoc tu buffer logcat"
                 _log("  khong doc duoc ban SDK - de trong tren report")
+        if tc_nguon == TC_MAC_DINH and sdk_probe.la_nextgen(sdk):
+            # Bo TC chung chua co tab Next-Gen: tab_for_version se lay tab cu
+            # nhat <= ban app va cham ban moi bang TC cua ban cu ma khong ai biet.
+            raise RcError(f"App dung SDK FO {sdk} (Next-Gen): bo TC chung khong co tab cho ban nay.\n"
+                          "  Cham theo checklist sdk-check/WORKFLOW.md, hoac truyen --tc <bo TC cua ban nay>.")
         # Ban do duoc chi de hien thi thi KHONG duoc dung de chon tab: bo mot
         # sheet von khong chia ban, truyen vao la doi cach chon case.
         rows, runnable, notes = tc_select.load_cases(

@@ -1,0 +1,57 @@
+#!/bin/bash
+export MSYS_NO_PATHCONV=1  # Git Bash: keep /sdcard/... paths for adb as-is
+# Drive a VslTemplate4 tutorial first-open flow to Home the same way on any build:
+# Splash -> (inter) -> Language -> Onboarding (incl. full-screen native) -> Question -> Billing -> Home.
+# Buttons are found by resource-id of the tutorial SDK, so it works across apps on that template.
+# Prints/marks one line per step; waits 15 s at Home. Use the same script on old and new build (CMP-01/02).
+# usage: drive-fo-to-home.sh <package> <marks-file> [noclear]
+D=$(cd "$(dirname "$0")" && pwd)
+P=$1; M=${2:-marks-fo.txt}
+top() { adb shell dumpsys activity activities | grep -m1 -E "topResumedActivity|mResumedActivity" | grep -oE '/[a-zA-Z.0-9_$]+' | tail -1; }
+mark() { echo "$1 $(date +%T.%N | cut -c1-12)" >> "$M"; echo "$1 $(date +%T)"; }
+tap() { bash "$D/tap-by-id.sh" "$1" >/dev/null; }
+
+adb shell am force-stop "$P"
+[ "$3" = noclear ] || { adb shell pm clear "$P" >/dev/null; adb shell pm grant "$P" android.permission.POST_NOTIFICATIONS 2>/dev/null; }
+adb shell input keyevent HOME; sleep 1
+mark fo_launch
+adb shell monkey -p "$P" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+lang_step=0; skip_n=0
+for step in $(seq 1 90); do
+  sleep 1.5
+  a=$(top)
+  case $a in
+    *Splash*|*permission*) tap 'permission_allow_button' ;;
+    *AdActivity*)
+      # full-screen ad: wait for the close button, then try top-right, top-left, "Continue to app", BACK
+      sleep 6
+      tap 'dismiss-button'; sleep 1.5
+      for xy in "1031 83" "1032 214" "80 210" "1008 196"; do [ "$(top)" != "$a" ] && break; adb shell input tap $xy; sleep 1.5; done
+      # no BACK on a real ad: on Sorapix 1.6.0 (24/10/2026) BACK on the splash inter logged 2 ad_click; retry next loop instead
+      mark ad_closed ;;
+    *Language*)
+      # first pick a language, then its sub-variant if the list expands, then Next
+      case $lang_step in
+        0) tap 'English$' && lang_step=1 ;;
+        1) tap 'English \(US\)' ; lang_step=2 ;;
+        *) tap 'buttonLanguageNext|imageButtonLanguageNext' && mark lang_next ;;
+      esac ;;
+    *Onboarding*)
+      # test devices: the AdMob native validator popup can sit on top of the Next/Get Started button
+      bash "$D/dismiss-native-validator.sh" >/dev/null && mark validator_dismiss
+      if tap 'btnTimeoutSkip|btnSkip'; then mark ob_fullscreen_skip
+      else bash "$D/tap-by-id.sh" 'btnNextOnboarding|Next' right >/dev/null; fi ;;
+    *Question*)
+      bash "$D/dismiss-native-validator.sh" >/dev/null && mark validator_dismiss
+      # pick an item only when no Next button yet (tapping a selected item unselects it and hides Next)
+      tap 'btnNextQuestion|btnNextOnboardingImage' || { tap 'tvQuestionTitle'; sleep 0.8; tap 'btnNextQuestion|btnNextOnboardingImage|Next|Go to Home'; } && mark q_next ;;
+    *Billing*)
+      sleep 2; tap 'Close Billing Screen|ivClose|btnClose' || adb shell input tap 100 130; mark billing_close ;;
+    *MainActivity*)
+      mark at_home; sleep 15; mark home_wait_end; exit 0 ;;
+    *Launcher*|*chrome*|*vending*)
+      mark "left_app_$a"; adb shell monkey -p "$P" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 ;;
+    *) mark "unknown_$a" ;;
+  esac
+done
+mark fo_timeout; exit 1

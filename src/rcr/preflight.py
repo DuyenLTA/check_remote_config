@@ -17,7 +17,7 @@ import ctypes
 import sys
 from pathlib import Path
 
-from . import ad_units_sheet, app_sandbox, device_app, fa_log, tc_source
+from . import ad_units_sheet, app_sandbox, device_app, fa_log, sdk_probe, tc_source
 from .adb_parsers import AdbError
 from .models import RcError
 
@@ -141,21 +141,45 @@ def muc_ads_test(units: list[str]) -> dict:
     return _muc("Ads dùng ID thật", OK, f"{len(set(units))} unit đã request đều là ID thật")
 
 
-async def _ads_test(client, serial: str, package: str) -> dict:
-    """Mo app mot lan, doc log FA-SVC xem ads request bang ID nao."""
+async def _mo_app_mot_lan(client, serial: str, package: str) -> tuple[dict, str]:
+    """Mo app mot lan: doc log FA-SVC xem ads request bang ID nao, va dong
+    `VslTemplate4FirstOpenSDK: Using version` cua CHINH pid app (truoc khi
+    force-stop: mat pid la khong loc duoc log theo app). -> (muc ads, ban SDK)."""
     await fa_log.bat(client, serial)
     await client.shell(serial, "logcat", "-c")
     try:
         await device_app.restart(client, serial, package)
         units: list[str] = []
+        sdk = ""
         for _ in range(int(ADS_CHO_S / 1.5)):
             await asyncio.sleep(1.5)
             units = unit_ads(await fa_log.doc(client, serial))
-            if units and any(u.startswith(GOOGLE_TEST_PUB) for u in units):
+            if not sdk:
+                pid = await sdk_probe.pid_of(client, serial, package)
+                sdk = sdk_probe.last_version(await sdk_probe.read_log(client, serial, pid)) if pid else ""
+            if sdk and units and any(u.startswith(GOOGLE_TEST_PUB) for u in units):
                 break
-        return muc_ads_test(units)
+        return muc_ads_test(units), sdk
     finally:
         await device_app.force_stop(client, serial, package)
+
+
+def muc_sdk(sdk: str) -> dict:
+    """Ban SDK FO quyet dinh nhanh chay: Next-Gen -> checklist, con lai -> bo TC."""
+    if not sdk:
+        return _muc("Bản SDK FO", CANH_BAO, "không thấy dòng `VslTemplate4FirstOpenSDK: Using version` trong log",
+                    "Hỏi bản SDK rồi truyền --sdk X.Y.Z")
+    if sdk_probe.la_nextgen(sdk):
+        return _muc("Bản SDK FO", OK, f"{sdk} → Next-Gen: chấm checklist sdk-check/ (không chạy bộ TC)")
+    return _muc("Bản SDK FO", OK, f"{sdk} → chạy bộ TC")
+
+
+def noi_long_nextgen(muc: list[dict]) -> list[dict]:
+    """Nhanh checklist Next-Gen khong patch RC va khong quy ad ve vi tri theo sheet:
+    ban release / ID test chi han che vai case (ghi o report), khong chan ca luot."""
+    nhe = {"Vào được dữ liệu app", "Ads dùng ID thật"}
+    return [{**m, "trang_thai": CANH_BAO, "viec_can_lam": "Checklist vẫn chạy; case cần đổi RC / ad thật ghi rõ trên report"}
+            if m["ten"] in nhe and m["trang_thai"] == LOI else m for m in muc]
 
 
 def _ram() -> dict:
@@ -168,8 +192,12 @@ def _ram() -> dict:
     return _muc("RAM máy tính", OK, f"còn trống {gb:.1f} GB")
 
 
-async def chay(client, serial: str, package: str, tc: str, out_dir) -> dict:
-    """Kiem het, KHONG dung o muc dau tien hong: nguoi dung can thay moi viec phai lam."""
+async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "") -> dict:
+    """Kiem het, KHONG dung o muc dau tien hong: nguoi dung can thay moi viec phai lam.
+
+    `sdk` (tham so --sdk) de trong thi doc tu log lan mo app. Ban Next-Gen ->
+    `nhanh = "nextgen"`: bo qua sheet TC / sheet ID ads, khong bat buoc debuggable.
+    """
     window, _, _ = await client.shell(serial, "dumpsys", "window")
     power, _, _ = await client.shell(serial, "dumpsys", "power")
     tt, ct = man_hinh(window, power)
@@ -177,14 +205,21 @@ async def chay(client, serial: str, package: str, tc: str, out_dir) -> dict:
            _muc("Màn hình", tt, ct, "Mở khoá máy, tắt khoá màn hình tự động" if tt == LOI else "")]
     app = await _app(client, serial, package)
     muc += app
-    if tt == OK and all(m["trang_thai"] == OK for m in app):
+    if tt == OK and app[0]["trang_thai"] == OK:
         try:
-            muc.append(await _ads_test(client, serial, package))
+            ads, sdk_log = await _mo_app_mot_lan(client, serial, package)
+            muc.append(ads)
+            sdk = sdk or sdk_log
         except (AdbError, RcError) as exc:
             muc.append(_muc("Ads dùng ID thật", CANH_BAO, f"không mở được app để kiểm: {exc}"))
-    muc += _sheets(package, tc, out_dir)
+    muc.append(muc_sdk(sdk))
+    nhanh = "nextgen" if sdk_probe.la_nextgen(sdk) else "tc"
+    if nhanh == "nextgen":
+        muc = noi_long_nextgen(muc)
+    else:
+        muc += _sheets(package, tc, out_dir)
     muc.append(_ram())
-    return {"ok": all(m["trang_thai"] != LOI for m in muc), "muc": muc}
+    return {"ok": all(m["trang_thai"] != LOI for m in muc), "muc": muc, "sdk": sdk, "nhanh": nhanh}
 
 
 def in_bang(kq: dict, log_fn) -> None:
@@ -193,4 +228,6 @@ def in_bang(kq: dict, log_fn) -> None:
         log_fn(f"  [{dau[m['trang_thai']]}] {m['ten']}: {m['chi_tiet']}")
         if m["viec_can_lam"]:
             log_fn(f"         -> {m['viec_can_lam']}")
+    if kq.get("nhanh") == "nextgen":
+        log_fn(f"Nhanh: checklist Next-Gen (SDK {kq['sdk']}) - lam theo sdk-check/WORKFLOW.md")
     log_fn("San sang chay." if kq["ok"] else "CHUA chay duoc - xu cac dong LOI truoc.")

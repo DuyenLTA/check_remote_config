@@ -1,0 +1,262 @@
+<title>LingoSpeak Next-Gen Checks</title>
+<style>
+/* Layout: header tóm tắt → thẻ lọc → khối cần xử lý → danh sách case gập/mở theo nhóm */
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --fg:#1b2230; --muted:#5d6778; --line:#dde2ea;
+  --ok:#1f7a4d; --ok-bg:#e5f4ec; --bad:#b4232c; --bad-bg:#fbe7e8; --accent:#2a5bd7;
+  --code-bg:#eef1f6;
+  --f-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161d; --panel:#1a2029; --fg:#e4e8ef; --muted:#9aa4b4; --line:#2b3340;
+  --ok:#5fd19a; --ok-bg:#16301f; --bad:#ff8a8f; --bad-bg:#3a1a1d; --accent:#7ea3ff; --code-bg:#222a35; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161d; --panel:#1a2029; --fg:#e4e8ef; --muted:#9aa4b4; --line:#2b3340;
+  --ok:#5fd19a; --ok-bg:#16301f; --bad:#ff8a8f; --bad-bg:#3a1a1d; --accent:#7ea3ff; --code-bg:#222a35; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--f-body);margin:0}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 60px;display:grid;gap:22px}
+h1{font:600 28px/1.15 var(--f-display);margin:0;text-wrap:balance}
+h2{font:600 18px/1.3 var(--f-display);margin:0;letter-spacing:.01em}
+.meta{color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13.5px}
+.meta b{color:var(--fg);font-weight:600}
+code,.mono{font-family:var(--f-mono);font-size:12.5px}
+code{background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left;cursor:pointer;color:var(--fg);font:inherit;display:grid;gap:2px}
+.card .n{font:600 26px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.card .l{font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.card[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:-1px}
+.card:focus-visible{outline:2px solid var(--accent)}
+.card.ok .n{color:var(--ok)} .card.bad .n{color:var(--bad)}
+.todo{background:var(--bad-bg);border-radius:10px;padding:14px 16px;display:grid;gap:8px}
+.todo ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.sec{display:grid;gap:8px}
+.sec>h2{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+details[data-v="fail"]{border-left:4px solid var(--bad)}
+details[data-v="pass"]{border-left:4px solid var(--ok)}
+summary{list-style:none;cursor:pointer;padding:10px 14px;display:grid;grid-template-columns:44px 64px minmax(0,1fr);gap:10px;align-items:baseline}
+summary::-webkit-details-marker{display:none}
+summary:focus-visible{outline:2px solid var(--accent)}
+.id{font:600 13px var(--f-mono);color:var(--muted)}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;text-align:center}
+.pill.pass{background:var(--ok-bg);color:var(--ok)} .pill.fail{background:var(--bad-bg);color:var(--bad)}
+.t{min-width:0} .t small{display:block;color:var(--muted);font-size:13px}
+.body{padding:0 14px 14px 14px;display:grid;gap:8px;min-width:0}
+.body p{margin:0}
+.k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+pre{background:var(--code-bg);border-radius:6px;padding:10px;margin:0;overflow-x:auto;font:12px/1.5 var(--f-mono)}
+.foot{color:var(--muted);font-size:13px;display:grid;gap:6px}
+.foot p{margin:0}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+
+<div class="wrap">
+<header style="display:grid;gap:8px">
+  <h1>LingoSpeak 1.9.0 · Next-Gen: khởi tạo, mediation, so bản cũ, hành vi</h1>
+  <div class="meta">
+    <span>Package <b class="mono">lingospeak.english.learnlanguage.speak</b></span>
+    <span>Bản mới cài 13/10 09:35 (1.9.0, versionCode 9; APK <span class="mono">3b1c817a…</span>; FO SDK 3.7.0-alpha07)</span>
+    <span>Bản cũ để so: 1.7.0, versionCode 8 (FO SDK 3.5.3, play-services-ads cũ)</span>
+    <span>Máy <b>Pixel 6</b> Android 16</span>
+    <span>Chạy <b>13/10/2026</b> 10:22–11:00</span>
+  </div>
+  <p style="margin:0;color:var(--muted);font-size:13.5px">Phạm vi chấm: <b>luồng tutorial</b> (splash, Language, onboarding, câu hỏi, paywall, app open khi quay lại). Nguồn: logcat, log Firebase <code>FA-SVC</code>, cây view và ảnh chụp màn hình. Mạng chậm giả lập bằng proxy trên máy tính (<code>settings global http_proxy</code>), đã gỡ sau mỗi lượt.</p>
+</header>
+
+<div class="cards" role="group" aria-label="Lọc">
+  <button class="card" data-f="all" aria-pressed="true"><span class="n">18</span><span class="l">Tất cả</span></button>
+  <button class="card ok" data-f="pass" aria-pressed="false"><span class="n">17</span><span class="l">Khớp</span></button>
+  <button class="card bad" data-f="fail" aria-pressed="false"><span class="n">1</span><span class="l">Sai</span></button>
+  <button class="card bad" data-f="new" aria-pressed="false"><span class="n">1</span><span class="l">Sai mới (không phải lỗi có sẵn)</span></button>
+</div>
+
+<section class="todo">
+  <h2>Cần báo dev</h2>
+  <ol>
+    <li><b>Bản Next-Gen mở tới màn đầu chậm hơn bản cũ khoảng 0,9 giây.</b> Đo 6 lần mỗi bản, cùng máy, cùng giờ. Thời gian từ lúc mở app tới khi inter splash hiện: bản cũ 4,10–5,01 s (bỏ lần đầu sau khi cài), bản mới 4,74–5,98 s. Các chặng trước (Splash hiện ~200 ms, Firebase, MobileAds sẵn sàng, request đầu tiên) bằng nhau. Chênh lệch nằm ở thời gian load inter splash: cũ trung bình 3,1 s, mới 3,9 s. (CMP-03)</li>
+  </ol>
+</section>
+
+<section class="sec">
+<h2>Khởi tạo</h2>
+
+<details data-v="pass"><summary><span class="id">KT-01</span><span class="pill pass">Khớp</span><span class="t">Mở app khi không có mạng<small>Splash vào Language sau khoảng 3 giây. Bật mạng lại thì quảng cáo ở màn sau load được, kể cả quảng cáo thật. Không crash.</small></span></summary><div class="body">
+<pre>10:22:44.086 AdsConsentManager: 2: Error making request.
+10:22:44.395 AperoAdmob: MobileAds ready but no internet, failing 0 pending ad requests
+~3,1 s       SplashActivity → VslTemplate4Language14Activity
+             (bật wifi ở Language, chọn English (US) → onboarding)
+10:23:24.974 track_ad_request …/9889443783 network_status=1
+10:23:29.425 ad_load success  …/6190293386 (AdMob Network)
+10:23:29.442 ad_show          …/6190293386 → native video hiện ở onboarding trang 1</pre></div></details>
+
+<details data-v="pass"><summary><span class="id">KT-02</span><span class="pill pass">Khớp</span><span class="t">Mở app khi mạng chậm<small>Splash đứng 58,8 s rồi tự vào Language, không kẹt, không crash. Inter dừng ở 49,8 s, trong mốc 60 s. Bản cũ cùng điều kiện đứng 69,3 s, inter bị cắt đúng 60 s.</small></span></summary><div class="body">
+<p>Proxy làm chậm mọi kết nối: trễ 3 s mỗi kết nối, 8 KB/s mỗi chiều. App không khai <code>splash_timeout</code> trên RC (đã đọc 141 key). Spec "logic preload publishing" ghi tổng timeout inter splash = 60 s.</p>
+<pre>Bản mới (10:36)                                   Bản cũ (10:53)
++8,9 s  MobileAds.initialize timeout after 5000ms +8,8 s  MobileAds.initialize timeout after 5000ms
++9,0 s  Fetch firebase successfully               +8,5 s  Fetch firebase successfully
++18,9 s MobileAds ready, run 3 pending requests   +13,9 s MobileAds ready, run 3 pending requests
++58,9 s loadInterstitialAd complete in 49.8s      +68,7 s loadInterstitialAd complete in 1m 0.006s
+        → splash_complete → Language                      → splash_complete → Language</pre>
+<p>Quảng cáo nào không về kịp đều ra <code>ad_load failed</code> với <code>SocketTimeoutException</code> hoặc No fill. Không có crash.</p></div></details>
+
+<details data-v="pass"><summary><span class="id">KT-03</span><span class="pill pass">Khớp</span><span class="t">Chạy trên máy Android 7.0 (API 24)<small>Lib ads và SDK tutorial đều minSdk 24, chạy được từ Android 7.0. App tự đặt minSdk 26, không chấm (chốt 13/10).</small></span></summary><div class="body">
+<pre>com.apero.moduleads (demo lib ads)          minSdk=24
+com.apero.tutorialsdk.sample (demo SDK)     minSdk=24
+lingospeak 1.9.0 / 1.7.0 (app)              minSdk=26  ← lựa chọn của app, không tính</pre>
+<p>Không có máy Android 7.0 để chạy thật.</p></div></details>
+
+<details data-v="pass"><summary><span class="id">KT-04</span><span class="pill pass">Khớp</span><span class="t">Không cài được trên máy dưới Android 7.0<small>Lib ads và SDK minSdk 24 (app 26), đều lớn hơn 23, nên Android 6.0 từ chối cài với INSTALL_FAILED_OLDER_SDK.</small></span></summary><div class="body">
+<p>Đọc từ manifest của APK (minSdkVersion 26). Không có máy Android 6.0 để cài thử. Máy tính không có KVM nên cũng không chạy được emulator. Package manager luôn chặn APK có minSdk lớn hơn API của máy, nên kết luận chắc chắn.</p></div></details>
+
+<details data-v="pass"><summary><span class="id">KT-07</span><span class="pill pass">Khớp</span><span class="t">Cập nhật đè từ bản cũ lên Next-Gen<small>Đi FO tới Home trên 1.7.0, cài đè 1.9.0 (adb install -r), mở app: nhận là user cũ, không chạy lại Language/Onboarding, không crash.</small></span></summary><div class="body">
+<pre>10:47:34.614 track_ad_request …/2707555398 INTERSTITIAL  ← splash_inter_high_o_id (unit user cũ)
+10:47:39.260 FO_VslTemplate4FirstOpenSDK: Show inter splash
+10:47:40.156 ad_show …/2707555398
+             đóng inter → VslTemplate4QuestionActivity (onboarding user cũ)
+Language14Activity / OnboardingActivity: 0 lần mở · FATAL EXCEPTION: 0</pre>
+<p>Checklist ghi "native splash 106", nhưng RC đang để <code>inter_native_change=false</code>. Theo spec 3.4.0 (SPLA-002), user cũ khi đó dùng inter 102-spl-o, nên app đúng. Vào Question chứ không vào Home là do <code>enable_ob1_old_screen=true</code>, đúng spec 3.2.0.</p></div></details>
+</section>
+
+
+<section class="sec">
+<h2>Mediation</h2>
+
+<details data-v="pass"><summary><span class="id">MED-01</span><span class="pill pass">Khớp</span><span class="t">Adapter mediation báo sẵn sàng<small>Meta (Facebook) và MobileAds đều State: COMPLETE. Bản cũ cũng chỉ báo đúng 2 adapter này.</small></span></summary><div class="body">
+<pre>AperoAdmob: Adapter name: com.google.ads.mediation.facebook.FacebookMediationAdapter, State: COMPLETE, Latency: 9
+AperoAdmob: Adapter name: com.google.android.libraries.ads.mobile.sdk.MobileAds, State: COMPLETE,
+            Description: The Google Mobile Ads SDK has successfully initialized.</pre>
+<p>Trong APK còn gói thêm adapter AppLovin, Mintegral, Pangle, Vungle (có cả SDK của từng mạng), nhưng không mạng nào được báo khởi tạo, ở cả bản cũ lẫn bản mới. Danh sách khởi tạo lấy theo cấu hình mediation trên AdMob, nên có vẻ AdMob chỉ bật Meta. Nhờ dev xác nhận danh sách mạng đang dùng là chỉ Meta.</p></div></details>
+
+<details data-v="pass"><summary><span class="id">MED-02</span><span class="pill pass">Khớp</span><span class="t">Từng nguồn mediation có kết quả rõ ràng<small>AdMob Network: 52 lần fill. Meta (bidding): 239 lần No fill rõ ràng. Không có lỗi adapter.</small></span></summary><div class="body">
+<p>Chấm bằng <code>won_ad_source</code> / <code>non_won_ad_source</code> của <code>ad_load</code> và log của adapter trong 6 lượt bản mới. Không mở được Ad Inspector: nó cần lắc máy, adb không giả lập được. Muốn xem bằng Ad Inspector thì bạn lắc máy giúp mình một lần.</p>
+<pre>52  success  won_ad_source=AdMob Network
+239 failed   non_won_ad_source=Meta Audience Network (bidding)  error=No fill.
+ 26 failed   SocketTimeoutException (lượt mạng chậm, cố ý)
+192 W FacebookMediationAdapter: No fill
+ 47 W FacebookMediationAdapter: Ad was re-loaded too frequently</pre>
+<p>"Ad was re-loaded too frequently" là Meta giới hạn tần suất (lỗi 1002), không phải adapter hỏng. Bản cũ cũng có (12 lần trong 1 lượt FO). Nên báo dev vì Meta chưa fill lần nào.</p></div></details>
+</section>
+
+<section class="sec">
+<h2>So với bản cũ (1.7.0)</h2>
+
+<details data-v="pass"><summary><span class="id">CMP-01</span><span class="pill pass">Khớp</span><span class="t">Số lần xin quảng cáo mỗi ad unit<small>Cùng một đường FO tới Home: cũ 37 request, mới 40 request, cùng bộ ad unit. Chênh ±1 ở vài unit native là do tải lại sau no-fill, không phải xin trùng.</small></span></summary><div class="body">
+<p>Cả hai bản chạy bằng cùng một script, thời gian các chặng gần như trùng nhau (inter đóng ở +14 s, Home ở +44–47 s).</p>
+<pre>unit         loại          màn          cũ  mới
+6379207096   INTERSTITIAL  Splash        1   1
+1279681827   INTERSTITIAL  Question      1   1
+9889443783   NATIVE        (inter)       4   4
+2442620063   NATIVE        Language      3   2
+8974751704   NATIVE        Onboarding    1   2   ← bản cũ fill ngay lần 1, bản mới no-fill rồi thử lại
+6264827880   NATIVE        Onboarding    1   2   ← thử lại sau no-fill
+8555913919   NATIVE        Onboarding    1   2   ← thử lại sau no-fill
+1411122302   NATIVE        Onboarding    0   1   ← unit dự phòng sau no-fill
+20 unit native khác                      bằng nhau
+TỔNG                                     37  40</pre></div></details>
+
+<details data-v="pass"><summary><span class="id">CMP-02</span><span class="pill pass">Khớp</span><span class="t">Tỉ lệ load thành công<small>Inter: cũ 2/2, mới 2/2. Native: cũ 1/35, mới 0/38. Cả hai bản đều fail vì kho không trả (No fill, sàn eCPM), không có lỗi request.</small></span></summary><div class="body">
+<pre>Lý do fail     bản cũ   bản mới
+No fill.         32       37
+eCPM floor        2        1</pre>
+<p>Lượt đo rơi vào giờ native gần như không fill ở cả hai bản. Các lượt bản mới khác trong ngày có native fill bình thường (onboarding 10:23, 10:58), nên tỉ lệ thấp không phải do Next-Gen.</p></div></details>
+
+<details data-v="fail" data-new="1"><summary><span class="id">CMP-03</span><span class="pill fail">Sai</span><span class="t">Thời gian mở app đến màn đầu<small>Bản mới chậm hơn khoảng 0,9 s. Chênh ở thời gian load inter splash (cũ 3,1 s, mới 3,9 s). Splash hiện nhanh như nhau (~200 ms).</small></span></summary><div class="body">
+<p>Mỗi bản: gỡ app, cài, mở lạnh 3 lần, rồi đo thêm 3 lần (đổi qua lại giữa 2 bản). "Màn đầu" là màn đầu tiên sau splash (đều là inter splash). Lấy từ dòng <code>ActivityTaskManager START/Displayed</code>.</p>
+<pre>                   lần 1*  2     3     4*    5     6     TB (bỏ lần *)
+Bản cũ  tới màn đầu 7,44  4,10  4,25  4,51  4,45  5,01  4,46 s
+Bản mới tới màn đầu 6,56  5,90  4,91  7,20  5,98  4,74  5,38 s
+Splash Displayed  cũ 258/201/196/112/197/179 ms · mới 223/204/181/248/206/188 ms
+Load inter splash cũ 2,68 2,80 3,25 3,16 3,06 3,56 s · mới 4,33 3,47 4,55 3,29 s
+* lần đầu sau khi cài (Firebase tải lần đầu ~1,6 s)</pre></div></details>
+</section>
+
+<section class="sec">
+<h2>Event doanh thu</h2>
+
+<details data-v="pass"><summary><span class="id">EV-30</span><span class="pill pass">Khớp</span><span class="t">Giá trị doanh thu với quảng cáo thật<small>Native thật ở onboarding: valuemicros=860, currency=USD, value=8,6E-4 = 860 / 1.000.000.</small></span></summary><div class="body">
+<p>Bản này trả cả quảng cáo thật (không có nhãn "Test Ad") cho một số native. Chỉ xem, không bấm.</p>
+<pre>10:23:29.542 paid_ad_impression_value precision=3 value=8.6E-4 currency=USD ad_source=AdMob Network
+10:23:29.547 paid_ad_impression       precision=3 valuemicros=860.0 currency=USD ad_source=AdMob Network
+             …/6190293386 (native onboarding trang 1)</pre></div></details>
+
+<details data-v="pass"><summary><span class="id">EV-31</span><span class="pill pass">Khớp</span><span class="t">Nguồn doanh thu khớp nguồn thắng<small>52/52 lượt: won_ad_source của ad_load trùng ad_source của paid_ad_impression cùng unit. 0 lệch.</small></span></summary><div class="body">
+<p>Mọi lượt fill đều là <code>AdMob Network</code>. Meta chưa fill lần nào nên chưa có lượt mediation để đối chiếu.</p></div></details>
+
+<details data-v="pass"><summary><span class="id">EV-32</span><span class="pill pass">Khớp</span><span class="t">Doanh thu gửi sang Adjust / AppsFlyer<small>Adjust: 46/46 lần paid_ad_impression đều có "Event success" ngay sau đó, 0 lỗi. AppsFlyer đang tắt (enableAppsflyer:false).</small></span></summary><div class="body">
+<pre>09:40:29.996 AperoAppsflyer: pushTrackEventAdmob enableAppsflyer:false --- value: 0.0 -- adType: APP_OPEN
+09:40:31.422 AdSdkAdjust: Event success callback called!  {"app_token":"a0jbxa79mr5s", …}
+lượt L 3/3 · M 4/4 · N 30/30 · Q2 3/3 · R 1/1 · U 5/5</pre>
+<p>Không có quyền vào trang test của Adjust, nên đối chiếu bằng callback thành công của SDK Adjust trong logcat. Giá trị gửi đi bằng <code>value</code> của paid_ad_impression (ví dụ 8.6E-4 với native thật).</p></div></details>
+</section>
+
+<section class="sec">
+<h2>Hành vi</h2>
+
+<details data-v="pass"><summary><span class="id">HV-01</span><span class="pill pass">Khớp</span><span class="t">Không hiện app open khi quay lại sau khi bấm quảng cáo<small>Inter splash: bấm → Chrome → Home → mở lại: vẫn là inter cũ. Native onboarding: bấm → Chrome → mở lại: về onboarding. Không có request/hiện app open.</small></span></summary><div class="body">
+<pre>10:28:46.516 event_user_click_ads …/6379207096 (inter splash) → Chrome → mở lại → AdActivity (inter cũ)
+10:58:33.456 event_user_click_ads …/6190293386 (native OB1)  → Chrome → mở lại → OnboardingActivity
+…/2523827769 (app open): 0 dòng ở cả hai lượt</pre>
+<p>Đối chứng: Home rồi mở lại bình thường ở Language thì có app open (EV-25 lượt 5, 09:40). Banner tutorial chỉ có ở splash và hiện chưa tới 0,5 s trước khung "Loading Ads…", nên không bấm được. Banner Home nằm ngoài phạm vi.</p></div></details>
+
+<details data-v="pass"><summary><span class="id">HV-02</span><span class="pill pass">Khớp</span><span class="t">Không hiện app open ngay sau khi đóng quảng cáo toàn màn<small>Đóng inter splash bằng X: về Language, đứng 10 s, không có app open.</small></span></summary><div class="body">
+<p>Rewarded chỉ có trong app (thưởng lượt chat), không có ở tutorial, nên không chấm phần rewarded.</p></div></details>
+
+<details data-v="pass"><summary><span class="id">HV-06</span><span class="pill pass">Khớp</span><span class="t">Bấm Back khi đang xem quảng cáo toàn màn<small>Giống bản cũ: inter còn đếm ngược thì Back bị chặn; X đã hiện thì Back đóng inter và sang Language. Không thoát sai màn, không crash.</small></span></summary><div class="body">
+<pre>Bản cũ 1.7.0  Back khi đếm ngược ×2 → vẫn AdActivity · Back khi X đã hiện → Language
+Bản mới       Back khi đếm ngược ×2 → vẫn AdActivity · Back khi X đã hiện → Language</pre>
+<p>Native toàn màn (OB3) không fill trong 4 lượt user mới (10:56–11:00), nên phần native chưa thử được. Rewarded chỉ có trong app.</p></div></details>
+
+<details data-v="pass"><summary><span class="id">HV-07</span><span class="pill pass">Khớp</span><span class="t">Quảng cáo về muộn khi đã rời màn<small>Inter xin ở Question về muộn lúc user đã ở Home: ad_load success nhưng không hiện, Home đứng yên 21 s.</small></span></summary><div class="body">
+<p>Proxy làm chậm riêng domain quảng cáo (trễ 6 s, 20 KB/s). Ở Question bấm Next ngay → paywall → đóng → Home.</p>
+<pre>10:43:35 vào Home (MainActivity)
+10:43:36.817 AperoAdmob: InterstitialAds onAdLoaded
+10:43:36.856 ad_load success …/1279681827 _sc=MainActivity
+10:43:35 → 10:43:56 MainActivity liên tục, không ad_show, không AdActivity</pre></div></details>
+
+<details data-v="pass"><summary><span class="id">HV-08</span><span class="pill pass">Khớp</span><span class="t">Bấm Home khi inter đang load<small>2 lần: không bao giờ có 2 quảng cáo chồng nhau, app open không xuất hiện, app quay về đúng màn.</small></span></summary><div class="body">
+<pre>Lần 1: Home lúc splash đang load inter (10:33:14) → mở lại: chỉ inter hiện, 1 AdActivity
+Lần 2: Home đúng lúc khung "Loading Ads…" (10:33:57)
+       AperoAdmob: showInterstitialAd: show fail in background after show loading ad
+       → mở lại: vào thẳng Language, 0 AdActivity
+…/2523827769 (app open): 0 dòng</pre></div></details>
+</section>
+
+<section class="sec">
+<h2>Ngoài phạm vi / không áp dụng</h2>
+<ul style="margin:0;padding-left:20px;display:grid;gap:6px">
+  <li><b>KT-05, KT-06 Consent (UMP).</b> Không phải lỗi code. Tài khoản AdMob chưa tạo form đồng ý cho app (<code>AdsConsentManager: 3: Publisher misconfiguration … no form(s) configured</code>, app ID <code>…~1032914015</code>), bản cũ 1.7.0 cũng vậy. Không có form nên không chấm được hiện form hay từ chối. Chấm lại khi tài khoản có form và có bản bật debug geography EEA.</li>
+  <li><b>HV-03, HV-04 Rewarded.</b> Rewarded chỉ có trong app (<code>show_reward_chat</code>), tutorial không có. Không tính.</li>
+  <li><b>HV-05 Rewarded interstitial.</b> App không có: RC không khai unit nào, log cả ngày không có định dạng này.</li>
+  <li><b>HV-09 Collapsible banner.</b> App không có: 89/89 lần banner load đều <code>collapsible=false</code>, RC không có key collapsible.</li>
+</ul>
+</section>
+
+<section class="sec">
+<h2>Cần bản debuggable</h2>
+<p style="margin:0"><b>RG-01 · bộ "TC SDK 3.5.0" (36 TC happy path).</b> Chưa chấm, không tính vào 20 mục. 34/36 TC cần đổi Remote Config trên máy (tắt/bật từng unit high1/high2, đổi <code>timer_auto_swipe</code>, <code>timer_button_x</code>, <code>swipe_onb2</code>…). Bản 1.9.0 là release: <code>run-as</code> báo "package not debuggable", máy không root. Chỉ 2 TC (OB2-001, OB2-003) khớp sẵn RC đang chạy. Cần dev gửi bản bật <code>debuggable</code> cùng Firebase project, rồi chạy bằng rc-check.</p>
+</section>
+
+<div class="foot">
+  <p>Ghi chú phụ: ở bản mới, <code>ad_load.error_message</code> khi trượt sàn eCPM là nguyên chuỗi <code>BowResponseError(code=3, description=…)</code> và bị cắt ở dấu phẩy. Bản cũ ghi gọn "No ads meet eCPM floor." Bản này hỏi quyền thông báo ngay lần mở đầu (trước splash).</p>
+  <p>Lượt chạy: M (10:22 offline → online) · N (10:27–10:44: HV-06/01/02/08, KT-02, HV-07) · O/O2 (bản cũ: CMP-03, HV-06, FO) · P (10:47 cài đè: KT-07) · Q/Q2 (bản mới: CMP-03, FO, HV-06) · S (10:53 bản cũ mạng chậm) · T (CMP-03 đo thêm) · R/U (10:52–11:00 native, HV-01). Máy để lại bản 1.9.0 (3b1c817a…), đã gỡ proxy.</p>
+</div>
+</div>
+
+<script>
+(function(){
+  var cards=document.querySelectorAll('.card'), items=document.querySelectorAll('details');
+  function apply(f){
+    items.forEach(function(d){
+      var v=d.getAttribute('data-v');
+      d.hidden = !(f==='all' || f===v || (f==='new' && d.getAttribute('data-new')==='1'));
+    });
+    cards.forEach(function(c){c.setAttribute('aria-pressed', c.dataset.f===f?'true':'false')});
+  }
+  cards.forEach(function(c){c.addEventListener('click',function(){apply(c.dataset.f)})});
+})();
+</script>

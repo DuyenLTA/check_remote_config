@@ -28,11 +28,11 @@ class FakeClient:
 
 
 def _gia(monkeypatch, debuggable=True, co_tab=True, ram=8.0,
-         units=("ca-app-pub-4584260126367940/2920391588",)):
-    async def ads_test(client, serial, package):
-        return preflight.muc_ads_test(list(units))
+         units=("ca-app-pub-4584260126367940/2920391588",), sdk="3.5.3"):
+    async def mo_app(client, serial, package):
+        return preflight.muc_ads_test(list(units)), sdk
 
-    monkeypatch.setattr(preflight, "_ads_test", ads_test)
+    monkeypatch.setattr(preflight, "_mo_app_mot_lan", mo_app)
 
     async def detect(client, serial, package):
         if debuggable:
@@ -147,3 +147,37 @@ def test_unit_ads_doc_ca_hai_ten_param():
         {"name": "screen_view", "params": {"ad_unit_id": "khong-phai-ads"}},
     ]
     assert preflight.unit_ads(events) == [TEST_NATIVE, THAT_INTER]
+
+
+def test_sdk_3_6_1_chay_checklist_next_gen_khong_can_sheet_hay_debuggable(monkeypatch):
+    _gia(monkeypatch, sdk="3.6.1", debuggable=False, co_tab=False)
+    kq = _chay(FakeClient())
+    assert kq["nhanh"] == "nextgen" and kq["sdk"] == "3.6.1" and kq["ok"]
+    assert _trang_thai(kq, "Vào được dữ liệu app") == "canh_bao"
+    assert not any(m["ten"].startswith("Sheet") for m in kq["muc"])
+
+
+def test_sdk_khac_3_6_1_van_chay_bo_tc(monkeypatch):
+    for sdk in ("3.5.3", "3.6.0", "3.6.2", "3.7.0"):
+        _gia(monkeypatch, sdk=sdk)
+        kq = _chay(FakeClient())
+        assert kq["nhanh"] == "tc", sdk
+        assert any(m["ten"] == "Sheet testcase" for m in kq["muc"])
+
+
+def test_khong_doc_duoc_sdk_thi_canh_bao_va_chay_bo_tc(monkeypatch):
+    _gia(monkeypatch, sdk="")
+    kq = _chay(FakeClient())
+    assert kq["nhanh"] == "tc" and _trang_thai(kq, "Bản SDK FO") == "canh_bao"
+
+
+def test_tham_so_sdk_thang_doc_tu_log(monkeypatch):
+    _gia(monkeypatch, sdk="3.5.3")
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", "3.6.1"))
+    assert kq["nhanh"] == "nextgen"
+
+
+def test_la_nextgen_chi_dung_3_6_1():
+    from rcr import sdk_probe
+    assert sdk_probe.la_nextgen("3.6.1") and sdk_probe.la_nextgen("3.6.1-alpha02")
+    assert not any(sdk_probe.la_nextgen(v) for v in ("3.6.0", "3.6.10", "3.6.2", "3.5.3", "", "x"))

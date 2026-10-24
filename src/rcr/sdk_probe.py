@@ -28,6 +28,10 @@ from .app_sandbox import guard
 log = logging.getLogger(__name__)
 
 TAG = "VslTemplate4FirstOpenSDK"
+# Ban SDK FO di cung GMA Next-Gen ma khong co bo TC: cham theo checklist `sdk-check/`.
+# User chot 24/10/2026: CHINH XAC 3.6.1 moi chay checklist (hau to -alphaNN van tinh),
+# ban khac van chay bo TC.
+NEXTGEN_SDK = (3, 6, 1)
 LOGCAT_TIMEOUT = 20.0
 WAIT_AFTER_LAUNCH = 15.0
 POLL_INTERVAL = 1.5
@@ -48,6 +52,11 @@ async def read_log(client, serial: str, pid: str) -> str:
         timeout=LOGCAT_TIMEOUT,
     )
     return out
+
+
+def la_nextgen(sdk: str) -> bool:
+    """Ban SDK FO cham theo checklist Next-Gen thay vi bo TC."""
+    return tc_catalog.parse_version(sdk) == NEXTGEN_SDK
 
 
 def last_version(log_text: str) -> str:

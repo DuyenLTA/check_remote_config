@@ -1,6 +1,6 @@
 ---
-description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, trên máy thật
-argument-hint: "<package> [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
+description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, hoặc tự chấm checklist SDK Next-Gen khi app dùng SDK 3.6.1, trên máy thật
+argument-hint: "<package> [mục 1|2|3|4|all — chỉ khi app SDK 3.6.1: tự chấm checklist Next-Gen] [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
 ---
 
 Chạy `rcr-check` một lượt: đọc baseline remote config, nạp file testcase, đặt
@@ -28,6 +28,20 @@ Gọi `<bin>` là thư mục lệnh của venv: `<repo>/.venv/bin` trên macOS/L
 toàn cục. Báo `command not found` thì
 `cd <repo> && <bin>/python -m pip install -e ".[dev]"` rồi thử lại: venv cài
 trước khi CLI được thêm thì thiếu file lệnh.
+
+## 0b. SDK 3.6.1 → chấm checklist Next-Gen (tự chọn, không cần hỏi)
+
+Không cần user nói SDK nào: bước `--preflight` (mục 3b) mở app một lần, đọc dòng
+`VslTemplate4FirstOpenSDK: Using version X` của chính pid app và in dòng **`Bản SDK FO`**.
+
+- **Đúng 3.6.1** (kể cả `3.6.1-alphaNN`) → preflight in `Nhanh: checklist Next-Gen`, JSON có
+  `"nhanh": "nextgen"`. **Không chạy các mục 4–7 dưới**: đọc toàn bộ `<repo>/sdk-check/WORKFLOW.md` và
+  làm theo nó (checklist có sẵn trong `<repo>/sdk-check/references/`, report Khớp/Sai). Ở nhánh này bản
+  release / ID ads test chỉ là `CHU Y`, không chặn.
+- **Bản khác** (3.5.x, 3.6.0, 3.6.2…) → nhánh bộ TC như thường. User truyền `--tc` riêng thì luôn theo `--tc`.
+- Không đọc được bản (dòng `Bản SDK FO` là `CHU Y`) → hỏi user bản SDK, chạy lại preflight với `--sdk X.Y.Z`.
+- Chạy case bằng bộ TC mặc định trên app 3.6.1 thì `rcr-check` dừng kèm lỗi (bộ chung không có tab
+  3.6.1, chọn tab cũ là chấm sai bản).
 
 ## 1. Tool này làm được tới đâu — nói trước, đừng để người dùng tưởng nhầm
 
@@ -413,6 +427,11 @@ còn chỗ trống mà server của chính app đang có giá trị thật cùng
 ghi rõ trên report là đã thay. Không có giá trị thật nào thì báo tách hẳn khỏi phần
 chạy được, kèm nguyên văn lý do.
 
+**Precondition "ad không fill / chặn ad server"**: RC có khai `id_*` của vị trí thì tool đổi sang slot trống; ID nằm
+cứng trong app (RC không khai) thì tool tự bật Private DNS `dns.adguard-dns.com` cho cả case (chặn domain quảng cáo,
+Firebase vẫn chạy), đổi wifi để bỏ cache DNS, xong trả DNS cũ về. Report ghi rõ ở `ep_ad_fail`: lúc đó **mọi** vị trí
+đều không về ad — dòng Expected cần ad vị trí khác hiện thì đo tay.
+
 ## 5b. Còn dòng NEEDS_HUMAN / NOT_VERIFIABLE → tự làm trên máy, KHÔNG hỏi, KHÔNG giao lại
 
 User đã nhắc **hai lần** (28/09 và 03/10/2026): *"cái nào need_human hoặc not_verify
@@ -563,6 +582,23 @@ xem có fail thật hay không trước khi xuất report"*. Mỗi case FAIL, tr
    không thành (vd 202 đã show ở LFO2) hoặc config bị đè thì ghi rõ "không dùng làm bằng
    chứng" — 07/10/2026 user đọc bảng ads của lượt sai điều kiện và bắt được FAIL mâu thuẫn
 
+## 5e. Gặp lỗi của tool giữa lượt → Claude tự sửa, KHÔNG giao lại user
+
+User chốt 24/10/2026: chạy app khác mà tool lỗi / chạy chập chờn / PASS giả / BLOCKED thì
+**user không phải ngồi sửa**. Lượt chạy chưa xong khi lỗi tool còn làm sai kết quả.
+
+1. Phân biệt trước: **bug app** (báo dev), **điều kiện máy/tài khoản** (mạng, máy khoá, sub
+   test — tự xử), hay **lỗi tool** (crash, lái sai màn, nhận nhầm node, regex log không khớp app
+   mới, PASS/FAIL giả do cách chấm). Chỉ loại cuối mới sửa code.
+2. App mới đặt tên id lạ → thêm vào `data/ui_names.yaml`, không sửa code (mục 1).
+3. Lỗi code → sửa đúng chỗ gốc trong `src/rcr/` (hoặc `sdk-check/scripts/`), thêm test tái hiện
+   đúng tình huống vừa gặp, chạy **cả bộ** `<bin>/python -m pytest -q` — đỏ thì sửa tới xanh.
+4. Chạy lại **chỉ các case bị lỗi đó ảnh hưởng**, gộp vào file lượt (`--gop`), rồi đi tiếp
+   5b–5d như thường. Không chạy lại cả bộ.
+5. Không sửa được ngay (cần dữ liệu ngoài, đổi kiến trúc) → vẫn đo tay case đó theo 5b để ra
+   PASS/FAIL, ghi lỗi tool vào câu báo kèm hướng sửa.
+6. Câu báo cuối liệt kê: lỗi tool đã gặp, đã sửa ở file nào, test nào, case nào chạy lại.
+
 ## 6. Xuất report
 
 Luôn truyền `--report <repo>/out/run-<pkg>-<hhmm>.html` khi chạy `--case`: trang
@@ -616,5 +652,6 @@ tầm (console PO, điều kiện đã thử mà không tạo được) và nói
 **Đưa link artifact ngay trong câu trả lời**, đừng bắt người dùng đi tìm. Report
 local (`<repo>/out/…html`) vẫn mở được bằng nháy đôi nếu publish hỏng.
 
-**Dừng ở đây. Không `git add`, không `git commit`, không `git push`.** Lượt chạy
-không sinh file nào trong repo. Sửa tool là việc riêng, người dùng sẽ tự nói.
+**Dừng ở đây. Không `git add`, không `git commit`, không `git push`** khi user chưa bảo.
+Code đã sửa theo mục 5e để nguyên trong working tree, liệt kê trong câu báo; user bảo commit
+thì push cả hai tài khoản.

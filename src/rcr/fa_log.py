@@ -80,3 +80,39 @@ def _params(body: str) -> dict:
         if key:
             ra[key] = gia_tri.strip()
     return ra
+
+
+_THREADTIME = re.compile(r"^(\d\d-\d\d \d\d:\d\d:\d\d\.\d+)\s+\d+\s+\d+\s+[VDIWEF]\s+(\S+)\s*: ?(.*)$")
+
+
+def gio_threadtime(t: str) -> float:
+    """'10-24 16:09:48.901' -> giay (nam co dinh 2000: 29/02 khong bi lech)."""
+    import datetime
+    return datetime.datetime.strptime("2000-" + t, "%Y-%m-%d %H:%M:%S.%f").timestamp()
+
+
+def parse_co_gio(text: str) -> list[dict]:
+    """Event FA-SVC tu file `logcat -v threadtime`, KEM GIO: [{t, ts, name, origin, params}].
+
+    Bundle dai bi logcat cat thanh nhieu dong cung tag: dong sau khong bat dau
+    bang chu "Logging"/"Upload"… thi noi vao event dang mo (giong cach skill
+    nextgen-sdk-check doc, da do tren LingoSpeak). Dung de cham thu tu / cap
+    event (EV-xx) - can gio, khac `parse` chi can ten + params.
+    """
+    tho: list[list[str]] = []
+    for dong in (text or "").splitlines():
+        m = _THREADTIME.match(dong.rstrip("\r"))
+        if not m or m.group(2) != TAG:
+            continue
+        t, than = m.group(1), m.group(3)
+        if than.startswith("Logging event:"):
+            tho.append([t, than])
+        elif tho and not tho[-1][1].rstrip().endswith("}]") and not re.match(r"^[A-Z][a-z]+ ", than):
+            tho[-1][1] += than
+    ra = []
+    for t, than in tho:
+        m = _SVC.search(than)
+        if m:
+            ra.append({"t": t, "ts": gio_threadtime(t), "name": _SHORT.sub("", m.group("name").strip()),
+                       "origin": m.group("origin"), "params": _params(m.group("body"))})
+    return ra

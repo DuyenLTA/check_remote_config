@@ -1,0 +1,119 @@
+10-24 15:33:45.936  1902  2094 I am_proc_start: [0,1963,10557,com.ai.aiimage.aivideogenerator,top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 15:50:12.281  1902  2094 I am_proc_start: [0,3794,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 15:50:50.802  1902  2094 I am_proc_start: [0,4383,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 15:50:54.922  1902  2094 I am_proc_start: [0,4893,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 15:51:01.260  1902  2094 I am_proc_start: [0,5560,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 15:55:45.542  1902  2094 I am_proc_start: [0,7448,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 15:57:19.678  1902  2094 I am_proc_start: [0,8680,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 15:58:21.999  1902  2094 I am_proc_start: [0,9167,10557,com.ai.aiimage.aivideogenerator,bound-service,{com.ai.aiimage.aivideogenerator/com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService}]
+10-24 15:59:04.781  1902  2094 I am_proc_start: [0,9702,10557,com.ai.aiimage.aivideogenerator,bound-service,{com.ai.aiimage.aivideogenerator/com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService}]
+10-24 15:59:51.261  1902  2094 I am_proc_start: [0,10305,10557,com.ai.aiimage.aivideogenerator,bound-service,{com.ai.aiimage.aivideogenerator/com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService}]
+10-24 16:00:41.444  1902  2094 I am_proc_start: [0,10975,10557,com.ai.aiimage.aivideogenerator,bound-service,{com.ai.aiimage.aivideogenerator/com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService}]
+10-24 16:01:58.163  1902  2094 I am_proc_start: [0,12253,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:02:10.687  1902  2094 I am_proc_start: [0,12329,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:02:54.671  1902  2094 I am_proc_start: [0,13563,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:03:35.143  1902  2094 I am_proc_start: [0,14893,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:03:36.587  1902  2094 I am_proc_start: [0,14986,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:04:01.227  1902  2094 I am_proc_start: [0,16017,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:04:35.414  1902  2094 I am_proc_start: [0,17387,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:04:36.906  1902  2094 I am_proc_start: [0,17459,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:05:32.019  1902  2094 I am_proc_start: [0,19636,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:05:33.495  1902  2094 I am_proc_start: [0,19721,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:06:26.632  1902  2094 I am_proc_start: [0,21119,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:06:28.125  1902  2094 I am_proc_start: [0,21185,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:08:00.199  1902  2094 I am_proc_start: [0,22757,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:08:01.679  1902  2094 I am_proc_start: [0,22835,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:09:36.194  1902  2094 I am_proc_start: [0,24263,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 16:09:47.752  1902  2094 I am_proc_start: [0,24343,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 17:47:22.098  1902  2094 I am_proc_start: [0,28083,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:08:45.490  1902  2094 I am_proc_start: [0,29331,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:18:25.383  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 1''
+10-24 18:18:25.411 31137 31137 I RCR_SDK : lan 1
+10-24 18:18:25.553  1902  2094 I am_proc_start: [0,31149,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:18:28.480 31149 31149 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 712
+10-24 18:18:30.685 31149 31149 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:18:32.319 31149 31149 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:18:32.850 31149 31149 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:18:33.709 31149 31149 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:18:33.778 31149 31149 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:18:35.889  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 2''
+10-24 18:18:35.915 31655 31655 I RCR_SDK : lan 2
+10-24 18:18:36.053  1902  2094 I am_proc_start: [0,31666,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:18:38.857 31666 31666 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 620
+10-24 18:18:40.126 31666 31666 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:18:40.684 31666 31666 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:18:41.123 31666 31666 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:18:41.544 31666 31666 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:18:41.609 31666 31666 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:18:46.415  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 3''
+10-24 18:18:46.452 32255 32255 I RCR_SDK : lan 3
+10-24 18:18:46.633  1902  2094 I am_proc_start: [0,32268,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:18:49.433 32268 32268 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 612
+10-24 18:18:50.718 32268 32268 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:18:50.916 32268 32268 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:18:51.774 32268 32268 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:18:51.835 32268 32268 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:18:52.071 32268 32268 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:18:57.008  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 4''
+10-24 18:18:57.035 32761 32761 I RCR_SDK : lan 4
+10-24 18:18:57.209  1902  2094 I am_proc_start: [0,314,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:18:59.912   314   314 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 602
+10-24 18:19:01.146   314   314 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:01.716   314   314 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:19:02.095   314   314 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:02.573   314   314 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:19:02.639   314   314 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:19:07.545  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 5''
+10-24 18:19:07.572  1161  1161 I RCR_SDK : lan 5
+10-24 18:19:07.742  1902  2094 I am_proc_start: [0,1172,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:19:10.501  1172  1172 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 589
+10-24 18:19:11.473  1172  1172 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:11.958  1172  1172 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:19:12.301  1172  1172 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:12.814  1172  1172 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:19:12.880  1172  1172 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:19:18.077  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 6''
+10-24 18:19:18.100  2168  2168 I RCR_SDK : lan 6
+10-24 18:19:18.242  1902  2094 I am_proc_start: [0,2182,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:19:21.073  2182  2182 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 693
+10-24 18:19:22.459  2182  2182 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:22.955  2182  2182 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:19:23.816  2182  2182 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:19:23.873  2182  2182 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:19:24.081  2182  2182 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:28.589  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 7''
+10-24 18:19:28.624  3587  3587 I RCR_SDK : lan 7
+10-24 18:19:28.774  1902  2094 I am_proc_start: [0,3644,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:19:31.468  3644  3644 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 591
+10-24 18:19:32.862  3644  3644 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:33.616  3644  3644 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:19:34.308  3644  3644 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:34.465  3644  3644 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:19:34.532  3644  3644 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:19:39.126  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 8''
+10-24 18:19:39.150  4234  4234 I RCR_SDK : lan 8
+10-24 18:19:39.324  1902  2094 I am_proc_start: [0,4245,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:19:42.113  4245  4245 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 622
+10-24 18:19:43.303  4245  4245 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:44.342  4245  4245 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:19:44.697  4245  4245 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:45.204  4245  4245 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:19:45.273  4245  4245 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:19:49.673  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 9''
+10-24 18:19:49.691  4836  4836 I RCR_SDK : lan 9
+10-24 18:19:49.847  1902  2094 I am_proc_start: [0,4846,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:19:52.751  4846  4846 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 715
+10-24 18:19:53.685  4846  4846 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:54.689  4846  4846 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:19:55.462  4846  4846 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:19:56.321  4846  4846 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:19:56.386  4846  4846 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:20:00.195  1750  1750 I adbd    : adbd service requested 'shell,v2,TERM=xterm-256color,raw:log -t RCR_SDK 'lan 10''
+10-24 18:20:00.220  5516  5516 I RCR_SDK : lan 10
+10-24 18:20:00.391  1902  2094 I am_proc_start: [0,5527,10557,com.ai.aiimage.aivideogenerator,next-top-activity,{com.ai.aiimage.aivideogenerator/com.ai.aiimage.aivideogenerator.presentation.activity.splash.AIPhotoVideoMakerSplashActivity}]
+10-24 18:20:03.282  5527  5527 D AperoAdmob: Adapter name: com.google.android.gms.ads.MobileAds, Description: , Latency: 644
+10-24 18:20:04.313  5527  5527 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>
+10-24 18:20:05.449  5527  5527 I AperoAdmob: InterstitialAds onAdLoaded
+10-24 18:20:06.319  5527  5527 E AperoAdmob: onAdShowedFullScreenContent 
+10-24 18:20:06.380  5527  5527 D AperoAdmob: OnPaidEvent getInterstitalAds:0
+10-24 18:20:06.699  5527  5527 E AperoAdmob: NativeAd onAdFailedToLoad: No ads meet eCPM floor. <https://support.google.com/admob/answer/9905175#8>

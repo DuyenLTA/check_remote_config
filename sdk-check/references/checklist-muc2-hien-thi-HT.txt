@@ -1,0 +1,21 @@
+MỤC 2 · HIỂN THỊ: quảng cáo hiện đúng, đủ, không crash                                    
+HT-01    Banner    Banner load xong hoặc lỗi, vùng banner đúng    "1. Mở màn có banner
+2. Thử cả lúc có mạng và lúc tắt mạng"    Logcat lỗi như trên. Nhìn vùng banner: shimmer chuyển sang quảng cáo hoặc ẩn đi.    Không crash, vùng banner xử lý đúng khi có hoặc lỗi.    4.2, 6.1            
+HT-02    Banner    Adaptive banner hiện đủ chiều rộng    "1. Mở màn có banner
+2. Xoay ngang màn hình"    Nhìn bằng mắt.    Banner vừa chiều rộng, không méo hoặc cắt.    6.3            
+HT-03    Interstitial    Interstitial: bấm quảng cáo và đóng quảng cáo    "1. Hiện inter, bấm vào quảng cáo, quay lại app
+2. Hiện lại, đóng bằng nút X"    Nhìn bằng mắt. Android Studio → Logcat → ô tìm: package:mine level:error    Bấm vào quảng cáo mở được trang đích, đóng bằng nút X được, app quay lại màn cũ, không crash.    7.3            
+HT-04    App open    App open hiện khi quay lại app    1. Bấm Home rồi mở lại app    Nhìn bằng mắt. Logcat tag AppOpenManager.    Có quảng cáo app open khi quay lại app.    7.1            
+HT-05    App open    App open không đè lên quảng cáo toàn màn hình    "1. Hiện inter hoặc rewarded
+2. Đang xem, bấm Home rồi mở lại app"    Nhìn bằng mắt. Logcat tag AppOpenManager.    Không có quảng cáo chồng lên quảng cáo (kiểm AdActivity của SDK mới).    7.6            
+HT-06    Native    Native hiện đủ thành phần    "1. Mở màn có native
+2. Quan sát"    Nhìn bằng mắt: tiêu đề, mô tả, nút, icon, ảnh/video, nhãn "Ad", biểu tượng AdChoices.    Đủ thành phần, không cắt, không che nút của app.    8.2, 8.6            
+HT-07    Native    Native video    1. Mở màn có native video    Nhìn bằng mắt.    Video tự phát tắt tiếng, đúng tỉ lệ khung, AdChoices đúng góc.    8.3, 8.7            
+HT-08    Native    Tải nhiều native một lúc (danh sách)    "1. Mở màn danh sách có nhiều native (nhờ Dev chỉ màn)
+2. Cuộn xuống hết"    DebugView: đếm track_ad_request và ad_load thành công cho màn đó. Logcat lỗi.    Số native hiện bằng số cấu hình. Nếu ít hơn (đặc biệt khi dùng mediation) thì ghi lại để báo Dev (Next Gen có thể không hỗ trợ tải nhiều cùng lúc với mediation).    8.8            
+HT-09    Native    Dialog thoát app và interstitial dạng native    "1. Bấm Back để mở dialog thoát app
+2. Mở màn interstitial dạng native"    Nhìn bằng mắt. Android Studio → Logcat → ô tìm: package:mine level:error    Quảng cáo hiện, nút đóng hoạt động, không crash.    8.9            
+HT-10    Native    Vào ra màn có native nhiều lần    "1. Vào rồi thoát màn có native 20 lần
+2. Theo dõi bộ nhớ"    Android Studio → View → Tool Windows → Profiler → Memory.    Bộ nhớ không tăng liên tục sau mỗi lần vào ra. Không crash.    8.2            
+HT-11    Trạng thái user    User đã mua thì không load quảng cáo    "1. Mua sub
+2. Mở app và các màn"    DebugView: không có track_ad_request.    Không có request và không có quảng cáo.    —

@@ -1,0 +1,21 @@
+Phiên bản và bản build    Không còn SDK AdMob cũ, không xung đột (qua log)    "1. Dev thêm vào log FOR_TESTER_CONFIG một dòng cho biết app còn lớp của SDK AdMob cũ hay không
+2. Mở app, đợi khoảng 10 giây
+3. Xem Logcat và Logcat lỗi"    Logcat: tag:FOR_TESTER_CONFIG, dòng báo SDK cũ. Android Studio → Logcat → ô tìm: package:mine level:error, tìm NoClassDefFoundError, ClassNotFoundException, NoSuchMethodError.    Dòng log báo không còn SDK cũ. Không có lỗi thiếu lớp hay lỗi xung đột phiên bản khi chạy.
+Phiên bản và bản build    minSdk của app (qua log)    "1. Dev thêm vào log FOR_TESTER_CONFIG dòng minSdk của app đang chạy
+2. Mở app, đợi khoảng 10 giây
+3. Xem Logcat"    Logcat: tag:FOR_TESTER_CONFIG, dòng minSdk.    minSdk = 24. App khởi tạo SDK quảng cáo không lỗi (xem test Thứ tự khởi tạo và cổng chờ).
+Khởi tạo SDK    Thứ tự khởi tạo và cổng chờ    "1. Gỡ app, cài mới
+2. Mở app, đợi vào màn đầu"    "Logcat tag AperoAdmob, tìm 2 dòng theo thứ tự:
+1) ""runWhenReady: MobileAds initializing, queued (N)""
+2) ""MobileAds ready, run N pending ad requests""
+Android Studio → Logcat → ô tìm: package:mine level:error"    Có dòng "queued" trước, dòng "ready" sau. Không có lỗi UninitializedPropertyAccessException.
+Khởi tạo SDK    Mở app nhiều lần không treo    "1. Tắt hẳn app (vuốt khỏi danh sách gần đây)
+2. Mở lại, lặp 10 lần"    Quan sát màn hình có đứng hơn vài giây không. Android Studio → Logcat → ô tìm: package:mine level:error tìm chữ "ANR".    Không có hộp "app không phản hồi", không có dòng ANR.
+Khởi tạo SDK    Adapter Meta báo sẵn sàng    "1. Mở app
+2. Đợi khởi tạo xong"    Logcat tag AperoAdmob, tìm dòng có "Adapter name:" của Meta/Facebook, đọc phần Description.    Có dòng adapter Meta, mô tả báo đã khởi tạo xong (không báo lỗi hoặc "not ready").
+Ổn định và bản release    Bản release (R8) chạy bình thường    "1. Cài bản release do Dev gửi
+2. Hiện từng loại quảng cáo"    Logcat lỗi: tìm NoClassDefFoundError, ClassNotFoundException, NoSuchMethodError.    Không crash, mọi loại quảng cáo hiện được.
+Ổn định và bản release    Preload native tự viết vẫn chạy    "1. Vào màn có preload native
+2. Quan sát tốc độ hiện quảng cáo"    Nhìn bằng mắt; DebugView: thời điểm track_ad_request sớm hơn lúc vào màn.    Quảng cáo hiện ngay khi vào màn, không phải chờ khung loading lâu.
+Ổn định và bản release    Màn dùng Compose và app demo    "1. Nhờ Dev chỉ màn dùng Compose (nếu có)
+2. Mở hết các màn của app demo"    Nhìn bằng mắt. Android Studio → Logcat → ô tìm: package:mine level:error    Quảng cáo hiện, không crash. Nếu không có màn Compose thì ghi N/A.
