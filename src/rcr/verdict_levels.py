@@ -30,12 +30,16 @@ def worst(verdicts) -> str:
     return NOT_VERIFIABLE
 
 
-def out(verdict: str, reason: str, actual, scope: str = "") -> dict:
+def out(verdict: str, reason: str, actual, scope: str = "", tinh: bool = False) -> dict:
     """`scope="po"`: dong nay KHONG thuoc pham vi tester (so lieu tren AdMob
     console - chi PO vao duoc). Khac han "tool chua do duoc": gop chung vao mot
     con so "can nguoi" la bao tester di lam mot viec ho khong co quyen lam."""
     # Cac luat cham ghep ten loai ad vao giua cau (`f"khong request {kind} nao"`).
     # Cau khong neu loai ad thi `kind` rong -> "khong request  nao" hai dau cach.
     # Gop cho o day: don tung cho goi la 20 lan `.replace` rai khap hai module.
+    # `tinh`: verdict suy tu CAU CHU cua dong, khong tu lan chay -> chay lai van ra y
+    # het, run_batch khong chay lai vi no.
     row = {"verdict": verdict, "reason": " ".join((reason or "").split()), "actual": actual}
+    if tinh:
+        row["tinh"] = True
     return row | {"scope": scope} if scope else row

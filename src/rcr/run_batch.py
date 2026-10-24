@@ -14,7 +14,9 @@ from . import (
     fo_screens,
     assert_ads,
     case_run,
+    chay_lai,
     precond_guards,
+    rc_json_lech,
     fo_flow,
     luot_file,
     rc_guards,
@@ -133,7 +135,14 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # Report chi duoc co PASS/FAIL (user chot 2026-10-06): ket qua lo
             # lung (doc file trung luc SDK ghi, ad chua fill...) -> tu chay lai.
             toi_da = LAN_CHAY_LAI + 1     # +1: cho lan xac nhan / phan xu FAIL
+            tc_lech = rc_json_lech.lech({k: v for luot in chosen["runs"] for k, v in luot.items()},
+                                        baseline.configs)
+            for dong in tc_lech:
+                log_fn("  CHU Y TC: " + dong)
             lich_su: list[str] = []
+            dau_truoc = None
+            # Dieu kien may nay khong tao duoc: chay lai van chay duoi trang thai tu nhien.
+            thieu_co_dinh = _thieu_co_dinh(chosen["precondition"])
             result = None
             ro_gan_nhat = None
             for lan in range(1, toi_da + 1):
@@ -169,6 +178,13 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 if v in ("PASS", "FAIL", "KEY_NOT_USED"):
                     ro_gan_nhat = result
                 if v not in ("PASS", "FAIL", "KEY_NOT_USED"):
+                    ly_do = chay_lai.ly_do_khong_chay_lai(result, dau_truoc)
+                    dau_truoc = chay_lai.dau_van(result)
+                    if not ly_do and thieu_co_dinh:
+                        ly_do = "precondition không tạo được: " + "; ".join(thieu_co_dinh)
+                    if ly_do:
+                        log_fn(f"    lan {lan}: verdict {v}, khong chay lai: {ly_do}")
+                        break
                     if lan >= LAN_CHAY_LAI:
                         break
                     log_fn(f"    lan {lan}: verdict {v} -> chay lai case")
@@ -210,12 +226,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         # Precondition doi mot dieu kien may nay khong tao duoc (throttle bang
         # thong, mediation test mode): case KHONG duoc ra PASS im lang - no
         # chua he chay dung nhanh ma TC mo ta.
-        thieu = precond_guards.khong_ep_duoc(chosen["precondition"])
-        if fo_screens.can_qua_lfo_nhanh(chosen["precondition"]):
-            # Precondition cho phep "di qua LFO2 nhanh HOAC throttle": fo_flow da qua
-            # LFO nhanh va case_run da kiem bang log (ad LFO2 chua show) -> khong doi
-            # throttle nua.
-            thieu = [t for t in thieu if "throttle" not in t]
+        thieu = _thieu_co_dinh(chosen["precondition"])
         if ep:
             # Dieu kien dat hay khong la do TRANG THAI THAT: kiem bang log, du
             # da ep hay khong. Ep roi ma ad van fill thi ep hong.
@@ -239,10 +250,14 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         # FAIL cung vay: case chay sai nhanh thi FAIL chua chung minh gi ve app - FAIL gia
         # (Sorapix SDK353-OB3A-002 23/10/2026: doi 303 no-fill, ad 303 high1 van fill ->
         # dong "vung ad trong" FAIL).
-        if thieu and result.get("verdict") in ("PASS", "FAIL"):
+        # Ca NEEDS_HUMAN cung vay: case chua chay dung nhanh thi "can nguoi xem" la
+        # giao nham viec - nguoi xem cung khong tao duoc dieu kien do (Piclux NAT-004).
+        if thieu and result.get("verdict") not in ("KEY_NOT_USED", "BLOCKED"):
             result["verdict"] = "BLOCKED"
             result["precondition_thieu"] = thieu
             log_fn("    precondition chua tao duoc: " + "; ".join(thieu) + " -> BLOCKED")
+        if tc_lech:
+            result["tc_lech"] = tc_lech
         log_fn(f"    verdict: {result['verdict']}")
         records.append(report_data.case_record(key, by_key.get(key, {}), result))
         luu()
@@ -257,3 +272,12 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
     return luu(xong=not dung_vi_click)
 
 
+def _thieu_co_dinh(precondition: str) -> list[str]:
+    """Dieu kien precondition may nay KHONG tao duoc (throttle, mediation test mode...)."""
+    thieu = precond_guards.khong_ep_duoc(precondition)
+    if fo_screens.can_qua_lfo_nhanh(precondition):
+        # Precondition cho phep "di qua LFO2 nhanh HOAC throttle": fo_flow da qua
+        # LFO nhanh va case_run da kiem bang log (ad LFO2 chua show) -> khong doi
+        # throttle nua.
+        thieu = [t for t in thieu if "throttle" not in t]
+    return thieu

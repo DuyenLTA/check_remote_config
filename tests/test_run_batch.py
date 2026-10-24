@@ -165,3 +165,14 @@ def test_co_ad_click_thi_khong_chay_lai_va_dung_ca_luot(monkeypatch):
     recs = run(monkeypatch, {"a": [click, "PASS"], "b": "PASS", "c": "PASS"}, lan=3)
     assert [r["key"] for r in recs] == ["a"]
     assert recs[0]["ad_click"] == 2 and recs[0]["lich_su_verdict"] == ["BLOCKED"]
+
+
+def test_precondition_khong_tao_duoc_thi_blocked_va_khong_chay_lai(monkeypatch):
+    """Piclux NAT-004 24/10/2026: "mang vua phai de native show sau ~2-3s" - may khong
+    throttle duoc, case ra NEEDS_HUMAN 3 lan lien. Phai BLOCKED kem ly do, chay 1 lan."""
+    monkeypatch.setitem(RUNNABLE["a"], "precondition",
+                        "1. Mạng vừa phải để native show sau ~2–3s (vẫn fill).")
+    recs = run(monkeypatch, {"a": "NEEDS_HUMAN", "b": "PASS", "c": "PASS"}, lan=3)
+    assert recs[0]["verdict"] == "BLOCKED" and recs[0]["lich_su_verdict"] == ["NEEDS_HUMAN"]
+    assert any("show muộn" in t for t in recs[0]["precondition_thieu"])
+    assert [r["verdict"] for r in recs[1:]] == ["PASS", "PASS"]

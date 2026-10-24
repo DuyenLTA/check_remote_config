@@ -96,6 +96,7 @@ def build(rec: dict) -> dict:
         "pending": rec.get("pending", 0),
         "thieu": rec.get("precondition_thieu") or [],
         "ep": rec.get("ep_ad_fail", ""),
+        "lech": rec.get("tc_lech") or [],
         "ads": rec.get("ads") or [],
         "steps": rec.get("steps") or [],
     }

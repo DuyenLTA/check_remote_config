@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import rc_extract, tc_catalog, tc_loader
+from . import rc_extract, rc_json_lech, tc_catalog, tc_loader
 from .models import RcError
 
 
@@ -156,5 +156,7 @@ def load_cases(path, baseline, sdk: str = "", tab: str = "") -> tuple[list[dict]
             # Gia tri lua chon (`layout1/2/3`) -> moi gia tri mot luot mo app.
             "runs": len(data.runs),
             **data.summary,
+            # Biet som truoc khi chay: ten truong JSON TC dat lech gia tri server.
+            "tc_lech": rc_json_lech.lech(data.overrides, baseline.configs),
         })
     return rows, runnable, notes

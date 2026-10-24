@@ -30,6 +30,10 @@ EP_DUOC = (
 KHONG_EP_DUOC = (
     (re.compile(r"throttle|m[ạa]ng\s+ch[ậa]m|\d+\s*kbps|charles\s*proxy", re.I),
      "throttle băng thông (máy không root, không có proxy)"),
+    # "Mang vua phai de native show sau ~2-3s (van fill)" = canh mang de ad VE MUON:
+    # khong throttle thi ad ve luc nao la tuy kho (Piclux NAT-004/BAN-002, 24/10/2026).
+    (re.compile(r"m[ạa]ng\s+v[ừu]a\s+ph[ảa]i|show\s+mu[ộo]n|show\s+sau\s+~?\s*\d", re.I),
+     "canh mạng để ad show muộn vài giây (cần giới hạn băng thông, máy không root, không có proxy)"),
     (re.compile(r"mediation\s+test\s+mode|mediation\s+inspector", re.I),
      "bật mediation test mode (tester không có quyền vào AdMob console)"),
     (re.compile(r"debug\s+menu|adb\s+root|thi[ếe]t\s*b[ịi]\s+root", re.I),

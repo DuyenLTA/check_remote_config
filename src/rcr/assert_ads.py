@@ -210,7 +210,7 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
             text, kind, requested, actual, tuple(vi_tri), ad_positions._khop_vi_tri, biet)
 
     if not SHOW_RE.search(text):
-        return out(NOT_VERIFIABLE, f"câu nói về {kind} nhưng không nêu rõ kỳ vọng", actual)
+        return out(NOT_VERIFIABLE, f"câu nói về {kind} nhưng không nêu rõ kỳ vọng", actual, tinh=True)
 
     # "Show" phai la ad CUA VI TRI trong cau: tinh ad bat ky la PASS gia (do
     # 2026-10-06: OB2-007 doi 302 thi 201 show, RMT-013 doi 106 thi 301 show).
