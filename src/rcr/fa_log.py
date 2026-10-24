@@ -62,6 +62,16 @@ def parse(text: str) -> list[dict]:
     return gon
 
 
+def ad_clicks(events: list[dict]) -> int:
+    """So lan SDK quang cao bao `ad_click` (origin=am, ten in ra `ad_click(_ac)`).
+
+    Tool chi duoc dong ad, khong duoc bam vao no: mot click tren ad that la traffic
+    khong hop le. Do 2026-10-24 (Piclux 2.4.0): bam BACK tren inter that, 2,2s sau
+    log co 2 `ad_click` - tool luc do khong doc event nay nen khong ai biet.
+    """
+    return sum(1 for e in events if e["name"].split("(", 1)[0] == "ad_click")
+
+
 def _params(body: str) -> dict:
     ra = {}
     for phan in _SPLIT.split(body or ""):

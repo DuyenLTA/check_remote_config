@@ -122,6 +122,7 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         # (PASS/FAIL) thi nguoi doc phai thay - khong duoc an trong verdict cuoi.
         "lich_su_verdict": result.get("lich_su_verdict") or [],
         "khong_on_dinh": bool(result.get("khong_on_dinh")),
+        "ad_click": result.get("ad_click", 0),
         # Ep ad fail bang cach nao - loi mang va no-fill that cho cung mot
         # man hinh nhung khac ma loi, nguoi doc phai biet la cach nao.
         "ep_ad_fail": result.get("ep_ad_fail", ""),

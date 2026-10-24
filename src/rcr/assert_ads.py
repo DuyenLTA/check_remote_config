@@ -174,7 +174,23 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
     # Cau PHU DINH co chu "alternate" ("khong duoc goi ke ca trong alternate")
     # khong phai cau ta thu tu preload - kiem NEGATIVE truoc.
     if assert_ad_rules.ORDER_RE.search(text) and not NEGATIVE_RE.search(text):
-        ket = assert_ad_rules.preload_order(kind, units, actual)
+        # Thu tu preload cung phai la unit CUA VI TRI trong cau, nhu dong "show" ben
+        # duoi. Dem moi unit cung loai thi unit cua man khac (hoac unit test cua
+        # Google) duoc tinh la PASS (do 2026-10-24, Piclux REG-002: "preload 201"
+        # PASS bang native test …110).
+        cac = [t for t in [ad_positions._position_token(text) or scope] if t] or list(vi_tri)
+        xet = units
+        if cac:
+            xet = [u for u in units if any(ad_positions._khop_vi_tri(u, t) for t in cac)]
+            if not xet:
+                vi = ", ".join(cac)
+                if any(ad_positions.da_biet(t, biet) for t in cac):
+                    return out(FAIL, f"không có request {kind} nào của `{vi}` (ID vị trí này đã "
+                                     "biết, các request khác thuộc vị trí khác)", actual)
+                return out(NOT_VERIFIABLE, f"không map được unit nào về `{vi}` (ID vị trí chưa "
+                                           "biết) nên không quy được thứ tự preload cho vị trí này",
+                           actual)
+        ket = assert_ad_rules.preload_order(kind, xet, actual)
         if ket:
             return ket
 

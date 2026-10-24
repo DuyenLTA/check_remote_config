@@ -80,6 +80,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             log_fn(f"    (chưa ghi được file lượt / report: {exc} — ghi lại ở case sau)")
         return tat_ca
 
+    dung_vi_click = False
     for wanted in [k.strip() for k in args.case.split(",") if k.strip()]:
         key = wanted
         if wanted in bo_qua:
@@ -162,6 +163,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                     continue
                 v = result.get("verdict")
                 lich_su.append(v)
+                if result.get("ad_click"):
+                    break  # chay lai la di qua ad do them lan nua
+
                 if v in ("PASS", "FAIL", "KEY_NOT_USED"):
                     ro_gan_nhat = result
                 if v not in ("PASS", "FAIL", "KEY_NOT_USED"):
@@ -242,7 +246,14 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         log_fn(f"    verdict: {result['verdict']}")
         records.append(report_data.case_record(key, by_key.get(key, {}), result))
         luu()
+        if result.get("ad_click"):
+            # Diem chan: case sau cung lai qua cac man ad do. Nguoi phai xem cach
+            # dong ad truoc khi chay tiep (--tiep chay not phan con lai).
+            log_fn(f"DUNG LUOT: case {key} co {result['ad_click']} ad_click. "
+                   "Kiem tra cach dong ad roi chay tiep bang --tiep")
+            dung_vi_click = True
+            break
 
-    return luu(xong=True)
+    return luu(xong=not dung_vi_click)
 
 

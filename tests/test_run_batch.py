@@ -44,6 +44,8 @@ def run(monkeypatch, outcomes, lan=1):
                 run.order.insert(0, key)
         if isinstance(got, Exception):
             raise got
+        if isinstance(got, dict):          # ket qua day du (vd co ad_click)
+            return got, baseline
         return {"verdict": got, "runs": [{"overrides": {}, "verdict": got}]}, baseline
 
     run.order = ["a", "b", "c"]
@@ -154,3 +156,12 @@ def test_lan_cuoi_khong_ro_thi_giu_ket_qua_da_do(monkeypatch):
     recs = run(monkeypatch, {"a": ["NEEDS_HUMAN", "FAIL", "NEEDS_HUMAN", "NEEDS_HUMAN"],
                              "b": "PASS", "c": "PASS"}, lan=3)
     assert recs[0]["verdict"] == "FAIL"
+
+
+def test_co_ad_click_thi_khong_chay_lai_va_dung_ca_luot(monkeypatch):
+    """Do 24/10/2026: chay lai / sang case sau la di qua ad do them lan nua."""
+    click = {"verdict": "BLOCKED", "ad_click": 2,
+             "runs": [{"overrides": {}, "verdict": "BLOCKED", "ad_click": 2}]}
+    recs = run(monkeypatch, {"a": [click, "PASS"], "b": "PASS", "c": "PASS"}, lan=3)
+    assert [r["key"] for r in recs] == ["a"]
+    assert recs[0]["ad_click"] == 2 and recs[0]["lich_su_verdict"] == ["BLOCKED"]

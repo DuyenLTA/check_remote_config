@@ -201,8 +201,29 @@ def test_impression_ban_nhieu_lan_la_FAIL():
 
 
 def test_thu_tu_preload_alternate_doc_tu_log():
-    out = check("SDK preload banner 101 theo alternate: high trước, thường sau")
+    thuong = {**ADS_BANNER["units"]["banner:*****825"], "rc_keys": ["id_101_spl_a_banner"]}
+    ads = {"units": {**ADS_BANNER["units"], "banner:*****825": thuong}}
+    out = check("SDK preload banner 101 theo alternate: high trước, thường sau", ads=ads)
     assert out["verdict"] == a.PASS and "→" in out["reason"]
+
+
+# Do 24/10/2026 (Piclux 2.4.0): build dung native test cua Google cho moi vi tri ->
+# unit …110 khong mang key nao. Truoc day dong "preload 201" ra PASS bang unit nay.
+ADS_NATIVE_TEST = {"units": {
+    "native:*****110": {"type": "native", "unit": "*****110", "requested": 1, "loaded": 1,
+                        "load_failed": 0, "shown": 0, "impressions": 0, "errors": []},
+}}
+
+
+def test_preload_bang_unit_khong_thuoc_vi_tri_da_biet_ID_thi_FAIL():
+    ads = {**ADS_NATIVE_TEST, "positions": ["id_201_lfo1_n_native_high"]}
+    out = check("Có log preload 201-lfo1-n-native-high (+ high1) tại splash", ads=ads)
+    assert out["verdict"] == a.FAIL and "201_lfo1_n_native_high" in out["reason"]
+
+
+def test_preload_bang_unit_khong_thuoc_vi_tri_chua_biet_ID_thi_khong_cham():
+    out = check("Có log preload 201-lfo1-n-native-high (+ high1) tại splash", ads=ADS_NATIVE_TEST)
+    assert out["verdict"] == a.NOT_VERIFIABLE and "không map được" in out["reason"]
 
 
 def test_chi_mot_unit_request_ma_no_cung_khong_fill_la_thieu_alternate():

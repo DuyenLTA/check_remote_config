@@ -163,6 +163,15 @@ async def apply_case(
         out["precondition_thieu"] = [f"ad LFO2 ({', '.join(da_show)}) đã show ngay ở LFO2 — chưa tạo "
                                      "được điều kiện 'chưa kịp show ở LFO2'"]
         log_fn("    ad LFO2 da show o LFO2 -> chua tao duoc precondition, BLOCKED")
+    out["ad_click"] = fa_log.ad_clicks(out["events"])
+    if out["ad_click"]:
+        # Click vao ad la app roi luong (mo browser/store) va la traffic khong hop
+        # le tren unit that: ket qua luot nay khong dung duoc, run_batch dung ca luot.
+        out["verdict"] = "BLOCKED"
+        out["precondition_thieu"] = (out.get("precondition_thieu") or []) + [
+            f"log có {out['ad_click']} lần ad_click trong lượt — tool chỉ được đóng ad, "
+            "không được bấm vào; dừng cả lượt để người kiểm"]
+        log_fn(f"    CO {out['ad_click']} ad_click trong luot -> BLOCKED, dung ca luot")
     # Doc lai config SAU KHI cham: app fetch Firebase luc mo, lan fetch that
     # (khong phai doc cache) kich hoat lai gia tri server va de mat patch - verify
     # o tren doc qua som (foreground +0,8s, fetch xong sau do) nen van ra OK. Do
@@ -251,12 +260,15 @@ async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, got
         log_fn(f"    foreground sau {out['launch']['waited_s']}s · verify: "
                f"{'CONFIG_OK' if out['verify']['ok'] else 'BLOCKED'} · verdict: {out['verdict']}")
         done.append(out)
+        if out.get("ad_click"):
+            break  # luot sau cung di qua ad do -> them click
     if keep:
         log_fn(f"  GIU patch tren may. Tra ve: rcr-check --package {baseline.package} --restore")
     else:
         log_fn("  da tra config ve nguyen trang")
     # Verdict cua case = luot xau nhat (cung thang bac voi tung dong Expected).
-    return {"runs": done, "verdict": assert_check.worst(r["verdict"] for r in done)}
+    return {"runs": done, "verdict": assert_check.worst(r["verdict"] for r in done),
+            "ad_click": sum(r.get("ad_click", 0) for r in done)}
 
 
 async def restore_saved(client, package: str, serial: str, out_dir) -> dict:

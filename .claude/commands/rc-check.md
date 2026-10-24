@@ -257,6 +257,13 @@ cd <repo> && <bin>/rcr-check --package <pkg> --tiep out/run-x.luot.json
 kết quả, chạy nốt phần còn lại và ghi tiếp vào chính file đó. Lệnh chết vì lỗi thì JSON
 lỗi cũng có trường `luot` trỏ tới file này.
 
+**Lượt tự dừng khi log có `ad_click`** (stderr `DUNG LUOT: case … co N ad_click`, record
+có `ad_click > 0`, case BLOCKED). Tool chỉ được đóng ad (`fo_flow`: chạm nút Close, rồi
+BACK), không được bấm vào; click trên unit thật là traffic không hợp lệ, và app rời luồng
+nên kết quả case đó không dùng được. Case đó không chạy lại, các case sau không chạy. **Đây
+là điểm chặn của người**: báo ngay, kèm case + unit đang show, **không tự `--tiep`**:
+`<bin>/rcr-notify --kind stop --title "Có ad_click trong lượt" --line "<case> · <N> ad_click" --action "Kiểm cách đóng ad trước khi chạy tiếp"`
+
 Case có giá trị lựa chọn (`layout1/2/3`) chạy **nhiều lượt** — mỗi giá trị một
 lượt mở app, `run.runs` là từng lượt. Verdict của case = lượt xấu nhất.
 
@@ -408,7 +415,11 @@ làm hết các bước dưới đây:
    phải `--restore`**: `--keep` lần 2 ghi đè snapshot, restore khi đó ra giá trị bẩn
 2. Tự lái bằng adb (`am start`, `am force-stop`, `input swipe`, `svc wifi`) theo đúng
    câu Action. **Vẫn không tap vào vùng ad**: lấy bằng chứng trước khi ad hiện, hoặc
-   từ log.
+   từ log. **Không gửi phím hay tap nào khi `AdActivity` đang hiện ad thật** — kể cả
+   `input keyevent BACK`: 24/10/2026 (Piclux 2.4.0) BACK trên inter thật …588, 2,2s sau
+   log có 2 `ad_click`. Dòng "dismiss ad → sang màn X" chấm tay thì đổi `id_*` của vị trí
+   đó sang unit test của Google (ad test đóng an toàn), hoặc để tool lái (`fo_flow` có canh
+   `ad_click`), hoặc nhờ người đóng. Muốn qua ad thật thì `am force-stop`
 3. Lấy bằng chứng, chọn theo loại dòng:
    - màn qua nhanh / bị ad che: `screenrecord` rồi tách khung. Máy không có ffmpeg:
      `python3 -m venv <scratchpad>/fv && <scratchpad>/fv/bin/pip install imageio-ffmpeg pillow`.
@@ -454,7 +465,9 @@ case PASS bằng **ad của vị trí khác**. Từ giờ, trước khi báo s�
    báo user bổ sung tab, đừng chạy tiếp như thể có ID. `data/ad_units.yaml` chỉ là bản
    dự phòng; ID đọc từ RC của máy vẫn thắng
 2. **Không fill = PASS chỉ khi có request đúng unit.** Không phải "có ad nào đó được
-   request"
+   request". Dòng thứ tự preload / alternate cũng vậy: tool chỉ xét unit map được về vị trí
+   trong câu (24/10/2026 trước đó đếm mọi unit cùng loại, REG-002 "preload 201" PASS bằng
+   native test …110)
 3. **Dòng nút X / số đếm OB3** khi ad không fill: phải có request native 303
    (…989 / …765) và khung chụp không thấy X. ID 303 **nằm cứng trong app** — RC không
    có `id_303_*`, **không ép fill được** bằng cách đổi ID; đừng tốn lượt thử
