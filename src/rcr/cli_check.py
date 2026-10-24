@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 
 from . import (
-    ad_units, case_run, luot_file, preflight, rc_baseline, run_batch, sdk_probe, discord_notify,
+    ad_units, case_run, cham_tay, luot_file, preflight, rc_baseline, run_batch, sdk_probe, discord_notify,
     discord_run_message, tc_select, tc_source,
 )
 from .adb_client import AdbClient
@@ -121,6 +121,8 @@ def nap_tiep(args: argparse.Namespace) -> list[dict]:
 
 async def run(args: argparse.Namespace) -> dict:
     started = time.monotonic()
+    if args.cham_tay:
+        return cham_tay.chay(args, _log)
     if args.gop and not args.case and not args.tiep:
         return dung_lai_report(args)
     goc_tiep = nap_tiep(args) if args.tiep else []
@@ -300,6 +302,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--gop", action="append", metavar="FILE_LUOT",
                    help="lay ket qua file luot lam nen (lap lai duoc); kem --case thi case chay "
                         "lai de len, khong kem --case thi chi dung lai report, khong can may")
+    p.add_argument("--cham-tay", metavar="FILE_LUOT",
+                   help="ghi ket qua cham tay vao file luot (kem --case, --dong, --ket, --ly-do) "
+                        "roi dung lai report, khong can may")
+    p.add_argument("--dong", default="", help="so dong Expected cham tay, dem tu 1, vd 2 hoac 1,3")
+    p.add_argument("--ket", default="", help="PASS | FAIL | NEEDS_HUMAN | NOT_VERIFIABLE")
+    p.add_argument("--ly-do", default="", help="so do / cach do, hien tren report")
     p.add_argument("--adb", help="duong dan adb neu khong nam trong PATH")
     return p
 

@@ -178,6 +178,16 @@ các case đã xong.
 .venv/bin/rcr-check --package <pkg> --gop out/a.luot.json --gop out/b.luot.json --report out/gop.html
 ```
 
+### Ghi kết quả chấm tay — `--cham-tay`
+
+Dòng tool chưa chấm được, đo tay trên máy xong thì ghi vào file lượt (không cần máy):
+
+```bash
+.venv/bin/rcr-check --package <pkg> --cham-tay out/run.luot.json   --case 3.4.0#SDK340-UI-001 --dong 1,4 --ket PASS --ly-do "screencap: ảnh phủ kín 1080x2400"
+```
+
+Tool tính lại verdict của case, giữ dấu vết `cham_tay` và dựng lại report của file lượt.
+
 ### Chạy không cần Claude — `--khong-claude`
 
 Trên Windows, chạy đúng một lệnh trên máy đang cắm điện thoại:

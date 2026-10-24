@@ -84,8 +84,14 @@ Hai chỗ nới lỏng có chủ ý, vì cái giá sai khác hẳn cái giá sai
 request/load/show, dòng về chữ và node chấm bằng cây UI, dòng *"icon là animation
 lặp"* chấm bằng cách chụp nhiều khung rồi so vùng node, dòng *"user vuốt sang màn
 kế"* chấm bằng **một cú vuốt thật**, dòng *"app bắn event X"* chấm bằng log
-`FA-SVC`, dòng *"luồng FO thông suốt"* chấm bằng nhật ký lái. Dòng thật sự phải
-nhìn mắt (đúng design, đúng màu) ra `NOT_VERIFIABLE` — **không được đoán thành
+`FA-SVC`, dòng *"luồng FO thông suốt"* chấm bằng nhật ký lái. Dòng **bố cục splash**
+(*"progress + text neo ngay trên mép native"*, *"không đè banner"*, *"cách mép 12–16dp"*,
+*"nhãn ngay dưới progress"*, *"giữa màn"*, *"không dịch chuyển khi native show"*) chấm bằng
+bounds trong dump, đổi dp theo `wm density` (id ở mục `bo_cuc` của `data/ui_names.yaml`).
+Dòng **màu chữ** (*"Title đúng màu #4957FF"*) chấm trên ảnh PNG gốc: đếm pixel trùng màu
+(lệch ≤4/kênh) trong khung chữ so với dải đối chứng sát bên, bounds đọc lại theo từng khung
+(cụm chữ splash nhảy lên khi native về). Nền trùng màu chữ thì ra NEEDS_HUMAN, không FAIL.
+Dòng thật sự phải nhìn mắt (đúng design, ảnh full-screen) ra `NOT_VERIFIABLE` — **không được đoán thành
 PASS**. Đó là giới hạn của tool, không phải của lượt chạy: Claude tự đo tiếp theo mục 5b.
 
 **Verdict của case = dòng xấu nhất trong MỌI dòng**, trừ dòng của PO. Dòng chưa
@@ -389,6 +395,11 @@ Bảng `tc.cases`, đọc ba cột:
   (`data/ad_id_keys.yaml`), quá 16 tổ hợp giá trị, hoặc không key nào thuộc RC
 - `from_precondition` — key lấy từ cột Precondition (bộ TC từ SDK 3.2.0 bỏ cột
   Test Data). Trùng key thì Test Data thắng
+- `tc_lech` — giá trị JSON TC đặt có trường mà giá trị server của cùng key không có
+  (TC SDK 3.4.0 đặt `image_url`, server Piclux dùng `media_url`). **Chỉ là cảnh báo**:
+  đọc log app trước khi kết luận TC sai — Piclux 2.4.0 đọc cả `image_url`
+  (`applySplashUiConfig … mediaUrl=<link image_url>`, đo 24/10/2026). Report hiện ở
+  "TC lệch giá trị server"
 
 Bộ TC hay viết vị trí ads bằng **mã** thay vì tên key thật: *"tắt unit
 102-spl-n-inter-high1 (key show_* tương ứng) = false"*. Tool suy ra
@@ -442,12 +453,19 @@ làm hết các bước dưới đây:
 4. Chấm từng dòng với **số đo thật** làm lý do. Report gửi đi **chỉ có PASS / FAIL**
    (user nhắc lần 3, 06/10/2026: *"không được phép need_human với not_verifiable
    blocked"*). Điều kiện chưa đạt thì tự ép, tự chạy lại; lỗi đọc/race của tool thì
-   tool tự thử lại (`run_batch` chạy lại case tối đa 3 lần khi verdict lơ lửng)
+   tool tự thử lại (`run_batch` chạy lại case tối đa 3 lần khi verdict lơ lửng). Tool
+   **không** chạy lại khi các dòng còn mở đều suy từ câu chữ, khi lần sau ra y hệt lần
+   trước, hoặc khi precondition không tạo được (case đó ra BLOCKED kèm lý do ngay)
 5. Trả máy về sạch: `--restore`, rồi đọc lại key đã đổi để đối chiếu với giá trị gốc.
    Lệch (snapshot bị ghi đè) thì `pm clear` + mở app cho fetch lại từ server.
    Mạng đã ngắt thì bật lại và chờ ping thông
-6. Dựng report theo đúng bố cục mục 6, ghi rõ dòng nào Claude chấm tay và đo bằng gì,
-   rồi publish
+6. Ghi từng dòng đã đo vào file lượt bằng lệnh, **đừng sửa tay JSON**:
+   ```
+   cd <repo> && <bin>/rcr-check --package <pkg> --cham-tay out/run-x.luot.json      --case 3.4.0#SDK340-UI-001 --dong 1,4 --ket PASS --ly-do "<số đo + cách đo>"
+   ```
+   Tool tính lại verdict case (dòng xấu nhất, trừ PO; precondition thiếu / có ad_click thì
+   vẫn BLOCKED), giữ dấu vết `cham_tay` (ai, lúc nào, lý do) và dựng lại report. Hạ PASS giả
+   cũng bằng lệnh này (`--ket NEEDS_HUMAN`). Rồi publish
 
 ## 5c. Rà PASS giả TRƯỚC khi báo — bắt buộc
 
