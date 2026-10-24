@@ -30,7 +30,13 @@ TRE_UIA = 0.5
 KHONG_TU_RE = re.compile(r"kh[ôo]ng\s+(?:t[ựu]\s+|auto[\s-]*)?(?:chuy[ểe]n|swipe)|"
                          r"[ởo]\s+l[ạa]i\s+(?:m[àa]n\s+)?OB3", re.I)
 TU_CHUYEN_RE = re.compile(r"(?:t[ựu]|auto)[\s-]*(?:chuy[ểe]n|swipe)|chuy[ểe]n\s+m[àa]n\s+t[ạa]i|"
+                          r"chuy[ểe]n\s+(?:sang\s+)?OB\d\s+t[ạa]i|"
                           r"h[ếe]t\s+timer.*chuy[ểe]n|chuy[ểe]n\s+sau|timer_auto_swipe", re.I)
+# "Khong chuyen o moc 5s" (timer=3 -> KHONG duoc dung cung 5s): phu dinh MOT MOC, khong
+# phai "khong tu chuyen". Rời OB3 lúc 3,6s là ĐÚNG ý câu - truoc day doc thanh "van roi
+# trang OB3" -> FAIL oan (Sorapix SDK353-OB3A-004, 23/10/2026).
+KHONG_O_MOC_RE = re.compile(r"kh[ôo]ng\s+(?:t[ựu]\s+)?chuy[ểe]n\s+(?:[ởo]|t[ạa]i)\s+(?:m[ốo]c\s+)?"
+                            r"~?\s*(\d+(?:[.,]\d+)?)\s*s\b", re.I)
 MOT_LAN_RE = re.compile(r"đúng\s*1\s*l[ầa]n|dung\s*1\s*lan|double\s*navigate|"
                         r"chuy[ểe]n\s+m[àa]n\s+l[ầa]n\s*2|kh[ôo]ng\s+skip\s+m[àa]n", re.I)
 X_RE = re.compile(r"(?:button|n[úu]t)\s*X\b|\bX\s+(?:xu[ấa]t\s+hi[ệe]n|hi[ểe]n|hi[ệe]n)", re.I)
@@ -60,7 +66,8 @@ DOC_LAP_RE = re.compile(r"đ[ộo]c\s+l[ậa]p|kh[ôo]ng\s+can\s+thi[ệe]p", re
 HUY_RE = re.compile(r"b[ịi]\s+h[ủu]y", re.I)
 NGAY_RE = re.compile(r"\bngay\b", re.I)
 # "Bam X -> chuyen man ngay", "Native full dong, chuyen sang man ke tiep ngay"
-SAU_BAM_RE = re.compile(r"b[ấa]m\s+(?:n[úu]t\s+|button\s+)?X\b|chuy[ểe]n\s+sang\s+m[àa]n\s+k[ếe]", re.I)
+SAU_BAM_RE = re.compile(r"b[ấa]m\s+(?:n[úu]t\s+|button\s+)?X\b|chuy[ểe]n\s+sang\s+m[àa]n\s+k[ếe]|"
+                        r"chuy[ểe]n\s+(?:sang\s+)?OB\d\s+ngay\s+khi\s+vu[ốo]t", re.I)
 # Tool vua vuot/bam trong khoang nay truoc luc roi trang -> do TOOL, khong phai app.
 DO_TOOL = 2.0
 GIAY_RE = re.compile(r"t0\s*\+\s*(\d+(?:[.,]\d+)?)|(?:sau|t[ạa]i)\s*(?:đủ\s*)?~?\s*(\d+(?:[.,]\d+)?)\s*s\b|"
@@ -72,6 +79,12 @@ def _so(cfg: dict, key: str) -> float | None:
         return float(str(cfg.get(key, "")).strip())
     except ValueError:
         return None          # "abc", "null": app dung mac dinh - TC tu ghi so mong doi
+
+
+def _tat_303(cfg: dict) -> bool:
+    """Case TAT het native 303: khong co request 303 la DUNG, khong phai "khong fill"."""
+    keys = [k for k in cfg if k.startswith("show_303_")]
+    return bool(keys) and all(str(cfg[k]).strip().lower() == "false" for k in keys)
 
 
 def _giay_mong(text: str, cfg: dict, key: str) -> float | None:
@@ -95,7 +108,19 @@ def cham(text: str, tl: dict | None, cfg: dict, req_303=()) -> dict | None:
         # (luot vuot qua lai), lan cuoi co ad show; khong co thi lan cuoi.
         dau = next((v for v in reversed(luot[1:]) if v["co_ad"]), luot[-1])
     thao_tac = (tl or {}).get("thao_tac") or []
+    if (thao_tac and len(luot) == 1 and dau["roi"] is not None
+            and min(thao_tac) > dau["roi"] + TRE_UIA):
+        # Thao tac cua case (vuot/bam "tai t0+2s") roi vao SAU luc OB3 da tu roi: tool nhan
+        # ra da toi OB3 qua tre, case chua chay dung kich ban -> moi dong deu vo nghia
+        # (Sorapix SDK353-OB3A-006 23/10/2026: OB3 roi 5,6s, tool vuot luc 8,9s).
+        return out(NEEDS_HUMAN, f"tool thao tác lúc {min(thao_tac) - dau['t0']:.1f}s, khi trang OB3 "
+                                f"đã tự rời lúc {dau['roi'] - dau['t0']:.1f}s — case chưa chạy đúng "
+                                "kịch bản, cần chạy lại", text)
     tool_roi = bool(dau["roi"]) and any(0 <= dau["roi"] - t <= DO_TOOL for t in thao_tac)
+    moc = KHONG_O_MOC_RE.search(text)
+    if moc:
+        return _khong_o_moc(text, dau, float(moc.group(1).replace(",", ".")), tool_roi)
+    tat_303 = _tat_303(cfg)
     if SAU_BAM_RE.search(text) and tool_roi:
         tre = dau["roi"] - max(t for t in thao_tac if t <= dau["roi"])
         return out(PASS if tre <= 1.5 else FAIL, f"rời trang OB3 {tre:.1f}s sau khi tool bấm", text)
@@ -117,7 +142,7 @@ def cham(text: str, tl: dict | None, cfg: dict, req_303=()) -> dict | None:
         if MAN_KE_RE.search(text) and KHONG_HIEN_RE.search(text) and dau["roi"]:
             return _x_man_ke(text, dau, khung)
         return _nut_x(text, dau, khung, cfg, req_303)
-    if (DOC_LAP_RE.search(text) or HUY_RE.search(text)) and not dau["co_ad"]:
+    if (DOC_LAP_RE.search(text) or HUY_RE.search(text)) and not dau["co_ad"] and not tat_303:
         return _khong_fill(text, dau, (tl or {}).get("khung") or [], req_303)
     if MOT_LAN_RE.search(text) or DOC_LAP_RE.search(text):
         roi = [v["roi"] for v in luot if v["roi"]]
@@ -147,6 +172,19 @@ def _tu_chuyen(text: str, v: dict, cfg: dict) -> dict:
     return out(PASS if ok else FAIL,
                f"tự chuyển màn sau {do:.1f}s kể từ {v['nguon_t0']} — kỳ vọng {mong:g}s "
                f"(sai số ±{SAI_SO_LOG:g}s, đo bằng giờ trong log)", text)
+
+
+def _khong_o_moc(text: str, v: dict, moc: float, tool_roi: bool) -> dict:
+    if v["roi"] is None:
+        return out(PASS, f"không rời trang OB3 trong suốt lượt — không chuyển ở mốc {moc:g}s", text)
+    do = v["roi"] - v["t0"]
+    if tool_roi:
+        return out(NEEDS_HUMAN, f"trang OB3 bị rời lúc {do:.1f}s ngay sau thao tác của tool — "
+                                "không tách được app tự chuyển hay do tool", text)
+    return out(FAIL if abs(do - moc) <= SAI_SO_LOG else PASS,
+               f"tự rời trang OB3 sau {do:.1f}s kể từ {v['nguon_t0']} — "
+               + ("trùng" if abs(do - moc) <= SAI_SO_LOG else "không trùng")
+               + f" mốc {moc:g}s (sai số ±{SAI_SO_LOG:g}s)", text)
 
 
 def _khong_tu_chuyen(text: str, v: dict, cfg: dict, tool_roi: bool) -> dict:

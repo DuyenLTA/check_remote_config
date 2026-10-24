@@ -230,3 +230,42 @@ def test_x_ngay_khung_dau_tre_da_thay_x_khong_ket_luan():
     r = at.cham("Button X hiển thị NGAY từ đầu (không có số đếm ngược).",
                 tl(roi=3.01, show=0.01, khung=k), {"timer_button_x": "0"})
     assert v(r) == "NEEDS_HUMAN"
+
+
+TAT_303 = {"auto_swipe_onb3": "true", "timer_auto_swipe": "3",
+           "show_303_onb3_n_native_high": "false", "show_303_onb3_n_native": "false"}
+
+
+def test_khong_chuyen_o_moc_5s_ma_roi_luc_3s_la_dung():
+    """Sorapix OB3A-004: timer=3, roi 3,6s - dung y "khong dung cung 5s"."""
+    r = at.cham("Không chuyển ở mốc 5s.", tl(roi=3.63, fail=0.01), TAT_303)
+    assert v(r) == "PASS" and "không trùng" in r["reason"]
+
+
+def test_khong_chuyen_o_moc_5s_ma_roi_luc_5s_la_FAIL():
+    r = at.cham("Không chuyển ở mốc 5s.", tl(roi=5.2, fail=0.01), TAT_303)
+    assert v(r) == "FAIL"
+
+
+def test_chuyen_OB4_tai_t0_cong_3s_cham_bang_log():
+    r = at.cham("Chuyển OB4 tại ~t0+3s.", tl(roi=3.63, fail=0.01), TAT_303)
+    assert v(r) == "PASS" and "kỳ vọng 3s" in r["reason"]
+
+
+def test_tool_thao_tac_sau_khi_OB3_da_roi_thi_chua_cham_duoc():
+    """Sorapix OB3A-006: OB3 tu roi 5,6s, tool vuot luc 8,9s -> chua chay dung kich ban."""
+    r = at.cham("Timer bị hủy — không chuyển màn lần 2 khi đang ở OB4.",
+                tl(roi=5.64, fail=0.01, thao_tac=[8.89]), {**TAT_303, "timer_auto_swipe": "5"})
+    assert v(r) == "NEEDS_HUMAN" and "chưa chạy đúng kịch bản" in r["reason"]
+
+
+def test_tat_303_thi_khong_cham_huy_timer_nhu_ad_khong_fill():
+    """303 OFF: khong co request 303 la dung - truoc day FAIL "app khong goi ad cho OB3"."""
+    r = at.cham("Timer bị hủy — không chuyển màn lần 2 khi đang ở OB4.",
+                tl(roi=2.2, fail=0.01, thao_tac=[2.1]), {**TAT_303, "timer_auto_swipe": "5"})
+    assert v(r) == "PASS" and "303" not in r["reason"]
+
+
+def test_chuyen_OB4_ngay_khi_vuot():
+    r = at.cham("Chuyển OB4 ngay khi vuốt.", tl(roi=2.3, fail=0.01, thao_tac=[2.1]), TAT_303)
+    assert v(r) == "PASS"
