@@ -24,8 +24,8 @@ import time
 from pathlib import Path
 
 from . import (
-    ad_units, case_run, rc_baseline, run_batch, sdk_probe, discord_notify, discord_run_message,
-    tc_select, tc_source,
+    ad_units, case_run, luot_file, preflight, rc_baseline, run_batch, sdk_probe, discord_notify,
+    discord_run_message, tc_select, tc_source,
 )
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
@@ -84,11 +84,55 @@ def _notify_run(args: argparse.Namespace, out: dict, started: float) -> None:
         _log(f"discord: không dựng được thông báo ({type(exc).__name__})")
 
 
+def dung_lai_report(args: argparse.Namespace) -> dict:
+    """`--gop a.json --gop b.json` khong kem --case: gop record roi dung lai report, KHONG can may."""
+    meta, records = luot_file.doc_nhieu(args.gop, args.package)
+    report = args.report or str(
+        Path(args.out_dir) / f"rc-{args.package}-gop-{time.strftime('%y%m%d-%H%M%S')}.html")
+    tc = meta.get("tc") or {}
+    run_batch.ghi_report(luot_file.baseline_tu(meta), tc, records,
+                         args.app_label or meta.get("app_label", ""), report, _log)
+    path = luot_file.duong_dan(report, args.out_dir, args.package)
+    luot_file.ghi(path, {**meta, "report": report, "gop_tu": args.gop}, records, True)
+    _log(f"Gộp {len(args.gop)} file → {len(records)} case. File lượt: {path}")
+    return {"package": args.package, "tc": tc, "cases": records, "report": report, "luot": str(path)}
+
+
+# Co doi cach chay case - luot tiep phai giong luot dau, khong thi mot report tron hai kieu.
+CO_GIU_KHI_TIEP = ("no_walk", "full_walk", "no_actions", "fresh", "no_dex_check", "keep")
+
+
+def nap_tiep(args: argparse.Namespace) -> list[dict]:
+    """`--tiep <file>`: lay lai tham so cua luot bi tat, tra record da xong."""
+    meta = luot_file.doc(args.tiep, args.package)
+    args.case = args.case or meta.get("case_list", "")
+    args.tc = args.tc or meta.get("tc_nguon", "")
+    args.tab = args.tab or meta.get("tab", "")
+    args.report = args.report or meta.get("report", "")
+    args.app_label = args.app_label or meta.get("app_label", "")
+    # Ban SDK do lai co the ra tab khac -> nua sau cua luot cham bang TC cua ban khac.
+    args.sdk = args.sdk or meta.get("sdk", "")
+    for co in CO_GIU_KHI_TIEP:
+        setattr(args, co, getattr(args, co) or bool((meta.get("co") or {}).get(co)))
+    if not args.case or not args.tc:
+        raise RcError(f"File {args.tiep} thiếu danh sách case / bộ TC - truyền --case và --tc")
+    return meta["records"]
+
+
 async def run(args: argparse.Namespace) -> dict:
     started = time.monotonic()
+    if args.gop and not args.case and not args.tiep:
+        return dung_lai_report(args)
+    goc_tiep = nap_tiep(args) if args.tiep else []
     client = AdbClient(args.adb)
     serial = await pick_serial(client, args.serial)
     _log(f"May: {serial} · App: {args.package}")
+
+    if args.preflight:
+        _log("Kiem dieu kien truoc khi chay...")
+        kq = await preflight.chay(client, serial, args.package, args.tc or TC_MAC_DINH, args.out_dir)
+        preflight.in_bang(kq, _log)
+        return {"serial": serial, "package": args.package, "preflight": kq}
 
     if args.restore:
         _log("Tra config ve ban da luu o luot --keep truoc...")
@@ -123,6 +167,7 @@ async def run(args: argparse.Namespace) -> dict:
     if args.set:
         runs = (parse_sets(args.set),)
     if args.tc:
+        tc_nguon = args.tc
         if tc_source.la_link(args.tc):
             _log("Tai bo TC moi nhat tu Google Sheet...")
             out["tc_link"] = args.tc
@@ -169,8 +214,24 @@ async def run(args: argparse.Namespace) -> dict:
             if not runnable:
                 raise RcError("--case all: bo TC khong co case nao tool chay duoc.")
         if args.case:
+            # File dang chay tiep la moi nhat -> dung SAU de thang cac file --gop.
+            goc = (luot_file.doc_nhieu(args.gop, args.package)[1] if args.gop else []) + goc_tiep
+            # Luot tiep ghi vao CHINH file cu: chay tiep may lan van mot file.
+            path = Path(args.tiep) if args.tiep else luot_file.duong_dan(
+                args.report, args.out_dir, args.package)
+            args.luot_path = out["luot"] = str(path)
+            _log(f"Ghi kết quả sau mỗi case vào {path}")
+            meta = {
+                "generated_at": out["generated_at"], "package": args.package, "serial": serial,
+                "tc_nguon": tc_nguon, "tc": out["tc"], "tab": args.tab, "case_list": args.case,
+                "report": args.report, "app_label": args.app_label, "sdk": args.sdk or sdk,
+                "co": {co: getattr(args, co) for co in CO_GIU_KHI_TIEP},
+                "baseline_tom": luot_file.tom_baseline(baseline),
+            }
             out["cases"] = await run_batch.run_cases(
-                client, baseline, args, runnable, rows, out["tc"], _log
+                client, baseline, args, runnable, rows, out["tc"], _log,
+                goc=goc, bo_qua=luot_file.da_xong(goc_tiep),
+                luot={"path": path, "meta": meta},
             )
             # Duong dan report phai nam trong JSON stdout: nguoi goi (slash
             # command /rc-check) publish file nay, ma stderr thi khong parse.
@@ -231,6 +292,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--khong-claude", action="store_true",
                    help="chay khong co agent: --tc mac dinh sheet TC chung, --report tu "
                         "dat ten, Discord dinh kem report va ghi so case can nguoi xem")
+    p.add_argument("--preflight", action="store_true",
+                   help="chi kiem dieu kien truoc khi chay (may, khoa man, ban debuggable, "
+                        "sheet TC + sheet ID ads, RAM may tinh) roi thoat")
+    p.add_argument("--tiep", metavar="FILE_LUOT",
+                   help="chay not case chua co ket qua trong file luot (luot truoc bi tat giua chung)")
+    p.add_argument("--gop", action="append", metavar="FILE_LUOT",
+                   help="lay ket qua file luot lam nen (lap lai duoc); kem --case thi case chay "
+                        "lai de len, khong kem --case thi chi dung lai report, khong can may")
     p.add_argument("--adb", help="duong dan adb neu khong nam trong PATH")
     return p
 
@@ -269,10 +338,17 @@ def main(argv: list[str] | None = None) -> int:
         result = asyncio.run(run(args))
     except (AdbError, RcError) as exc:
         _log(f"LOI: {exc}")
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        loi = {"error": str(exc)}
+        luot = getattr(args, "luot_path", "")
+        if luot:
+            # Luot chet giua chung (mat may...): cac case da xong van nam trong file nay.
+            loi["luot"] = luot
+            _log(f"Kết quả các case đã xong: {luot} — chạy tiếp bằng --tiep {luot}")
+        print(json.dumps(loi, ensure_ascii=False))
         return 1
     print(json.dumps(result, ensure_ascii=False))
-    return 0
+    pf = result.get("preflight")
+    return 1 if pf and not pf["ok"] else 0
 
 
 if __name__ == "__main__":

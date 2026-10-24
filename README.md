@@ -152,6 +152,32 @@ Trang gom nhóm theo **tính năng** (cột Feature của file TC), có ô đế
 dropdown trạng thái và ô tìm. Mỗi hàng mang `id="c-<mã case>"` để dán link nhảy thẳng tới
 một case khi log bug.
 
+### Kiểm trước khi chạy — `--preflight`
+
+```bash
+.venv/bin/rcr-check --package com.example.app --preflight
+```
+
+Vài giây, in bảng `OK` / `LOI` / `CHU Y`: máy, màn hình không khoá, app đã cài, vào được dữ
+liệu app (bản debuggable hoặc root), tải được sheet TC, sheet ID ads có tab của app, RAM
+trống của máy tính (< 4 GB thì cảnh báo). Có dòng `LOI` thì exit 1 kèm việc cần làm.
+`chay-khong-claude.bat` tự chạy bước này trước.
+
+### Lượt bị tắt giữa chừng, gộp lượt — `--tiep`, `--gop`
+
+Chạy `--case` thì kết quả ghi xuống **file lượt** sau mỗi case (cạnh report:
+`out/run.html` → `out/run.luot.json`; trường `luot` trong JSON). Lượt chết giữa chừng vẫn còn
+các case đã xong.
+
+```bash
+# chay not case chua co ket qua (lay lai TC, tab, danh sach case, report tu file)
+.venv/bin/rcr-check --package <pkg> --tiep out/run.luot.json
+# chay lai vai case, gop vao luot cu (case chay lai de len theo key)
+.venv/bin/rcr-check --package <pkg> --tc "<link>" --case <key,key> --gop out/run.luot.json --report out/run-gop.html
+# chi gop cac file luot co san thanh mot report - khong can may
+.venv/bin/rcr-check --package <pkg> --gop out/a.luot.json --gop out/b.luot.json --report out/gop.html
+```
+
 ### Chạy không cần Claude — `--khong-claude`
 
 Trên Windows, chạy đúng một lệnh trên máy đang cắm điện thoại:

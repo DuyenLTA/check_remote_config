@@ -135,6 +135,26 @@ báo không mở được app — nhìn y hệt app hỏng. Gặp lỗi đó th�
 khoá rồi chạy lại, đừng đi tìm bug trong app. Báo Discord:
 `<bin>/rcr-notify --kind stop --title "Máy đang khoá màn hình" --line "<serial>" --action "Mở khoá máy rồi chạy lại"`
 
+## 3b. Kiểm điều kiện trước khi chạy — luôn làm
+
+```
+cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>] --preflight
+```
+
+Khoảng 20 giây, kiểm hết một lượt: máy, màn hình không khoá, app đã cài, **vào được dữ liệu app
+(bản debuggable / root)**, **ads dùng ID thật** (mở app một lần, đọc log `FA-SVC` tối đa 15s),
+tải được sheet TC, sheet ID ads có tab của package, RAM trống của máy tính.
+
+Dòng `Ads dùng ID thật` ra `LOI` = build request bằng unit test của Google
+(`ca-app-pub-3940256099942544/…`): mọi vị trí chung một ID nên không quy được ad về vị trí
+nào, dòng ads ra NEEDS_HUMAN hàng loạt hoặc PASS giả (24/10/2026, Piclux 2.4.0: native/banner
+là ID test, inter 102 là ID thật — chạy 50 phút mới biết). **Dừng, xin dev bản debuggable dùng
+ID ads thật**, đừng chạy thử. Exit 1 = có dòng `LOI` → **dừng**, in nguyên bảng cho người dùng kèm việc
+cần làm (đừng chạy thử cho biết: 23/10/2026 cài nhầm bản release 3 lần mới phát hiện
+lúc đọc baseline). Dòng `CHU Y` về RAM (< 4 GB) không chặn nhưng phải nói trước: lượt dài
+có thể bị Claude Code tắt giữa chừng. Báo Discord khi dừng:
+`<bin>/rcr-notify --kind stop --title "Chưa đủ điều kiện chạy" --line "<dòng LOI>" --action "<việc cần làm>"`
+
 ## 4. Chạy
 
 **Người dùng chỉ cần gửi package** (user chốt 06/10/2026). Còn lại tự lấy, không hỏi:
@@ -224,6 +244,18 @@ Kiểu (c) có tắt/mở lại app nên mất vài chục giây → chạy `run
 stdout/stderr vào `<scratchpad>` của phiên. Kiểu (a)/(b) chạy thẳng, vài giây.
 
 stdout là **đúng một dòng JSON** (`baseline`, `tc`, `run`); tiến độ ra stderr.
+
+**Kết quả ghi xuống đĩa sau MỖI case** vào file lượt (trường `luot` trong JSON, cạnh
+report: `out/run-x.html` → `out/run-x.luot.json`), report HTML cũng cập nhật theo. Lượt bị tắt
+giữa chừng (RAM máy tính, rút cáp, `device not found`) thì **đừng chạy lại từ đầu**:
+
+```
+cd <repo> && <bin>/rcr-check --package <pkg> --tiep out/run-x.luot.json
+```
+
+`--tiep` lấy lại bộ TC, tab, danh sách case, đường dẫn report từ file; bỏ qua case đã có
+kết quả, chạy nốt phần còn lại và ghi tiếp vào chính file đó. Lệnh chết vì lỗi thì JSON
+lỗi cũng có trường `luot` trỏ tới file này.
 
 Case có giá trị lựa chọn (`layout1/2/3`) chạy **nhiều lượt** — mỗi giá trị một
 lượt mở app, `run.runs` là từng lượt. Verdict của case = lượt xấu nhất.
@@ -376,7 +408,7 @@ làm hết các bước dưới đây:
    phải `--restore`**: `--keep` lần 2 ghi đè snapshot, restore khi đó ra giá trị bẩn
 2. Tự lái bằng adb (`am start`, `am force-stop`, `input swipe`, `svc wifi`) theo đúng
    câu Action. **Vẫn không tap vào vùng ad**: lấy bằng chứng trước khi ad hiện, hoặc
-   từ log
+   từ log.
 3. Lấy bằng chứng, chọn theo loại dòng:
    - màn qua nhanh / bị ad che: `screenrecord` rồi tách khung. Máy không có ffmpeg:
      `python3 -m venv <scratchpad>/fv && <scratchpad>/fv/bin/pip install imageio-ffmpeg pillow`.
@@ -438,10 +470,19 @@ case PASS bằng **ad của vị trí khác**. Từ giờ, trước khi báo s�
 ### Chạy lại: chỉ case chưa PASS / PASS giả, rồi gộp
 
 User: *"chạy lại case chưa chạy được thôi chứ case pass rồi thì đừng chạy lại"*,
-*"chạy lại case pass giả thôi"*. Lấy key từ JSON lượt trước, chạy `--case` đúng các
-key đó, rồi gộp: record của lượt sau đè lượt trước theo `key`, dựng lại trang bằng
-`report_html.build(report_data.page_data(baseline, tc, records, app_label))` (baseline
-chỉ cần `serial`, `package`, `configs`, `mirrored_keys`). Publish đè **cùng link**.
+*"chạy lại case pass giả thôi"*. Lấy key từ file lượt trước, chạy đúng các key đó kèm
+`--gop <file lượt trước>` (file lượt mới hoặc JSON kiểu cũ đều đọc được): record của lượt sau đè lượt trước theo `key`, report ra đủ cả
+case cũ lẫn case vừa chạy lại.
+
+```
+cd <repo> && <bin>/rcr-check --package <pkg> --tc "<link>" --case <key,key> \
+  --gop out/run-x.luot.json --report out/run-x-gop.html --app-label "<tên> <ver>"
+# chi gop cac file luot co san, dung lai report - KHONG can may:
+cd <repo> && <bin>/rcr-check --package <pkg> --gop out/a.json --gop out/b.json --report out/gop.html
+```
+
+`--gop` lặp lại được, file sau thắng file trước; file của app khác thì tool từ chối. Đừng
+tự viết Python gộp record nữa. Publish đè **cùng link**.
 
 ### Bẫy đã gặp (06/10/2026, Piclux 2.8.0) — tool đã xử lý, đừng đi tìm bug app
 

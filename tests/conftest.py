@@ -273,3 +273,12 @@ def _no_discord(monkeypatch):
     """Test khong bao gio duoc cham mang that: tat thong bao Discord mac dinh."""
     monkeypatch.setenv("DISCORD_NOTIFY", "0")
     monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _out_tam(monkeypatch, tmp_path):
+    """Test khong duoc ghi vao `<repo>/out` that: file luot ghi sau moi case, test goi
+    CLI khong truyen --out-dir thi roi vao do."""
+    from rcr import cli_check
+
+    monkeypatch.setattr(cli_check, "DEFAULT_OUT", tmp_path / "out")

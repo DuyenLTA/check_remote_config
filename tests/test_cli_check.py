@@ -482,7 +482,7 @@ def test_case_all_chay_moi_case_tool_chay_duoc(adb_ui, tmp_path, monkeypatch):
     monkeypatch.setattr(cli_check, "AdbClient", lambda _p=None: adb_ui)
     chay: list[str] = []
 
-    async def run_cases(client, baseline, args, runnable, rows, tc, log_fn):
+    async def run_cases(client, baseline, args, runnable, rows, tc, log_fn, **_kw):
         chay.append(args.case)
         return []
 

@@ -16,6 +16,7 @@ from . import (
     case_run,
     precond_guards,
     fo_flow,
+    luot_file,
     rc_guards,
     rc_patch,
     report_data,
@@ -42,16 +43,57 @@ async def _try_restore(client, baseline, log_fn) -> None:
         log_fn(f"    (khong tra duoc config ve nguyen trang: {exc})")
 
 
-async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noop) -> list[dict]:
-    """Chay lan luot cac case nguoi dung chi dinh (`--case a,b,c`)."""
+def ghi_report(baseline, tc_info, records, app_label, report: str, log_fn=_noop) -> None:
+    page = report_html.build(report_data.page_data(baseline, tc_info, records, app_label))
+    path = Path(report)
+    luot_file.ghi_nguyen_tu(path, page)
+    log_fn(f"Report: {path} ({len(page) // 1024}KB)")
+
+
+async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noop,
+                    goc=(), bo_qua=frozenset(), luot=None) -> list[dict]:
+    """Chay lan luot cac case nguoi dung chi dinh (`--case a,b,c`).
+
+    `goc`: record cua luot truoc (--gop / --tiep) - case chay lai de len theo key.
+    `bo_qua`: key da co ket qua, khong chay lai (--tiep).
+    `luot`: {"path", "meta"} - ghi file luot + report SAU MOI CASE, luot bi tat
+    giua chung van con ket qua cac case da xong.
+    """
     by_key = {r["key"]: r for r in rows}
     records = []
+    co_ket_qua = luot_file.da_xong(list(goc))
+
+    def luu(xong: bool = False) -> list[dict]:
+        # Case hong vi loi chay khong duoc de len ket qua that cua luot truoc.
+        moi = [r for r in records if not (r.get("loi_chay") and r["key"] in co_ket_qua)]
+        tat_ca = luot_file.gop(list(goc), moi)
+        try:
+            if luot:
+                luot_file.ghi(luot["path"], luot["meta"], tat_ca, xong)
+            if args.report and (records or xong):
+                ghi_report(baseline, tc_info, tat_ca, args.app_label, args.report,
+                           log_fn if xong else _noop)
+        except OSError as exc:
+            # Ghi giua luot hong (file bi khoa...) khong duoc giet ca luot: lan sau ghi lai.
+            if xong:
+                raise
+            log_fn(f"    (chưa ghi được file lượt / report: {exc} — ghi lại ở case sau)")
+        return tat_ca
+
     for wanted in [k.strip() for k in args.case.split(",") if k.strip()]:
         key = wanted
+        if wanted in bo_qua:
+            # Kiem TRUOC pick: chay tiep ma bo TC / tab doi thi pick hong, record loi
+            # se de mat ket qua da xong.
+            log_fn(f"--- case {key}: đã có kết quả ở lượt trước, bỏ qua ---")
+            continue
         try:
             # Ten case sai cung phai xu nhu case hong: bao loi o day la mat sach
             # ket qua cua nhung case da chay xong truoc do.
             key = tc_select.pick(runnable, wanted)
+            if key in bo_qua:
+                log_fn(f"--- case {key}: đã có kết quả ở lượt trước, bỏ qua ---")
+                continue
             chosen = runnable[key]
             log_fn(f"--- case {key} ---")
             row = by_key.get(key, {})
@@ -157,7 +199,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # chet o case thu 14 la mat sach cong cua 13 case truoc.
             log_fn(f"    LOI: {exc}")
             await _try_restore(client, baseline, log_fn)
-            records.append(report_data.error_record(key, by_key.get(key, {}), str(exc)))
+            records.append({**report_data.error_record(key, by_key.get(key, {}), str(exc)),
+                            "loi_chay": True})
+            luu()
             continue
         # Precondition doi mot dieu kien may nay khong tao duoc (throttle bang
         # thong, mediation test mode): case KHONG duoc ra PASS im lang - no
@@ -188,21 +232,17 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 result["ep_ad_fail"] = ("không ép được (remote config không khai `id_*` cho "
                                         f"{vi}) — nhưng log cho thấy ad tự không fill, "
                                         "đúng trạng thái case cần")
-        if thieu and result.get("verdict") == "PASS":
+        # FAIL cung vay: case chay sai nhanh thi FAIL chua chung minh gi ve app - FAIL gia
+        # (Sorapix SDK353-OB3A-002 23/10/2026: doi 303 no-fill, ad 303 high1 van fill ->
+        # dong "vung ad trong" FAIL).
+        if thieu and result.get("verdict") in ("PASS", "FAIL"):
             result["verdict"] = "BLOCKED"
             result["precondition_thieu"] = thieu
             log_fn("    precondition chua tao duoc: " + "; ".join(thieu) + " -> BLOCKED")
         log_fn(f"    verdict: {result['verdict']}")
         records.append(report_data.case_record(key, by_key.get(key, {}), result))
+        luu()
 
-    if args.report:
-        page = report_html.build(
-            report_data.page_data(baseline, tc_info, records, args.app_label)
-        )
-        path = Path(args.report)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(page, encoding="utf-8")
-        log_fn(f"Report: {path} ({len(page) // 1024}KB)")
-    return records
+    return luu(xong=True)
 
 
