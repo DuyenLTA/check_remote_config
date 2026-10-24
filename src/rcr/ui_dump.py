@@ -11,6 +11,7 @@ quy doi la them mot cho sai ma khong duoc gi.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -20,6 +21,8 @@ from .app_sandbox import guard
 
 DUMP_PATH = "/data/local/tmp/rcr_uidump.xml"
 DUMP_TIMEOUT = 30.0
+NULL_ROOT_RETRIES = 3
+NULL_ROOT_WAIT = 0.5
 
 _BOUNDS_RE = re.compile(r"\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]")
 
@@ -154,8 +157,15 @@ def app_nodes(nodes: list[DeviceNode], package: str = "") -> list[DeviceNode]:
 async def dump(client, serial: str) -> str:
     """Chup man hinh dang hien. Tra nguyen van XML."""
     guard(serial)
-    out, err, _ = await client.shell(serial, "uiautomator", "dump", DUMP_PATH, timeout=DUMP_TIMEOUT)
-    joined = f"{out} {err}"
+    for lan in range(NULL_ROOT_RETRIES + 1):
+        out, err, _ = await client.shell(serial, "uiautomator", "dump", DUMP_PATH, timeout=DUMP_TIMEOUT)
+        joined = f"{out} {err}"
+        # "null root node": dump roi dung luc doi cua so (splash -> AdActivity),
+        # chua co cua so active. Thu lai sau mot nhip thay vi lam chet ca case
+        # (do 24/10/2026, Piclux 2.4.0: 14/22 case BLOCKED vi loi nay).
+        if "null root node" not in joined or lan == NULL_ROOT_RETRIES:
+            break
+        await asyncio.sleep(NULL_ROOT_WAIT)
     if "ERROR" in joined.upper() or "Exception" in joined:
         raise AdbError(f"uiautomator dump that bai: {joined.strip()}")
     xml, err, _ = await client.shell(serial, "cat", DUMP_PATH, timeout=DUMP_TIMEOUT)

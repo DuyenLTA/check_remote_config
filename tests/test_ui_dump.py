@@ -8,6 +8,8 @@ Diem phai gac:
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from rcr import ui_dump
@@ -85,3 +87,46 @@ def test_bo_node_he_thong():
 def test_xml_hong_thi_bao_ro():
     with pytest.raises(AdbError, match="khong phai XML"):
         ui_dump.parse_dump("<hierarchy><node")
+
+
+class _DumpAdb:
+    """Fake adb: `uiautomator dump` tra lan luot cac ket qua trong `dumps`."""
+
+    def __init__(self, dumps):
+        self.dumps = list(dumps)
+        self.so_lan_dump = 0
+
+    async def shell(self, serial, *args, timeout=None):
+        if args[0] == "uiautomator":
+            self.so_lan_dump += 1
+            return self.dumps.pop(0), "", 0
+        if args[0] == "cat":
+            return DUMP_XML, "", 0
+        return "", "", 0
+
+
+NULL_ROOT = "ERROR: null root node returned by UiTestAutomationBridge."
+
+
+def test_null_root_node_thoang_qua_thi_dump_lai(monkeypatch):
+    monkeypatch.setattr(ui_dump, "NULL_ROOT_WAIT", 0)
+    adb = _DumpAdb([NULL_ROOT, NULL_ROOT, "UI hierchary dumped to: x"])
+    xml = asyncio.run(ui_dump.dump(adb, "18311FDF60085N"))
+    assert "<hierarchy" in xml
+    assert adb.so_lan_dump == 3
+
+
+def test_null_root_node_mai_khong_het_thi_van_bao_loi(monkeypatch):
+    monkeypatch.setattr(ui_dump, "NULL_ROOT_WAIT", 0)
+    adb = _DumpAdb([NULL_ROOT] * (ui_dump.NULL_ROOT_RETRIES + 1))
+    with pytest.raises(AdbError, match="null root node"):
+        asyncio.run(ui_dump.dump(adb, "18311FDF60085N"))
+    assert adb.so_lan_dump == ui_dump.NULL_ROOT_RETRIES + 1
+
+
+def test_loi_dump_khac_khong_thu_lai(monkeypatch):
+    monkeypatch.setattr(ui_dump, "NULL_ROOT_WAIT", 0)
+    adb = _DumpAdb(["ERROR: could not get idle state."])
+    with pytest.raises(AdbError, match="idle state"):
+        asyncio.run(ui_dump.dump(adb, "18311FDF60085N"))
+    assert adb.so_lan_dump == 1
