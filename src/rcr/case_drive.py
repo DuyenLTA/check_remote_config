@@ -28,7 +28,7 @@ import time
 
 from . import (act_compound, act_exec, act_resolver, device_app, drive_probes, fo_flow,
                fo_screens,
-               fo_steps, quan_sat, screencap, ui_dump)
+               fo_steps, mau_chu, quan_sat, screencap, ui_dump)
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                 man_can: str | None = None, thu_vuot: bool = False,
                 da_toi: str | None = None, do_anim: bool = False,
                 man_dau: str = "", cua_so: float = act_exec.CUA_SO_MAC_DINH,
-                ghi_khung: bool = False, thu_bam_x: bool = False) -> dict:
+                ghi_khung: bool = False, thu_bam_x: bool = False, mau_can=()) -> dict:
     """Chay lan luot cac buoc. Tra nhat ky tung buoc + dump de phase 5 cham.
 
     Man hinh bi che CHI chan buoc phai cham vao man hinh. Buoc quan sat va buoc
@@ -115,7 +115,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             else:
                 xml = await ui_dump.dump(client, serial)
                 # Chup cung luc voi dump -> anh va cay node ta CUNG mot man hinh.
-                shot = await screencap.capture(client, serial)
+                shot = await screencap.capture(client, serial, giu_png=bool(mau_can))
             nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
             # Dung lai dump van PHAI do animation neu man nay chua do lan nao:
             # bo do theo dump la dong "icon la animation lap" roi sang luat khac
@@ -134,6 +134,10 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                       "shot": shot["thumb"], "shot_warning": shot["warning"]}
             if anim:
                 record["anim"] = anim
+            if mau_can and shot.get("png") and not blocked:
+                # Do mau chu NGAY tren anh goc cung luc voi dump (dong "dung mau #HEX").
+                record["mau"] = await mau_chu.do_nhieu_khung(client, serial, package, activity, nodes,
+                                                             list(mau_can), shot["png"])
         if moc:
             record["moc"] = {"t0_cong": moc[0], "lam_luc": round(time.monotonic() - t0, 1),
                              "ghi_chu": "t0 = lúc vừa tới màn, chưa đo lúc ad show"}

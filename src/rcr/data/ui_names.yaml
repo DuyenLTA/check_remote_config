@@ -47,3 +47,22 @@ elements:
   - name: số đếm ngược
     aliases: ["số đếm ngược", "countdown", "đếm ngược"]
     ids: [btnTimeoutSkip, tvCountdown, tvTimer]
+
+# Cham dong BO CUC tren splash ("progress + text neo tren mep native", "khong de banner",
+# "nhan ngay duoi progress"). Chi `assert_bo_cuc` doc muc nay - khong dung `elements` de
+# khong doi luat cua cac dong khac. Moi id phai tung thay trong dump that.
+bo_cuc:
+  progress:
+    ids: [progressBar, pbLoading, progress_splash, splProcessId]   # Piclux 2.4.0: splProcessId (ImageView)
+    classes: [ProgressBar, LinearProgressIndicator, CircularProgressIndicator]
+  nhan_ads:
+    ids: [this_maybe_contain_ads]
+    texts: ["may contain ads"]
+  native:
+    ids: [nativeAdView, shimmer_container_native]                  # Piclux 2.4.0: nativeAdView trong flBottomAd
+  banner:
+    ids: [banner_container, bannerAdView, adViewBanner]
+    classes: [AdView]                                              # com.google.android.gms.ads.AdView
+  # Vung de danh cho ad o day splash: dung khi chua thay node ad nao (ad chua ve).
+  vung_ad:
+    ids: [flBottomAd]

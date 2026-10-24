@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_ads, assert_timing, assert_ui,
+from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_bo_cuc, assert_mau, assert_ads, assert_timing, assert_ui,
                ui_names)
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
@@ -112,6 +112,12 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
             return out(FAIL, "app crash trong lượt chạy", crash.get("lines", [])[:3])
         return out(PASS, "không thấy crash nào của app trong buffer crash", "")
 
+    # Vi tri cum progress/nhan so voi native/banner/man hinh: cham bang bounds. Phai truoc
+    # luat ads - cau co chu "native" nhung hoi vi tri, khong hoi request.
+    ket = assert_bo_cuc.cham(text, drive or {}) or assert_mau.cham(text, drive or {}, cfg)
+    if ket:
+        return ket
+
     # "Layout theo layout_X": cau co chu native nhung hoi BO CUC, cham bang cay UI.
     bo_cuc = ui_names.find_in(text)
     if bo_cuc and bo_cuc.get("ids_all"):
@@ -168,7 +174,8 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         where = assert_ads.where(drive) or "màn mở đầu"
         return out(NEEDS_HUMAN,
                    f"dòng này tả UI của màn cần lái tới, tool mới dừng ở {where}", text)
-    return out(NOT_VERIFIABLE, "dòng này phải nhìn mắt mới kết luận được (design/màu/animation)", text)
+    return out(NOT_VERIFIABLE, "dòng này phải nhìn mắt mới kết luận được (design/màu/animation)", text,
+               tinh=True)
 
 
 def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), overrides=(),

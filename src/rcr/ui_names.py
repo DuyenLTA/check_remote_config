@@ -20,6 +20,13 @@ def elements() -> list[dict]:
     return (yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}).get("elements") or []
 
 
+def bo_cuc() -> dict:
+    """Muc `bo_cuc`: id/class/chu cua progress, nhan ads, native, banner tren splash."""
+    import yaml
+
+    return (yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}).get("bo_cuc") or {}
+
+
 def find_in(text: str) -> dict | None:
     """Phan tu UI ma cau nay dang noi toi. Khop ten dai truoc ten ngan."""
     low = (text or "").casefold()

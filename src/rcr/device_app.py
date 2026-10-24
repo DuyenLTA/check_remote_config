@@ -172,6 +172,20 @@ async def wait_foreground(
     )
 
 
+def parse_density(text: str) -> int | None:
+    """`wm density` -> dpi dang dung (Override thang Physical). Khong doc duoc -> None."""
+    import re
+
+    so = {k.lower(): int(v) for k, v in re.findall(r"(Physical|Override) density:\s*(\d+)", text or "")}
+    return so.get("override") or so.get("physical")
+
+
+async def density(client, serial: str) -> int | None:
+    """Mat do man hinh (dpi) - doi px trong dump sang dp cho dong \"cach mep 12-16dp\"."""
+    out, _, _ = await client.shell(serial, "wm", "density")
+    return parse_density(out)
+
+
 async def restart(client, serial: str, package: str) -> dict:
     """force-stop -> mo lai -> cho len foreground. Dung sau khi patch config.
 

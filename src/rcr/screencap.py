@@ -82,9 +82,10 @@ async def frames(client, serial: str, so_khung: int = 10, nhip: float = 0.30) ->
     return ra
 
 
-async def capture(client, serial: str) -> dict:
+async def capture(client, serial: str, giu_png: bool = False) -> dict:
     """-> {thumb: data URI, warning: str}. Khong raise: thieu anh thi bao chu
-    khong lam do ca case dang chay."""
+    khong lam do ca case dang chay. `giu_png`: kem PNG goc (`png`) de do mau chu -
+    anh thu nho JPEG da lam lech mau."""
     guard(serial)
     runner = getattr(client, "run_binary", None)
     if runner is None:
@@ -98,4 +99,7 @@ async def capture(client, serial: str) -> dict:
     if code != 0 or not out:
         return {"thumb": "", "warning": f"khong chup duoc: {(err or '').strip() or 'anh rong'}"}
     note = warning(out)
-    return {"thumb": to_thumb(out), "warning": note}
+    ra = {"thumb": to_thumb(out), "warning": note}
+    if giu_png:
+        ra["png"] = out
+    return ra

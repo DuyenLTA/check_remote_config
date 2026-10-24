@@ -31,6 +31,7 @@ from . import (
     crash_log,
     case_drive,
     device_app,
+    mau_chu,
     device_reset,
     dex_check,
     net_ctl,
@@ -132,6 +133,8 @@ async def apply_case(
             man_dau=((out.get("drive") or {}).get("steps") or [{}])[-1].get("dump", ""),
             **dict(zip(("cua_so", "ghi_khung"), assert_timing.cach_quan_sat(overrides, expects))),
             thu_bam_x=thu_bam_x,
+            mau_can=tuple(sorted({f"#{h}".upper() for e in expects
+                                  for h in mau_chu.HEX_RE.findall(e or "")})),
         )
         # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
         driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]
@@ -141,6 +144,8 @@ async def apply_case(
     # de len truoc khi kip nhin thay banner.
     if out.get("drive"):
         out["drive"]["timeline"] = await case_evidence._dong_thoi_gian(client, baseline, out["drive"])
+        # Dong "cach mep banner 12-16dp": bounds trong dump la px, can dpi de doi.
+        out["drive"]["density"] = await device_app.density(client, baseline.serial)
     out["ads"] = await case_evidence._read_ads(client, baseline, overrides)
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
     out["events"] = await fa_log.doc(client, baseline.serial)
