@@ -122,3 +122,33 @@ def test_da_khong_fill_doc_tu_log_chu_khong_mac_dinh():
     assert not g.da_khong_fill(fill, vi_tri, ad_positions._khop_vi_tri)
     # Khong co unit nao cua vi tri do trong log -> chua chung minh duoc gi.
     assert not g.da_khong_fill([], vi_tri, ad_positions._khop_vi_tri)
+
+
+class _DnsClient:
+    """Gia `settings` cua may: ghi lai lenh, tra gia tri Private DNS dang dat."""
+
+    def __init__(self, mode="null", spec="null"):
+        self.v = {"private_dns_mode": mode, "private_dns_specifier": spec}
+        self.lenh = []
+
+    async def shell(self, serial, *args, timeout=None):
+        self.lenh.append(args)
+        if args[:2] == ("settings", "get"):
+            return self.v[args[3]] + "\n", "", 0
+        if args[:2] == ("settings", "put"):
+            self.v[args[3]] = args[4]
+        if args[:2] == ("settings", "delete"):
+            self.v[args[3]] = "null"
+        return ("THONG" if "ping" in " ".join(args) else ""), "", 0
+
+
+def test_chan_ad_bang_private_dns_roi_tra_ve_dung_cai_dat_cu(monkeypatch):
+    ngu = asyncio.sleep
+    monkeypatch.setattr(net_ctl.asyncio, "sleep", lambda s: ngu(0))
+    for mode, spec in (("null", "null"), ("hostname", "dns.google")):
+        c = _DnsClient(mode, spec)
+        cu = asyncio.run(net_ctl.chan_ad(c, "S1"))
+        assert c.v == {"private_dns_mode": "hostname", "private_dns_specifier": net_ctl.DNS_CHAN_AD}
+        assert ("svc", "wifi", "disable") in c.lenh  # doi wifi de bo cache DNS cu
+        asyncio.run(net_ctl.bo_chan_ad(c, "S1", cu))
+        assert c.v == {"private_dns_mode": mode, "private_dns_specifier": spec}

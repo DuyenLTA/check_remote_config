@@ -97,3 +97,41 @@ async def bat(client, serial: str, cho: float = CHO_MANG) -> dict:
         await asyncio.sleep(NHIP)
         doi += NHIP
     return {"mang": "bat", "thong": False, "cho_s": round(doi, 1)}
+
+
+# DNS chan domain quang cao (doubleclick, googlesyndication... -> 127.0.0.1) ma Firebase
+# van chay: tao dieu kien "ad khong ve" khi RC khong khai `id_*` de doi slot (ID nam cung
+# trong app). Do tay Sorapix 1.6.0 24/10/2026: OB3A-002/003 ra dung nhanh no-fill.
+DNS_CHAN_AD = "dns.adguard-dns.com"
+
+
+async def _doi_wifi(client, serial: str) -> dict:
+    """Bat tat wifi de bo cache DNS cu (doi Private DNS ma khong doi wifi thi domain van phan giai cu)."""
+    await client.shell(serial, "svc", "wifi", "disable")
+    await asyncio.sleep(2)
+    return await bat(client, serial)
+
+
+async def chan_ad(client, serial: str) -> dict:
+    """Bat Private DNS chan quang cao. Tra cai dat cu de `bo_chan_ad` tra ve dung nhu truoc."""
+    guard(serial)
+    cu = {}
+    for k in ("private_dns_mode", "private_dns_specifier"):
+        out, _, _ = await client.shell(serial, "settings", "get", "global", k)
+        cu[k] = out.strip()
+    await client.shell(serial, "settings", "put", "global", "private_dns_mode", "hostname")
+    await client.shell(serial, "settings", "put", "global", "private_dns_specifier", DNS_CHAN_AD)
+    cu["mang"] = await _doi_wifi(client, serial)
+    return cu
+
+
+async def bo_chan_ad(client, serial: str, cu: dict) -> dict:
+    """Tra Private DNS ve cai dat truoc `chan_ad` (gia tri 'null' = chua tung dat -> xoa)."""
+    guard(serial)
+    for k in ("private_dns_mode", "private_dns_specifier"):
+        v = cu.get(k, "null")
+        if v in ("", "null"):
+            await client.shell(serial, "settings", "delete", "global", k)
+        else:
+            await client.shell(serial, "settings", "put", "global", k, v)
+    return await _doi_wifi(client, serial)

@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import (
+    net_ctl,
     ad_positions,
     fo_screens,
     assert_ads,
@@ -145,62 +146,72 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             thieu_co_dinh = _thieu_co_dinh(chosen["precondition"])
             result = None
             ro_gan_nhat = None
-            for lan in range(1, toi_da + 1):
-                try:
-                    result, baseline = await case_run.run_case(
-                        client, baseline, runs, chosen["precondition"],
-                        () if args.no_actions else chosen["actions"], chosen["expects"], goto,
-                        keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
-                        log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
-                        runtime=chosen.get("runtime", False),
-                    )
-                except (RcError, AdbError) as exc:
-                    if isinstance(exc, AdbTransportError):
-                        raise
-                    if lan >= LAN_CHAY_LAI:
-                        if ro_gan_nhat is None:
+            # ID cua vi tri nam cung trong app (RC khong khai `id_*`) -> khong doi slot duoc:
+            # chan domain quang cao bang Private DNS cho ca case, xong tra DNS cu ve.
+            dns_cu = None
+            if ep and not them:
+                dns_cu = await net_ctl.chan_ad(client, baseline.serial)
+                log_fn(f"  ép ad không về: Private DNS {net_ctl.DNS_CHAN_AD} (RC không khai id_* của vị trí)")
+            try:
+                for lan in range(1, toi_da + 1):
+                    try:
+                        result, baseline = await case_run.run_case(
+                            client, baseline, runs, chosen["precondition"],
+                            () if args.no_actions else chosen["actions"], chosen["expects"], goto,
+                            keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
+                            log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
+                            runtime=chosen.get("runtime", False),
+                        )
+                    except (RcError, AdbError) as exc:
+                        if isinstance(exc, AdbTransportError):
                             raise
-                        # Lan chay lai de xac nhan bi loi doc file (vd ngay sau
-                        # pm clear) -> giu ket qua da do duoc, khong bao BLOCKED
-                        # mat ca hai lan FAIL (do 2026-10-07, H202-006).
-                        log_fn(f"    LOI (lan {lan}): {exc} -> giu ket qua lan truoc")
+                        if lan >= LAN_CHAY_LAI:
+                            if ro_gan_nhat is None:
+                                raise
+                            # Lan chay lai de xac nhan bi loi doc file (vd ngay sau
+                            # pm clear) -> giu ket qua da do duoc, khong bao BLOCKED
+                            # mat ca hai lan FAIL (do 2026-10-07, H202-006).
+                            log_fn(f"    LOI (lan {lan}): {exc} -> giu ket qua lan truoc")
+                            await _try_restore(client, baseline, log_fn)
+                            result = ro_gan_nhat
+                            break
+                        log_fn(f"    LOI (lan {lan}): {exc} -> chay lai case")
                         await _try_restore(client, baseline, log_fn)
-                        result = ro_gan_nhat
-                        break
-                    log_fn(f"    LOI (lan {lan}): {exc} -> chay lai case")
-                    await _try_restore(client, baseline, log_fn)
-                    continue
-                v = result.get("verdict")
-                lich_su.append(v)
-                if result.get("ad_click"):
-                    break  # chay lai la di qua ad do them lan nua
+                        continue
+                    v = result.get("verdict")
+                    lich_su.append(v)
+                    if result.get("ad_click"):
+                        break  # chay lai la di qua ad do them lan nua
 
-                if v in ("PASS", "FAIL", "KEY_NOT_USED"):
-                    ro_gan_nhat = result
-                if v not in ("PASS", "FAIL", "KEY_NOT_USED"):
-                    ly_do = chay_lai.ly_do_khong_chay_lai(result, dau_truoc)
-                    dau_truoc = chay_lai.dau_van(result)
-                    if not ly_do and thieu_co_dinh:
-                        ly_do = "precondition không tạo được: " + "; ".join(thieu_co_dinh)
-                    if ly_do:
-                        log_fn(f"    lan {lan}: verdict {v}, khong chay lai: {ly_do}")
-                        break
-                    if lan >= LAN_CHAY_LAI:
-                        break
-                    log_fn(f"    lan {lan}: verdict {v} -> chay lai case")
-                    continue
-                # FAIL KHONG duoc len report khi chi thay mot lan (user chot
-                # 2026-10-07): mot lan FAIL co the do config bi fetch de, ad
-                # fill khac, tool nhin tre. Chay lai xac nhan; lech nhau thi
-                # chay them mot lan phan xu va danh dau khong on dinh.
-                if v == "FAIL" and lich_su.count("FAIL") < 2 and lan < toi_da:
-                    log_fn(f"    lan {lan}: FAIL -> chay lai de xac nhan truoc khi bao")
-                    continue
-                if (v == "PASS" and "FAIL" in lich_su and lich_su.count("PASS") < 2
-                        and lan < toi_da):
-                    log_fn(f"    lan {lan}: PASS sau khi lan truoc FAIL -> chay them de phan xu")
-                    continue
-                break
+                    if v in ("PASS", "FAIL", "KEY_NOT_USED"):
+                        ro_gan_nhat = result
+                    if v not in ("PASS", "FAIL", "KEY_NOT_USED"):
+                        ly_do = chay_lai.ly_do_khong_chay_lai(result, dau_truoc)
+                        dau_truoc = chay_lai.dau_van(result)
+                        if not ly_do and thieu_co_dinh:
+                            ly_do = "precondition không tạo được: " + "; ".join(thieu_co_dinh)
+                        if ly_do:
+                            log_fn(f"    lan {lan}: verdict {v}, khong chay lai: {ly_do}")
+                            break
+                        if lan >= LAN_CHAY_LAI:
+                            break
+                        log_fn(f"    lan {lan}: verdict {v} -> chay lai case")
+                        continue
+                    # FAIL KHONG duoc len report khi chi thay mot lan (user chot
+                    # 2026-10-07): mot lan FAIL co the do config bi fetch de, ad
+                    # fill khac, tool nhin tre. Chay lai xac nhan; lech nhau thi
+                    # chay them mot lan phan xu va danh dau khong on dinh.
+                    if v == "FAIL" and lich_su.count("FAIL") < 2 and lan < toi_da:
+                        log_fn(f"    lan {lan}: FAIL -> chay lai de xac nhan truoc khi bao")
+                        continue
+                    if (v == "PASS" and "FAIL" in lich_su and lich_su.count("PASS") < 2
+                            and lan < toi_da):
+                        log_fn(f"    lan {lan}: PASS sau khi lan truoc FAIL -> chay them de phan xu")
+                        continue
+                    break
+            finally:
+                if dns_cu is not None:
+                    await net_ctl.bo_chan_ad(client, baseline.serial, dns_cu)
             if (result is not None and ro_gan_nhat is not None
                     and result.get("verdict") not in ("PASS", "FAIL", "KEY_NOT_USED")):
                 # Het so lan ma lan cuoi khong ra ket luan (BLOCKED / chua cham duoc):
@@ -244,9 +255,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             elif them:
                 result["ep_ad_fail"] = f"ép fail bằng cách đổi `id_*` của {vi} sang slot trống"
             else:
-                result["ep_ad_fail"] = ("không ép được (remote config không khai `id_*` cho "
-                                        f"{vi}) — nhưng log cho thấy ad tự không fill, "
-                                        "đúng trạng thái case cần")
+                result["ep_ad_fail"] = (f"RC không khai `id_*` cho {vi} → chặn domain quảng cáo bằng Private DNS "
+                                        f"{net_ctl.DNS_CHAN_AD} cả lượt (mọi vị trí đều không về ad); log xác nhận "
+                                        "ad không fill")
         # FAIL cung vay: case chay sai nhanh thi FAIL chua chung minh gi ve app - FAIL gia
         # (Sorapix SDK353-OB3A-002 23/10/2026: doi 303 no-fill, ad 303 high1 van fill ->
         # dong "vung ad trong" FAIL).
