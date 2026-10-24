@@ -61,3 +61,36 @@ def test_khung_nhanh_bo_khung_khi_dumpsys_qua_gio(monkeypatch):
     monkeypatch.setattr(quan_sat, "gio_may", gio_may)
     monkeypatch.setattr(quan_sat.view_hierarchy_fast, "read", read)
     assert asyncio.run(quan_sat.khung_nhanh(None, "s", "pkg", 1080)) == (None, None)
+
+
+def test_cho_nut_x_dumpsys_treo_thi_uiautomator_tim_x(monkeypatch):
+    """Sorapix OB3X-002/004 (23/10/2026): dumpsys qua gio moi lan, uiautomator van thay X."""
+    from rcr.ui_dump import parse_dump
+
+    xml = ('<hierarchy><node package="pkg" resource-id="pkg:id/btnSkip" text="" '
+           'content-desc="" visible-to-user="true" bounds="[900,100][1000,200]"/></hierarchy>')
+
+    async def nhanh_treo(client, serial, package, rong):
+        await asyncio.sleep(5)
+        return None, None
+
+    async def mot_khung(client, serial, package):
+        await asyncio.sleep(0.05)
+        return {"t": 1.0, "x": True, "dem": "", "trang": 0, "nguon": "uia"}, parse_dump(xml)
+
+    async def screen_size(client, serial):
+        return (1080, 2400)
+
+    monkeypatch.setattr(quan_sat.device_app, "screen_size", screen_size)
+    monkeypatch.setattr(quan_sat, "khung_nhanh", nhanh_treo)
+    monkeypatch.setattr(quan_sat, "mot_khung", mot_khung)
+    bat_dau = asyncio.run(_do_gio(quan_sat.cho_nut_x(None, "s", "pkg", 10.0, [])))
+    tam, giay = bat_dau
+    assert tam == (950, 150) and giay < 1.0      # khong cho dumpsys treo xong
+
+
+async def _do_gio(coro):
+    import time
+    t = time.monotonic()
+    kq = await coro
+    return kq, time.monotonic() - t

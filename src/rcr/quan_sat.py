@@ -193,13 +193,54 @@ async def theo_doi(client, serial: str, package: str, giay: float, khung: list,
 
 
 async def cho_nut_x(client, serial: str, package: str, giay: float, khung: list) -> tuple | None:
-    """Nhin nhanh toi khi nut X hien -> tam nut tren man (de tap ngay), hoac None."""
+    """Nhin toi khi nut X hien -> tam nut tren man (de tap ngay), hoac None.
+
+    Khung nhanh va uiautomator chay song song, nguon nao thay X truoc thi tra ngay
+    (khong cho nguon kia xong). Truoc 23/10/2026 chi co khung nhanh: native OB3 dang
+    hien thi dumpsys qua gio o MOI lan goi -> Sorapix OB3X-002/004 co 0 khung trong
+    15s, tool khong bam duoc X.
+    """
     rong = (await device_app.screen_size(client, serial))[0]
     het = time.monotonic() + giay
-    while time.monotonic() < het:
-        k, tam = await khung_nhanh(client, serial, package, rong)
-        if k:
-            khung.append(k)
-        if tam:
-            return tam
-    return None
+    thay: list = []
+    xong = asyncio.Event()
+
+    def _bao(tam) -> None:
+        if not xong.is_set():
+            thay.append(tam)
+            xong.set()
+
+    async def nhin_nhanh() -> None:
+        while time.monotonic() < het and not xong.is_set():
+            k, tam = await khung_nhanh(client, serial, package, rong)
+            if k:
+                khung.append(k)
+            if tam:
+                _bao(tam)
+
+    async def nhin_uia() -> None:
+        while time.monotonic() < het and not xong.is_set():
+            bat_dau = time.monotonic()
+            ku, nodes = await mot_khung(client, serial, package)
+            khung.append(ku)
+            xs = tim_x(nodes)
+            if xs:
+                # Cay uiautomator chi co trang dang hien -> toa do dung, khong can quy ve man.
+                _bao(xs[0].bounds.center)
+                return
+            await asyncio.sleep(max(0.0, GIUA_HAI_UIA - (time.monotonic() - bat_dau)))
+
+    tasks = [asyncio.create_task(nhin_nhanh()), asyncio.create_task(nhin_uia())]
+    cho_thay = asyncio.create_task(xong.wait())
+    ca_hai = asyncio.gather(*tasks)
+    try:
+        await asyncio.wait([cho_thay, ca_hai], return_when=asyncio.FIRST_COMPLETED)
+        if ca_hai.done():
+            ca_hai.result()             # loi that (mat may...) thi bao len
+    finally:
+        for t in (*tasks, cho_thay):
+            if not t.done():
+                t.cancel()
+        ca_hai.cancel()
+        khung.sort(key=lambda k: k["t"])
+    return thay[0] if thay else None

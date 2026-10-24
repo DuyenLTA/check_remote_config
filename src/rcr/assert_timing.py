@@ -204,6 +204,11 @@ def _nut_x(text: str, v: dict, khung: list, cfg: dict, req_303=()) -> dict:
         return out(NEEDS_HUMAN if mu else FAIL,
                    mu or f"nút X không hiện trong {len(tren)} khung trên OB3", text)
     luc = x[0]["t"] - v["t0"]
+    if NGAY_RE.search(text) and x[0] is tren[0] and luc > SAI_SO_KHUNG:
+        # Khung DAU TIEN da thay X nhung chup tre: X co the da hien tu dau - khong
+        # du de noi "hien tre" (Sorapix OB3X-004 23/10/2026: khung dau o 2,6s da co X).
+        return out(NEEDS_HUMAN, f"khung đầu tiên trên OB3 chụp lúc {luc:.1f}s đã thấy nút X — "
+                                "trước đó không nhìn được, chưa biết X có hiện ngay không", text)
     if NGAY_RE.search(text):
         return out(PASS if luc <= SAI_SO_KHUNG and not dem else FAIL,
                    f"nút X hiện ở khung đầu sau {luc:.1f}s"

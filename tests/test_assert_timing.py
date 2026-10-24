@@ -222,3 +222,11 @@ def test_khung_uia_sat_luc_roi_khong_tinh_la_man_ke():
     r = at.cham("Countdown X bị hủy khi rời màn — không hiện X/không crash ở màn kế.",
                 tl(roi=3.63, show=0.01, khung=k), {"timer_button_x": "5"})
     assert v(r) == "PASS"
+
+
+def test_x_ngay_khung_dau_tre_da_thay_x_khong_ket_luan():
+    """Sorapix OB3X-004 23/10/2026: khung dau o 2,6s da co X -> chua biet X co tu 0s khong."""
+    k = khung((2.63, True, ""), (4.21, False, ""), (5.18, False, ""))
+    r = at.cham("Button X hiển thị NGAY từ đầu (không có số đếm ngược).",
+                tl(roi=3.01, show=0.01, khung=k), {"timer_button_x": "0"})
+    assert v(r) == "NEEDS_HUMAN"
