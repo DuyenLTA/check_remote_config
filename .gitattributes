@@ -1,0 +1,2 @@
+# Bash khong chay script co CRLF ($'': command not found): giu LF ca khi checkout tren Windows (autocrlf=true).
+*.sh text eol=lf
