@@ -15,14 +15,22 @@ if (-not (Get-Command claude -ErrorAction SilentlyContinue)) { Write-Error "Khon
 if (-not (Get-Command adb -ErrorAction SilentlyContinue)) { Write-Error "Khong thay 'adb' trong PATH" }
 New-Item -ItemType Directory -Force $Out | Out-Null
 
-# cmd /s /c giu nguyen nhay trong; log noi them vao out\bot-run.log.
-$Lenh = "/s /c `"set PYTHONIOENCODING=utf-8&& `"$Bin`" >> `"$Log`" 2>&1`""
-$Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument $Lenh -WorkingDirectory $Repo
+# conhost --headless: chay AN, khong cua so. Ban dau chay cmd.exe thang -> hien cua so den,
+# dong cua so la giet bot giua luot cai (0xC000013A, do 27/10/2026).
+# Vong for /l vo han: bot thoat thi ~30s sau tu bat lai. RestartCount cua Task Scheduler chi
+# chay lai khi task KHONG KHOI DONG duoc, khong chay lai khi bot dang chay roi thoat.
+# Cho bang ping vi `timeout` trong console an bao loi va thoat ngay -> vong quay lien tuc.
+$Lap = "for /l %i in (0,0,1) do (`"$Bin`" >> `"$Log`" 2>&1 & ping -n 31 127.0.0.1 >nul)"
+$Lenh = "--headless cmd.exe /s /c `"set PYTHONIOENCODING=utf-8&& $Lap`""
+$Action = New-ScheduledTaskAction -Execute "conhost.exe" -Argument $Lenh -WorkingDirectory $Repo
 $Trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $Settings = New-ScheduledTaskSettingsSet -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
     -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+# Cai lai: dung ban cu truoc (ca bot con cua no) keo 2 bot cung tra loi.
+Stop-ScheduledTask -TaskName "rcr-bot" -ErrorAction SilentlyContinue
+Get-Process rcr-bot -ErrorAction SilentlyContinue | Stop-Process -Force
 Register-ScheduledTask -TaskName "rcr-bot" -Action $Action -Trigger $Trigger -Settings $Settings -Force | Out-Null
 Start-ScheduledTask -TaskName "rcr-bot"
 
 Write-Host "Da cai task rcr-bot (tu bat khi dang nhap). Log: $Log"
-Write-Host "Dung: Stop-ScheduledTask rcr-bot   Go: Unregister-ScheduledTask rcr-bot -Confirm:`$false"
+Write-Host "Dung: Stop-ScheduledTask rcr-bot; Stop-Process -Name rcr-bot   Go: Unregister-ScheduledTask rcr-bot -Confirm:`$false"
