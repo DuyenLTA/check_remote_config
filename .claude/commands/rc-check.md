@@ -123,7 +123,7 @@ ai đụng tới — PASS hụt, người đọc tưởng đã test xong nên kh
 **Chỉ nhận package id**, không nhận tên app: khớp theo tên là khớp mờ, gõ thiếu
 một ký tự là patch nhầm app hàng xóm. `$ARGUMENTS` không có chuỗi nào trông như
 `com.abc.xyz` thì **dừng và hỏi**. Trước khi hỏi, báo Discord (lỗi gửi thì bỏ qua):
-`<bin>/rcr-notify --kind stop --title "Thiếu / sai package" --line "<$ARGUMENTS>" --action "Gửi package id dạng com.abc.xyz"`
+`<bin>/rcr-notify --kind stop --title "Thiếu / sai package" --line="<$ARGUMENTS>" --action "Gửi package id dạng com.abc.xyz"`
 
 App phải cho vào vùng dữ liệu riêng — một trong hai:
 
