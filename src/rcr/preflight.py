@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import asyncio
 import ctypes
+import json
 import sys
 from pathlib import Path
 
-from . import ad_units_sheet, app_sandbox, device_app, fa_log, sdk_probe, tc_source
+from . import ad_units_sheet, app_sandbox, device_app, fa_log, net_ctl, rc_snapshot, sdk_probe, tc_source
 from .adb_parsers import AdbError
 from .models import RcError
 
@@ -29,6 +30,9 @@ RAM_TOI_THIEU_GB = 4.0
 GOOGLE_TEST_PUB = "ca-app-pub-3940256099942544/"
 # Cho toi da bao lau sau khi mo app de thay request ads dau tien (splash ~2s, do 24/10/2026).
 ADS_CHO_S = 15.0
+# Private DNS do tool (chan ad no-fill) hoac rc-check.md muc 5b (giu splash) dat ra.
+# Luot do chet giua chung thi may con chan / treo ads cho moi luot sau.
+DNS_CUA_TOOL = (net_ctl.DNS_CHAN_AD, "invalid-dns.example.invalid")
 
 
 def _muc(ten: str, trang_thai: str, chi_tiet: str, viec: str = "") -> dict:
@@ -71,6 +75,34 @@ def man_hinh(window: str, power: str) -> tuple[str, str]:
     if "isKeyguardShowing=true" in window or "mDreamingLockscreen=true" in window:
         return LOI, "máy đang khoá màn hình"
     return OK, "màn hình đang mở, không khoá"
+
+
+def muc_private_dns(mode: str, specifier: str) -> dict:
+    """Private DNS con o gia tri tool dat -> ads khong ve / treo toi timeout,
+    moi dong ads cua luot nay sai ma nhin y het app khong fill."""
+    mode, specifier = mode.strip(), specifier.strip()
+    if mode != "hostname":
+        return _muc("Private DNS", OK, f"không đặt hostname ({mode or 'null'})")
+    if specifier in DNS_CUA_TOOL:
+        return _muc("Private DNS", LOI, f"còn {specifier} của lượt trước (chặn / treo ads)",
+                    "adb shell settings delete global private_dns_mode; "
+                    "adb shell settings delete global private_dns_specifier; rồi chờ ping thông")
+    return _muc("Private DNS", CANH_BAO, f"máy đặt {specifier}",
+                "DNS chặn quảng cáo thì ads không về; tắt Private DNS nếu không chắc")
+
+
+def muc_snapshot(out_dir, package: str, serial: str) -> dict:
+    """Con snapshot `--keep` = may dang giu config DA PATCH: baseline luot nay la ban
+    ban, va `--keep` lan nua ghi de snapshot -> mat duong ve gia tri goc."""
+    path = rc_snapshot.path_for(out_dir, package, serial)
+    if not path.exists():
+        return _muc("Config đã trả về", OK, "không còn snapshot --keep")
+    try:
+        luc = json.loads(path.read_text(encoding="utf-8")).get("saved_at", "?")
+    except (OSError, ValueError):
+        luc = "?"
+    return _muc("Config đã trả về", LOI, f"còn snapshot --keep lúc {luc} ({path.name}): máy đang giữ config đã patch",
+                f"rcr-check --package {package} --serial {serial} --restore")
 
 
 async def _app(client, serial: str, package: str) -> list[dict]:
@@ -201,8 +233,11 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
     window, _, _ = await client.shell(serial, "dumpsys", "window")
     power, _, _ = await client.shell(serial, "dumpsys", "power")
     tt, ct = man_hinh(window, power)
+    dns = [(await client.shell(serial, "settings", "get", "global", k))[0]
+           for k in ("private_dns_mode", "private_dns_specifier")]
     muc = [_muc("Máy", OK, serial),
-           _muc("Màn hình", tt, ct, "Mở khoá máy, tắt khoá màn hình tự động" if tt == LOI else "")]
+           _muc("Màn hình", tt, ct, "Mở khoá máy, tắt khoá màn hình tự động" if tt == LOI else ""),
+           muc_private_dns(*dns), muc_snapshot(out_dir, package, serial)]
     app = await _app(client, serial, package)
     muc += app
     if tt == OK and app[0]["trang_thai"] == OK:

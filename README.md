@@ -72,13 +72,13 @@ thì truyền bằng `--tc <link sheet>` như thường.
 Claude Code chỉ đọc lệnh trong `~/.claude/commands/`. Tạo file
 `~/.claude/commands/rc-check.md` là một file trỏ về repo: nội dung chỉ bảo Claude tìm repo
 theo thứ tự `git rev-parse --show-toplevel` → `$RC_RUNNER_REPO` →
-`~/Desktop/check_remote_config` → `~/check_remote_config`, rồi đọc
+`~/projects/check_remote_config` → `~/Desktop/check_remote_config` → `~/check_remote_config`, rồi đọc
 `<repo>/.claude/commands/rc-check.md`. Clone repo về chỗ khác thì đặt biến
 `RC_RUNNER_REPO=<đường dẫn repo>`. Không chép nguyên file lệnh sang: hai bản sẽ lệch nhau sau
 mỗi lần `git pull`. Lệnh mới chỉ hiện ở phiên Claude Code mở sau đó.
 
 Cùng lệnh `/rc-check` còn **tự chấm checklist nâng cấp SDK quảng cáo Next-Gen** khi app dùng SDK FO
-**đúng 3.6.1** (bản này không có bộ TC): `--preflight` đọc bản SDK từ log lúc mở app rồi chọn nhánh, không cần
+**đúng 3.7.0** (bản này không có bộ TC; 3.6.1 đã revert next-gen nên chạy bộ TC): `--preflight` đọc bản SDK từ log lúc mở app rồi chọn nhánh, không cần
 gõ gì thêm. Quy trình ở `sdk-check/WORKFLOW.md`; script, checklist gốc và cách đo nằm trong `sdk-check/`.
 Cả 4 mục chấm bằng code: `rcr-sdk-check --package <pkg> --muc 1,2,3,4` — cùng bộ log thì cùng kết quả
 (`--cham-lai <thư mục>`); dòng code không chấm chắc được ra `DO_TAY`, đo tay rồi ghi bằng `--cham-tay`.

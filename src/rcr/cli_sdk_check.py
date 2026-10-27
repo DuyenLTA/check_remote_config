@@ -1,6 +1,6 @@
 """`rcr-sdk-check`: cham checklist SDK Next-Gen (muc 1-4) bang code.
 
-  rcr-sdk-check --package P [--muc 1,2,3,4] [--sdk 3.6.1] [--app-label "Ten 1.0"]
+  rcr-sdk-check --package P [--muc 1,2,3,4] [--sdk 3.7.0] [--app-label "Ten 1.0"]
       thu bang chung tren may vao out/sdk-<pkg>-<gio>/ roi cham + xuat report
   rcr-sdk-check --cham-lai DIR
       cham lai tu log da thu (khong can may) - cung log, cung ket qua

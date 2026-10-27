@@ -29,9 +29,10 @@ log = logging.getLogger(__name__)
 
 TAG = "VslTemplate4FirstOpenSDK"
 # Ban SDK FO di cung GMA Next-Gen ma khong co bo TC: cham theo checklist `sdk-check/`.
-# User chot 24/10/2026: CHINH XAC 3.6.1 moi chay checklist (hau to -alphaNN van tinh),
-# ban khac van chay bo TC.
-NEXTGEN_SDK = (3, 6, 1)
+# User chot 27/10/2026: Next-Gen la tutorial CHINH XAC 3.7.0 (hau to -alphaNN van tinh).
+# 3.6.1 tung la ban Next-Gen nhung da "revert next-gen" (tin build AIP882 4.3.0) -> chay bo TC
+# nhu cac ban khac.
+NEXTGEN_SDK = (3, 7, 0)
 LOGCAT_TIMEOUT = 20.0
 WAIT_AFTER_LAUNCH = 15.0
 POLL_INTERVAL = 1.5

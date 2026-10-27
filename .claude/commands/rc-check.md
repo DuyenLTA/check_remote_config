@@ -1,6 +1,6 @@
 ---
-description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, hoặc tự chấm checklist SDK Next-Gen khi app dùng SDK 3.6.1, trên máy thật
-argument-hint: "<package> [mục 1|2|3|4|all — chỉ khi app SDK 3.6.1: tự chấm checklist Next-Gen] [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
+description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, hoặc tự chấm checklist SDK Next-Gen khi app dùng SDK 3.7.0, trên máy thật
+argument-hint: "<package> [mục 1|2|3|4|all — chỉ khi app SDK 3.7.0: tự chấm checklist Next-Gen] [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
 ---
 
 Chạy `rcr-check` một lượt: đọc baseline remote config, nạp file testcase, đặt
@@ -14,7 +14,12 @@ Command chạy được từ thư mục bất kỳ — **đừng giả định C
 1. `git rev-parse --show-toplevel` (nếu CWD đang nằm trong chính repo này)
 2. biến môi trường `$RC_RUNNER_REPO`
 3. `~/projects/check_remote_config`
-4. `~/.claude/check_remote_config`
+4. `~/Desktop/check_remote_config`
+5. `~/check_remote_config`
+
+Máy có **nhiều bản clone** thì cái đứng trước thắng, dù nó cũ hơn: đặt `RC_RUNNER_REPO` trỏ
+vào bản đang dùng, và `git log -1` bản tìm được trước khi chạy (bản cũ thiếu `--preflight`,
+chốt dừng `ad_click`…).
 
 Repo có **hai remote** (github.com/DuyenLTA và github.com/LuuThiAnDuyen), nhưng
 **tên remote mỗi máy đặt một kiểu** — đọc `git remote -v`, đừng giả định `origin`
@@ -29,19 +34,22 @@ toàn cục. Báo `command not found` thì
 `cd <repo> && <bin>/python -m pip install -e ".[dev]"` rồi thử lại: venv cài
 trước khi CLI được thêm thì thiếu file lệnh.
 
-## 0b. SDK 3.6.1 → chấm checklist Next-Gen (tự chọn, không cần hỏi)
+## 0b. SDK 3.7.0 → chấm checklist Next-Gen (tự chọn, không cần hỏi)
 
 Không cần user nói SDK nào: bước `--preflight` (mục 3b) mở app một lần, đọc dòng
 `VslTemplate4FirstOpenSDK: Using version X` của chính pid app và in dòng **`Bản SDK FO`**.
 
-- **Đúng 3.6.1** (kể cả `3.6.1-alphaNN`) → preflight in `Nhanh: checklist Next-Gen`, JSON có
+**Next-Gen = tutorial 3.7.0** (user chốt 27/10/2026). 3.6.1 từng là bản Next-Gen nhưng đã *revert next-gen* → chạy
+bộ TC như bản thường; bộ TC chưa có tab 3.6.1 thì tool chấm base + delta tới 3.5.3 và ghi chú phần thay đổi chưa có TC.
+
+- **Đúng 3.7.0** (kể cả `3.7.0-alphaNN`) → preflight in `Nhanh: checklist Next-Gen`, JSON có
   `"nhanh": "nextgen"`. **Không chạy các mục 4–7 dưới**: đọc toàn bộ `<repo>/sdk-check/WORKFLOW.md` và
   làm theo nó (checklist có sẵn trong `<repo>/sdk-check/references/`, report Khớp/Sai). Ở nhánh này bản
   release / ID ads test chỉ là `CHU Y`, không chặn.
-- **Bản khác** (3.5.x, 3.6.0, 3.6.2…) → nhánh bộ TC như thường. User truyền `--tc` riêng thì luôn theo `--tc`.
+- **Bản khác** (3.5.x, 3.6.x, 3.7.1…) → nhánh bộ TC như thường. User truyền `--tc` riêng thì luôn theo `--tc`.
 - Không đọc được bản (dòng `Bản SDK FO` là `CHU Y`) → hỏi user bản SDK, chạy lại preflight với `--sdk X.Y.Z`.
-- Chạy case bằng bộ TC mặc định trên app 3.6.1 thì `rcr-check` dừng kèm lỗi (bộ chung không có tab
-  3.6.1, chọn tab cũ là chấm sai bản).
+- Chạy case bằng bộ TC mặc định trên app 3.7.0 thì `rcr-check` dừng kèm lỗi (bộ chung không có tab
+  Next-Gen, chọn tab cũ là chấm sai bản).
 
 ## 1. Tool này làm được tới đâu — nói trước, đừng để người dùng tưởng nhầm
 
@@ -118,7 +126,7 @@ ai đụng tới — PASS hụt, người đọc tưởng đã test xong nên kh
 **Chỉ nhận package id**, không nhận tên app: khớp theo tên là khớp mờ, gõ thiếu
 một ký tự là patch nhầm app hàng xóm. `$ARGUMENTS` không có chuỗi nào trông như
 `com.abc.xyz` thì **dừng và hỏi**. Trước khi hỏi, báo Discord (lỗi gửi thì bỏ qua):
-`<bin>/rcr-notify --kind stop --title "Thiếu / sai package" --line "<$ARGUMENTS>" --action "Gửi package id dạng com.abc.xyz"`
+`<bin>/rcr-notify --kind stop --title "Thiếu / sai package" --line="<$ARGUMENTS>" --action "Gửi package id dạng com.abc.xyz"`
 
 App phải cho vào vùng dữ liệu riêng — một trong hai:
 
@@ -163,7 +171,9 @@ cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>] --preflight
 
 Khoảng 20 giây, kiểm hết một lượt: máy, màn hình không khoá, app đã cài, **vào được dữ liệu app
 (bản debuggable / root)**, **ads dùng ID thật** (mở app một lần, đọc log `FA-SVC` tối đa 15s),
-tải được sheet TC, sheet ID ads có tab của package, RAM trống của máy tính.
+tải được sheet TC, sheet ID ads có tab của package, RAM trống của máy tính, **Private DNS
+không còn sót** giá trị chặn/treo ads của lượt trước, và **không còn snapshot `--keep`** chưa
+`--restore` (máy đang giữ config đã patch).
 
 Dòng `Ads dùng ID thật` ra `LOI` = build request bằng unit test của Google
 (`ca-app-pub-3940256099942544/…`): mọi vị trí chung một ID nên không quy được ad về vị trí
@@ -480,7 +490,8 @@ làm hết các bước dưới đây:
    Mạng đã ngắt thì bật lại và chờ ping thông
 6. Ghi từng dòng đã đo vào file lượt bằng lệnh, **đừng sửa tay JSON**:
    ```
-   cd <repo> && <bin>/rcr-check --package <pkg> --cham-tay out/run-x.luot.json      --case 3.4.0#SDK340-UI-001 --dong 1,4 --ket PASS --ly-do "<số đo + cách đo>"
+   cd <repo> && <bin>/rcr-check --package <pkg> --cham-tay out/run-x.luot.json \
+     --case 3.4.0#SDK340-UI-001 --dong 1,4 --ket PASS --ly-do "<số đo + cách đo>"
    ```
    Tool tính lại verdict case (dòng xấu nhất, trừ PO; precondition thiếu / có ad_click thì
    vẫn BLOCKED), giữ dấu vết `cham_tay` (ai, lúc nào, lý do) và dựng lại report. Hạ PASS giả
@@ -654,4 +665,5 @@ local (`<repo>/out/…html`) vẫn mở được bằng nháy đôi nếu publis
 
 **Dừng ở đây. Không `git add`, không `git commit`, không `git push`** khi user chưa bảo.
 Code đã sửa theo mục 5e để nguyên trong working tree, liệt kê trong câu báo; user bảo commit
-thì push cả hai tài khoản.
+thì push lên mọi remote mà máy có quyền ghi (`git remote -v`, bỏ remote có push URL `no_push`);
+remote nào không push được thì nói rõ trong câu báo để push từ máy khác.

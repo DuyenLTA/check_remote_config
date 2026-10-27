@@ -149,16 +149,17 @@ def test_unit_ads_doc_ca_hai_ten_param():
     assert preflight.unit_ads(events) == [TEST_NATIVE, THAT_INTER]
 
 
-def test_sdk_3_6_1_chay_checklist_next_gen_khong_can_sheet_hay_debuggable(monkeypatch):
-    _gia(monkeypatch, sdk="3.6.1", debuggable=False, co_tab=False)
+def test_sdk_3_7_0_chay_checklist_next_gen_khong_can_sheet_hay_debuggable(monkeypatch):
+    _gia(monkeypatch, sdk="3.7.0", debuggable=False, co_tab=False)
     kq = _chay(FakeClient())
-    assert kq["nhanh"] == "nextgen" and kq["sdk"] == "3.6.1" and kq["ok"]
+    assert kq["nhanh"] == "nextgen" and kq["sdk"] == "3.7.0" and kq["ok"]
     assert _trang_thai(kq, "Vào được dữ liệu app") == "canh_bao"
     assert not any(m["ten"].startswith("Sheet") for m in kq["muc"])
 
 
-def test_sdk_khac_3_6_1_van_chay_bo_tc(monkeypatch):
-    for sdk in ("3.5.3", "3.6.0", "3.6.2", "3.7.0"):
+def test_sdk_khac_3_7_0_van_chay_bo_tc(monkeypatch):
+    # 3.6.1 = ban "revert next-gen" (tin build AIP882 4.3.0, 27/10/2026) -> bo TC
+    for sdk in ("3.5.3", "3.6.0", "3.6.1", "3.6.1-alpha02", "3.7.1", "3.8.0"):
         _gia(monkeypatch, sdk=sdk)
         kq = _chay(FakeClient())
         assert kq["nhanh"] == "tc", sdk
@@ -173,11 +174,61 @@ def test_khong_doc_duoc_sdk_thi_canh_bao_va_chay_bo_tc(monkeypatch):
 
 def test_tham_so_sdk_thang_doc_tu_log(monkeypatch):
     _gia(monkeypatch, sdk="3.5.3")
-    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", "3.6.1"))
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", "3.7.0"))
     assert kq["nhanh"] == "nextgen"
 
 
-def test_la_nextgen_chi_dung_3_6_1():
+def test_la_nextgen_chi_dung_3_7_0():
     from rcr import sdk_probe
-    assert sdk_probe.la_nextgen("3.6.1") and sdk_probe.la_nextgen("3.6.1-alpha02")
-    assert not any(sdk_probe.la_nextgen(v) for v in ("3.6.0", "3.6.10", "3.6.2", "3.5.3", "", "x"))
+    assert sdk_probe.la_nextgen("3.7.0") and sdk_probe.la_nextgen("3.7.0-alpha02")
+    assert not any(sdk_probe.la_nextgen(v) for v in ("3.6.1", "3.6.1-alpha02", "3.7.1", "3.7.10", "3.5.3", "", "x"))
+
+
+class DnsClient(FakeClient):
+    def __init__(self, mode, spec):
+        super().__init__()
+        self.dns = {"private_dns_mode": mode, "private_dns_specifier": spec}
+
+    async def shell(self, serial, *args, timeout=None):
+        if args[:3] == ("settings", "get", "global"):
+            return self.dns[args[3]] + "\n", "", 0
+        return await super().shell(serial, *args, timeout=timeout)
+
+
+def test_private_dns_chan_ad_con_sot_tu_luot_truoc_la_loi(monkeypatch):
+    """Luot chet giua case no-fill (hoac giu splash o muc 5b) de lai DNS chan ads."""
+    _gia(monkeypatch)
+    for spec in preflight.DNS_CUA_TOOL:
+        kq = _chay(DnsClient("hostname", spec))
+        assert not kq["ok"] and _trang_thai(kq, "Private DNS") == "loi", spec
+
+
+def test_private_dns_cua_nguoi_dung_chi_canh_bao(monkeypatch):
+    _gia(monkeypatch)
+    kq = _chay(DnsClient("hostname", "dns.google"))
+    assert kq["ok"] and _trang_thai(kq, "Private DNS") == "canh_bao"
+
+
+def test_private_dns_tat_hoac_tu_dong_la_ok(monkeypatch):
+    _gia(monkeypatch)
+    for mode in ("null", "off", "opportunistic"):
+        assert _trang_thai(_chay(DnsClient(mode, "null")), "Private DNS") == "ok", mode
+
+
+def test_con_snapshot_keep_chua_restore_la_loi(monkeypatch, tmp_path):
+    """Con snapshot = may giu config da patch; --keep lan nua ghi de mat gia tri goc."""
+    _gia(monkeypatch)
+    from rcr import rc_snapshot
+    rc_snapshot.path_for(tmp_path, PKG, "S1").write_text('{"saved_at": "2026-10-27T10:00:00+0700"}')
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, tmp_path))
+    muc = next(m for m in kq["muc"] if m["ten"] == "Config đã trả về")
+    assert not kq["ok"] and muc["trang_thai"] == "loi"
+    assert "2026-10-27T10:00" in muc["chi_tiet"] and "--restore" in muc["viec_can_lam"]
+
+
+def test_snapshot_cua_may_khac_khong_tinh(monkeypatch, tmp_path):
+    _gia(monkeypatch)
+    from rcr import rc_snapshot
+    rc_snapshot.path_for(tmp_path, PKG, "S2").write_text("{}")
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, tmp_path))
+    assert kq["ok"] and _trang_thai(kq, "Config đã trả về") == "ok"
