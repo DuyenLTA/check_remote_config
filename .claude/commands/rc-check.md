@@ -14,7 +14,12 @@ Command chạy được từ thư mục bất kỳ — **đừng giả định C
 1. `git rev-parse --show-toplevel` (nếu CWD đang nằm trong chính repo này)
 2. biến môi trường `$RC_RUNNER_REPO`
 3. `~/projects/check_remote_config`
-4. `~/.claude/check_remote_config`
+4. `~/Desktop/check_remote_config`
+5. `~/check_remote_config`
+
+Máy có **nhiều bản clone** thì cái đứng trước thắng, dù nó cũ hơn: đặt `RC_RUNNER_REPO` trỏ
+vào bản đang dùng, và `git log -1` bản tìm được trước khi chạy (bản cũ thiếu `--preflight`,
+chốt dừng `ad_click`…).
 
 Repo có **hai remote** (github.com/DuyenLTA và github.com/LuuThiAnDuyen), nhưng
 **tên remote mỗi máy đặt một kiểu** — đọc `git remote -v`, đừng giả định `origin`
@@ -163,7 +168,9 @@ cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>] --preflight
 
 Khoảng 20 giây, kiểm hết một lượt: máy, màn hình không khoá, app đã cài, **vào được dữ liệu app
 (bản debuggable / root)**, **ads dùng ID thật** (mở app một lần, đọc log `FA-SVC` tối đa 15s),
-tải được sheet TC, sheet ID ads có tab của package, RAM trống của máy tính.
+tải được sheet TC, sheet ID ads có tab của package, RAM trống của máy tính, **Private DNS
+không còn sót** giá trị chặn/treo ads của lượt trước, và **không còn snapshot `--keep`** chưa
+`--restore` (máy đang giữ config đã patch).
 
 Dòng `Ads dùng ID thật` ra `LOI` = build request bằng unit test của Google
 (`ca-app-pub-3940256099942544/…`): mọi vị trí chung một ID nên không quy được ad về vị trí
@@ -480,7 +487,8 @@ làm hết các bước dưới đây:
    Mạng đã ngắt thì bật lại và chờ ping thông
 6. Ghi từng dòng đã đo vào file lượt bằng lệnh, **đừng sửa tay JSON**:
    ```
-   cd <repo> && <bin>/rcr-check --package <pkg> --cham-tay out/run-x.luot.json      --case 3.4.0#SDK340-UI-001 --dong 1,4 --ket PASS --ly-do "<số đo + cách đo>"
+   cd <repo> && <bin>/rcr-check --package <pkg> --cham-tay out/run-x.luot.json \
+     --case 3.4.0#SDK340-UI-001 --dong 1,4 --ket PASS --ly-do "<số đo + cách đo>"
    ```
    Tool tính lại verdict case (dòng xấu nhất, trừ PO; precondition thiếu / có ad_click thì
    vẫn BLOCKED), giữ dấu vết `cham_tay` (ai, lúc nào, lý do) và dựng lại report. Hạ PASS giả
@@ -654,4 +662,5 @@ local (`<repo>/out/…html`) vẫn mở được bằng nháy đôi nếu publis
 
 **Dừng ở đây. Không `git add`, không `git commit`, không `git push`** khi user chưa bảo.
 Code đã sửa theo mục 5e để nguyên trong working tree, liệt kê trong câu báo; user bảo commit
-thì push cả hai tài khoản.
+thì push lên mọi remote mà máy có quyền ghi (`git remote -v`, bỏ remote có push URL `no_push`);
+remote nào không push được thì nói rõ trong câu báo để push từ máy khác.
