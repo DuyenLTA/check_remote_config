@@ -36,7 +36,7 @@ PROMPT = (
     "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi, khong co nguoi ngoi truoc may. Gap diem can nguoi quyet "
     "(ad_click, preflight LOI, man la) thi dung, khong tu chay tiep. Khong commit/push.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
-    'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact hoac duong dan report, rong neu khong co>", '
+    'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
     '"tom_tat": "<tieng Viet, toi da 300 ky tu: so PASS/FAIL hoac ly do dung>"}}'
 )
 

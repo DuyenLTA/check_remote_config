@@ -15,6 +15,8 @@ from . import ad_units_sheet, build_ma_app, tc_source
 from .models import RcError
 
 TIMEOUT_CAI = 900
+# Gioi han file dinh kem cua bot o server khong boost.
+MAX_DINH_KEM = 10 * 1024 * 1024
 TRANG_THAI = {"XONG": ("✅", "Xong"), "DUNG": ("⚠️", "Dừng — cần người xem"),
               "LOI": ("⛔", "Lỗi"), "HET_GIO": ("⏱️", "Hết giờ")}
 
@@ -65,11 +67,33 @@ def tin_hoi(c: dict) -> str:
     return f"{dau_tin(c)}\n{ghi} từ App Tester rồi chạy /rc-check. Chạy không?{goc}"
 
 
-def tin_ket_qua(c: dict, kq: dict) -> str:
+def file_report(kq: dict, out_dir: Path) -> Path | None:
+    """File HTML de dinh kem khi KHONG co link artifact (user chot 27/10/2026: co link thi chi gan link).
+
+    `link` do Claude ghi -> chi nhan file .html nam trong `out_dir`, khong dinh kem file bat ky.
+    """
+    link = kq.get("link") or ""
+    if not link or link.startswith("https://"):
+        return None
+    try:
+        f = Path(link).resolve()
+        f.relative_to(Path(out_dir).resolve())
+    except (OSError, ValueError):
+        return None
+    if f.suffix.lower() != ".html" or not f.is_file() or f.stat().st_size > MAX_DINH_KEM:
+        return None
+    return f
+
+
+def tin_ket_qua(c: dict, kq: dict, dinh_kem: Path | None = None) -> str:
     dau, chu = TRANG_THAI.get(kq["trang_thai"], ("•", kq["trang_thai"]))
     dong = [f"{dau} {dau_tin(c)} — {chu}", kq.get("tom_tat", "")[:300]]
-    if kq.get("link"):
+    if kq.get("link", "").startswith("https://"):
         dong.append(f"Report: {kq['link']}")
+    elif dinh_kem:
+        dong.append(f"Report: file `{dinh_kem.name}` đính kèm (chưa publish được artifact)")
+    elif kq.get("link"):
+        dong.append(f"Report trên máy chạy bot: `{kq['link']}`")
     if kq.get("phut") is not None:
         dong.append(f"{kq['phut']} phút · ${kq.get('chi_phi') or 0:.2f}")
     return "\n".join(d for d in dong if d)
