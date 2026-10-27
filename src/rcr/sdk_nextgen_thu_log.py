@@ -36,7 +36,17 @@ SO_LAN = 10
 CHO_KHOI_DONG_S = 10.0
 CHO_OFFLINE_S = 30.0       # KT-01: "doi toi da 30 giay"
 CHO_CHAM_TOI_DA_S = 120.0  # KT-02: mang cham, cho roi splash toi da
-PROXY_PORT, PROXY_TRE_S, PROXY_KBPS = 8899, 3, 8  # skill goc do KT-02 bang `slow_ads_proxy.py 8899 3 8`
+# Skill goc do KT-02 bang `slow_ads_proxy.py 8899 3 8`. Cong lay cong trong moi luot, khong co
+# dinh 8899: hai may chay song song thi proxy thu hai khong bind duoc (loi bi nuot vao DEVNULL),
+# ca hai may di qua proxy dau, luot dau xong go proxy -> may kia mat mang giua KT-02 (do 2026-10-27).
+PROXY_TRE_S, PROXY_KBPS = 3, 8
+
+
+def cong_trong() -> int:
+    import socket
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 BUFFERS = "main,system,crash,events"
 _TOTAL = re.compile(r"TotalTime:\s*(\d+)")
 _MIN_SDK = re.compile(r"minSdk=(\d+)")
@@ -239,12 +249,13 @@ async def mang_cham(client, serial: str, package: str, out: Path, log_fn) -> dic
     """KT-02: moi host qua proxy tre 3 s + 8 KB/s; do luc roi splash so voi timeout splash."""
     timeout_s, key = await splash_timeout_rc(client, serial, package)
     log_fn(f"  mạng chậm (proxy {PROXY_TRE_S}s, {PROXY_KBPS} KB/s), timeout splash: {timeout_s or 'mặc định 60'}s {key}")
-    proxy = subprocess.Popen([sys.executable, "-I", str(SCRIPTS / "slow_ads_proxy.py"), str(PROXY_PORT), str(PROXY_TRE_S),
+    cong = cong_trong()
+    proxy = subprocess.Popen([sys.executable, "-I", str(SCRIPTS / "slow_ads_proxy.py"), str(cong), str(PROXY_TRE_S),
                               str(PROXY_KBPS)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     ra: dict = {"cham_timeout_s": timeout_s, "cham_timeout_key": key}
     try:
-        await client._run("-s", serial, "reverse", f"tcp:{PROXY_PORT}", f"tcp:{PROXY_PORT}")
-        await client.shell(serial, "settings", "put", "global", "http_proxy", f"127.0.0.1:{PROXY_PORT}")
+        await client._run("-s", serial, "reverse", f"tcp:{cong}", f"tcp:{cong}")
+        await client.shell(serial, "settings", "put", "global", "http_proxy", f"127.0.0.1:{cong}")
         async with GhiLog(client, serial, out / "log-cham.txt"):
             await _moi(client, serial, package)
             await device_app.launch(client, serial, package)
@@ -255,7 +266,7 @@ async def mang_cham(client, serial: str, package: str, out: Path, log_fn) -> dic
     finally:
         # Luon go proxy: de lai la may mat mang moi luot sau.
         await client.shell(serial, "settings", "put", "global", "http_proxy", ":0")
-        await client._run("-s", serial, "reverse", "--remove", f"tcp:{PROXY_PORT}")
+        await client._run("-s", serial, "reverse", "--remove", f"tcp:{cong}")
         proxy.terminate()
     return ra
 

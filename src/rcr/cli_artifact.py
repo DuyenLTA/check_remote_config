@@ -37,7 +37,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--url", default="", help="link artifact vừa publish")
     parser.add_argument("--generated-at", default="",
                         help="mốc `generated_at` của lượt đã publish")
-    parser.add_argument("--out", default="out", help="thư mục chứa artifact.json")
+    parser.add_argument("--out", default="out", help="thư mục chứa artifact-<package>.json")
+    parser.add_argument("--package", default="",
+                        help="package của lượt; mỗi app một link (chạy song song nhiều máy không đè nhau)")
     parser.add_argument("--app", default="",
                         help="tên app + version; có thì ghi thêm một dòng vào docs/usage-log.md")
     parser.add_argument("--version", default="", help="cột Version của usage-log")
@@ -52,14 +54,14 @@ def main(argv: list[str] | None = None) -> int:
 
     goc = Path(args.out)
     if not args.url:
-        print(json.dumps(doc(goc), ensure_ascii=False))
+        print(json.dumps(doc(goc, args.package), ensure_ascii=False))
         return 0
     if not args.generated_at:
         # Thieu moc thi khong biet link dang tro toi luot nao - mot bao cao cu
         # se duoc gui di nhu bao cao cua lan chay vua roi.
         print("Lỗi: có --url thì phải có --generated-at.", file=sys.stderr)
         return 1
-    ban = ghi(args.url, args.generated_at, goc)
+    ban = ghi(args.url, args.generated_at, goc, args.package)
     if args.app:
         _log_usage(args, args.url)
     discord_notify.send("done", f"Report đã publish · {args.app or 'rc-check'}", [],

@@ -198,3 +198,19 @@ def test_cot_TC_ID_giu_nguyen_ma_case():
                       ("▌ Splash", "", "", "", "", "", "", "", ""),
                       ("SDK340-SPL-001", "x", "y", "s", "", "k_a = false", "1. Mo app", "1. ok", "")])
     assert [c.n for c in out] == ["SDK340-SPL-001"]
+
+
+def test_tai_sheet_ghi_tam_roi_thay_khong_de_file_ghi_do(tmp_path, monkeypatch):
+    """Hai luot song song cung tai sheet ID ads: file dich luon la ban day du."""
+    from rcr import tc_source
+    dich = tmp_path / "tc-x.xlsx"
+    dich.write_bytes(b"PK cu")
+    tc_source._ghi_thay(dich, b"PK moi")
+    assert dich.read_bytes() == b"PK moi" and list(tmp_path.glob("*.tmp")) == []
+
+    def bi_giu(*a):
+        raise PermissionError("file dang mo o luot khac")
+    monkeypatch.setattr(tc_source.os, "replace", bi_giu)
+    monkeypatch.setattr(tc_source.time, "sleep", lambda s: None)
+    tc_source._ghi_thay(dich, b"PK moi hon")          # bi giu het nhip -> giu ban dang co, khong no
+    assert dich.read_bytes() == b"PK moi" and list(tmp_path.glob("*.tmp")) == []

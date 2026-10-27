@@ -157,6 +157,9 @@ adb devices -l
   **hỏi**. Patch bừa lên máy người khác đang dùng là hỏng data của họ. Báo Discord:
   `<bin>/rcr-notify --kind stop --title "Nhiều máy, cần chọn" --line "<danh sách serial>" --action "Chọn serial máy cần chạy"`
 - máy `unauthorized` không tính là dùng được
+- `$ARGUMENTS` có `--serial` (bot Discord luôn truyền) → **mọi** lệnh `rcr-check` / `rcr-sdk-check` /
+  `rcr-cai-build` / `adb` trong lượt đều kèm đúng serial đó, kể cả các lệnh mẫu dưới không ghi `[--serial]`.
+  Bot chạy song song nhiều máy: sót một lệnh là nó đụng máy của lượt khác.
 
 **Máy phải đang mở khoá.** Máy khoá thì PMS không resolve được activity nào, tool
 báo không mở được app — nhìn y hệt app hỏng. Gặp lỗi đó thì bảo người dùng mở
@@ -612,7 +615,7 @@ User chốt 24/10/2026: chạy app khác mà tool lỗi / chạy chập chờn /
 
 ## 6. Xuất report
 
-Luôn truyền `--report <repo>/out/run-<pkg>-<hhmm>.html` khi chạy `--case`: trang
+Luôn truyền `--report <repo>/out/run-<pkg>-<serial>-<hhmmss>.html` khi chạy `--case`: trang
 HTML tự chứa, `out/` đã gitignore. Bố cục **tester đã chốt** — đừng đổi:
 
 1. Header: eyebrow · H1 · dòng meta (App + package + version, Máy, Ngày)
@@ -638,8 +641,8 @@ vì nó không nói được gì về app. Làm mục 5b trước, rồi publish
 Publish xong thì ghi link lại, lấy `generated_at` từ **chính dòng JSON của lượt vừa chạy**:
 
 ```
-cd <repo> && <bin>/rcr-artifact --url <link> --generated-at <generated_at cua luot>
-cd <repo> && <bin>/rcr-artifact          # in link da luu cua luot truoc
+cd <repo> && <bin>/rcr-artifact --package <pkg> --url <link> --generated-at <generated_at cua luot>
+cd <repo> && <bin>/rcr-artifact --package <pkg>          # in link da luu cua luot truoc cua app nay
 ```
 
 Lệnh ghi link tự báo Discord "Report đã publish". Lần publish **đầu** của một lượt thì thêm
@@ -648,7 +651,9 @@ Lệnh ghi link tự báo Discord "Report đã publish". Lần publish **đầu*
 `docs/usage-log.md`; republish đè cùng link thì **bỏ `--app`** kẻo ghi trùng dòng.
 
 URL artifact **cố định**: republish cùng file thì giữ nguyên link. Nên lượt sau cứ đọc
-link cũ rồi republish đè, người dùng không phải đổi link đang mở. Bắt buộc kèm
+link cũ **của đúng app đó** (`--package`) rồi republish đè, người dùng không phải đổi link đang mở.
+Luôn truyền `--package`: hai lượt song song trên hai máy mà dùng chung một link thì lượt
+sau đè report của lượt trước. Bắt buộc kèm
 `--generated-at`: thiếu nó thì không phân biệt được link đang trỏ tới lượt vừa chạy hay
 một lượt cũ — gửi nhầm báo cáo cũ cho team là sai một cách im lặng.
 

@@ -39,8 +39,11 @@ không chạy). Script `.sh` tự chọn đúng và tắt đổi đường dẫn
 User chốt 24/10/2026: kết quả phải giống nhau mỗi lần chạy. Cả 4 mục chấm bằng code:
 
 ```
-<bin>/rcr-sdk-check --package <pkg> --muc 1,2,3,4 --sdk <bản từ preflight> --app-label "<tên> <version>"
+<bin>/rcr-sdk-check --package <pkg> --serial <serial> --muc 1,2,3,4 --sdk <bản từ preflight> --app-label "<tên> <version>"
 ```
+
+Luôn truyền `--serial` (cùng serial với preflight): cắm từ 2 máy trở lên thì thiếu nó là dừng ngay, và 2 lượt
+song song trên 2 máy không được đụng máy của nhau.
 
 ~12 phút, `run_in_background`. Thu log vào `out/sdk-<pkg>-<giờ>/`: 10 lần mở lạnh, 10 lần mở lại, FO user mới +
 Home → mở lại ×2, lượt mất mạng (30s rồi bật mạng đi tiếp), lượt mạng chậm qua proxy (luôn gỡ proxy khi xong). Chấm bằng
@@ -59,7 +62,8 @@ luật cố định, ra `ket-qua.json` + `report.html`. stdout: `{thu_muc, repor
 
 ## Quy trình đo tay
 
-1. **Máy + bản**: `adb devices -l` (1 máy). `dumpsys package <pkg> | grep -E "versionName|versionCode|lastUpdateTime"`,
+1. **Máy + bản**: `adb devices -l`. Cắm nhiều máy thì `export ANDROID_SERIAL=<serial>` trước mọi lệnh `adb` /
+   script dưới đây (script gọi `adb` trơn) — không đặt là `adb` báo "more than one device" hoặc đụng máy của lượt khác. `dumpsys package <pkg> | grep -E "versionName|versionCode|lastUpdateTime"`,
    `sha256sum` APK (`adb pull $(pm path)` vào scratchpad, dùng lại cho cài đè). Máy khoá thì mở khoá trước. Kiểm sub
    test còn hạn (xem bẫy). Kiểm cờ debuggable (luật 5).
 2. **Bản cũ để so** — mặc định BỎ (user chốt 15/10): CMP-01/02/03, KT-07, HV-06, EV-27 ghi "bỏ theo yêu cầu"; KT-02 chấm

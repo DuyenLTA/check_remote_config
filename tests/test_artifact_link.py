@@ -53,3 +53,11 @@ def test_cli_khong_tham_so_thi_in_link_da_luu(tmp_path, capsys):
     artifact_link.ghi("https://claude.ai/artifact/abc", "moc-cu", tmp_path)
     assert main(["--out", str(tmp_path)]) == 0
     assert "https://claude.ai/artifact/abc" in capsys.readouterr().out
+
+
+def test_moi_app_mot_link_chay_song_song_khong_de_nhau(tmp_path):
+    artifact_link.ghi("https://claude.ai/artifact/a", "t1", tmp_path, "pkg.a")
+    artifact_link.ghi("https://claude.ai/artifact/b", "t2", tmp_path, "pkg.b")
+    assert artifact_link.doc(tmp_path, "pkg.a")["url"].endswith("/a")
+    assert artifact_link.doc(tmp_path, "pkg.b")["url"].endswith("/b")
+    assert artifact_link.doc(tmp_path) == {}            # file chung cu khong bi dung toi

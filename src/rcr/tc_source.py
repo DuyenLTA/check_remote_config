@@ -11,7 +11,9 @@ Khong tai duoc thi dung han, khong lui ve file cu nao ca.
 from __future__ import annotations
 
 import http.client
+import os
 import re
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -21,6 +23,7 @@ from .models import RcError
 SHEET_RE = re.compile(r"docs\.google\.com/spreadsheets/d/([A-Za-z0-9_-]{20,})")
 TIMEOUT = 60
 LAN_TAI = 3
+LAN_THAY = 6
 
 
 def la_link(tc: str) -> bool:
@@ -54,5 +57,31 @@ def tai_ve(tc: str, out_dir) -> str:
             f"Sheet {sheet_id} khong tai duoc ve dang xlsx (nhan '{kieu}'). "
             "Mo quyen 'Bat ky ai co duong link deu xem duoc' roi chay lai."
         )
-    dich.write_bytes(data)
+    _ghi_thay(dich, data)
     return str(dich)
+
+
+def _ghi_thay(dich: Path, data: bytes) -> None:
+    """Ghi ra file tam roi thay vao: hai luot song song (hai may) cung tai sheet ID ads
+    thi luot kia khong bao gio doc phai file dang ghi do (do 2026-10-27).
+
+    Windows khong cho thay file ma process khac dang mo (openpyxl read_only giu file)
+    -> thu lai vai nhip; van bi giu thi giu ban dang co: no vua duoc luot kia tai ve.
+    """
+    fd, tam = tempfile.mkstemp(dir=dich.parent, prefix=dich.stem + "-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        for lan in range(LAN_THAY):
+            try:
+                os.replace(tam, dich)
+                return
+            except PermissionError:
+                if lan == LAN_THAY - 1 and dich.exists():
+                    return
+                if lan == LAN_THAY - 1:
+                    raise
+                time.sleep(0.5)
+    finally:
+        if os.path.exists(tam):
+            os.remove(tam)
