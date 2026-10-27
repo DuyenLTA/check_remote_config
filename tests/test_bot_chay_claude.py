@@ -39,6 +39,22 @@ def test_thieu_dong_ket_qua_thi_lay_duoi_van_ban():
     assert c.doc_ket_qua("khong phai json")["trang_thai"] == "LOI"
 
 
+def test_luot_bot_tat_webhook(tmp_path, monkeypatch):
+    goi = {}
+
+    class P:
+        returncode, stdout, stderr = 0, "{}", ""
+
+    def run(cmd, **k):
+        goi.update(k)
+        return P
+    monkeypatch.setattr(c.subprocess, "run", run)
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/x/y")
+    c.chay("pkg.a", "S1", tmp_path, 60, tmp_path / "out")
+    assert goi["env"]["DISCORD_NOTIFY"] == "0"
+    assert goi["env"]["DISCORD_WEBHOOK_URL"]          # van giu env khac (PATH, ...)
+
+
 def test_qua_gio_thi_bao_het_gio(tmp_path, monkeypatch):
     def treo(*a, **k):
         raise subprocess.TimeoutExpired(a[0], k["timeout"])

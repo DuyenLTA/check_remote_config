@@ -15,6 +15,7 @@ sach tool. Spike 2026-10-27: voi danh sach nay `-p` khong hoi quyen, khong treo.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -72,6 +73,12 @@ def doc_ket_qua(stdout: str) -> dict:
     return ra
 
 
+def moi_truong() -> dict[str, str]:
+    """Env cua luot: tat webhook `rcr-notify` (DISCORD_NOTIFY=0) - bot da bao vao chinh tin
+    cua build, webhook gui them la kenh nhan hai tin cho mot viec (user chot 27/10/2026)."""
+    return {**os.environ, "DISCORD_NOTIFY": "0"}
+
+
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path) -> dict:
     """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO."""
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -79,7 +86,7 @@ def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path) -> 
     try:
         cmd, prompt = lenh(package, serial)
         p = subprocess.run(cmd, input=prompt, cwd=repo, capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=timeout)
+                           encoding="utf-8", errors="replace", timeout=timeout, env=moi_truong())
     except subprocess.TimeoutExpired as exc:
         log.write_text(f"HET GIO sau {timeout}s\n{exc.stdout or ''}\n{exc.stderr or ''}", encoding="utf-8")
         return {"trang_thai": "HET_GIO", "link": "", "tom_tat": f"quá {timeout // 60} phút", "log": str(log)}
