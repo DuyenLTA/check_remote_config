@@ -149,16 +149,17 @@ def test_unit_ads_doc_ca_hai_ten_param():
     assert preflight.unit_ads(events) == [TEST_NATIVE, THAT_INTER]
 
 
-def test_sdk_3_6_1_chay_checklist_next_gen_khong_can_sheet_hay_debuggable(monkeypatch):
-    _gia(monkeypatch, sdk="3.6.1", debuggable=False, co_tab=False)
+def test_sdk_3_7_0_chay_checklist_next_gen_khong_can_sheet_hay_debuggable(monkeypatch):
+    _gia(monkeypatch, sdk="3.7.0", debuggable=False, co_tab=False)
     kq = _chay(FakeClient())
-    assert kq["nhanh"] == "nextgen" and kq["sdk"] == "3.6.1" and kq["ok"]
+    assert kq["nhanh"] == "nextgen" and kq["sdk"] == "3.7.0" and kq["ok"]
     assert _trang_thai(kq, "Vào được dữ liệu app") == "canh_bao"
     assert not any(m["ten"].startswith("Sheet") for m in kq["muc"])
 
 
-def test_sdk_khac_3_6_1_van_chay_bo_tc(monkeypatch):
-    for sdk in ("3.5.3", "3.6.0", "3.6.2", "3.7.0"):
+def test_sdk_khac_3_7_0_van_chay_bo_tc(monkeypatch):
+    # 3.6.1 = ban "revert next-gen" (tin build AIP882 4.3.0, 27/10/2026) -> bo TC
+    for sdk in ("3.5.3", "3.6.0", "3.6.1", "3.6.1-alpha02", "3.7.1", "3.8.0"):
         _gia(monkeypatch, sdk=sdk)
         kq = _chay(FakeClient())
         assert kq["nhanh"] == "tc", sdk
@@ -173,14 +174,14 @@ def test_khong_doc_duoc_sdk_thi_canh_bao_va_chay_bo_tc(monkeypatch):
 
 def test_tham_so_sdk_thang_doc_tu_log(monkeypatch):
     _gia(monkeypatch, sdk="3.5.3")
-    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", "3.6.1"))
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", "3.7.0"))
     assert kq["nhanh"] == "nextgen"
 
 
-def test_la_nextgen_chi_dung_3_6_1():
+def test_la_nextgen_chi_dung_3_7_0():
     from rcr import sdk_probe
-    assert sdk_probe.la_nextgen("3.6.1") and sdk_probe.la_nextgen("3.6.1-alpha02")
-    assert not any(sdk_probe.la_nextgen(v) for v in ("3.6.0", "3.6.10", "3.6.2", "3.5.3", "", "x"))
+    assert sdk_probe.la_nextgen("3.7.0") and sdk_probe.la_nextgen("3.7.0-alpha02")
+    assert not any(sdk_probe.la_nextgen(v) for v in ("3.6.1", "3.6.1-alpha02", "3.7.1", "3.7.10", "3.5.3", "", "x"))
 
 
 class DnsClient(FakeClient):
