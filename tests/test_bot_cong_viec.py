@@ -55,3 +55,14 @@ def test_cli_loi_lay_dong_LOI(monkeypatch):
     monkeypatch.setattr(v.subprocess, "run", lambda cmd, **k: goi.setdefault("cmd", cmd) and P)
     assert v.cai("pkg.a", "4.3.0 (40)", "debug", "SER1") == {"loi": "4.3.0 (40) chưa có bản debug (mới có: release)"}
     assert goi["cmd"][-2:] == ["--serial", "SER1"]                   # dung may bot da chon
+
+
+def test_duong_dan_tuong_doi_tinh_tu_repo(tmp_path, monkeypatch):
+    """Luot AIP920: Claude ghi "out/sdk-.../report.html" (tuong doi), bot chay o thu muc khac van tim ra."""
+    out = tmp_path / "repo" / "out"
+    (out / "sdk-x").mkdir(parents=True)
+    (out / "sdk-x" / "report.html").write_text("<html>", "utf-8")
+    monkeypatch.chdir(tmp_path)
+    f = v.file_report({"link": "out/sdk-x/report.html"}, out)
+    assert f == (out / "sdk-x" / "report.html").resolve()
+    assert v.file_report({"link": "out/../../bi-mat.html"}, out) is None

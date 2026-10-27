@@ -75,8 +75,13 @@ def file_report(kq: dict, out_dir: Path) -> Path | None:
     link = kq.get("link") or ""
     if not link or link.startswith("https://"):
         return None
+    # Claude hay ghi duong dan TUONG DOI tinh tu repo ("out/sdk-.../report.html", luot AIP920
+    # 28/10/2026) du prompt doi tuyet doi -> noi vao thu muc repo (cha cua out_dir), khong vao CWD.
+    f = Path(link)
+    if not f.is_absolute():
+        f = Path(out_dir).parent / f
     try:
-        f = Path(link).resolve()
+        f = f.resolve()
         f.relative_to(Path(out_dir).resolve())
     except (OSError, ValueError):
         return None
