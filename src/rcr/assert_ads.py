@@ -27,9 +27,16 @@ from .verdict_levels import FAIL, NEEDS_HUMAN, NOT_VERIFIABLE, PASS, out
 # Toi 2 chu chen giua "khong" va dong tu: "KHONG phat sinh request",
 # "khong duoc goi". Chen khong gioi han thi mot cau khang dinh o ve sau cung bi
 # hut vao phu dinh o ve dau.
+# "khong co <X> nao duoc preload" / "khong co native 201 hien thi": chu nam
+# giua dai hon 2 nhung van la phu dinh - chan o dau cau/dau phay de khong hut
+# ve sau. Thieu nhanh nay + thieu "preload" thi cau "302 KHONG duoc preload"
+# bi cham nhu cau khang dinh: log khong co 302 -> FAIL nguoc (do 2026-10-25,
+# Lingix 6.4.0 #14/#20/#44/#77/#84).
 NEGATIVE_RE = re.compile(
     r"(?:kh[oô]ng|ko)\s+(?:\w+\s+){0,2}?"
-    r"(?:load|show|hi[ểe]n|request|g[ọo]i|xu[ấa]t hi[ệe]n)|requests?\s*=\s*0",
+    r"(?:(?:pre)?load|show|hi[ểe]n|request|g[ọo]i|xu[ấa]t hi[ệe]n)"
+    r"|kh[oô]ng\s+c[óo]\s+[^.;,:()]{0,40}?(?:(?:pre)?load|show|hi[ểe]n|request|xu[ấa]t hi[ệe]n)"
+    r"|requests?\s*=\s*0",
     re.I,
 )
 SHOW_RE = re.compile(r"hi[ểe]n\s*th[ịi]|show|xu[ấa]t\s*hi[ệe]n", re.I)

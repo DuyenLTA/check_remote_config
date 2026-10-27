@@ -799,3 +799,25 @@ def test_cau_khong_neu_vi_tri_loc_theo_vi_tri_case_bat():
     out = a.check("Native ad hiển thị bình thường.", ads, DA_TAP, OK_CRASH,
                   vi_tri=("302_onb2_n_native", "302_onb2_n_native_high"))
     assert out["verdict"] == a.PASS and "*****993" in out["reason"] and "*****394" not in out["reason"]
+
+
+def test_cau_khong_preload_la_phu_dinh():
+    """Lingix 6.4.0: "302 KHONG duoc preload" bi cham nhu cau khang dinh -> FAIL nguoc."""
+    from rcr import assert_ads as ads
+    for cau in ("302 KHÔNG được preload (vì OB2 tắt)",
+                "Không preload bất kỳ 106 native nào",
+                "Không có bất kỳ inter 102 nào được preload",
+                "Không có 303 hay 302 nào được preload",
+                "Không có native 201 hiển thị"):
+        assert ads.NEGATIVE_RE.search(cau), cau
+    for cau in ("SDK preload 106-spl-o-native-high (ưu tiên 1)",
+                "202-lfo2-n-native-high được preload (alternate với high1)",
+                "Không có lỗi, native 201 hiển thị"):
+        assert not ads.NEGATIVE_RE.search(cau), cau
+
+
+def test_vung_ads_collapsed_la_ky_vong_vang_mat():
+    from rcr import assert_ui
+    assert assert_ui.AN_DI_RE.search("Vùng ads bị collapsed/gone")
+    assert assert_ui.AN_DI_RE.search("Layout ads bị ẩn")
+    assert not assert_ui.AN_DI_RE.search("Native ads hiển thị bên dưới")

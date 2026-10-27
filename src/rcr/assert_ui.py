@@ -17,6 +17,8 @@ EVENT_RE = re.compile(r"\bevent\b|\bsu\s*ki[ệe]n\b|\bs[ựu]\s*ki[ệe]n\b", r
 # Ten event: chu thuong + gach duoi, it nhat mot gach -> khong an nham tu thuong.
 TEN_EVENT_RE = re.compile(r"\b([a-z][a-z0-9]*(?:_[a-z0-9]+)+)\b")
 NOT_SHOW_RE = re.compile(r"kh[oô]ng\s+(?:c[óo]\s+)?(?:hi[ểe]n|th[ấa]y|xu[ấa]t hi[ệe]n)", re.I)
+# "Vung ads bi collapsed/gone" - ky vong la KHONG con vung do tren man.
+AN_DI_RE = re.compile(r"collaps|\bgone\b|b[ịi]\s+[ẩa]n\b", re.I)
 
 from .verdict_levels import FAIL, NEEDS_HUMAN, PASS, out
 
@@ -58,7 +60,8 @@ def _element_on_screen(element: dict, text: str, drive: dict) -> dict:
                    f"chưa lái tới màn cần xem {element['name']} "
                    f"(đang ở {assert_ads.where(drive) or 'màn mở đầu'})", "")
     hit = ui_names.seen_in(element, [s.get("dump", "") for s in drive["steps"]])
-    want_absent = bool(assert_ads.NEGATIVE_RE.search(text) or NOT_SHOW_RE.search(text))
+    want_absent = bool(assert_ads.NEGATIVE_RE.search(text) or NOT_SHOW_RE.search(text)
+                       or AN_DI_RE.search(text))
     if want_absent:
         if hit:
             return out(FAIL, f"vẫn thấy {element['name']} trên màn ({hit})", hit)
