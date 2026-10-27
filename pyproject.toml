@@ -20,9 +20,12 @@ rcr-check = "rcr.cli_check:main"
 rcr-artifact = "rcr.cli_artifact:main"
 rcr-notify = "rcr.discord_notify:main"
 rcr-sdk-check = "rcr.cli_sdk_check:main"
+rcr-cai-build = "rcr.cli_cai_build:main"
+rcr-bot = "rcr.discord_bot:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.27"]
+bot = ["discord.py>=2.4,<3"]
 
 [build-system]
 requires = ["setuptools>=68"]
