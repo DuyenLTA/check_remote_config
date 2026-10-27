@@ -6,7 +6,9 @@ con lai: release note co chu "debug") roi chay `/rc-check` bang Claude headless 
 ket qua vao tin do. Khong kiem App Tester truoc (user chot 27/10/2026): chua co ban thi bao
 loi kem nut Thu lai.
 
-Cau hinh (bien moi truong, doc ca bien User cua Windows dat sau khi mo terminal):
+Cau hinh - chay duoc ca Windows lan Ubuntu. Doc lan luot: bien moi truong cua process,
+bien User cua Windows (registry), file `~/.config/rcr/bot.env` (dong KEY=VALUE; systemd
+tren Ubuntu cung doc file nay, khong doc ~/.bashrc):
   DISCORD_BOT_TOKEN        token bot (bi mat, khong in, khong ghi repo)
   DISCORD_BUILD_CHANNEL_ID kenh dev bao build
   DISCORD_QA_CHANNEL_ID    kenh bot hoi duyet + bao ket qua
@@ -33,8 +35,26 @@ OUT = REPO / "out"
 log = logging.getLogger("rcr-bot")
 
 
-def env(ten: str) -> str:
-    """Bien moi truong; tren Windows doc them bien User trong registry (setx sau khi mo shell)."""
+FILE_CAU_HINH = Path.home() / ".config" / "rcr" / "bot.env"
+
+
+def _doc_file_env(path: Path) -> dict[str, str]:
+    """`KEY=VALUE` moi dong, bo dong trong / `#`, bo nhay boc ngoai. File thieu -> {}."""
+    try:
+        dong = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    ra = {}
+    for d in dong:
+        d = d.strip()
+        if d and not d.startswith("#") and "=" in d:
+            k, v = d.split("=", 1)
+            ra[k.removeprefix("export ").strip()] = v.strip().strip("'\"")
+    return ra
+
+
+def env(ten: str, file_cau_hinh: Path = FILE_CAU_HINH) -> str:
+    """Bien moi truong -> bien User cua Windows (setx sau khi mo shell) -> ~/.config/rcr/bot.env."""
     gt = os.environ.get(ten, "")
     if not gt and os.name == "nt":
         import winreg
@@ -43,6 +63,8 @@ def env(ten: str) -> str:
                 gt = str(winreg.QueryValueEx(k, ten)[0])
         except OSError:
             pass
+    if not gt:
+        gt = _doc_file_env(file_cau_hinh).get(ten, "")
     return gt.strip()
 
 

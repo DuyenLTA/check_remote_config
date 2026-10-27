@@ -378,6 +378,33 @@ stderr, không đổi kết quả hay exit code của lượt chạy.
 Gửi tay một tin (slash command dùng cho các điểm dừng agent tự xử lý):
 `rcr-notify --kind stop --title "..." --line "..." [--action "..."] [--link URL]`.
 
+## Bot build-watch (`rcr-bot`) — Windows và Ubuntu
+
+Dev đăng tin `Bản build <MÃ> v<x.y.z> (<code>) …` (hoặc QA chuyển tiếp tin đó) → bot hỏi ở kênh QA kèm
+nút **Check** → người được duyệt bấm → bot tải đúng bản từ App Tester (tin ghi next-gen: bản release, còn
+lại: release có note `debug`) → chạy `/rc-check` bằng Claude headless → trả kết quả + link report vào tin.
+Cắm nhiều máy thì mỗi máy chạy một build, song song.
+
+1. Cài thêm: `<bin>/python -m pip install -e ".[dev,bot]"`.
+2. Tạo bot ở Discord Developer Portal, bật **Message Content Intent**, mời vào server có kênh build + kênh QA.
+3. Cấu hình — **không ghi vào repo (repo public)**. Một trong hai:
+   - file `~/.config/rcr/bot.env` (dùng được cả hai hệ điều hành; Ubuntu bắt buộc dùng file này):
+     ```
+     DISCORD_BOT_TOKEN=...
+     DISCORD_BUILD_CHANNEL_ID=...
+     DISCORD_QA_CHANNEL_ID=...
+     DISCORD_DUYET_USER_IDS=<id người được bấm, phẩy ngăn cách>
+     DISCORD_QA_ROLE_ID=<tuỳ chọn>
+     ```
+   - Windows: biến User (`[Environment]::SetEnvironmentVariable('DISCORD_BOT_TOKEN','...','User')`).
+4. Mỗi máy điện thoại: App Tester đã đăng nhập tài khoản tester, USB debugging, màn hình không khoá.
+5. Chạy thử: `<bin>/rcr-bot`. Tự bật khi đăng nhập:
+   - Ubuntu: `bash deploy/cai-bot-linux.sh` (systemd user service, log `journalctl --user -u rcr-bot -f`)
+   - Windows: `powershell -ExecutionPolicy Bypass -File deploy\cai-bot-windows.ps1` (Task Scheduler, log `out/bot-run.log`)
+
+Lệnh tay: `rcr-cai-build --package <pkg> --version "4.3.0 (40)" --loai debug|release [--serial S]` (cài đúng
+bản từ App Tester), thêm `--chi-kiem` để chỉ xem App Tester đang có những bản nào.
+
 ## Test
 
 ```bash
