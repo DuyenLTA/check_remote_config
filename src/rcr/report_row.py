@@ -97,6 +97,7 @@ def build(rec: dict) -> dict:
         "thieu": rec.get("precondition_thieu") or [],
         "ep": rec.get("ep_ad_fail", ""),
         "lech": rec.get("tc_lech") or [],
+        "tuban": rec.get("ad_click_tu_ban", 0),
         "ads": rec.get("ads") or [],
         "steps": rec.get("steps") or [],
     }

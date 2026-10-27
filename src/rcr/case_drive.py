@@ -13,7 +13,8 @@ khong the bam nham vao quang cao, va dung cai dang duoc test (icon SWIPE thay
 cho vung ad) lai nam o man co quang cao.
 
 HAI CHO TU CHOI THAO TAC, co y:
-  - quang cao dang che man hinh -> khong tu tim nut X. Nut dong quang cao nho,
+  - quang cao dang che man hinh -> khong tu tim nut X giua cac buoc (chi sau buoc
+    cuoi moi dong, va chi bam dung nut dong cua ad - `fo_flow.dong_ad_dang_che`). Nut dong quang cao nho,
     lech vai pixel la bam vao chinh quang cao (mo trinh duyet, co khi mua hang).
   - man hinh khong phai cua app dich (app khac bung len) -> dung, bao nguoi.
 
@@ -63,6 +64,8 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
 
 # Nhin tiep bay nhieu giay sau cu bam X tool tu lam: du thay trang roi di + man ke.
 SAU_TU_BAM_X = 6.0
+# Cho nut dong cua inter con che sau buoc cuoi (nut bam duoc sau ~5s, nhu luat AdActivity).
+CHO_NUT_DONG_AD = 15.0
 
 
 async def drive(client, serial: str, package: str, steps, log_fn=_noop,
@@ -233,6 +236,12 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
     ra = {"steps": done, "status": "DONE", "stopped_at": 0,
           "blocked_steps": blocked_steps, "final": cuoi, "khung": ctx["khung"],
                     "thao_tac": ctx["thao_tac"]}
+    # Anh cuoi da chup dung man case quan sat; inter con che thi dong ngay,
+    # de no nam do toi luc force-stop la co ad_click (do 2026-10-24).
+    dong = await fo_flow.dong_ad_dang_che(client, serial, CHO_NUT_DONG_AD)
+    if dong:
+        ra["dong_ad"] = dong
+        log_fn(f"    {dong}")
     if thu_vuot:
         ra["thu_vuot"] = await drive_probes._thu_vuot(client, serial, package, cuoi, len(done) + 1)
         done.append(ra["thu_vuot"]["anh"])

@@ -57,6 +57,28 @@ def rules() -> dict:
     return yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}
 
 
+async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
+    """Dong ad toan man con che sau case chi quan sat -> mo ta da bam, "" neu khong can/khong thay nut.
+
+    Case chi co buoc quan sat khong qua `walk_to` nen inter cu nam do toi luc
+    force-stop; trong luc tool doc log, GMA ghi 2 `ad_click` (do 2026-10-24,
+    Lingix 6.4.0#16). Cung luat voi AdActivity cua walk_to: chi bam DUNG nut
+    dong cua ad, khong BACK, khong bam mu - chua thay nut thi cho, het gio thi thoi.
+    """
+    het = asyncio.get_running_loop().time() + cho
+    while True:
+        _pkg, activity = await device_app.focus(client, serial)
+        if "AdActivity" not in activity:
+            return ""
+        node = fo_steps.find_close_ad(ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial))))
+        if node:
+            await _tap(client, serial, node)
+            return f"dong quang cao con che man ({node.label})"
+        if asyncio.get_running_loop().time() >= het:
+            return ""
+        await asyncio.sleep(POLL_SECONDS)
+
+
 def rule_for(activity: str, ruleset: list[dict]) -> dict | None:
     """Luat DAU TIEN co `match` nam trong ten activity."""
     return next((r for r in ruleset if r["match"] in activity), None)

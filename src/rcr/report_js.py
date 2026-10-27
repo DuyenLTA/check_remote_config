@@ -123,6 +123,8 @@ function row(d) {
         esc(d.thieu.join("; ")) + ` — case chưa chạy đúng nhánh TC mô tả.</div>` : ""}
       ${d.lech && d.lech.length ? `<div class="full fixnote"><b>TC lệch giá trị server:</b> ` +
         esc(d.lech.join("; ")) + `</div>` : ""}
+      ${d.tuban ? `<div class="full fixnote"><b>Ad tự click:</b> log có ${d.tuban} ad_click khi tool ` +
+        `không thao tác gì vào máy (không có lệnh input nào trong 5s trước đó) — báo dev.</div>` : ""}
       <div class="full"><h4>Precondition (TC)</h4><div class="pre">${esc(d.pre)}</div></div>
       ${steps(d)}${adsTable(d)}${shots(d)}
     </div>

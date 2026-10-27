@@ -10,7 +10,9 @@ Diem phai gac:
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
+import pytest
 from conftest import PKG, FakeAdb
 from test_ui_dump import DUMP_XML
 
@@ -19,13 +21,20 @@ from rcr import case_drive, fo_flow
 APP_XML = DUMP_XML.replace("com.ai.app", PKG)
 COMPONENT = f"{PKG}/.MainActivity"
 AD_COMPONENT = f"{PKG}/com.google.android.gms.ads.AdActivity"
+INTER_XML = (Path(__file__).parent / "fixtures" / "uidump_inter_dismiss_button.xml").read_text("utf-8")
 
 
-def fake(activity=COMPONENT):
+@pytest.fixture(autouse=True)
+def khong_cho_nut_dong_ad(monkeypatch):
+    """Dump gia khong co nut dong ad -> dung cho 15s moi test."""
+    monkeypatch.setattr(case_drive, "CHO_NUT_DONG_AD", 0)
+
+
+def fake(activity=COMPONENT, xml=APP_XML):
     return FakeAdb(fails={
         "dumpsys window": (f"  mCurrentFocus=Window{{4a2 u0 {activity}}}\n", "", 0),
         "uiautomator dump": ("UI hierchary dumped to: /data/local/tmp/rcr_uidump.xml\n", "", 0),
-        "rcr_uidump.xml": (APP_XML, "", 0),
+        "rcr_uidump.xml": (xml, "", 0),
     })
 
 
@@ -77,6 +86,24 @@ def test_quang_cao_che_man_hinh_van_cho_buoc_QUAN_SAT_di_tiep():
     assert out["blocked_steps"] == [1, 2]
     # danh dau de phase 5 biet dump nay khong phai UI app
     assert all("screen_blocked" in s for s in out["steps"][:-1])
+    assert not adb.cmds_with("input tap")
+
+
+def test_inter_con_che_sau_buoc_cuoi_thi_dong_bang_nut_dong_cua_ad():
+    """Case chi quan sat de inter nam do toi force-stop -> 2 ad_click (Lingix 6.4.0#16)."""
+    adb = fake(AD_COMPONENT, INTER_XML)
+    out = drive(adb, ["Mở app (old user)", "Chờ Splash", "Kiểm tra logcat"])
+    assert out["status"] == "DONE"
+    # bam dung chu "Đóng" trong dismiss-button (162,2022-285,2121), khong bam "More"
+    assert adb.cmds_with("input tap 223 2071")
+    assert len(adb.cmds_with("input tap")) == 1
+    assert "dong quang cao" in out["dong_ad"]
+
+
+def test_khong_thay_nut_dong_ad_thi_khong_bam_mu():
+    adb = fake(AD_COMPONENT)
+    out = drive(adb, ["Chờ Splash"])
+    assert "dong_ad" not in out
     assert not adb.cmds_with("input tap")
 
 

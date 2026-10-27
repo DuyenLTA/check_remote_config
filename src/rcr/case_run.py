@@ -168,7 +168,11 @@ async def apply_case(
         out["precondition_thieu"] = [f"ad LFO2 ({', '.join(da_show)}) đã show ngay ở LFO2 — chưa tạo "
                                      "được điều kiện 'chưa kịp show ở LFO2'"]
         log_fn("    ad LFO2 da show o LFO2 -> chua tao duoc precondition, BLOCKED")
-    out["ad_click"] = fa_log.ad_clicks(out["events"])
+    out["ad_click"], out["ad_click_tu_ban"] = fa_log.chia_click(
+        out["events"], await fa_log.doc_input(client, baseline.serial))
+    if out["ad_click_tu_ban"]:
+        log_fn(f"    {out['ad_click_tu_ban']} ad_click khong co thao tac nao cua tool truoc do "
+               "-> app/ad tu ban, ghi lai de bao dev, khong dung luot")
     if out["ad_click"]:
         # Click vao ad la app roi luong (mo browser/store) va la traffic khong hop
         # le tren unit that: ket qua luot nay khong dung duoc, run_batch dung ca luot.
@@ -273,7 +277,8 @@ async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, got
         log_fn("  da tra config ve nguyen trang")
     # Verdict cua case = luot xau nhat (cung thang bac voi tung dong Expected).
     return {"runs": done, "verdict": assert_check.worst(r["verdict"] for r in done),
-            "ad_click": sum(r.get("ad_click", 0) for r in done)}
+            "ad_click": sum(r.get("ad_click", 0) for r in done),
+            "ad_click_tu_ban": sum(r.get("ad_click_tu_ban", 0) for r in done)}
 
 
 async def restore_saved(client, package: str, serial: str, out_dir) -> dict:

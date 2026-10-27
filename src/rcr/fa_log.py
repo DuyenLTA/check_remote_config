@@ -26,6 +26,12 @@ _SVC = re.compile(
 _FE = re.compile(r"Logging event \(FE\): (?P<name>[^,]+), Bundle\[\{(?P<body>.*)\}\]\s*$")
 _SPLIT = re.compile(r",\s+(?=[A-Za-z_][\w.]*(?:\([^)]*\))?=)")
 _SHORT = re.compile(r"\(.*\)$")
+_EPOCH = re.compile(r"^\s*(\d{9,}\.\d+)\s")
+# adbd in moi lenh adb shell kem gio may: dong nay la lenh tool GUI THAO TAC vao may.
+_ADB_INPUT = re.compile(r"adbd service requested '.*raw:input (tap|swipe|keyevent|text)\b")
+# ad_click nam trong bay nhieu giay sau mot thao tac cua tool thi tinh la do tool.
+# Do 2026-10-24: Piclux BACK tren inter -> click sau 2,2s.
+CUA_SO_CLICK = 5.0
 
 
 async def bat(client, serial: str) -> None:
@@ -38,8 +44,22 @@ async def bat(client, serial: str) -> None:
 async def doc(client, serial: str) -> list[dict]:
     """Cac event da ban ra trong buffer hien tai."""
     guard(serial)
-    out, _, _ = await client.shell(serial, "logcat", "-d", "-s", TAG, "FA:V")
+    out, _, _ = await client.shell(serial, "logcat", "-d", "-v", "epoch", "-s", TAG, "FA:V")
     return parse(out)
+
+
+async def doc_input(client, serial: str) -> list[float] | None:
+    """Gio may cua tung lenh `input` tool gui qua adb, None neu may khong in log adbd."""
+    guard(serial)
+    out, _, _ = await client.shell(serial, "logcat", "-d", "-v", "epoch", "-s", "adbd")
+    return parse_input(out)
+
+
+def parse_input(text: str) -> list[float] | None:
+    dong = [d for d in (text or "").splitlines() if "adbd service requested" in d]
+    if not dong:
+        return None   # khong biet tool da thao tac luc nao -> khong duoc tha click nao
+    return [float(m.group(1)) for d in dong if _ADB_INPUT.search(d) and (m := _EPOCH.match(d))]
 
 
 def parse(text: str) -> list[dict]:
@@ -52,8 +72,10 @@ def parse(text: str) -> list[dict]:
             m = _FE.search(dong)
         if not m:
             continue
-        ra.append({"name": m.group("name").strip(), "origin": origin,
-                   "params": _params(m.group("body"))})
+        e = {"name": m.group("name").strip(), "origin": origin, "params": _params(m.group("body"))}
+        if t := _EPOCH.match(dong):
+            e["t"] = float(t.group(1))
+        ra.append(e)
     # Cung event in o ca hai tag -> bo ban trung lien tiep.
     gon: list[dict] = []
     for e in ra:
@@ -70,6 +92,26 @@ def ad_clicks(events: list[dict]) -> int:
     log co 2 `ad_click` - tool luc do khong doc event nay nen khong ai biet.
     """
     return sum(1 for e in events if e["name"].split("(", 1)[0] == "ad_click")
+
+
+def chia_click(events: list[dict], inputs: list[float] | None) -> tuple[int, int]:
+    """(ad_click do tool, ad_click app/ad tu ban khi tool khong thao tac gi).
+
+    Do 2026-10-24 (Lingix 1.5.0, inter 102 …443): 3/3 lan GMA ghi 2 `ad_click`
+    ~10,2s sau khi ad show, ke ca khi khong gui lenh nao vao may. Click do khong
+    phai tool bam nen khong dung luot, chi ghi lai de bao dev. Khong co gio (log
+    khong -v epoch, may khong in adbd) thi tinh het la do tool - an toan.
+    """
+    tool = tu_ban = 0
+    for e in events:
+        if e["name"].split("(", 1)[0] != "ad_click":
+            continue
+        t = e.get("t")
+        if inputs is None or t is None or any(0 <= t - x <= CUA_SO_CLICK for x in inputs):
+            tool += 1
+        else:
+            tu_ban += 1
+    return tool, tu_ban
 
 
 def _params(body: str) -> dict:
