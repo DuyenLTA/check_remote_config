@@ -49,6 +49,10 @@ song song trên 2 máy không được đụng máy của nhau.
 Home → mở lại ×2, lượt mất mạng (30s rồi bật mạng đi tiếp), lượt mạng chậm qua proxy (luôn gỡ proxy khi xong). Chấm bằng
 luật cố định, ra `ket-qua.json` + `report.html`. stdout: `{thu_muc, report, dem}`.
 
+10 lần mở lạnh **không có event quảng cáo nào** (Remote Config đang tắt ads) → tool tự **bỏ lượt FO** (đỡ ~1,7 phút),
+`bang-chung.json` có `fo_bo_qua`; các dòng dựa vào FO ra `DO_TAY` kèm lý do đó. Báo user: cần PO bật ads trên RC hoặc
+bản debug (để tool bật ads) rồi chạy lại — không phải bug dev.
+
 - Dòng `KHOP` / `SAI` / `KHONG_AP_DUNG` do code chấm: **không sửa tay, không chấm lại theo cảm nhận**. Nghi luật sai →
   sửa luật trong `src/rcr/sdk_nextgen_cham_*.py` + thêm test bằng chính log đó (mục 5e của `rc-check.md`), rồi
   `rcr-sdk-check --cham-lai <thu_muc>` — cùng log thì cùng kết quả; dòng đã đo tay được giữ nguyên.

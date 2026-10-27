@@ -254,3 +254,28 @@ def test_lai_fo_loi_thi_sai_thanh_do_tay(tmp_path):
     bc["fo_loi"] = "drive-fo-to-home không tới Home"
     (d / "bang-chung.json").write_text(json.dumps(bc), "utf-8")
     assert all(r["ket"] != "SAI" for r in sdk_nextgen_cham.cham_thu_muc(d)["ket_qua"])
+
+
+def test_dem_event_quang_cao_trong_log_mo_lanh(tmp_path):
+    """RC tat ads (AIP920 1.6.0, 28/10/2026): 10 lan mo lanh khong co event quang cao -> bo luot FO."""
+    from rcr import sdk_nextgen_thu_log as T
+    co = tmp_path / "co.txt"
+    co.write_text("V FA-SVC  : Logging event: origin=app,name=track_ad_request,params=Bundle[{adunitid=1/2}]\n"
+                  "V FA-SVC  : Logging event: origin=app,name=ad_load,params=Bundle[{ad_unit_id=1/2}]\n"
+                  "V FA-SVC  : Logging event: origin=app,name=adjust_id,params=Bundle[{x=1}]\n", "utf-8")
+    khong = tmp_path / "khong.txt"
+    khong.write_text("V FA-SVC  : Logging event: origin=app,name=tracking_install_adjust,params=Bundle[{x=1}]\n", "utf-8")
+    assert T.dem_ads(co) == 2 and T.dem_ads(khong) == 0
+    assert T.dem_ads(tmp_path / "khong-co.txt") == -1          # khong doc duoc -> khong bo FO
+
+
+def test_bo_luot_fo_thi_dong_dua_vao_fo_thanh_do_tay():
+    from rcr.sdk_nextgen_ket import DO_TAY, KHONG_AP_DUNG, KHOP, SAI
+    ket = [{"ma": "EV-07", "ket": KHOP, "ly_do": "khong ban trung"},     # Khop vi log FO rong -> khong tin
+           {"ma": "HT-03", "ket": SAI, "ly_do": "thieu event"},
+           {"ma": "EV-24", "ket": KHOP, "ly_do": "tu luot mat mang"},
+           {"ma": "1.1", "ket": KHOP, "ly_do": "tu log mo lanh"},
+           {"ma": "EV-12", "ket": KHONG_AP_DUNG, "ly_do": "app khong co"}]
+    ra = {r["ma"]: r for r in sdk_nextgen_cham.bo_qua_fo(ket, "bỏ lượt FO")}
+    assert ra["EV-07"]["ket"] == DO_TAY and ra["HT-03"]["ket"] == DO_TAY and "bỏ lượt FO" in ra["HT-03"]["ly_do"]
+    assert ra["EV-24"]["ket"] == KHOP and ra["1.1"]["ket"] == KHOP and ra["EV-12"]["ket"] == KHONG_AP_DUNG

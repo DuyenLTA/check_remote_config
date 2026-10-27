@@ -8,6 +8,8 @@ Luot:
   khoi_dong  10 lan pm clear + mo lanh, cho 10 s                         (1.1, 1.3, 1.5, MED-01)
   mo_lai     10 lan force-stop + am start -W                             (1.4)
   fo         user moi di het FO toi Home, roi Home -> mo lai x2          (muc 3, 1.7, EV-25, HT-04, HV-02)
+             BO QUA khi 10 lan mo lanh khong co event quang cao nao (RC tat ads): moi dong dua vao
+             FO deu ra Do tay, lai FO chi ton ~1,7 phut (AIP920 1.6.0, 28/10/2026)
   offline    tat wifi + data, mo app, cho 30 s; bat mang, di tiep FO     (EV-04/21/24, KT-01)
   cham       proxy lam cham moi host, do luc roi splash                  (KT-02)
 Lai FO dung script `sdk-check/scripts/*.sh` (cung cach skill goc).
@@ -271,6 +273,16 @@ async def mang_cham(client, serial: str, package: str, out: Path, log_fn) -> dic
     return ra
 
 
+def dem_ads(log: Path) -> int:
+    """So event quang cao app ban ra trong log (do 2026-10-28: app co ads 166, AIP920 RC tat ads 0)."""
+    from .sdk_nextgen_events import AD_EVENTS
+    try:
+        text = log.read_text("utf-8", "replace")
+    except OSError:
+        return -1                         # khong doc duoc -> khong ket luan "khong co ads"
+    return sum(1 for e in fa_log.parse(text) if e["name"].split("(", 1)[0] in AD_EVENTS)
+
+
 async def thu(client, serial: str, package: str, out: Path, muc: set[str], log_fn) -> dict:
     """Chay cac luot can cho `muc`, ghi `bang-chung.json`. Tra bang chung (khong kem noi dung log)."""
     out.mkdir(parents=True, exist_ok=True)
@@ -283,12 +295,19 @@ async def thu(client, serial: str, package: str, out: Path, muc: set[str], log_f
         bc.update(await thu_apk(client, serial, package, out))
         log_fn("Lượt mở lạnh...")
         await khoi_dong(client, serial, package, out, log_fn)
+        bc["ads_khoi_dong"] = dem_ads(out / "log-khoi-dong.txt")
     if "1" in muc:
         log_fn("Lượt mở lại...")
         bc["mo_lai_ms"] = await mo_lai(client, serial, package, out, log_fn)
-    log_fn("Lượt FO + quay lại app...")
-    nhat_ky, bc["fo_loi"] = await fo(client, serial, package, out, log_fn)
-    bc["nhat_ky_fo"] = nhat_ky[-4000:]
+    if "ads_khoi_dong" in bc and bc["ads_khoi_dong"] == 0:
+        bc["fo_bo_qua"] = ("bỏ lượt FO: 10 lần mở lạnh không có event quảng cáo nào "
+                           "(Remote Config đang tắt ads?)")
+        bc["fo_loi"], bc["nhat_ky_fo"] = "", ""
+        log_fn(f"  {bc['fo_bo_qua']}")
+    else:
+        log_fn("Lượt FO + quay lại app...")
+        nhat_ky, bc["fo_loi"] = await fo(client, serial, package, out, log_fn)
+        bc["nhat_ky_fo"] = nhat_ky[-4000:]
     if muc & {"3", "4"}:
         bc.update(await offline(client, serial, package, out, log_fn))
     if "4" in muc:

@@ -60,6 +60,8 @@ def cham_thu_muc(d: Path) -> dict:
     if "4" in bc["muc"]:
         ket += sdk_nextgen_cham_muc4.tat_ca(bc, ev, {"fo": fo, "khoi_dong": bc["log_khoi_dong"], "offline_mat": off_mat or "",
                                                      "offline_sau": off_sau, "cham": _doc(d, "log-cham.txt")}, pkg)
+    if bc.get("fo_bo_qua"):
+        ket = bo_qua_fo(ket, bc["fo_bo_qua"])
     if bc.get("fo_loi"):
         # Lai FO hong giua chung: log thieu doan sau -> "thieu event" co the chi la chua toi, khong ket luan Sai.
         ket = [{**r, "ket": DO_TAY, "ly_do": f"Lái FO lỗi ({bc['fo_loi']}) — code ra Sai trên log thiếu: {r['ly_do']}"}
@@ -67,6 +69,19 @@ def cham_thu_muc(d: Path) -> dict:
     meta = {k: bc.get(k) for k in ("package", "serial", "muc", "debuggable", "mo_lai_ms", "ad_click", "app_label", "sdk")}
     meta["cham_luc"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     return {"meta": meta, "ket_qua": ket}
+
+
+# Dong chi doc log luot mat mang -> van cham duoc khi bo luot FO.
+_TU_LOG_OFFLINE = {"EV-04", "EV-21", "EV-24"}
+
+
+def bo_qua_fo(ket: list[dict], ly_do: str) -> list[dict]:
+    """Bo luot FO -> log FO rong: dong dua vao FO (EV/HT/HV/1.7/1.8/MED-02) khong duoc ra Khop/Sai
+    tren log rong (vd "khong ban trung" Khop vi khong co gi) -> Do tay kem ly do."""
+    def dua_vao_fo(ma: str) -> bool:
+        return ma not in _TU_LOG_OFFLINE and (ma.startswith(("EV", "HT", "HV")) or ma in ("1.7", "1.8", "MED-02"))
+    return [{**r, "ket": DO_TAY, "ly_do": f"Không đo: {ly_do}."} if r["ket"] in KET_TAY and dua_vao_fo(r["ma"]) else r
+            for r in ket]
 
 
 def giu_cham_tay(moi: dict, cu: dict | None) -> dict:
