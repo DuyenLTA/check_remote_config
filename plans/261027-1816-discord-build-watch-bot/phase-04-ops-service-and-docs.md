@@ -13,6 +13,7 @@ dependencies: [3]
 Bot phải sống khi đóng terminal / khởi động lại máy, và người khác cài lại được từ README.
 
 ## Requirements
+- **Máy thật là Windows 11** (đo 27/10/2026) → systemd dưới đây không dùng được; thay bằng Task Scheduler "At log on" chạy `.venv\Scripts\rcr-bot.exe`, khởi động lại khi lỗi. Chốt với user trước khi làm
 - File mẫu `deploy/rcr-bot.service` (systemd **user** service, `Restart=on-failure`, đọc env từ `~/.config/rcr/bot.env` quyền 600)
   — user tự `systemctl --user enable --now` (không tự bật thay user)
 - Hướng dẫn tạo bot từng bước: Developer Portal → New Application → Bot → bật **Message Content Intent** →

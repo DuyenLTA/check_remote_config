@@ -1,6 +1,6 @@
 ---
 title: "Discord build-watch bot: dev báo build → QA duyệt → cài từ App Tester → tự /rc-check"
-status: pending
+status: in-progress
 created: 2026-10-27
 blockedBy: []
 blocks: []
@@ -22,10 +22,10 @@ gọi `claude -p "/rc-check <pkg>"` → đăng kết quả + link artifact vào 
 ## Phases
 | # | Phase | Status | Effort |
 |---|-------|--------|--------|
-| 0 | [Spike rủi ro: claude -p publish artifact, tải + cài qua App Tester](phase-00-risk-spikes.md) | pending | 1h |
-| 1 | [Lấy build từ App Tester + cài (`rcr-cai-build`)](phase-01-app-tester-download-and-install.md) | pending | 5h |
-| 2 | [Bot Discord: đọc kênh, nút duyệt theo role, hàng đợi](phase-02-discord-bot-watch-and-approve.md) | pending | 4h |
-| 3 | [Chạy Claude headless + đăng kết quả](phase-03-headless-claude-run-and-report.md) | pending | 3h |
+| 0 | [Spike rủi ro: claude -p publish artifact, tải + cài qua App Tester](phase-00-risk-spikes.md) | in-progress (headless OK, tải+cài OK; chưa có bản debug để thử đè release) | 1h |
+| 1 | [Lấy build từ App Tester + cài (`rcr-cai-build`)](phase-01-app-tester-download-and-install.md) | done (`rcr-cai-build` chạy trên máy thật; tải tự động chạy thật ở build dev kế tiếp) | 5h |
+| 2 | [Bot Discord: đọc kênh, nút duyệt theo role, hàng đợi](phase-02-discord-bot-watch-and-approve.md) | in-progress (`bot_hang_doi` xong, bot chờ token) | 4h |
+| 3 | [Chạy Claude headless + đăng kết quả](phase-03-headless-claude-run-and-report.md) | in-progress (`bot_chay_claude` xong, đăng kết quả chờ bot) | 3h |
 | 4 | [Vận hành: service, hướng dẫn tạo bot, README](phase-04-ops-service-and-docs.md) | pending | 2h |
 
 ## Phụ thuộc chính
@@ -50,6 +50,13 @@ gọi `claude -p "/rc-check <pkg>"` → đăng kết quả + link artifact vào 
 - **Next-Gen = tutorial 3.7.0** (user chốt 27/10/2026); 3.6.1 đã *revert next-gen* → bộ TC. Đã sửa `sdk_probe.NEXTGEN_SDK`
   sang 3.7.0 + docs + test (chưa commit). Bộ TC sắp có tab 3.6.1 / mới hơn — tool tự lấy khi tab có
 
+## Đo trên máy (27/10/2026 tối)
+- Luồng cài: Download (~2s) → hộp `Update this app?` (packageinstaller `button1`) → Play Protect `App scan recommended` → **Scan app** (~20s) → `This app looks safe` → **Install**
+- App chưa test trên máy → màn **consent** của App Tester
+- User chốt: bot **được bấm Scan app** (gửi APK lên Google quét) và **tự tick consent**
+- Cùng version có nhiều release (vd 1.3.0 (13) ×2) → phân biệt bằng note; >1 bản cùng loại → dừng
+
 ## Câu hỏi còn mở
+0. Máy chạy bot là **Windows** → phase 4 đổi systemd sang Task Scheduler (hoặc NSSM); token đặt ở biến môi trường user Windows thay vì `~/.bashrc`?
 1. Tin dev có luôn đúng mẫu `Bản build <MÃ>---<Tên> v<x.y.z> (<code>)` không? Lệch mẫu → bot hỏi QA thay vì đoán
 
