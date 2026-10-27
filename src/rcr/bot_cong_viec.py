@@ -102,3 +102,37 @@ def tin_ket_qua(c: dict, kq: dict, dinh_kem: Path | None = None) -> str:
     if kq.get("phut") is not None:
         dong.append(f"{kq['phut']} phút · ${kq.get('chi_phi') or 0:.2f}")
     return "\n".join(d for d in dong if d)
+
+
+def lua_chon_bug(bugs: list[dict]) -> list[tuple[str, str, str]]:
+    """(value, label, description) cho menu chon cua Discord - label/description toi da 100 ky tu."""
+    return [(str(i), f"{b['case']} · {b['tieu_de']}"[:100], f"{b['muc_do']} · {b['thuc_te']}"[:100])
+            for i, b in enumerate(bugs)]
+
+
+def tin_bug(bugs: list[dict], chon: list[int] | None = None) -> str:
+    """Tin hoi QA review: liet ke tung bug kem Expected / thuc te de quyet dinh ngay tren Discord."""
+    dong = [f"🐞 **{len(bugs)} FAIL đã rà lại** — tick bug thật trong menu rồi bấm **Log Jira**:"]
+    for i, b in enumerate(bugs):
+        dau = "☑" if chon and i in chon else "☐"
+        dong.append(f"{dau} **{b['case']}** {b['tieu_de']}\n  Expected: {b['expected'][:150]}\n"
+                    f"  Thực tế: {b['thuc_te'][:150]}")
+    # Tin Discord toi da 2000 ky tu; danh sach dai thi cat, chi tiet nam o report.
+    t = "\n".join(dong)
+    return t if len(t) <= 1900 else t[:1880] + "\n… (xem report)"
+
+
+def tin_jira(kq: dict, so_bug: int) -> str:
+    so = len([i for i in kq.get("issues") or [] if i.get("key")])
+    dau = "✅" if so == so_bug and not kq.get("loi") else "⚠️"
+    dong = [f"{dau} Đã log {so}/{so_bug} bug lên Jira"]
+    for i in kq.get("issues") or []:
+        ghi = f" ({i['ghi_chu']})" if i.get("ghi_chu") else ""
+        dong.append(f"• {i['case']} → {i['key'] or 'không tạo'} {i['link']}{ghi}".rstrip())
+    if kq.get("luu_y"):
+        dong.append(f"Lưu ý: {kq['luu_y'][:300]}")
+    if kq.get("loi"):
+        dong.append(f"⛔ Lỗi: {kq['loi'][:300]}")
+    if kq.get("chi_phi") is not None:
+        dong.append(f"Chi phí: ${kq['chi_phi'] or 0:.2f}")
+    return "\n".join(dong)

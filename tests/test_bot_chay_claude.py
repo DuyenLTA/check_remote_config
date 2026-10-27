@@ -30,7 +30,26 @@ def test_doc_dong_ket_qua_cuoi():
     out = c.doc_ket_qua(json.dumps({"result": text, "is_error": False,
                                     "total_cost_usd": 3.2, "duration_ms": 1_800_000}))
     assert out == {"trang_thai": "XONG", "link": "https://claude.ai/artifact/x",
-                   "tom_tat": "12 PASS / 1 FAIL", "chi_phi": 3.2, "phut": 30.0}
+                   "tom_tat": "12 PASS / 1 FAIL", "bugs": [], "chi_phi": 3.2, "phut": 30.0}
+
+
+def test_ket_qua_mang_danh_sach_bug_de_qa_tick():
+    bug = {"case": "3.5.3#SDK353-OB2-002", "tieu_de": "Chữ đè native 302", "expected": "chữ đọc rõ",
+           "thuc_te": "x" * 5000, "muc_do": "Medium", "la": "bo"}
+    k = {"trang_thai": "XONG", "link": "", "tom_tat": "1 FAIL",
+         "bugs": [bug, {"tieu_de": "thieu case"}, "khong phai dict"] + [bug] * 30}
+    out = c.doc_ket_qua(json.dumps({"result": "KET_QUA: " + json.dumps(k, ensure_ascii=False)}))
+    assert len(out["bugs"]) == c.MAX_BUG                  # menu Discord toi da 25 lua chon
+    b = out["bugs"][0]
+    assert set(b) == set(c.TRUONG_BUG) and b["case"] == "3.5.3#SDK353-OB2-002"
+    assert len(b["thuc_te"]) == c.MAX_TRUONG_BUG and b["buoc"] == ""
+    k["bugs"] = "khong phai list"
+    assert c.doc_ket_qua(json.dumps({"result": "KET_QUA: " + json.dumps(k)}))["bugs"] == []
+
+
+def test_prompt_bot_khong_hoi_khong_tu_log_jira():
+    _, prompt = c.lenh("pkg.a", "S1")
+    assert '"bugs"' in prompt and "KHONG tu log Jira" in prompt and "5d" in prompt
 
 
 def test_thieu_dong_ket_qua_thi_lay_duoi_van_ban():

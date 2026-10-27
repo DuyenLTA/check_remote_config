@@ -30,6 +30,10 @@ KET_QUA_RE = re.compile(r"^KET_QUA:\s*(\{.*\})\s*$", re.M)
 TIMEOUT_BO_TC = 120 * 60
 TIMEOUT_NEXT_GEN = 30 * 60
 DUOI_LOG = 300
+# Menu chon cua Discord toi da 25 lua chon; moi truong cat ngan de tin khong phinh.
+MAX_BUG = 25
+TRUONG_BUG = ("case", "tieu_de", "precondition", "buoc", "expected", "thuc_te", "muc_do")
+MAX_TRUONG_BUG = 1000
 
 PROMPT = (
     "/rc-check {package} --serial {serial}\n\n"
@@ -37,7 +41,13 @@ PROMPT = (
     "(ad_click, preflight LOI, man la) thi dung, khong tu chay tiep. Khong commit/push.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
-    '"tom_tat": "<tieng Viet, toi da 300 ky tu: so PASS/FAIL hoac ly do dung>"}}'
+    '"tom_tat": "<tieng Viet, toi da 300 ky tu: so PASS/FAIL hoac ly do dung>", '
+    '"bugs": [{{"case": "<ma case>", "tieu_de": "<tom tat bug>", "precondition": "<config/user state>", '
+    '"buoc": "<buoc tai hien>", "expected": "<dong Expected>", "thuc_te": "<so do that>", '
+    '"muc_do": "Highest|High|Medium|Low"}}]}}\n'
+    "Moi chu trong `tom_tat` va `bugs` (bot dang len Discord) viet tieng Viet CO DAU day du. "
+    "`bugs` chi gom FAIL da ra lai theo muc 5d (FAIL gia, loi tool thi khong dua vao); khong co thi []. "
+    "KHONG hoi user, KHONG tu log Jira: bot dua danh sach nay len Discord cho QA tick."
 )
 
 
@@ -52,13 +62,13 @@ def lenh(package: str, serial: str) -> tuple[list[str], str]:
 
 
 def doc_ket_qua(stdout: str) -> dict:
-    """Output JSON cua `claude -p` -> {trang_thai, link, tom_tat, chi_phi, phut}."""
+    """Output JSON cua `claude -p` -> {trang_thai, link, tom_tat, bugs, chi_phi, phut}."""
     try:
         d = json.loads(stdout)
     except json.JSONDecodeError:
         return {"trang_thai": "LOI", "link": "", "tom_tat": (stdout or "")[-DUOI_LOG:]}
     text = d.get("result") or ""
-    ra = {"trang_thai": "LOI" if d.get("is_error") else "XONG", "link": "", "tom_tat": text[-DUOI_LOG:]}
+    ra = {"trang_thai": "LOI" if d.get("is_error") else "XONG", "link": "", "tom_tat": text[-DUOI_LOG:], "bugs": []}
     m = None
     for m in KET_QUA_RE.finditer(text):
         pass                                     # lay dong KET_QUA cuoi cung
@@ -66,11 +76,23 @@ def doc_ket_qua(stdout: str) -> dict:
         try:
             k = json.loads(m.group(1))
             ra.update({x: str(k.get(x, ra[x])) for x in ("trang_thai", "link", "tom_tat")})
+            ra["bugs"] = doc_bugs(k.get("bugs"))
         except json.JSONDecodeError:
             pass
     ra["chi_phi"] = d.get("total_cost_usd")
     ra["phut"] = round((d.get("duration_ms") or 0) / 60000, 1)
     return ra
+
+
+def doc_bugs(bugs) -> list[dict]:
+    """Danh sach bug Claude tra ve -> chi giu dict co `case`, moi truong la chuoi da cat ngan."""
+    if not isinstance(bugs, list):
+        return []
+    ra = []
+    for b in bugs:
+        if isinstance(b, dict) and str(b.get("case") or "").strip():
+            ra.append({x: str(b.get(x) or "").strip()[:MAX_TRUONG_BUG] for x in TRUONG_BUG})
+    return ra[:MAX_BUG]
 
 
 def moi_truong() -> dict[str, str]:

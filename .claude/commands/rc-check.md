@@ -668,6 +668,23 @@ tầm (console PO, điều kiện đã thử mà không tạo được) và nói
 **Đưa link artifact ngay trong câu trả lời**, đừng bắt người dùng đi tìm. Report
 local (`<repo>/out/…html`) vẫn mở được bằng nháy đôi nếu publish hỏng.
 
+## 7b. Có FAIL → user review, rồi log Jira
+
+User chốt 28/10/2026: *"auto test xong có bug thì để tôi review lại xem nó có phải bug không,
+sau đó dùng skill log bug để tự log bug lên jira"*.
+
+1. Chỉ đưa vào danh sách những FAIL **đã rà xong theo 5d**. Mỗi bug ghi: mã case, dòng Expected,
+   thực tế đo được (số đo, unit, log), bước tái hiện, ảnh/video của lượt hợp lệ, link report.
+2. **Lượt chạy trong terminal (có người):** hỏi bằng `AskUserQuestion` (multiSelect, mỗi bug một
+   lựa chọn). **Chưa có câu trả lời thì không log**: Jira là chỗ cả team nhìn, log nhầm thì dev mất công.
+   Bug được chọn → gọi skill `anthropic-skills:jira-log-bug` mode TEXT (`bug_ad`), mỗi bug một lần,
+   đủ thông tin ở bước 1 + app, version, SDK FO, máy. Báo lại link từng issue.
+3. **Lượt do bot Discord gọi (headless, không có người):** KHÔNG hỏi, KHÔNG log Jira. Chỉ đưa danh
+   sách bug vào trường `bugs` của dòng `KET_QUA` (mẫu nằm trong prompt của bot). Bot đăng menu tick
+   lên kênh QA; QA bấm **Log Jira** thì bot chạy lượt riêng (`src/rcr/bot_log_jira.py`): project key =
+   mã app trong tin build, reviewer = `DISCORD_JIRA_REVIEWER` trong `bot.env`.
+4. Không có FAIL thì bỏ qua mục này.
+
 **Dừng ở đây. Không `git add`, không `git commit`, không `git push`** khi user chưa bảo.
 Code đã sửa theo mục 5e để nguyên trong working tree, liệt kê trong câu báo; user bảo commit
 thì push lên mọi remote mà máy có quyền ghi (`git remote -v`, bỏ remote có push URL `no_push`);

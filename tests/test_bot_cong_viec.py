@@ -66,3 +66,32 @@ def test_duong_dan_tuong_doi_tinh_tu_repo(tmp_path, monkeypatch):
     f = v.file_report({"link": "out/sdk-x/report.html"}, out)
     assert f == (out / "sdk-x" / "report.html").resolve()
     assert v.file_report({"link": "out/../../bi-mat.html"}, out) is None
+
+
+BUGS = [{"case": f"6.4.0#{i}", "tieu_de": "t" * 200, "precondition": "", "buoc": "", "expected": "e" * 300,
+         "thuc_te": "a" * 300, "muc_do": "High"} for i in range(25)]
+
+
+def test_lua_chon_bug_vua_gioi_han_discord():
+    ds = v.lua_chon_bug(BUGS)
+    assert [gt for gt, _, _ in ds] == [str(i) for i in range(25)]
+    assert all(len(n) <= 100 and len(m) <= 100 for _, n, m in ds) and ds[0][1].startswith("6.4.0#0 · ")
+
+
+def test_tin_bug_danh_dau_bug_da_tick_va_khong_qua_2000_ky_tu():
+    t = v.tin_bug(BUGS[:2], [1])
+    assert "☐ **6.4.0#0**" in t and "☑ **6.4.0#1**" in t and "Log Jira" in t
+    assert len(v.tin_bug(BUGS)) <= 2000
+
+
+def test_tin_jira_liet_ke_issue_va_loi():
+    t = v.tin_jira({"issues": [{"case": "6.4.0#3", "key": "AIP920-7", "link": "https://j/AIP920-7",
+                                "ghi_chu": "tạo mới"}], "loi": "bug 6.4.0#4: thiếu sprint", "chi_phi": 0.5}, 2)
+    assert t.startswith("⚠️ Đã log 1/2 bug lên Jira") and "6.4.0#3 → AIP920-7" in t
+    assert "(tạo mới)" in t and "⛔ Lỗi: bug 6.4.0#4: thiếu sprint" in t and "Chi phí: $0.50" in t
+
+
+def test_tin_jira_lu_y_khong_hien_nhu_loi():
+    t = v.tin_jira({"issues": [{"case": "TEST#1", "key": "AIP920-13", "link": "https://j/AIP920-13",
+                                "ghi_chu": "tạo mới"}], "luu_y": "Board không có sprint active", "loi": ""}, 1)
+    assert t.startswith("✅ Đã log 1/1 bug") and "Lưu ý: Board không có sprint active" in t and "⛔" not in t
