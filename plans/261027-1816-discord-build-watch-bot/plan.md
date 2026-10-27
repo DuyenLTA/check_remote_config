@@ -1,6 +1,6 @@
 ---
 title: "Discord build-watch bot: dev báo build → QA duyệt → cài từ App Tester → tự /rc-check"
-status: in-progress
+status: done
 created: 2026-10-27
 blockedBy: []
 blocks: []
@@ -24,9 +24,9 @@ gọi `claude -p "/rc-check <pkg>"` → đăng kết quả + link artifact vào 
 |---|-------|--------|--------|
 | 0 | [Spike rủi ro: claude -p publish artifact, tải + cài qua App Tester](phase-00-risk-spikes.md) | in-progress (headless OK, tải+cài OK; chưa có bản debug để thử đè release) | 1h |
 | 1 | [Lấy build từ App Tester + cài (`rcr-cai-build`)](phase-01-app-tester-download-and-install.md) | done (`rcr-cai-build` chạy trên máy thật; tải tự động chạy thật ở build dev kế tiếp) | 5h |
-| 2 | [Bot Discord: đọc kênh, nút duyệt theo role, hàng đợi](phase-02-discord-bot-watch-and-approve.md) | in-progress (`bot_hang_doi` xong, bot chờ token) | 4h |
-| 3 | [Chạy Claude headless + đăng kết quả](phase-03-headless-claude-run-and-report.md) | in-progress (`bot_chay_claude` xong, đăng kết quả chờ bot) | 3h |
-| 4 | [Vận hành: service, hướng dẫn tạo bot, README](phase-04-ops-service-and-docs.md) | pending | 2h |
+| 2 | [Bot Discord: đọc kênh, nút duyệt theo role, hàng đợi](phase-02-discord-bot-watch-and-approve.md) | done (bot chạy thật ở `qa-auto`; hỏi ngay không kiểm App Tester trước; đọc tin chuyển tiếp + markdown; nhiều máy song song) | 4h |
+| 3 | [Chạy Claude headless + đăng kết quả](phase-03-headless-claude-run-and-report.md) | done (prompt qua stdin — claude.CMD cắt tham số xuống dòng; trả lời tiếng Việt; chưa chạy trọn 1 lượt /rc-check thật) | 3h |
+| 4 | [Vận hành: service, hướng dẫn tạo bot, README](phase-04-ops-service-and-docs.md) | done (Task Scheduler cài trên máy Windows; script systemd cho Ubuntu chưa chạy thật) | 2h |
 
 ## Phụ thuộc chính
 - `discord.py` (mới, thêm vào extras `bot`), App Tester v0.133 trên máy (đã đăng nhập), `claude` CLI 2.1.311 (có sẵn)
@@ -56,7 +56,18 @@ gọi `claude -p "/rc-check <pkg>"` → đăng kết quả + link artifact vào 
 - User chốt: bot **được bấm Scan app** (gửi APK lên Google quét) và **tự tick consent**
 - Cùng version có nhiều release (vd 1.3.0 (13) ×2) → phân biệt bằng note; >1 bản cùng loại → dừng
 
+## Đổi so với plan ban đầu (user chốt 27/10/2026 tối)
+- **Bỏ bước kiểm App Tester trước** + lịch kiểm lại 10 phút: bot hỏi ngay; bấm Check mới vào App Tester tải đúng bản,
+  chưa có bản → báo lỗi + nút **Thử lại**
+- **Nhiều máy song song**, mỗi máy một build khác nhau; khoá `out/.may-<serial>.lock`; link report theo package,
+  sheet ghi tạm rồi thay, proxy KT-02 lấy cổng trống
+- Duyệt theo **user ID** (`DISCORD_DUYET_USER_IDS`), role tuỳ chọn
+- Chạy được **Windows + Ubuntu**: cấu hình `~/.config/rcr/bot.env` (hoặc biến User Windows);
+  `deploy/cai-bot-windows.ps1` (Task Scheduler) / `deploy/cai-bot-linux.sh` (systemd user)
+- Tin dev có thể **không có tên app** (`Bản build AIP920 v1.6.0 (7)`) và **in đậm mã app** (`**AIP920**`)
+
 ## Câu hỏi còn mở
-0. Máy chạy bot là **Windows** → phase 4 đổi systemd sang Task Scheduler (hoặc NSSM); token đặt ở biến môi trường user Windows thay vì `~/.bashrc`?
-1. Tin dev có luôn đúng mẫu `Bản build <MÃ>---<Tên> v<x.y.z> (<code>)` không? Lệch mẫu → bot hỏi QA thay vì đoán
+1. Bot chưa được mời vào kênh build của dev → đang tạm nghe `qa-auto` (QA chuyển tiếp tin)
+2. Lượt bot có tắt webhook `rcr-notify` để kênh không nhận tin trùng không?
+3. Chưa thử: cài bản debug đè release (App Tester chưa có bản debug), 2 máy chạy song song thật, script Ubuntu
 
