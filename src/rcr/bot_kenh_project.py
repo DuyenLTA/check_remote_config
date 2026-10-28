@@ -45,8 +45,9 @@ async def _kenh_project(bot, c: dict):
     return None
 
 
-async def bao(bot, c: dict, tin: str, tin_qa) -> None:
-    """Gui `tin` o kenh project cua `c['ma']`, tag dev; that bai thi tra loi duoi `tin_qa`."""
+async def bao(bot, c: dict, tin: str, tin_qa):
+    """Gui `tin` o kenh project cua `c['ma']`, tag dev; that bai thi tra loi duoi `tin_qa`.
+    Tra kenh da gui (None khi phai bao o kenh QA)."""
     try:
         ids = dev_ids(getattr(bot, "dev_ids", ""))
         tag = " ".join(f"<@{i}>" for i in ids)
@@ -55,7 +56,7 @@ async def bao(bot, c: dict, tin: str, tin_qa) -> None:
         if kenh is not None:
             await kenh.send(noi_dung[:2000], allowed_mentions=discord.AllowedMentions(
                 users=[discord.Object(i) for i in ids], roles=False, everyone=False))
-            return
+            return kenh
         ly_do = f"không thấy kênh `{c.get('ma', '').lower()}-…` bot gửi được"
     except Exception as exc:             # noqa: BLE001 - bao dev hong khong duoc lam mat ket qua Jira
         log.warning("khong bao duoc dev o kenh project: %s", exc)

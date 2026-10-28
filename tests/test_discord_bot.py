@@ -204,3 +204,28 @@ def test_webhook_thong_bao_o_kenh_qa_khong_hoi_lai_ma_app(monkeypatch):
     assert gui == []
     asyncio.run(bot.on_message(tin(2)))                 # kenh build that van hoi QA nhu cu
     assert len(gui) == 1 and "không đọc được" in gui[0]
+
+
+def test_log_jira_xong_bao_duoc_dev_thi_khong_dang_them_o_kenh_qa(monkeypatch):
+    """Log du bug + bao duoc dev o kenh project -> kenh QA chi sua dong trang thai, khong tra loi them."""
+    monkeypatch.setattr(d.bot_log_jira, "chay", lambda *a: {
+        "issues": [{"case": "6.4.0#44", "key": "AIP920-9", "link": "u", "ghi_chu": "tạo mới"}], "loi": ""})
+    gui = []
+
+    async def bao(bot, c, tin, tin_qa, kenh=SimpleNamespace(mention="#aip920-dev")):
+        gui.append(tin)
+        return kenh
+    monkeypatch.setattr(d.bot_kenh_project, "bao", bao)
+    bot, c = _bot(), {**_c(), "bug_chon": [1]}
+    it = _It()
+    asyncio.run(bot._review_bug(it, "jira", c))
+    assert gui and "AIP920-9" in gui[0]
+    assert not [g for g in it.goi if g[0] == "reply"]
+    assert it.goi[-1][0] == "msg_edit" and "đã báo dev ở #aip920-dev" in it.goi[-1][2]["content"]
+
+    async def bao_hong(bot, c, tin, tin_qa):
+        return None                                   # khong bao duoc dev -> bao o kenh QA
+    monkeypatch.setattr(d.bot_kenh_project, "bao", bao_hong)
+    c2, it = {**_c(), "bug_chon": [1]}, _It()
+    asyncio.run(_bot()._review_bug(it, "jira", c2))
+    assert it.goi[-1][0] == "reply" and "AIP920-9" in it.goi[-1][1][0]

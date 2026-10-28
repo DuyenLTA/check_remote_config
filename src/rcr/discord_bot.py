@@ -254,20 +254,28 @@ class BuildBot(discord.Client):
             return
         finally:
             self.dang_log.discard(msg_id)
-        await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
-        if not any(i.get("key") for i in kq.get("issues") or []):
+        so = len([i for i in kq.get("issues") or [] if i.get("key")])
+        if not so:
             # Khong tao duoc issue nao (Jira / MCP loi) -> chua tinh la da log: tra menu de bam thu lai.
+            await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
             await it.message.edit(view=_view_bug(bugs, chon, msg_id))
             return
         c["jira"] = kq
         self.q.nho_tin(c)
         tin_dev = bot_cong_viec.tin_bao_dev(c, kq, [bugs[i] for i in chon])
-        if tin_dev:
-            await self._bao_dev(c, tin_dev, it.message)
+        kenh_dev = await self._bao_dev(c, tin_dev, it.message) if tin_dev else None
+        # Log du + bao duoc dev o kenh project -> khong dang them tin o kenh QA (user chot 28/10/2026),
+        # chi sua dong trang thai cua tin menu. Thieu issue / Jira bao loi / khong bao duoc dev -> bao o QA.
+        if kenh_dev is not None and so == len(chon) and not kq.get("loi"):
+            await it.message.edit(content=f"{bot_cong_viec.tin_bug(bugs, chon, c)}\n"
+                                          f"✅ Đã log {so} bug, đã báo dev ở {kenh_dev.mention} — {it.user.mention}")
+        else:
+            await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
 
     async def _bao_dev(self, c: dict, tin: str, tin_qa: discord.Message):
-        """Bao o kenh rieng cua project (user chot 28/10/2026), tag dev; khong gui duoc thi bao o kenh QA."""
-        await bot_kenh_project.bao(self, c, tin, tin_qa)
+        """Bao o kenh rieng cua project (user chot 28/10/2026), tag dev; khong gui duoc thi bao o kenh QA.
+        Tra kenh da gui, None khi da phai bao o kenh QA."""
+        return await bot_kenh_project.bao(self, c, tin, tin_qa)
 
     # --- chia job cho cac may ----------------------------------------------------------
     async def worker(self):
