@@ -368,6 +368,9 @@ Tool gửi tin vào Discord khi một lượt chạy xong (có FAIL → ⛔, kh�
 trong sheet thông số KT, và khi report được publish. Gửi hỏng chỉ in một dòng cảnh báo ra
 stderr, không đổi kết quả hay exit code của lượt chạy.
 
+Máy đã cấu hình bot (`DISCORD_BOT_TOKEN` + `DISCORD_QA_CHANNEL_ID`, xem mục bot bên dưới) thì tin đi
+**bằng bot vào kênh QA** (`qa-auto`), cùng chỗ với tin của bot. Máy không có bot thì dùng webhook:
+
 1. Discord → *Server Settings* → *Integrations* → *Webhooks* → *New Webhook* (chọn channel) → *Copy Webhook URL*.
 2. Đặt biến môi trường (đừng ghi URL vào file nào trong repo — repo này public):
    ```bash
@@ -405,12 +408,19 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
    - Ubuntu: `bash deploy/cai-bot-linux.sh` (systemd user service, log `journalctl --user -u rcr-bot -f`)
    - Windows: `powershell -ExecutionPolicy Bypass -File deploy\cai-bot-windows.ps1` (Task Scheduler, log `out/bot-run.log`)
 
-**Tự verify bug Reviewing** (có `JIRA_PERSONAL_TOKEN`): bug bot đã log lên Jira (ghi chú "tạo mới") mà dev kéo
-sang **Reviewing** → khi dev báo build mới của app đó, bot tự xếp lượt verify (tin 🔁 riêng ở kênh QA, không cần
-bấm Check): cài build, chạy lại đúng các case, **PASS → comment + Done**, **FAIL → comment + To Do**; lượt dừng /
-không ổn định / Claude không kết luận → giữ Reviewing. Bug checklist Next-Gen hoặc khác loại bản (debug/release)
-→ bỏ qua, báo "cần verify tay". Dev kéo Reviewing sau khi báo build → QA bấm **Verify lại** ở tin build / tin
-kết quả. Thiếu token → tính năng tắt, luồng Check giữ nguyên.
+**Tự verify bug Reviewing** (có `JIRA_PERSONAL_TOKEN`): bug do tool log (từ bot Discord, `rc-check` trong terminal
+hay checklist Next-Gen) mang **label `auto-qa`** + một dòng marker cuối description
+`AUTOQA case=<mã case> ban=<debug|release> pkg=<package>`. Dev kéo bug sang **Reviewing** → khi dev báo build mới
+của app đó, bot tìm bug Reviewing theo label (JQL `project = <MÃ> AND labels = "auto-qa" AND status = Reviewing`,
+tối đa 50) + bug bot log cũ chưa có label (theo state), gộp theo key, rồi xếp lượt verify (tin 🔁 riêng ở kênh QA,
+không cần bấm Check): cài build, chạy lại đúng các case trong marker, **PASS → comment + Done**,
+**FAIL → comment + To Do**; lượt dừng / không ổn định / Claude không kết luận → giữ Reviewing.
+Mỗi lượt chạy **một nhóm case**: mã bộ TC (`<tab>#<số>`) chạy bằng `--case`; mã dòng checklist Next-Gen
+(`EV-07`, `HT-03`, `KT-02`, `MED-02`, `1.7`…) chạy checklist `rcr-sdk-check` rồi đo tay riêng các mã đó nếu `DO_TAY`
+(timeout 70 phút), `KHOP → PASS`, `SAI → FAIL`, còn lại giữ Reviewing. Lẫn hai nhóm → chạy nhóm đông hơn, nhóm kia
+bấm **Verify lại** sau. Thiếu marker, khác loại bản (debug/release) hoặc khác package → bỏ qua, báo "cần verify tay".
+Dev kéo Reviewing sau khi báo build → QA bấm **Verify lại** ở tin build / tin kết quả. Thiếu token → tính năng
+tắt, luồng Check giữ nguyên.
 
 **Báo dev**: bug vừa log Jira và bug verify vẫn FAIL được báo ở **kênh riêng của project** (cùng server với kênh
 build, tên bắt đầu bằng mã app: `aip920-…`), tag các dev trong `DISCORD_DEV_IDS`. Không có kênh / bot không có

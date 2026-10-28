@@ -17,6 +17,8 @@ import urllib.parse
 import urllib.request
 
 KEY_RE = re.compile(r"^[A-Z][A-Z0-9]{1,9}-\d+$")
+PROJECT_RE = re.compile(r"^[A-Z][A-Z0-9]{1,9}$")
+MAX_AUTO_QA = 50
 TIMEOUT = 30
 USER_AGENT = "qa-workflow-bot/1.0"
 
@@ -69,6 +71,28 @@ def dang_reviewing(url: str, token: str, keys: list[str]) -> list[str]:
     q = urllib.parse.urlencode({"jql": jql, "fields": "status", "maxResults": len(sach), "validateQuery": "warn"})
     d = _goi(url, token, "GET", f"/rest/api/2/search?{q}")
     return [i["key"] for i in (d or {}).get("issues", [])]
+
+
+def tim_auto_qa(url: str, token: str, project: str) -> list[dict]:
+    """Bug dang Reviewing mang label `auto-qa` cua project: [{key, link, summary, marker}]; marker la
+    {case, loai_ban, package} doc tu description, None khi thieu / sai mau. Toi da MAX_AUTO_QA issue."""
+    from .bot_jira_marker import LABEL, doc_marker
+
+    if not PROJECT_RE.fullmatch(project or ""):
+        raise JiraLoi(f"project key Jira sai mau: {project!r}")
+    jql = f'project = {project} AND labels = "{LABEL}" AND status = Reviewing ORDER BY key'
+    q = urllib.parse.urlencode({"jql": jql, "fields": "summary,description", "maxResults": MAX_AUTO_QA,
+                                "validateQuery": "warn"})
+    d = _goi(url, token, "GET", f"/rest/api/2/search?{q}")
+    ra = []
+    for i in (d or {}).get("issues", []):
+        key = str(i.get("key") or "")
+        if not KEY_RE.fullmatch(key):
+            continue
+        f = i.get("fields") or {}
+        ra.append({"key": key, "link": f"{url.rstrip('/')}/browse/{key}", "summary": str(f.get("summary") or ""),
+                   "marker": doc_marker(f.get("description"))})
+    return ra
 
 
 def comment(url: str, token: str, key: str, text: str) -> None:

@@ -24,52 +24,20 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from pathlib import Path
 
 import discord
 
-from . import (bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_kenh_project, bot_log_jira,
-               build_ma_app)
+from . import (bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
+               bot_log_jira, build_ma_app)
 from .adb_client import AdbClient
+from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
 from .adb_parsers import AdbError
 
 REPO = Path(__file__).resolve().parents[2]
 OUT = REPO / "out"
 log = logging.getLogger("rcr-bot")
 
-
-FILE_CAU_HINH = Path.home() / ".config" / "rcr" / "bot.env"
-
-
-def _doc_file_env(path: Path) -> dict[str, str]:
-    """`KEY=VALUE` moi dong, bo dong trong / `#`, bo nhay boc ngoai. File thieu -> {}."""
-    try:
-        dong = path.read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return {}
-    ra = {}
-    for d in dong:
-        d = d.strip()
-        if d and not d.startswith("#") and "=" in d:
-            k, v = d.split("=", 1)
-            ra[k.removeprefix("export ").strip()] = v.strip().strip("'\"")
-    return ra
-
-
-def env(ten: str, file_cau_hinh: Path = FILE_CAU_HINH) -> str:
-    """Bien moi truong -> bien User cua Windows (setx sau khi mo shell) -> ~/.config/rcr/bot.env."""
-    gt = os.environ.get(ten, "")
-    if not gt and os.name == "nt":
-        import winreg
-        try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as k:
-                gt = str(winreg.QueryValueEx(k, ten)[0])
-        except OSError:
-            pass
-    if not gt:
-        gt = _doc_file_env(file_cau_hinh).get(ten, "")
-    return gt.strip()
 
 
 def noi_dung(m) -> str:
@@ -120,6 +88,7 @@ class BuildBot(discord.Client):
         # Verify bug Reviewing goi Jira REST thang; thieu token -> tinh nang tat, luong Check giu nguyen.
         self.jira_url, self.jira_token = env("JIRA_URL"), env("JIRA_PERSONAL_TOKEN")
         self.dev_ids = env("DISCORD_DEV_IDS")   # dev tag khi bao bug o kenh project (phay ngan cach)
+        self.hoi_lock = asyncio.Lock()          # hoi dap: moi lan mot cau
 
     async def setup_hook(self):
         asyncio.create_task(self.worker())
@@ -132,7 +101,14 @@ class BuildBot(discord.Client):
         return {k.guild.id for k in map(self.get_channel, self.kenh_build) if k is not None and k.guild}
 
     # --- tin build -> hoi o kenh QA ----------------------------------------------------
+    def bi_mat(self) -> list[str]:
+        """Gia tri phai che trong moi cau tra loi gui len Discord."""
+        return [env("DISCORD_BOT_TOKEN"), self.jira_token, env("DISCORD_WEBHOOK_URL")]
+
     async def on_message(self, m: discord.Message):
+        if bot_hoi_dap.la_cau_hoi(self, m):      # nhan rieng / tag bot -> hoi dap, khong doc nhu tin build
+            await bot_hoi_dap.tra_loi_tin(self, m, REPO, OUT)
+            return
         # dev bao build qua webhook "Build Notification" (author.bot=True) -> nhan webhook, bo bot khac
         if m.author.bot and not m.webhook_id:
             return
@@ -224,13 +200,13 @@ class BuildBot(discord.Client):
             c["bug_chon"] = sorted(int(x) for x in (it.data or {}).get("values", [])
                                    if x.isdigit() and int(x) < len(bugs))
             self.q.nho_tin(c)
-            await it.response.edit_message(content=bot_cong_viec.tin_bug(bugs, c["bug_chon"]),
+            await it.response.edit_message(content=bot_cong_viec.tin_bug(bugs, c["bug_chon"], c),
                                            view=_view_bug(bugs, c["bug_chon"], msg_id))
             return
         if hanh_dong == "khongbug":
             c["jira"] = {"issues": [], "loi": ""}
             self.q.nho_tin(c)
-            await it.response.edit_message(content=f"{bot_cong_viec.tin_bug(bugs)}\n"
+            await it.response.edit_message(content=f"{bot_cong_viec.tin_bug(bugs, None, c)}\n"
                                            f"Không log — {it.user.mention} xác nhận không có bug thật.", view=None)
             return
         chon = c.get("bug_chon") or []
@@ -241,7 +217,7 @@ class BuildBot(discord.Client):
             await it.response.send_message("Bot thiếu DISCORD_JIRA_REVIEWER trong bot.env.", ephemeral=True)
             return
         self.dang_log.add(msg_id)
-        await it.response.edit_message(content=f"{bot_cong_viec.tin_bug(bugs, chon)}\n"
+        await it.response.edit_message(content=f"{bot_cong_viec.tin_bug(bugs, chon, c)}\n"
                                        f"Đang log {len(chon)} bug lên Jira ({c['ma']}) — {it.user.mention}", view=None)
         try:
             kq = await asyncio.to_thread(bot_log_jira.chay, [bugs[i] for i in chon], c,
@@ -253,9 +229,13 @@ class BuildBot(discord.Client):
             return
         finally:
             self.dang_log.discard(msg_id)
+        await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
+        if not any(i.get("key") for i in kq.get("issues") or []):
+            # Khong tao duoc issue nao (Jira / MCP loi) -> chua tinh la da log: tra menu de bam thu lai.
+            await it.message.edit(view=_view_bug(bugs, chon, msg_id))
+            return
         c["jira"] = kq
         self.q.nho_tin(c)
-        await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
         tin_dev = bot_cong_viec.tin_bao_dev(c, kq, [bugs[i] for i in chon])
         if tin_dev:
             await self._bao_dev(c, tin_dev, it.message)
@@ -324,7 +304,7 @@ class BuildBot(discord.Client):
             c = {**(self.q.tin_cua(job["msg_id"]) or job), "bugs": kq["bugs"], "bug_chon": [],
                  "link_report": kq.get("link", ""), "jira": None}
             self.q.nho_tin(c)
-            await qa.reply(bot_cong_viec.tin_bug(kq["bugs"]), view=_view_bug(kq["bugs"], [], job["msg_id"]))
+            await qa.reply(bot_cong_viec.tin_bug(kq["bugs"], None, c), view=_view_bug(kq["bugs"], [], job["msg_id"]))
 
 
 def main() -> int:

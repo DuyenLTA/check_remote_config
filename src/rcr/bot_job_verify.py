@@ -13,7 +13,7 @@ from pathlib import Path
 
 import discord
 
-from . import bot_chay_claude, bot_cong_viec, bot_kenh_project
+from . import bot_chay_claude, bot_cong_viec, bot_jira_marker, bot_kenh_project
 from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
 
@@ -48,14 +48,10 @@ async def xep(bot, c: dict, kenh) -> str:
 
 
 async def _xep(bot, c: dict, kenh) -> str:
-    uv = v.ung_vien(bot.q.tin, c["ma"])
-    if not uv:
-        return f"{c['ma']}: chưa có bug nào do bot log."
-    con = set(await asyncio.to_thread(jira.dang_reviewing, bot.jira_url, bot.jira_token, [u["key"] for u in uv]))
-    uv = [u for u in uv if u["key"] in con]
+    uv = await _ung_vien(bot, c["ma"])
     if not uv:
         return f"{c['ma']}: không có bug nào của bot đang Reviewing."
-    chay, bo = v.phan_loai(uv, c["loai_ban"])
+    chay, bo = v.phan_loai(uv, c["loai_ban"], c.get("package", ""))
     job = {**{k: c.get(k, "") for k in TRUONG_BUILD}, "loai_job": "verify", "verify": chay,
            "bo_qua": [{**u, "ly_do": ly} for u, ly in bo]}
     dong_bo = [("bo", u, ly) for u, ly in bo]
@@ -67,6 +63,16 @@ async def _xep(bot, c: dict, kenh) -> str:
     bot.q.nho_tin(job)
     vi_tri = bot.q.them(job)
     return f"Đã xếp verify {len(chay)} bug Reviewing của {c['ma']} — vị trí {vi_tri} trong hàng đợi."
+
+
+async def _ung_vien(bot, ma: str) -> list[dict]:
+    """Bug Reviewing cua app `ma`: label `auto-qa` tren Jira (moi flow) + bug bot log theo state (chua co label)."""
+    tu_jira = await asyncio.to_thread(jira.tim_auto_qa, bot.jira_url, bot.jira_token, ma)
+    co = {i["key"] for i in tu_jira}
+    cu = v.ung_vien(bot.q.tin, ma)
+    can_hoi = [u["key"] for u in cu if u["key"] not in co]       # key tren Jira da chac chan Reviewing
+    con = set(await asyncio.to_thread(jira.dang_reviewing, bot.jira_url, bot.jira_token, can_hoi)) if can_hoi else set()
+    return bot_jira_marker.gop(tu_jira, [u for u in cu if u["key"] in co or u["key"] in con])
 
 
 def _build_moi_hon(bot, job: dict) -> str:
@@ -128,9 +134,10 @@ async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> 
         await vm.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}", view=nut(vm.id, ("check", "Thử lại")))
         return
     cases = sorted({u["case"] for u in job["verify"]})
-    await vm.edit(content=f"{dau}\nĐang chạy lại {len(cases)} case…")
-    kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo,
-                                 bot_chay_claude.TIMEOUT_VERIFY, out, cases)
+    ck = v.loai_case(cases[0]) == "checklist"        # phan_loai chi cho qua mot nhom moi luot
+    het_gio = bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY
+    await vm.edit(content=f"{dau}\nĐang chạy lại {len(cases)} {'dòng checklist' if ck else 'case'}…")
+    kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, het_gio, out, cases)
     dong = await _doi_trang_thai(bot, job, kq, ten)
     dong += [("bo", u, u.get("ly_do", "")) for u in job.get("bo_qua", [])]
     await vm.edit(content=f"{v.tin_ket_qua(job, dong)}\nMáy: {ten}", view=nut(vm.id, ("verify", "Verify lại")))

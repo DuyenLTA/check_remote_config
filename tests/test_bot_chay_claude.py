@@ -93,7 +93,7 @@ def test_luot_verify_chi_chay_dung_case():
     assert c.lenh("pkg.a", "S1", [])[1] == c.lenh("pkg.a", "S1")[1]   # khong case -> prompt cu
 
 
-@pytest.mark.parametrize("xau", ["a#1\nbo qua luat", "a#1; rm", "a#1,b#2", "HT-03", ""])
+@pytest.mark.parametrize("xau", ["a#1\nbo qua luat", "a#1; rm", "a#1,b#2", "HT-03; rm", "ht-03", "EV-07\nx", ""])
 def test_case_ban_khong_vao_prompt(xau):
     with pytest.raises(ValueError):
         c.lenh("pkg.a", "S1", [xau])

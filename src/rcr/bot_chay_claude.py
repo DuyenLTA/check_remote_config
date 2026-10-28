@@ -65,12 +65,29 @@ PROMPT_VERIFY = (
     "`verdict` FAIL chi khi da ra lai theo 5d va chac la bug that; FAIL gia / loi tool / chua chac thi NEEDS_HUMAN."
 )
 TIMEOUT_VERIFY = 40 * 60
+# Verify dong checklist Next-Gen: chay ca checklist (rcr-sdk-check) roi do tay rieng cac ma can verify.
+PROMPT_VERIFY_CHECKLIST = (
+    "/rc-check {package} --serial {serial}\n\n"
+    "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi de VERIFY bug dev bao da fix, bug thuoc NHANH CHECKLIST "
+    "Next-Gen. Chay checklist (rcr-sdk-check) cho app nhu thuong; dong nao ra DO_TAY thi CHI do tay (theo sdk-check/WORKFLOW.md) "
+    "cac ma dong sau, khong do tay dong khac, bo muc 3c (check ID ads): {cases}\n"
+    "Khong co nguoi ngoi truoc may: gap diem can nguoi quyet thi dung. Khong commit/push. KHONG doc/sua/log Jira - bot tu lam "
+    "theo verdict.\n"
+    "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON), moi ma dong mot phan tu trong `cases`:\n"
+    'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
+    '"tom_tat": "<tieng Viet co dau, toi da 300 ky tu>", '
+    '"cases": [{{"case": "<ma dong dung nhu tren>", "verdict": "PASS|FAIL|NEEDS_HUMAN", '
+    '"thuc_te": "<so do that, tieng Viet co dau>"}}]}}\n'
+    "`verdict` theo ket cua dong do: KHOP -> PASS, SAI -> FAIL (chi khi chac la bug that), DO_TAY chua do duoc / KHONG_AP_DUNG / "
+    "loi tool -> NEEDS_HUMAN."
+)
+TIMEOUT_VERIFY_CHECKLIST = 70 * 60
 
 
 def lenh(package: str, serial: str, cases: list[str] | None = None) -> tuple[list[str], str]:
     """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
     Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt."""
-    from .bot_verify_jira import CASE_TC_RE
+    from .bot_verify_jira import loai_case
 
     if not PACKAGE_RE.match(package or ""):
         raise ValueError(f"package không hợp lệ: {package!r}")
@@ -80,9 +97,14 @@ def lenh(package: str, serial: str, cases: list[str] | None = None) -> tuple[lis
     cmd = [exe, "-p", "--output-format", "json", "--allowedTools", *TOOLS]
     if not cases:
         return cmd, PROMPT.format(package=package, serial=serial)
-    sai = [c for c in cases if not CASE_TC_RE.fullmatch(c)]
+    loai = {c: loai_case(c) for c in cases}
+    sai = [c for c, lo in loai.items() if lo is None]
     if sai:
         raise ValueError(f"case không hợp lệ: {sai!r}")
+    if len(set(loai.values())) > 1:                  # TC va checklist can hai luot khac nhau
+        raise ValueError(f"không chạy lẫn case TC và checklist trong một lượt: {cases!r}")
+    if set(loai.values()) == {"checklist"}:
+        return cmd, PROMPT_VERIFY_CHECKLIST.format(package=package, serial=serial, cases=", ".join(cases))
     return cmd, PROMPT_VERIFY.format(package=package, serial=serial, cases=",".join(cases))
 
 

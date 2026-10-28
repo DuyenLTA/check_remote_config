@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from rcr import cau_hinh_bot
 from rcr import discord_bot as d
 
 
@@ -38,8 +39,8 @@ def test_doc_cau_hinh_tu_file_khi_khong_co_bien_moi_truong(tmp_path, monkeypatch
     f.write_text("# cau hinh bot\nexport DISCORD_QA_CHANNEL_ID=123\nDISCORD_DUYET_USER_IDS = '7,8'\n\n", "utf-8")
     monkeypatch.delenv("DISCORD_QA_CHANNEL_ID", raising=False)
     monkeypatch.delenv("DISCORD_DUYET_USER_IDS", raising=False)
-    if d.os.name == "nt":                         # registry may that co the dang co gia tri that
-        monkeypatch.setattr(d.os, "name", "posix")
+    if cau_hinh_bot.os.name == "nt":              # registry may that co the dang co gia tri that
+        monkeypatch.setattr(cau_hinh_bot.os, "name", "posix")
     assert d.env("DISCORD_QA_CHANNEL_ID", f) == "123"
     assert d.env("DISCORD_DUYET_USER_IDS", f) == "7,8"
     monkeypatch.setenv("DISCORD_QA_CHANNEL_ID", "999")   # bien moi truong thang file
@@ -142,3 +143,14 @@ def test_log_loi_thi_tra_menu_lai_de_thu_lai(monkeypatch):
     asyncio.run(bot._review_bug(it, "jira", c))
     assert c["jira"] is None and not bot.dang_log
     assert [g[0] for g in it.goi] == ["edit", "msg_edit", "reply"] and "mcp chết" in it.goi[-1][1][0]
+
+
+def test_log_ra_0_issue_thi_chua_tinh_da_log_va_tra_menu(monkeypatch):
+    """28/10/2026: MCP Jira khong ket noi -> Claude tra 0 issue; truoc day bot ghi 'da log' nen khong bam lai duoc."""
+    monkeypatch.setattr(d.bot_log_jira, "chay", lambda *a: {
+        "issues": [{"case": "6.4.0#0", "key": "", "link": "", "ghi_chu": "bỏ qua: không gọi được Jira"}],
+        "loi": "tool Jira bị từ chối"})
+    bot, c, it = _bot(), {**_c(), "bug_chon": [0]}, _It()
+    asyncio.run(bot._review_bug(it, "jira", c))
+    assert c["jira"] is None and not bot.dang_log
+    assert [g[0] for g in it.goi] == ["edit", "reply", "msg_edit"] and it.goi[-1][2]["view"] is not None

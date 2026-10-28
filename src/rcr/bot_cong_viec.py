@@ -6,6 +6,7 @@ Tach khoi `discord_bot` de test khong can Discord / may.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -13,6 +14,8 @@ from pathlib import Path
 
 from . import ad_units_sheet, build_ma_app, tc_source
 from .models import RcError
+
+log = logging.getLogger("rcr-bot")
 
 TIMEOUT_CAI = 900
 # Gioi han file dinh kem cua bot o server khong boost.
@@ -44,7 +47,10 @@ def _cli(args: list[str], timeout: int) -> dict:
     if p.returncode == 0:
         return json.loads(p.stdout.strip().splitlines()[-1])
     dong = [d for d in p.stderr.splitlines() if d.startswith("LOI:")]
-    return {"loi": dong[-1][4:].strip() if dong else (p.stderr or p.stdout)[-300:]}
+    loi = dong[-1][4:].strip() if dong else (p.stderr or p.stdout)[-300:]
+    # Tin Discord bi ghi de khi QA bam Thu lai -> ghi lai o log bot de con tra duoc nguyen nhan.
+    log.warning("rcr-cai-build %s loi: %s", " ".join(args), loi)
+    return {"loi": loi}
 
 
 def cai(package: str, version: str, loai: str, serial: str) -> dict:
@@ -110,14 +116,21 @@ def lua_chon_bug(bugs: list[dict]) -> list[tuple[str, str, str]]:
             for i, b in enumerate(bugs)]
 
 
-def tin_bug(bugs: list[dict], chon: list[int] | None = None) -> str:
-    """Tin hoi QA review: liet ke tung bug kem Expected / thuc te de quyet dinh ngay tren Discord."""
-    dong = [f"🐞 **{len(bugs)} FAIL đã rà lại** — tick bug thật trong menu rồi bấm **Log Jira**:"]
+def tin_bug(bugs: list[dict], chon: list[int] | None = None, c: dict | None = None) -> str:
+    """Tin hoi QA review: dau tin co app + link report (user chot 28/10/2026: phai mo duoc report de
+    xem), moi bug mot khoi tach dong trong de doc nhanh roi tick ngay tren Discord."""
+    c = c or {}
+    dong = [f"🐞 **{len(bugs)} bug cần review**" + (f" — {dau_tin(c)}" if c.get("ma") else ""),
+            "Tick bug thật trong menu rồi bấm **Log Jira**."]
+    link = str(c.get("link_report") or "")
+    if link.startswith("https://"):              # duong dan file tren may thi QA khong mo duoc
+        dong.append(f"📄 [Mở report]({link})")
     for i, b in enumerate(bugs):
         dau = "☑" if chon and i in chon else "☐"
-        dong.append(f"{dau} **{b['case']}** {b['tieu_de']}\n  Expected: {b['expected'][:150]}\n"
-                    f"  Thực tế: {b['thuc_te'][:150]}")
-    # Tin Discord toi da 2000 ky tu; danh sach dai thi cat, chi tiet nam o report.
+        muc = f" · {b['muc_do']}" if b.get("muc_do") else ""
+        dong += ["", f"{dau} **{i + 1}. {b['tieu_de'][:150]}**{muc}", f"> Case: `{b['case']}`",
+                 f"> Expected: {b['expected'][:150]}", f"> Thực tế: {b['thuc_te'][:200]}"]
+    # Tin Discord toi da 2000 ky tu; danh sach dai thi cat (link report o dau tin van con).
     t = "\n".join(dong)
     return t if len(t) <= 1900 else t[:1880] + "\n… (xem report)"
 

@@ -29,12 +29,43 @@ def test_ung_vien_chi_issue_bot_tao_moi_cung_ma():
 
 def test_phan_loai():
     uv = [{"key": "A-1", "case": "3.6.1#SDK361-SPL-001", "loai_ban_goc": "debug"},
-          {"key": "A-2", "case": "HT-03", "loai_ban_goc": "debug"},
+          {"key": "A-2", "case": "", "loai_ban_goc": ""},
           {"key": "A-3", "case": "daily checkin#4", "loai_ban_goc": "debug"},
-          {"key": "A-4", "case": "SDK350-OB3X-013", "loai_ban_goc": "release"}]
-    chay, bo = v.phan_loai(uv, "debug")
+          {"key": "A-4", "case": "SDK350-OB3X-013", "loai_ban_goc": "release"},
+          {"key": "A-5", "case": "x y z", "loai_ban_goc": "debug"},
+          {"key": "A-6", "case": "a#1", "loai_ban_goc": "debug", "package": "pkg.khac"}]
+    chay, bo = v.phan_loai(uv, "debug", "pkg.a")
     assert [u["key"] for u in chay] == ["A-1", "A-3"]
-    assert [(u["key"], "Next-Gen" in ly or "release" in ly) for u, ly in bo] == [("A-2", True), ("A-4", True)]
+    assert [(u["key"], ly) for u, ly in bo][0] == ("A-2", v.LY_DO_THIEU_MARKER)
+    assert [u["key"] for u, _ in bo] == ["A-2", "A-4", "A-5", "A-6"]
+    assert "release" in bo[1][1] and "package" in bo[3][1]
+
+
+def test_checklist_chay_duoc_va_chi_mot_nhom_moi_luot():
+    for ma in ("EV-07", "HT-03", "KT-02", "MED-02", "HV-01", "RG-01", "CMP-02", "1.7"):
+        assert v.loai_case(ma) == "checklist", ma
+    for xau in ("ev-07", "EV-07\n", "EV07", "HT-03; rm", "1.7.2", "", "EV-1234"):
+        assert v.loai_case(xau) is None, xau
+    assert v.loai_case("daily checkin#4") == "tc" and v.loai_case("SDK350-OB3X-013") == "tc"
+    ck = lambda k, c: {"key": k, "case": c, "loai_ban_goc": "debug"}
+    chay, bo = v.phan_loai([ck("A-1", "EV-07"), ck("A-2", "HT-03"), ck("A-3", "a#1")], "debug")
+    assert [u["key"] for u in chay] == ["A-1", "A-2"] and [u["key"] for u, _ in bo] == ["A-3"]
+    chay, bo = v.phan_loai([ck("A-1", "EV-07"), ck("A-3", "a#1")], "debug")     # hoa -> TC
+    assert [u["key"] for u in chay] == ["A-3"] and "Verify lại" in bo[0][1]
+    chay, bo = v.phan_loai([ck("A-1", "EV-07")], "release")
+    assert chay == [] and "release" in bo[0][1]
+
+
+def test_ket_luan_checklist_khop_sai_do_tay():
+    u = {"case": "EV-07"}
+    xong = lambda vd: {"trang_thai": "XONG", "cases": [{"case": "EV-07", "verdict": vd}]}
+    assert v.ket_luan(xong("PASS"), u) == "PASS" and v.ket_luan(xong("KHOP"), u) == "PASS"
+    assert v.ket_luan(xong("FAIL"), u) == "FAIL" and v.ket_luan(xong("SAI"), u) == "FAIL"
+    for vd in ("DO_TAY", "KHONG_AP_DUNG", "NEEDS_HUMAN", ""):
+        assert v.ket_luan(xong(vd), u) is None
+    assert v.ket_luan({"trang_thai": "DUNG", "cases": xong("KHOP")["cases"]}, u) is None
+    tc = {"trang_thai": "XONG", "cases": [{"case": "a#1", "verdict": "KHOP"}]}
+    assert v.ket_luan(tc, {"case": "a#1"}) is None                  # KHOP chi doi cho dong checklist
 
 
 def test_ket_luan_chi_khi_xong_va_verdict_dung():

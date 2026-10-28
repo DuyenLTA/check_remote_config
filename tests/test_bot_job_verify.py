@@ -58,8 +58,9 @@ def _bot(tmp_path, token="pat"):
 BUILD = {"ma": "AIP920", "ten": "", "version": "1.6.1 (8)", "package": "pkg.a", "loai_ban": "debug", "link_tin": "l"}
 
 
-def _jira(monkeypatch, reviewing, loi_chuyen=()):
+def _jira(monkeypatch, reviewing, loi_chuyen=(), tu_jira=()):
     goi = []
+    monkeypatch.setattr(jira, "tim_auto_qa", lambda u, t, project: list(tu_jira))
     monkeypatch.setattr(jira, "dang_reviewing", lambda u, t, keys: [k for k in keys if k in reviewing])
     monkeypatch.setattr(jira, "comment", lambda u, t, k, chu: goi.append(("comment", k, chu)))
 
@@ -91,7 +92,7 @@ def test_xep_mot_job_cho_cac_bug_reviewing(tmp_path, monkeypatch):
     j = bot.q.jobs[0]
     assert j["loai_job"] == "verify" and j["msg_id"] == 501 and [u["key"] for u in j["verify"]] == ["AIP920-13", "AIP920-14"]
     assert [u["key"] for u in j["bo_qua"]] == ["AIP920-15"]
-    assert "AIP920-13" in kenh.sent[0] and "Next-Gen" in kenh.sent[0]
+    assert "AIP920-13" in kenh.sent[0] and "nhóm case khác" in kenh.sent[0]
     assert "đã trong hàng đợi" in asyncio.run(bj.xep(bot, BUILD, _Kenh()))   # bam Verify lai lan nua
 
 

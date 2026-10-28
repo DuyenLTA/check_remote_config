@@ -725,6 +725,7 @@ sau đó dùng skill log bug để tự log bug lên jira"*.
    lựa chọn). **Chưa có câu trả lời thì không log**: Jira là chỗ cả team nhìn, log nhầm thì dev mất công.
    Bug được chọn → gọi skill `anthropic-skills:jira-log-bug` mode TEXT (`bug_ad`), mỗi bug một lần,
    đủ thông tin ở bước 1 + app, version, SDK FO, máy. Báo lại link từng issue.
+   **Mỗi issue phải có label `auto-qa` và một dòng marker riêng ở CUỐI description**, đúng mẫu `AUTOQA case=<mã case> ban=<debug|release> pkg=<package>` (mã case: `<tab>#<số>` / TC ID của bộ TC, hoặc mã dòng checklist Next-Gen như `EV-07`; `ban` = loại bản đã test; `pkg` = package đã test). Bot Discord tìm bug Reviewing theo label này và chạy lại đúng case ghi trong marker, nên sai/thiếu marker là bug bị bỏ qua ("cần verify tay").
    Log xong (có ít nhất một issue tạo được) → **báo dev check bug** bằng một tin Discord:
    `<bin>/rcr-notify --kind bug --title "Nhờ dev check bug · bản build <MÃ>---<Tên app> v<versionName> (<versionCode>)" --line "<KEY-1> — <tóm tắt bug> · <mức độ> · <link issue>" [--line ...]`
    — mỗi issue một `--line`, bỏ bug không tạo được issue. Bản build ghi **đúng mẫu tin build của dev**

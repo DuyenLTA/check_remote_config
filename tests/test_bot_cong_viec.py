@@ -80,8 +80,18 @@ def test_lua_chon_bug_vua_gioi_han_discord():
 
 def test_tin_bug_danh_dau_bug_da_tick_va_khong_qua_2000_ky_tu():
     t = v.tin_bug(BUGS[:2], [1])
-    assert "☐ **6.4.0#0**" in t and "☑ **6.4.0#1**" in t and "Log Jira" in t
+    assert "☐ **1. " in t and "☑ **2. " in t and "> Case: `6.4.0#1`" in t and "Log Jira" in t
     assert len(v.tin_bug(BUGS)) <= 2000
+
+
+def test_tin_bug_co_app_va_link_report_https():
+    c = {"ma": "AIP938", "ten": "", "version": "2.2.0 (13)", "package": "pkg.a",
+         "link_report": "https://claude.ai/artifact/x"}
+    t = v.tin_bug(BUGS[:1], None, c)
+    assert "**AIP938**" in t and "📄 [Mở report](https://claude.ai/artifact/x)" in t
+    t = v.tin_bug(BUGS[:1], None, {**c, "link_report": "C:\\\\Users\\\\x\\\\report.html"})
+    assert "Mở report" not in t                     # duong dan file tren may: khong dan len Discord
+    assert len(v.tin_bug(BUGS, None, c)) <= 2000 and "Mở report" in v.tin_bug(BUGS, None, c)
 
 
 def test_tin_jira_liet_ke_issue_va_loi():

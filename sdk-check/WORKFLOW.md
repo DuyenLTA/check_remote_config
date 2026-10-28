@@ -103,3 +103,11 @@ bản debug (để tool bật ads) rồi chạy lại — không phải bug dev.
   cũ (thêm khối "Lượt n" trong case, sửa thẻ đếm).
 - Trả lời user: link (riêng tư, bật Share nếu cần), số Khớp/Sai, từng Sai là gì, case không tính và vì sao, trạng thái máy
   (proxy đã gỡ, RC đã restore, sub test, bản đang cài).
+
+## Log bug lên Jira (lượt có người trong terminal)
+
+Dòng `SAI` đã rà xong, user chọn log → skill `anthropic-skills:jira-log-bug`, mỗi dòng một issue, kèm **label `auto-qa`** và
+**một dòng marker riêng ở cuối description** (bot Discord dựa vào đó để tự verify lại khi dev chuyển Reviewing):
+`AUTOQA case=<mã dòng, vd EV-07> ban=<debug|release> pkg=<package>`. Mã dòng đúng như cột mã trong checklist
+(`EV-07`, `HT-03`, `KT-02`, `MED-02`, `HV-01`, `1.7`); `ban` = loại bản đang cài trên máy test. Không thêm ký tự định dạng
+quanh dòng marker, không đổi chữ.

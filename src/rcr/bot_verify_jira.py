@@ -12,8 +12,11 @@ import re
 import unicodedata
 
 # `<tab>#<so|TC ID>` (tab co the co dau cach: `daily checkin#4`) hoac TC ID tran (`SDK350-OB3X-013`).
-# Ma checklist Next-Gen (`HT-03`) khong khop -> khong chay lai duoc bang --case.
 CASE_TC_RE = re.compile(r"^[\w.]+(?: [\w.]+)*#[\w.-]+$|^SDK\d{3}-[\w-]+$")
+# Ma dong checklist Next-Gen (sdk-check/references): `EV-07`, `HT-03`, `KT-02`, `MED-02`, `HV-01`, `1.7`.
+# Khong giao voi CASE_TC_RE (TC luon co `#` hoac tien to SDKnnn-).
+CASE_CHECKLIST_RE = re.compile(r"^(?:[A-Z]{2,4}-\d{1,3}|\d{1,2}\.\d{1,2})$")
+LY_DO_THIEU_MARKER = "thiếu marker auto-qa — cần verify tay"
 MAX_TRUONG = 300
 MAX_TIN = 1900
 
@@ -26,6 +29,13 @@ def _khong_dau(s: str) -> str:
 def _cat(s, n: int = MAX_TRUONG) -> str:
     s = " ".join(str(s or "").split())
     return s if len(s) <= n else s[: n - 1] + "…"
+
+
+def loai_case(case: str) -> str | None:
+    """"tc" (bo TC, chay bang --case) | "checklist" (dong checklist Next-Gen) | None (khong chay lai duoc)."""
+    if CASE_TC_RE.fullmatch(case or ""):
+        return "tc"
+    return "checklist" if CASE_CHECKLIST_RE.fullmatch(case or "") else None
 
 
 def ung_vien(tin: dict, ma: str) -> list[dict]:
@@ -46,16 +56,27 @@ def ung_vien(tin: dict, ma: str) -> list[dict]:
     return list(ra.values())
 
 
-def phan_loai(uv: list[dict], loai_ban_moi: str) -> tuple[list[dict], list[tuple[dict, str]]]:
-    """(chay duoc, [(bo qua, ly do)])."""
+def phan_loai(uv: list[dict], loai_ban_moi: str, package: str = "") -> tuple[list[dict], list[tuple[dict, str]]]:
+    """(chay duoc, [(bo qua, ly do)]). Mot luot chay MOT nhom case (TC hoac checklist): prompt hai nhom khac
+    nhau. Lan nhom (hiem) -> chay nhom dong hon (hoa thi TC), nhom kia bo, bam Verify lai khi nhom nay xong."""
     chay, bo = [], []
     for u in uv:
-        if not CASE_TC_RE.fullmatch(u["case"]):
-            bo.append((u, "case checklist Next-Gen — cần verify tay"))
+        if not u["case"]:
+            bo.append((u, LY_DO_THIEU_MARKER))
+        elif loai_case(u["case"]) is None:
+            bo.append((u, "case không chạy lại tự động được — cần verify tay"))
+        elif u.get("package") and package and u["package"] != package:
+            bo.append((u, f"bug của package {u['package']}, build mới là {package} — cần verify tay"))
         elif u["loai_ban_goc"] and u["loai_ban_goc"] != loai_ban_moi:
             bo.append((u, f"bug từ bản {u['loai_ban_goc']}, build mới là bản {loai_ban_moi} — cần verify tay"))
         else:
             chay.append(u)
+    nhom_tc = [u for u in chay if loai_case(u["case"]) == "tc"]
+    nhom_ck = [u for u in chay if loai_case(u["case"]) == "checklist"]
+    if nhom_tc and nhom_ck:
+        giu, bo_them = (nhom_ck, nhom_tc) if len(nhom_ck) > len(nhom_tc) else (nhom_tc, nhom_ck)
+        chay = giu
+        bo += [(u, "lượt này chạy nhóm case khác (TC / checklist) — bấm Verify lại sau") for u in bo_them]
     return chay, bo
 
 
@@ -63,9 +84,12 @@ def ket_luan(kq: dict, u: dict) -> str | None:
     """"PASS" / "FAIL" hoac None (giu Reviewing)."""
     if kq.get("trang_thai") != "XONG":
         return None
+    # Dong checklist: Claude co the tra thang ket cua rcr-sdk-check (KHOP/SAI); DO_TAY, KHONG_AP_DUNG... -> khong ket luan.
+    doi = {"KHOP": "PASS", "SAI": "FAIL"} if loai_case(u["case"]) == "checklist" else {}
     for c in kq.get("cases") or []:
-        if c.get("case") == u["case"] and c.get("verdict") in ("PASS", "FAIL"):
-            return c["verdict"]
+        vd = doi.get(c.get("verdict"), c.get("verdict"))
+        if c.get("case") == u["case"] and vd in ("PASS", "FAIL"):
+            return vd
     return None
 
 
@@ -90,8 +114,8 @@ def tin_ket_qua(job: dict, dong: list[tuple[str, dict, str]]) -> str:
     ra = [f"🔁 **Verify bug Reviewing** — **{job.get('ma', '')}** `{_cat(job.get('version'), 40)}`"]
     for loai, u, ghi_chu in dong:
         them = f" — {_cat(ghi_chu, 160)}" if ghi_chu else ""
-        ra.append(f"{icon[loai]} [{u['key']}]({u['link']}) `{u['case']}`{them}" if u["link"]
-                  else f"{icon[loai]} {u['key']} `{u['case']}`{them}")
+        ra.append(f"{icon[loai]} [{u['key']}]({u['link']}) `{u['case'] or '—'}`{them}" if u["link"]
+                  else f"{icon[loai]} {u['key']} `{u['case'] or '—'}`{them}")
     chu = "\n".join(ra)
     return chu if len(chu) <= MAX_TIN else chu[: MAX_TIN - 1] + "…"
 

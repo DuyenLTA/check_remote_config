@@ -29,7 +29,19 @@ lấy các issue **bot đã tạo** của mã app đó → hỏi Jira cái nào 
    (đỡ trường hợp dev kéo Reviewing sau khi báo build)
 7. Chỉ issue ghi chú **"tạo mới"** là bug của bot; issue "trùng, đã cập nhật" bỏ qua
 
-Mặc định chưa hỏi (theo đề xuất): bỏ mục 3c, chỉ báo ở `qa-auto`, bug checklist Next-Gen bỏ qua + "cần verify tay".
+Mặc định chưa hỏi (theo đề xuất): bỏ mục 3c, chỉ báo ở `qa-auto`.
+
+## Mở rộng (user chốt 28/10/2026) — thay đổi mục 1 và bug checklist
+- **A. Theo dõi bug trên chính Jira**: mọi bug tool log (bot, `rc-check` terminal, checklist Next-Gen) có label `auto-qa` +
+  dòng marker `AUTOQA case=<mã> ban=<debug|release> pkg=<package>` cuối description (`bot_jira_marker.py`). Ứng viên =
+  search Jira theo label (chính, `bot_jira_rest.tim_auto_qa`) ∪ state cũ (dự phòng, bug chưa có label), gộp theo key.
+  Thiếu marker → bỏ qua "thiếu marker auto-qa — cần verify tay". Marker sai mẫu / package khác build → bỏ qua.
+- **B. Verify bug checklist Next-Gen thay vì bỏ qua**: mã dòng (`EV-07`, `HT-03`, `KT-02`, `MED-02`, `1.7`…) chạy được
+  (`CASE_CHECKLIST_RE`). Prompt riêng `PROMPT_VERIFY_CHECKLIST` (chạy checklist, đo tay riêng mã cần), timeout 70 phút;
+  KHOP→PASS, SAI→FAIL, còn lại giữ Reviewing. Một lượt một nhóm (TC hoặc checklist); lẫn → nhóm đông hơn chạy, nhóm kia
+  bỏ kèm lý do. Chỉ PASS/FAIL + trang_thai XONG mới đổi Jira (giữ nguyên).
+- Chưa kiểm thật: marker sau khi qua skill jira-log-bug / mcp-atlassian (có thể bị escape wiki; parser đã bỏ `\`)
+  và một lượt checklist verify trên máy thật.
 
 ## Đề xuất của planner (user đã gật các điểm trên)
 - Câu Check thường **vẫn hỏi như cũ**; job verify là job riêng (`loai_job: "verify"`) xếp hàng ngay, không chờ QA.

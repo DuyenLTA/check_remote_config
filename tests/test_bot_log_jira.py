@@ -62,3 +62,10 @@ def test_ma_app_sai_thi_khong_goi_claude(tmp_path, monkeypatch):
     monkeypatch.setattr(j.subprocess, "run", lambda *a, **k: pytest.fail("không được gọi claude"))
     out = j.chay([BUG], {**JOB, "ma": "aip920"}, "", "qa.lead", tmp_path, tmp_path / "out")
     assert "project key" in out["loi"]
+
+
+def test_lenh_co_toolsearch_de_nap_tool_mcp_deferred(tmp_path):
+    cmd, prompt = j.lenh("AIP938", "duyenlta", tmp_path / "b.json", "AI Song")
+    tools = cmd[cmd.index("--allowedTools") + 1:]
+    assert "ToolSearch" in tools and not any(t.startswith("mcp__claude_ai") for t in tools)
+    assert "select:mcp__mcp-atlassian__jira_search," in prompt and "mcp__claude_ai_*" in prompt
