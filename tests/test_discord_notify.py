@@ -18,6 +18,8 @@ class _Hook:
         self.agents: list[str] = []
         self.raw: list[bytes] = []
         self.types: list[str] = []
+        self.auth: list[str] = []
+        self.paths: list[str] = []
         outer = self
 
         class H(BaseHTTPRequestHandler):
@@ -34,6 +36,8 @@ class _Hook:
                     assert outer.types[-1] == "application/json"
                 outer.bodies.append(json.loads(raw))
                 outer.agents.append(self.headers.get("User-Agent", ""))
+                outer.auth.append(self.headers.get("Authorization", ""))
+                outer.paths.append(self.path)
                 time.sleep(delay)
                 try:
                     self.send_response(status)
@@ -334,7 +338,7 @@ def test_upload_hong_thi_van_gui_tin_chu_kem_duong_dan(tmp_path, monkeypatch):
     report.write_text("x", encoding="utf-8")
     gui: list = []
 
-    def post(url, payload, dinh_kem):
+    def post(url, payload, dinh_kem, them=None):
         gui.append((payload["content"], dinh_kem is not None))
         return dinh_kem is None
 
@@ -343,3 +347,20 @@ def test_upload_hong_thi_van_gui_tin_chu_kem_duong_dan(tmp_path, monkeypatch):
     assert [co for _, co in gui] == [True, False]
     assert "Không gửi kèm được report" in gui[1][0]
     assert discord_notify._ten_file(Path('báo "cáo".html')) == "b_o__c_o_.html"
+
+
+def test_may_co_bot_thi_gui_bang_bot_vao_kenh_qa(hook, monkeypatch):
+    """User chot 28/10/2026: tin rcr-notify ve kenh qa-auto qua bot, khong qua webhook kenh chung."""
+    webhook, api = hook(), hook()
+    monkeypatch.setattr(discord_notify, "_qua_bot",
+                        lambda: (api.url.replace("/hook", "/channels/42/messages"), {"Authorization": "Bot tk"}))
+    assert discord_notify.send("done", "Report đã publish", ["AI Song"]) is True
+    assert webhook.bodies == [] and api.paths == ["/channels/42/messages"] and api.auth == ["Bot tk"]
+    assert api.bodies[0]["content"].startswith("✅ **rc-check** · Report đã publish")
+
+
+def test_dich_bot_tu_token_va_kenh_qa():
+    url, them = discord_notify._dich_bot("tk", "1562794153082097695")
+    assert url == "https://discord.com/api/v10/channels/1562794153082097695/messages" and them == {"Authorization": "Bot tk"}
+    assert discord_notify._dich_bot("tk", "khong-phai-so") is None
+    assert discord_notify._dich_bot("", "1") is None

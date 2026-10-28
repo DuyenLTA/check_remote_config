@@ -273,6 +273,9 @@ def _no_discord(monkeypatch):
     """Test khong bao gio duoc cham mang that: tat thong bao Discord mac dinh."""
     monkeypatch.setenv("DISCORD_NOTIFY", "0")
     monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+    from rcr import discord_notify
+    # May dev co token bot that trong registry: test khong duoc gui bang bot.
+    monkeypatch.setattr(discord_notify, "_qua_bot", lambda: None)
 
 
 @pytest.fixture(autouse=True)

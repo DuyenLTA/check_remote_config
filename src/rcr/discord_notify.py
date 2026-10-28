@@ -1,6 +1,9 @@
-"""Thong bao Discord (Webhook) cho luot /rc-check - chi stdlib.
+"""Thong bao Discord cho luot /rc-check - chi stdlib.
 
-URL webhook lay tu env `DISCORD_WEBHOOK_URL`, KHONG BAO GIO in ra hay ghi vao repo.
+May co cau hinh bot (`DISCORD_BOT_TOKEN` + `DISCORD_QA_CHANNEL_ID`, doc nhu `rcr-bot`) -> gui
+bang bot vao kenh QA (user chot 28/10/2026: moi tin cua luot ve chung kenh `qa-auto`, khong
+ve kenh chung cua webhook cu). Khong co thi lui ve webhook `DISCORD_WEBHOOK_URL`.
+Token / URL webhook KHONG BAO GIO in ra hay ghi vao repo.
 Gui hong (khong env, mang loi, HTTP loi, qua 5s) chi tra False + mot dong stderr:
 thong bao la tien nghi, khong duoc lam doi stdout / exit code cua luot chay.
 `DISCORD_NOTIFY=0` tat han viec gui (test dat san trong conftest).
@@ -19,6 +22,8 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+from . import cau_hinh_bot
+
 ENV_URL = "DISCORD_WEBHOOK_URL"
 ENV_SWITCH = "DISCORD_NOTIFY"
 TIMEOUT_S = 5
@@ -30,6 +35,7 @@ MAX_LEN = 2000
 MAX_FILE = 9 * 1024 * 1024
 # Cloudflare truoc Discord chan UA mac dinh cua urllib (Python-urllib/x.y).
 USER_AGENT = "qa-workflow-bot/1.0"
+API = "https://discord.com/api/v10"
 
 EMOJI = {"stop": "⛔", "done": "✅", "bug": "🐞"}
 
@@ -49,6 +55,18 @@ def build_text(kind: str, title: str, lines: list[str], action: str | None = Non
         rows.append(f"[Mở report](<{link}>)")  # <> tat embed xem truoc
     text = "\n".join(rows)
     return text if len(text) <= MAX_LEN else text[:MAX_LEN - 1] + "…"
+
+
+def _dich_bot(token: str, kenh: str) -> tuple[str, dict[str, str]] | None:
+    """(URL tao tin, header) de gui bang bot vao kenh `kenh`; thieu / sai cau hinh -> None."""
+    if token and kenh.isdigit():
+        return f"{API}/channels/{kenh}/messages", {"Authorization": f"Bot {token}"}
+    return None
+
+
+def _qua_bot() -> tuple[str, dict[str, str]] | None:
+    """Gui bang bot vao kenh QA neu may co cau hinh bot; khong thi None (dung webhook)."""
+    return _dich_bot(cau_hinh_bot.env("DISCORD_BOT_TOKEN"), cau_hinh_bot.env("DISCORD_QA_CHANNEL_ID"))
 
 
 def _doc_dinh_kem(file: Path | None) -> tuple[bytes | None, str]:
@@ -87,17 +105,21 @@ def send(kind: str, title: str, lines: list[str], action: str | None = None,
     try:
         if os.environ.get(ENV_SWITCH, "").strip() == "0":
             return False
-        url = os.environ.get(ENV_URL, "").strip()
-        if not url:
-            _warn(f"{ENV_URL} chưa đặt, bỏ qua thông báo")
-            return False
         if kind not in EMOJI:
             _warn(f"kind không hợp lệ: {kind!r}")
             return False
-        if not url.lower().startswith(("https://", "http://")):
-            # Chan file:// va scheme la cua urllib; khong in URL ra.
-            _warn(f"{ENV_URL} không phải URL http(s), bỏ qua thông báo")
-            return False
+        dich = _qua_bot()
+        if dich is not None:
+            url, them = dich
+        else:
+            url, them = os.environ.get(ENV_URL, "").strip(), {}
+            if not url:
+                _warn(f"{ENV_URL} chưa đặt, bỏ qua thông báo")
+                return False
+            if not url.lower().startswith(("https://", "http://")):
+                # Chan file:// va scheme la cua urllib; khong in URL ra.
+                _warn(f"{ENV_URL} không phải URL http(s), bỏ qua thông báo")
+                return False
         data, ghi_chu = _doc_dinh_kem(file)
         if ghi_chu:
             lines = [*lines, ghi_chu]
@@ -107,12 +129,12 @@ def send(kind: str, title: str, lines: list[str], action: str | None = None,
                     "allowed_mentions": {"parse": ["roles", "users"]}}
 
         if data is not None:
-            if _post(url, noi_dung(lines), (_ten_file(file), data)):
+            if _post(url, noi_dung(lines), (_ten_file(file), data), them):
                 return True
             # Upload hong (mang cham, file lon) khong duoc lam mat ca tin.
             _warn("gửi kèm report hỏng, gửi lại tin không kèm file")
             lines = [*lines, f"Không gửi kèm được report, mở trên máy chạy: {file}"]
-        return _post(url, noi_dung(lines), None)
+        return _post(url, noi_dung(lines), None, them)
     except Exception as exc:  # noqa: BLE001 - thong bao khong duoc lam hong luot chay
         _warn(f"gửi thất bại ({type(exc).__name__})")
         return False
@@ -123,8 +145,9 @@ def _ten_file(file: Path) -> str:
     return re.sub(r"[^A-Za-z0-9._-]", "_", file.name) or "report.html"
 
 
-def _post(url: str, payload: dict, dinh_kem: tuple[str, bytes] | None) -> bool:
-    """Mot request toi webhook. True khi 2xx; moi loi -> False, khong raise."""
+def _post(url: str, payload: dict, dinh_kem: tuple[str, bytes] | None,
+          them: dict[str, str] | None = None) -> bool:
+    """Mot request toi webhook / API bot (`them` = header Authorization). True khi 2xx; loi -> False."""
     try:
         if dinh_kem is not None:
             body, ranh = _multipart(payload, *dinh_kem)
@@ -134,7 +157,7 @@ def _post(url: str, payload: dict, dinh_kem: tuple[str, bytes] | None) -> bool:
             loai = "application/json"
         req = urllib.request.Request(
             url, data=body, method="POST",
-            headers={"Content-Type": loai, "User-Agent": USER_AGENT})
+            headers={"Content-Type": loai, "User-Agent": USER_AGENT, **(them or {})})
         timeout = TIMEOUT_FILE_S if dinh_kem is not None else TIMEOUT_S
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - scheme da kiem
             if 200 <= resp.status < 300:
@@ -142,7 +165,7 @@ def _post(url: str, payload: dict, dinh_kem: tuple[str, bytes] | None) -> bool:
             _warn(f"HTTP {resp.status}, thông báo không gửi được")
             return False
     except Exception as exc:  # noqa: BLE001 - thong bao khong duoc lam hong luot chay
-        # Chi in loai loi / ma HTTP: thong diep goc co the chua URL webhook.
+        # Chi in loai loi / ma HTTP: thong diep goc co the chua URL webhook / token.
         code = getattr(exc, "code", None)
         _warn(f"gửi thất bại ({'HTTP ' + str(code) if code else type(exc).__name__})")
         return False
