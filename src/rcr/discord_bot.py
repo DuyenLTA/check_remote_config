@@ -152,17 +152,23 @@ class BuildBot(discord.Client):
                 await kenh.send(f"Bot không đọc được mã app + version (dạng `AIP922 v3.7.0 (30)`) "
                                 f"trong tin báo build — QA xem giúp: {m.jump_url}")
             return
-        if not tin["sdk"]:
-            # Build chuc nang / fix bug, khong apply SDK: chua co workflow cho loai nay (user chot 28/10/2026).
-            log.info("bo qua build khong apply SDK: %s %s", tin["ma"], tin["version"])
-            return
-        if any(t.get("ma") == tin["ma"] and t.get("version") == tin["version"] for t in self.q.tin.values()):
+        cu = [t for t in self.q.tin.values() if t.get("ma") == tin["ma"] and t.get("version") == tin["version"]]
+        if cu:
             # Giai doan chuyen kenh dev co the bao mot build o ca kenh chung lan kenh project.
             log.info("build da hoi roi: %s %s (%s)", tin["ma"], tin["version"], m.jump_url)
-            if m.channel.id == self.kenh_qa:     # QA gui lai tin build de chay lai -> tro ve tin cu
+            # QA gui lai tin build de chay lai -> tro ve tin Check cu (build chi co luot verify thi khong co tin Check)
+            if m.channel.id == self.kenh_qa and any(t.get("loai_job") != "verify" for t in cu):
                 await self._hoi_lai(m, tin)
             return
         pkg = await asyncio.to_thread(bot_cong_viec.package_cua, tin["ma"], OUT)
+        if not tin["sdk"]:
+            # Build chuc nang / fix bug, khong apply SDK: khong hoi Check (chua co workflow, user chot 28/10/2026)
+            # nhung VAN verify bug dev da keo Reviewing - build fix bug thuong khong ghi SDK (user chot 28/10/2026).
+            log.info("build khong apply SDK, chi verify bug Reviewing: %s %s", tin["ma"], tin["version"])
+            if pkg:
+                await self._xep_verify({**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin),
+                                        "link_tin": m.jump_url}, kenh)
+            return
         if not pkg:
             await kenh.send(f"Sheet Check thông số KT không có package của **{tin['ma']}** — {m.jump_url}")
             return
@@ -170,6 +176,10 @@ class BuildBot(discord.Client):
         c = {**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin), "link_tin": m.jump_url, "msg_id": qa.id}
         self.q.nho_tin(c)
         await qa.edit(content=bot_cong_viec.tin_hoi(c), view=_nut(*NUT_HOI, msg_id=qa.id))
+        await self._xep_verify(c, kenh)
+
+    async def _xep_verify(self, c: dict, kenh) -> None:
+        """Tim bug bot da log cua app dang Reviewing -> xep luot verify tren build `c`."""
         try:                                 # loi verify khong duoc lam hong tin Check vua gui
             tom_tat = await bot_job_verify.xep(self, c, kenh)
             log.info("verify %s: %s", c["ma"], tom_tat)

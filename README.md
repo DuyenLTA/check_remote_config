@@ -413,7 +413,7 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
 **Tự verify bug Reviewing** (có `JIRA_PERSONAL_TOKEN`): bug do tool log (từ bot Discord, `rc-check` trong terminal
 hay checklist Next-Gen) mang **label `auto-qa`** + một dòng marker cuối description
 `AUTOQA case=<mã case> ban=<debug|release> pkg=<package>`. Dev kéo bug sang **Reviewing** → khi dev báo build mới
-của app đó, bot tìm bug Reviewing theo label (JQL `project = <MÃ> AND labels = "auto-qa" AND status = Reviewing`,
+của app đó (kể cả build không ghi SDK, như build fix bug: build đó không có tin hỏi Check, chỉ có lượt verify), bot tìm bug Reviewing theo label (JQL `project = <MÃ> AND labels = "auto-qa" AND status = Reviewing`,
 tối đa 50) + bug bot log cũ chưa có label (theo state), gộp theo key, rồi xếp lượt verify (tin 🔁 riêng ở kênh QA,
 không cần bấm Check): cài build, chạy lại đúng các case trong marker, **PASS → comment + Done**,
 **FAIL → comment + To Do**; lượt dừng / không ổn định / Claude không kết luận → giữ Reviewing.
@@ -425,8 +425,10 @@ Dev kéo Reviewing sau khi báo build → QA bấm **Verify lại** ở tin buil
 tắt, luồng Check giữ nguyên.
 
 **Báo dev**: bug vừa log Jira và bug verify vẫn FAIL được báo ở **kênh riêng của project** (cùng server với kênh
-build, tên bắt đầu bằng mã app: `aip920-…`), tag các dev trong `DISCORD_DEV_IDS`. Không có kênh / bot không có
-quyền gửi (kênh Publishing `apb…`) → bot đăng nội dung ở kênh QA để QA chuyển tay.
+build, tên bắt đầu bằng mã app: `aip920-…`), tag các dev trong `DISCORD_DEV_IDS`. Kênh project được tìm ở server của tin build trước, không có thì ở các
+server khác bot đang ở (QA gửi lại tin build ở kênh QA). Log đủ bug và báo được dev → kênh QA không có tin mới, chỉ
+tin menu bug đổi dòng trạng thái. Không có kênh / bot không có quyền gửi (kênh Publishing `apb…`), log thiếu bug hay
+Jira báo lỗi → bot báo ở kênh QA (kèm nội dung để QA chuyển tay khi không báo được dev).
 
 Lệnh tay: `rcr-cai-build --package <pkg> --version "4.3.0 (40)" --loai debug|release [--serial S]` (cài đúng
 bản từ App Tester), thêm `--chi-kiem` để chỉ xem App Tester đang có những bản nào.

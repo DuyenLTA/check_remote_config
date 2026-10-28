@@ -229,3 +229,32 @@ def test_log_jira_xong_bao_duoc_dev_thi_khong_dang_them_o_kenh_qa(monkeypatch):
     c2, it = {**_c(), "bug_chon": [1]}, _It()
     asyncio.run(_bot()._review_bug(it, "jira", c2))
     assert it.goi[-1][0] == "reply" and "AIP920-9" in it.goi[-1][1][0]
+
+
+def test_build_khong_ghi_sdk_van_verify_bug_reviewing_nhung_khong_hoi_check(monkeypatch):
+    """Build fix bug thuong khong ghi SDK: khong dang tin hoi Check, nhung van xep verify bug Reviewing."""
+    gui, xep = [], []
+
+    async def send(chu, **k):
+        gui.append(chu)
+
+    async def xep_(bot, c, kenh):
+        xep.append(c)
+        return "ok"
+    monkeypatch.setattr(d.bot_hoi_dap, "la_cau_hoi", lambda bot, m: False)
+    monkeypatch.setattr(d.bot_cong_viec, "package_cua", lambda ma, out: "pkg.nexus")
+    monkeypatch.setattr(d.bot_job_verify, "xep", xep_)
+    bot = object.__new__(d.BuildBot)
+    bot.kenh_qa, bot.kenh_build, bot.q = 1, {1, 2}, SimpleNamespace(tin={})
+    bot.get_channel = lambda cid: SimpleNamespace(send=send)
+    m = SimpleNamespace(author=SimpleNamespace(bot=False), webhook_id=None, channel=SimpleNamespace(id=2),
+                        guild=None, content="AIP922---Nexus AI v3.7.1 (31) fix bug round 1", jump_url="u")
+    asyncio.run(bot.on_message(m))
+    assert gui == []                                        # khong co tin hoi Check
+    assert len(xep) == 1 and xep[0]["version"] == "3.7.1 (31)" and xep[0]["package"] == "pkg.nexus"
+
+    gui.clear(), xep.clear()
+    bot.q.tin = {"9": {"ma": "AIP922", "version": "3.7.1 (31)", "loai_job": "verify"}}
+    m.channel = SimpleNamespace(id=1)                       # QA gui lai o qa-auto: da xep verify roi
+    asyncio.run(bot.on_message(m))
+    assert gui == [] and xep == []
