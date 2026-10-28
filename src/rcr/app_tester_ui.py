@@ -87,9 +87,13 @@ async def mo_chi_tiet(client, serial, package, out_dir: Path):
         nodes = await _nodes(client, serial)
     if s.man(nodes) != "danh_sach":
         raise await _luu_man_la(client, serial, out_dir, "mở App Tester không ra danh sách app")
-    await _cuon(client, serial, "down", 8)                 # len dau = keo lam moi
+    # App dang hien san tren man -> bam luon. Chi khi chua thay moi len dau (keo lam moi) roi do tung
+    # trang: truoc day luon vuot 8 lan du app nam ngay truoc mat (QA phan nan 28/10/2026).
+    dong = s.dong_app(nodes, package)
+    if dong is None:
+        await _cuon(client, serial, "down", 8)
     for _ in range(MAX_CUON_DS):
-        dong = s.dong_app(await _nodes(client, serial), package)
+        dong = dong or s.dong_app(await _nodes(client, serial), package)
         if dong:
             await _bam(client, serial, dong, 3)
             break
@@ -114,10 +118,13 @@ async def doc_cac_ban(client, serial, nodes, version: str) -> list[dict]:
     gom: dict = {}
     for _ in range(MAX_CUON_BAN):
         moi = s.cac_ban(nodes)
+        truoc = len(gom)
         for b in moi:
             gom.setdefault(s.khoa_ban(b), b)
         da_qua = any(b["version"] == version for b in gom.values()) and moi and moi[-1]["version"] != version
-        if da_qua or not moi:
+        # Cuon ma khong ra release moi = het danh sach -> dung, khong cuon tiep cho du MAX_CUON_BAN.
+        het = truoc and len(gom) == truoc
+        if da_qua or not moi or het:
             break
         await _cuon(client, serial, "up")
         nodes = await _nodes(client, serial)
@@ -135,16 +142,21 @@ async def kiem(client, serial, package, version, out_dir: Path) -> dict:
 
 
 async def _toi_ban(client, serial, dich: dict):
-    """Cuon lai tu dau toi release `dich`, mo rong no. Tra release (co node_nut) tren man hien tai."""
-    await _cuon(client, serial, "down", 4)
-    for _ in range(MAX_CUON_BAN):
+    """Tim release `dich` (man hien tai truoc, khong thay moi cuon ve dau roi do xuong), mo rong no.
+    Tra release (co node_nut) tren man hien tai."""
+    ve_dau = False
+    for _ in range(MAX_CUON_BAN + 1):
         b = next((x for x in s.cac_ban(await _nodes(client, serial)) if s.khoa_ban(x) == s.khoa_ban(dich)), None)
         if b and not b["mo_rong"]:
             await _bam(client, serial, b["node_mo"])
             continue
         if b and b["node_nut"] is not None:
             return b
-        await _cuon(client, serial, "up")
+        if not ve_dau:
+            await _cuon(client, serial, "down", 4)
+            ve_dau = True
+        else:
+            await _cuon(client, serial, "up")
     return None
 
 
