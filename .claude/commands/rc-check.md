@@ -726,8 +726,9 @@ sau đó dùng skill log bug để tự log bug lên jira"*.
    Bug được chọn → gọi skill `anthropic-skills:jira-log-bug` mode TEXT (`bug_ad`), mỗi bug một lần,
    đủ thông tin ở bước 1 + app, version, SDK FO, máy. Báo lại link từng issue.
    Log xong (có ít nhất một issue tạo được) → **báo dev check bug** bằng một tin Discord:
-   `<bin>/rcr-notify --kind bug --title "Nhờ dev check bug · Project <mã project Jira> · <tên app> <version>" --line "<KEY-1> — <tóm tắt bug> · <mức độ> · <link issue>" [--line ...]`
-   — mỗi issue một `--line`, bỏ bug không tạo được issue.
+   `<bin>/rcr-notify --kind bug --title "Nhờ dev check bug · bản build <MÃ>---<Tên app> v<versionName> (<versionCode>)" --line "<KEY-1> — <tóm tắt bug> · <mức độ> · <link issue>" [--line ...]`
+   — mỗi issue một `--line`, bỏ bug không tạo được issue. Bản build ghi **đúng mẫu tin build của dev**
+   (`AIP882---AI-Video v4.3.0 (40)`); versionName/versionCode lấy từ `dumpsys package <pkg>` của bản đã test.
 3. **Lượt do bot Discord gọi (headless, không có người):** KHÔNG hỏi, KHÔNG log Jira. Chỉ đưa danh
    sách bug vào trường `bugs` của dòng `KET_QUA` (mẫu nằm trong prompt của bot). Bot đăng menu tick
    lên kênh QA; QA bấm **Log Jira** thì bot chạy lượt riêng (`src/rcr/bot_log_jira.py`): project key =

@@ -148,7 +148,9 @@ def tin_bao_dev(c: dict, kq: dict, bugs: list[dict]) -> str | None:
               if i.get("key") and not i.get("ghi_chu", "").startswith("bỏ qua")]
     if not issues:
         return None
-    dong = [f"🐞 **Nhờ dev check bug** — Project **{c['ma']}** · {c['ten']} `{c['version']}`",
+    # Ghi dung nhu dong dau tin build cua dev ("AIP882---AI-Video v4.3.0 (40)") cho dev khoi nham ban.
+    ban = f"{c['ma']}---{c['ten']}" if c.get("ten") else c["ma"]
+    dong = [f"🐞 **Nhờ dev check bug** — bản build **{ban} v{c['version']}**",
             f"Đã log {len(issues)} bug lên Jira:"]
     for i in issues:
         b = theo_case.get(i["case"], {})
