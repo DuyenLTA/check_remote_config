@@ -130,8 +130,15 @@ class BuildBot(discord.Client):
         tin = build_ma_app.tach(chu)
         kenh = self.get_channel(self.kenh_qa)
         if tin is None:
-            if "bản build" in chu.lower():   # dung la tin build ma lech mau -> hoi, khong doan
-                await kenh.send(f"Tin build lệch mẫu, bot không tách được mã app / version: {m.jump_url}")
+            # Khong bam mau cau: tin webhook (bao build tu dong) hoac tin co ma app ma khong doc ra
+            # version -> hoi QA. Bo qua im lang chi khi tin khong dinh gi toi app nao.
+            if m.webhook_id or build_ma_app.co_ma_app(chu):
+                await kenh.send(f"Bot không đọc được mã app + version (dạng `AIP922 v3.7.0 (30)`) "
+                                f"trong tin ở kênh build — QA xem giúp: {m.jump_url}")
+            return
+        if not tin["sdk"]:
+            # Build chuc nang / fix bug, khong apply SDK: chua co workflow cho loai nay (user chot 28/10/2026).
+            log.info("bo qua build khong apply SDK: %s %s", tin["ma"], tin["version"])
             return
         pkg = await asyncio.to_thread(bot_cong_viec.package_cua, tin["ma"], OUT)
         if not pkg:
