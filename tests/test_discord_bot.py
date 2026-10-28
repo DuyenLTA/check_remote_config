@@ -184,3 +184,23 @@ def test_qa_gui_lai_build_da_hoi_thi_bat_lai_nut_check(monkeypatch):
     bot.q.vi_tri = lambda mid: 1                       # dang cho / dang chay -> khong bat lai nut
     asyncio.run(bot._hoi_lai(_tin_ghi(goi, "moi"), {"ma": "AIP922", "version": "3.7.0 (30)"}))
     assert [g[0] for g in goi] == ["moi_reply"] and "đang chờ" in goi[0][1]
+
+
+def test_webhook_thong_bao_o_kenh_qa_khong_hoi_lai_ma_app(monkeypatch):
+    """Kenh QA nam trong ca danh sach kenh build: webhook thong bao cua tool o day khong phai tin build."""
+    gui = []
+
+    async def send(chu, **k):
+        gui.append(chu)
+    monkeypatch.setattr(d.bot_hoi_dap, "la_cau_hoi", lambda bot, m: False)
+    bot = object.__new__(d.BuildBot)
+    bot.kenh_qa, bot.kenh_build = 1, {1, 2}
+    bot.get_channel = lambda cid: SimpleNamespace(send=send)
+
+    def tin(kenh):
+        return SimpleNamespace(author=SimpleNamespace(bot=True), webhook_id=99, channel=SimpleNamespace(id=kenh),
+                               guild=None, content="Audit xong: 51/51 khớp", jump_url="u")
+    asyncio.run(bot.on_message(tin(1)))
+    assert gui == []
+    asyncio.run(bot.on_message(tin(2)))                 # kenh build that van hoi QA nhu cu
+    assert len(gui) == 1 and "không đọc được" in gui[0]

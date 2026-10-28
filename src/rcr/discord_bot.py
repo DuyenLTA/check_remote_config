@@ -144,6 +144,10 @@ class BuildBot(discord.Client):
         if tin is None:
             # Khong bam mau cau: tin webhook (bao build tu dong) hoac tin co ma app ma khong doc ra
             # version -> hoi QA. Kenh project con chat thuong nen chi hoi voi tin webhook.
+            # Kenh QA cung la kenh build (QA gui lai tin build de chay lai), nhung webhook o day la
+            # thong bao cua chinh cac tool (audit, rc-check) chu khong phai tin bao build -> bo qua.
+            if m.webhook_id and m.channel.id == self.kenh_qa:
+                return
             if m.webhook_id or (o_kenh_build and build_ma_app.co_ma_app(chu)):
                 await kenh.send(f"Bot không đọc được mã app + version (dạng `AIP922 v3.7.0 (30)`) "
                                 f"trong tin báo build — QA xem giúp: {m.jump_url}")
