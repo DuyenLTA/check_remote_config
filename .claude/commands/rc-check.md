@@ -193,7 +193,7 @@ có thể bị Claude Code tắt giữa chừng. Báo Discord khi dừng:
 User chốt 28/10/2026: trước khi auto rc-check phải check ID ads như `/audit-fanout`. Lý do:
 mục 5c tra unit ↔ vị trí bằng chính sheet "Check thông số KT"; sheet lệch build thì dòng ads
 ra PASS/FAIL theo ID sai mà không ai biết. Audit đối chiếu sheet đó với ID build đang chạy;
-**lệch là dừng** (mục 4 dưới).
+lệch thì **vẫn chạy tiếp** (mục 4 dưới) — user đổi lại 28/10/2026, trước đó là lệch thì dừng.
 
 Áp dụng cho **cả hai nhánh** (bộ TC và Next-Gen §0b). **Bỏ qua** khi lượt không chạy case:
 kiểu (a)/(b) ở mục 4, `--set` đứng riêng, `--restore`, `--tiep`, `--cham-tay`, `--gop` chỉ dựng
@@ -212,17 +212,14 @@ lại report. Preflight ra `LOI` thì đã dừng ở 3b, không audit.
    trong câu báo. **Chạy xong audit mới chạy mục 4** — hai bên cùng lái một máy.
 4. Theo kết quả audit:
    - `clean` → chạy tiếp mục 4 như thường.
-   - **Lệch ID** = có dòng `Lệch` trong thống kê khớp/lệch, hoặc có `confirmed` → **DỪNG, không
-     chạy mục 4** (user chốt 28/10/2026): rc-check chấm load/show theo đúng ID từng vị trí, build
-     sai ID thì mọi dòng ads của vị trí đó chấm vô nghĩa. Báo dev build lại với ID đúng:
-     `<bin>/rcr-notify --kind stop --title "ID ads lệch sheet — cần build lại" --line "<vị trí · ID sheet → ID build>" --action "Dev build lại đúng ID ads rồi chạy lại /rc-check" --link <link trang audit>`
-     (mỗi vị trí lệch một `--line`). Câu báo liệt kê đủ vị trí lệch, ID
-     sheet, ID build. Lượt bot: `trang_thai` = `DUNG`, `link` = link trang audit, `bugs` = [].
-     Phát biểu là "build lệch sheet, cần dev build lại / ads-team xác nhận", đừng khẳng định bên
-     nào sai. Không có cờ nào để chạy tiếp khi đang lệch.
-   - chỉ có `disputed` / `unresolved` (chưa kết luận được là lệch) → **không dừng**, chạy tiếp
-     mục 4. Ở 5c/5d, dòng ads của các vị trí đó đối chiếu theo **unit thật trong log**, không
-     theo sheet, và nêu riêng trong câu báo để người xem lại.
+   - **Lệch ID** = có dòng `Lệch` trong thống kê khớp/lệch, hoặc có `confirmed` → **KHÔNG dừng,
+     chạy tiếp mục 4** (user đổi 28/10/2026: "lệch thì không sao, cứ chạy tiếp, đừng dừng lại").
+     Không gửi `rcr-notify --kind stop`, không đặt `trang_thai` = `DUNG` vì lệch ID. Ở 5c/5d, dòng
+     ads của vị trí lệch đối chiếu theo **unit thật trong log**, không theo sheet. Câu báo cuối
+     liệt kê đủ vị trí lệch (vị trí · ID sheet → ID build) để người xem lại; phát biểu là "build
+     lệch sheet, cần dev / ads-team xác nhận", đừng khẳng định bên nào sai.
+   - chỉ có `disputed` / `unresolved` (chưa kết luận được là lệch) → cũng **không dừng**, xử lý
+     như vị trí lệch ở trên.
    - `find_app.py` báo sheet không có tab / 2 tab cùng package → preflight đã chặn trường hợp
      thiếu tab; 2 tab thì lượt có người hỏi user theo audit-fanout, lượt bot ghi vào
      `tom_tat` rồi chạy tiếp bằng tab rc-check tự chọn.
