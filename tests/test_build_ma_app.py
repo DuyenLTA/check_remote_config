@@ -107,6 +107,25 @@ def test_build_chuc_nang_khong_phai_sdk(tin):
     assert b.tach(tin)["sdk"] is False
 
 
+@pytest.mark.parametrize("ten, ma", [
+    ("aip920-ai-english-official-group", "AIP920"),
+    ("ADA895-photoshoot", "ADA895"),
+    ("qa-auto", ""),
+    ("aip92-test", ""),
+    ("general", ""),
+])
+def test_ma_cua_kenh_project(ten, ma):
+    assert b.ma_cua_kenh(ten) == ma
+
+
+def test_tin_o_kenh_project_khong_ghi_ma_thi_lay_ma_kenh():
+    tin = b.tach("v3.7.0 (30) đã lên QA\n- Tutorial SDK 3.7.0", ma_kenh="AIP922")
+    assert (tin["ma"], tin["version"], tin["sdk"]) == ("AIP922", "3.7.0 (30)", True)
+    # Tin co ghi ma thi tin ma trong tin; khong co version thi van khong phai tin build.
+    assert b.tach("ADA895 v1.0.0 (3) apply 3.6.1", ma_kenh="AIP922")["ma"] == "ADA895"
+    assert b.tach("hôm nay build lỗi à", ma_kenh="AIP922") is None
+
+
 def test_tin_lech_mau_khong_doan():
     assert b.tach("Build AIP882 4.3.0 xong rồi nha") is None
     assert b.tach("") is None

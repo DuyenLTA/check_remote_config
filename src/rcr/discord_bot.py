@@ -121,24 +121,39 @@ class BuildBot(discord.Client):
     async def _tin_qa(self, msg_id: int) -> discord.Message:
         return await self.get_channel(self.kenh_qa).fetch_message(msg_id)
 
+    def _server_build(self) -> set[int]:
+        """Server chua kenh build chung - chi nghe kenh project trong cac server nay."""
+        return {k.guild.id for k in map(self.get_channel, self.kenh_build) if k is not None and k.guild}
+
     # --- tin build -> hoi o kenh QA ----------------------------------------------------
     async def on_message(self, m: discord.Message):
         # dev bao build qua webhook "Build Notification" (author.bot=True) -> nhan webhook, bo bot khac
-        if m.channel.id not in self.kenh_build or (m.author.bot and not m.webhook_id):
+        if m.author.bot and not m.webhook_id:
+            return
+        # Ngoai kenh build chung, nghe ca kenh rieng cua tung project (`aip922-...`, cung server voi kenh
+        # build): dev se chuyen sang bao build o kenh project (user chot 28/10/2026).
+        o_kenh_build = m.channel.id in self.kenh_build
+        ma_kenh = "" if o_kenh_build else build_ma_app.ma_cua_kenh(
+            getattr(getattr(m.channel, "parent", None) or m.channel, "name", ""))
+        if not o_kenh_build and not (ma_kenh and m.guild and m.guild.id in self._server_build()):
             return
         chu = noi_dung(m)
-        tin = build_ma_app.tach(chu)
+        tin = build_ma_app.tach(chu, ma_kenh)
         kenh = self.get_channel(self.kenh_qa)
         if tin is None:
             # Khong bam mau cau: tin webhook (bao build tu dong) hoac tin co ma app ma khong doc ra
-            # version -> hoi QA. Bo qua im lang chi khi tin khong dinh gi toi app nao.
-            if m.webhook_id or build_ma_app.co_ma_app(chu):
+            # version -> hoi QA. Kenh project con chat thuong nen chi hoi voi tin webhook.
+            if m.webhook_id or (o_kenh_build and build_ma_app.co_ma_app(chu)):
                 await kenh.send(f"Bot không đọc được mã app + version (dạng `AIP922 v3.7.0 (30)`) "
-                                f"trong tin ở kênh build — QA xem giúp: {m.jump_url}")
+                                f"trong tin báo build — QA xem giúp: {m.jump_url}")
             return
         if not tin["sdk"]:
             # Build chuc nang / fix bug, khong apply SDK: chua co workflow cho loai nay (user chot 28/10/2026).
             log.info("bo qua build khong apply SDK: %s %s", tin["ma"], tin["version"])
+            return
+        if any(t.get("ma") == tin["ma"] and t.get("version") == tin["version"] for t in self.q.tin.values()):
+            # Giai doan chuyen kenh dev co the bao mot build o ca kenh chung lan kenh project.
+            log.info("build da hoi roi: %s %s (%s)", tin["ma"], tin["version"], m.jump_url)
             return
         pkg = await asyncio.to_thread(bot_cong_viec.package_cua, tin["ma"], OUT)
         if not pkg:

@@ -43,23 +43,33 @@ def _sach(text: str) -> str:
     return MENTION_RE.sub(" ", LINK_RE.sub(" ", MARKDOWN_RE.sub("", text or "")))
 
 
+KENH_PROJECT_RE = re.compile(r"^([a-z]{3}\d{3})-")
+
+
+def ma_cua_kenh(ten: str) -> str:
+    """Kenh rieng cua project `aip920-ai-english-official-group` -> "AIP920"; kenh khac -> ""."""
+    m = KENH_PROJECT_RE.match((ten or "").lower())
+    return m.group(1).upper() if m else ""
+
+
 def co_ma_app(text: str) -> bool:
     """Tin co ma app -> la tin can bot xu ly, doc khong ra version thi phai hoi chu khong bo qua."""
     return bool(MA_RE.search(_sach(text)))
 
 
-def tach(text: str) -> dict | None:
+def tach(text: str, ma_kenh: str = "") -> dict | None:
     """{ma, ten, version, next_gen, tutorial, sdk} hoac None khi thieu ma app hoac version (code).
 
     `next_gen`: False khi "revert next-gen", True khi nhac next-gen, None khi khong nhac.
     `tutorial`: so SDK dung sau chu tutorial / sdk / apply, "" khi tin khong nhac.
     `sdk`: build co apply SDK khong (co so SDK hoac nhac next-gen) - False thi bot bo qua.
+    `ma_kenh`: ma app suy tu ten kenh project (`aip922-...`) - dung khi tin trong kenh do khong ghi ma.
     """
     text = _sach(text)
     ma, ver = MA_RE.search(text), VERSION_RE.search(text)
-    if not ma or not ver:
+    if not (ma or ma_kenh) or not ver:
         return None
-    ten = TEN_RE.match(text, ma.end())
+    ten = TEN_RE.match(text, ma.end()) if ma else None
     # Version build hay duoc nhac lai trong ghi chu ("v3.7.0 (30) - tutorial-sdk/3.7.0"): bo het truoc
     # khi tim tutorial, khong thi version app bi doc thanh ban tutorial.
     ghi_chu = re.sub(rf"v?\s?{re.escape(ver.group(1))}\s*[(\[]\s*{ver.group(2)}\s*[)\]]", " ", text, flags=re.I)
@@ -71,7 +81,7 @@ def tach(text: str) -> dict | None:
         next_gen = None
     tut = SDK_RE.search(ghi_chu)
     return {
-        "ma": ma.group(1).upper(),
+        "ma": (ma.group(1) if ma else ma_kenh).upper(),
         "ten": ten.group(1).strip(" -") if ten else "",
         "version": f"{ver.group(1)} ({ver.group(2)})",
         "next_gen": next_gen,
