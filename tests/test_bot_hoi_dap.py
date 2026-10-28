@@ -62,7 +62,8 @@ def test_chi_dm_hoac_tag_bot_moi_la_cau_hoi():
     me = SimpleNamespace(id=99)
     bot = SimpleNamespace(user=me)
     assert h.la_cau_hoi(bot, _m(guild=False))
-    assert h.la_cau_hoi(bot, _m(mentions=[me]))
+    assert h.la_cau_hoi(bot, _m(mentions=[me], content="<@99> AIP938 sao rồi"))
+    assert not h.la_cau_hoi(bot, _m(mentions=[me], content="ok cảm ơn"))   # bam Reply: Discord tu mention
     assert not h.la_cau_hoi(bot, _m())                         # tin build / chat thuong
     assert not h.la_cau_hoi(bot, _m(guild=False, bot=True))    # webhook / bot khac
 
@@ -73,4 +74,4 @@ def test_nguoi_ngoai_danh_sach_khong_hoi_duoc(monkeypatch):
     bot = SimpleNamespace(user=SimpleNamespace(id=99), _duoc_duyet=lambda u: False)
     m = _m(content="<@99> hang doi")
     asyncio.run(h.tra_loi_tin(bot, m, None, None))
-    assert goi == [] and "Chỉ QA được duyệt" in m.replies[0][0]
+    assert goi == [] and m.replies == []                       # im lang, khong tra loi

@@ -95,14 +95,17 @@ def boi_canh(jobs: list[dict], dang_chay: dict[str, int], tin: dict[str, dict]) 
 
 
 def la_cau_hoi(bot, m) -> bool:
-    """Nhan rieng bot, hoac tag bot o kenh bat ky (khong tinh tin cua bot / webhook)."""
-    return not m.author.bot and bot.user is not None and (m.guild is None or bot.user in m.mentions)
+    """Nhan rieng bot, hoac GO tag bot trong noi dung tin (khong tinh tin cua bot / webhook).
+    Bam Reply vao tin cua bot thi Discord tu dua bot vao mentions -> khong tinh la hoi
+    (user chot 28/10/2026: nguoi ta reply thi im lang)."""
+    if m.author.bot or bot.user is None:
+        return False
+    return m.guild is None or re.search(rf"<@!?{bot.user.id}>", m.content or "") is not None
 
 
 async def tra_loi_tin(bot, m, repo: Path, log_dir: Path) -> None:
     khong_tag = discord.AllowedMentions.none()
-    if not bot._duoc_duyet(m.author):
-        await m.reply("Chỉ QA được duyệt mới hỏi bot được.", mention_author=False, allowed_mentions=khong_tag)
+    if not bot._duoc_duyet(m.author):      # nguoi ngoai danh sach duyet: im lang, khong tra loi gi
         return
     cau = re.sub(rf"<@!?{bot.user.id}>", "", m.content or "").strip()
     ctx = boi_canh(bot.q.jobs, bot.ban, bot.q.tin)
