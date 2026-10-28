@@ -76,7 +76,7 @@ def phan_loai(uv: list[dict], loai_ban_moi: str, package: str = "") -> tuple[lis
     if nhom_tc and nhom_ck:
         giu, bo_them = (nhom_ck, nhom_tc) if len(nhom_ck) > len(nhom_tc) else (nhom_tc, nhom_ck)
         chay = giu
-        bo += [(u, "lượt này chạy nhóm case khác (TC / checklist) — bấm Verify lại sau") for u in bo_them]
+        bo += [(u, "lượt này chạy nhóm case khác (TC / checklist) — bấm Verify bug Jira sau") for u in bo_them]
     return chay, bo
 
 

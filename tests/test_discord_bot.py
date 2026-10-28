@@ -154,3 +154,33 @@ def test_log_ra_0_issue_thi_chua_tinh_da_log_va_tra_menu(monkeypatch):
     asyncio.run(bot._review_bug(it, "jira", c))
     assert c["jira"] is None and not bot.dang_log
     assert [g[0] for g in it.goi] == ["edit", "reply", "msg_edit"] and it.goi[-1][2]["view"] is not None
+
+
+def _tin_ghi(goi, ten, jump="https://discord.com/x/1"):
+    async def edit(**k):
+        goi.append((ten + "_edit", k))
+
+    async def reply(chu, **k):
+        goi.append((ten + "_reply", chu))
+    return SimpleNamespace(id=7, jump_url=jump, edit=edit, reply=reply)
+
+
+def test_qa_gui_lai_build_da_hoi_thi_bat_lai_nut_check(monkeypatch):
+    goi = []
+    c = {"msg_id": 7, "ma": "AIP922", "version": "3.7.0 (30)", "package": "p", "loai_ban": "release"}
+    bot = object.__new__(d.BuildBot)
+    bot.q = SimpleNamespace(tin={"7": c}, vi_tri=lambda mid: None)
+    cu = _tin_ghi(goi, "cu")
+
+    async def tin_qa(mid):
+        return cu
+    bot._tin_qa = tin_qa
+    monkeypatch.setattr(d.bot_cong_viec, "tin_hoi", lambda c: "hoi")
+    asyncio.run(bot._hoi_lai(_tin_ghi(goi, "moi"), {"ma": "AIP922", "version": "3.7.0 (30)"}))
+    assert goi[0][0] == "cu_edit" and goi[0][1]["view"] is not None
+    assert goi[1][0] == "moi_reply" and "Check" in goi[1][1] and cu.jump_url in goi[1][1]
+
+    goi.clear()
+    bot.q.vi_tri = lambda mid: 1                       # dang cho / dang chay -> khong bat lai nut
+    asyncio.run(bot._hoi_lai(_tin_ghi(goi, "moi"), {"ma": "AIP922", "version": "3.7.0 (30)"}))
+    assert [g[0] for g in goi] == ["moi_reply"] and "đang chờ" in goi[0][1]

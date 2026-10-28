@@ -51,7 +51,7 @@ def test_checklist_chay_duoc_va_chi_mot_nhom_moi_luot():
     chay, bo = v.phan_loai([ck("A-1", "EV-07"), ck("A-2", "HT-03"), ck("A-3", "a#1")], "debug")
     assert [u["key"] for u in chay] == ["A-1", "A-2"] and [u["key"] for u, _ in bo] == ["A-3"]
     chay, bo = v.phan_loai([ck("A-1", "EV-07"), ck("A-3", "a#1")], "debug")     # hoa -> TC
-    assert [u["key"] for u in chay] == ["A-3"] and "Verify lại" in bo[0][1]
+    assert [u["key"] for u in chay] == ["A-3"] and "Verify bug Jira" in bo[0][1]
     chay, bo = v.phan_loai([ck("A-1", "EV-07")], "release")
     assert chay == [] and "release" in bo[0][1]
 

@@ -56,7 +56,7 @@ def _nut(*cac: tuple[str, str, discord.ButtonStyle], msg_id: int) -> discord.ui.
 
 
 XANH, XAM = discord.ButtonStyle.success, discord.ButtonStyle.secondary
-NUT_HOI = (("check", "Check", XANH), ("bo", "Bỏ qua", XAM), ("verify", "Verify lại", XAM))
+NUT_HOI = (("check", "Check", XANH), ("bo", "Bỏ qua", XAM), ("verify", "Verify bug Jira", XAM))
 NUT_BUG = (("jira", "Log Jira", XANH), ("khongbug", "Không có bug thật", XAM))
 
 
@@ -106,6 +106,24 @@ class BuildBot(discord.Client):
         """Gia tri phai che trong moi cau tra loi gui len Discord."""
         return [env("DISCORD_BOT_TOKEN"), self.jira_token, env("DISCORD_WEBHOOK_URL")]
 
+    async def _hoi_lai(self, m: discord.Message, tin: dict):
+        """Build da hoi roi: bat lai nut Check o tin cu (neu khong dang cho/chay) va tra loi kem link,
+        thay vi im lang. Chi lam khi QA gui o kenh QA - dev bao trung o kenh khac thi van im."""
+        c = next(t for t in self.q.tin.values() if t.get("ma") == tin["ma"] and t.get("version") == tin["version"])
+        try:
+            cu = await self._tin_qa(c["msg_id"])
+        except discord.HTTPException:            # tin cu da bi xoa -> nhac QA, khong lam gi them
+            await m.reply(f"Build **{c['ma']}** `{c['version']}` đã hỏi trước đây nhưng tin cũ không còn.",
+                          mention_author=False)
+            return
+        if self.q.vi_tri(c["msg_id"]) is not None:
+            await m.reply(f"Build **{c['ma']}** `{c['version']}` đang chờ / đang chạy: {cu.jump_url}",
+                          mention_author=False)
+            return
+        await cu.edit(content=bot_cong_viec.tin_hoi(c), view=_nut(*NUT_HOI, msg_id=cu.id))
+        await m.reply(f"Build **{c['ma']}** `{c['version']}` đã có tin hỏi — bấm **Check** ở đây để chạy lại: "
+                      f"{cu.jump_url}", mention_author=False)
+
     async def on_message(self, m: discord.Message):
         if bot_hoi_dap.la_cau_hoi(self, m):      # nhan rieng / tag bot -> hoi dap, khong doc nhu tin build
             await bot_hoi_dap.tra_loi_tin(self, m, REPO, OUT)
@@ -137,6 +155,8 @@ class BuildBot(discord.Client):
         if any(t.get("ma") == tin["ma"] and t.get("version") == tin["version"] for t in self.q.tin.values()):
             # Giai doan chuyen kenh dev co the bao mot build o ca kenh chung lan kenh project.
             log.info("build da hoi roi: %s %s (%s)", tin["ma"], tin["version"], m.jump_url)
+            if m.channel.id == self.kenh_qa:     # QA gui lai tin build de chay lai -> tro ve tin cu
+                await self._hoi_lai(m, tin)
             return
         pkg = await asyncio.to_thread(bot_cong_viec.package_cua, tin["ma"], OUT)
         if not pkg:
@@ -304,7 +324,7 @@ class BuildBot(discord.Client):
         files = [discord.File(f)] if f else []
         await qa.reply((bot_cong_viec.tin_ket_qua(job, kq, f) + f"\nMáy: {ten}\n{audit_tom_tat.dong_tin(audit)}")[:2000],
                        files=files or discord.utils.MISSING,
-                       view=_nut(("verify", "Verify lại", XAM), msg_id=job["msg_id"]))
+                       view=_nut(("verify", "Verify bug Jira", XAM), msg_id=job["msg_id"]))
         if kq.get("bugs"):
             # Luu vao tin cua build: bot khoi dong lai van tick / log tiep duoc.
             c = {**(self.q.tin_cua(job["msg_id"]) or job), "bugs": kq["bugs"], "bug_chon": [],

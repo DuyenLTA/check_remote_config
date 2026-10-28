@@ -140,7 +140,7 @@ async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> 
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, het_gio, out, cases)
     dong = await _doi_trang_thai(bot, job, kq, ten)
     dong += [("bo", u, u.get("ly_do", "")) for u in job.get("bo_qua", [])]
-    await vm.edit(content=f"{v.tin_ket_qua(job, dong)}\nMáy: {ten}", view=nut(vm.id, ("verify", "Verify lại")))
+    await vm.edit(content=f"{v.tin_ket_qua(job, dong)}\nMáy: {ten}", view=nut(vm.id, ("verify", "Verify bug Jira")))
     f = bot_cong_viec.file_report(kq, out)
     link = f"\nReport: {kq['link']}" if kq.get("link") and not f else ""
     await vm.reply(f"{kq.get('tom_tat', '')[:1500]}{link}", file=discord.File(f) if f else discord.utils.MISSING)
