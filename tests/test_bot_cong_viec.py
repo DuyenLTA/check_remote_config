@@ -91,6 +91,8 @@ def test_tin_bug_co_app_va_link_report_https():
     assert "**AIP938**" in t and "📄 [Mở report](https://claude.ai/artifact/x)" in t
     t = v.tin_bug(BUGS[:1], None, {**c, "link_report": "C:\\\\Users\\\\x\\\\report.html"})
     assert "Mở report" not in t                     # duong dan file tren may: khong dan len Discord
+    assert "`report.html` đính kèm" in t and "Users" not in t   # bot dinh kem file, chi ghi ten file
+    assert "đính kèm" not in v.tin_bug(BUGS[:1], None, {**c, "link_report": ""})
     assert len(v.tin_bug(BUGS, None, c)) <= 2000 and "Mở report" in v.tin_bug(BUGS, None, c)
 
 

@@ -49,7 +49,10 @@ PROMPT = (
     '"muc_do": "Highest|High|Medium|Low"}}]}}\n'
     "Moi chu trong `tom_tat` va `bugs` (bot dang len Discord) viet tieng Viet CO DAU day du. "
     "`bugs` chi gom FAIL da ra lai theo muc 5d (FAIL gia, loi tool thi khong dua vao); khong co thi []. "
-    "KHONG hoi user, KHONG tu log Jira: bot dua danh sach nay len Discord cho QA tick."
+    "KHONG hoi user, KHONG tu log Jira: bot dua danh sach nay len Discord cho QA tick.\n"
+    "Co bug (`bugs` khac []) thi BAT BUOC publish report thanh artifact truoc khi tra loi, ke ca khi dung giua luot "
+    "(trang_thai DUNG) hay con dong chua do: publish report tam, ghi ro phan chua xong. QA can mo report de review bug, "
+    "nen `link` luc do phai la link claude.ai; chi ghi duong dan file khi publish that bai."
 )
 # Luot verify bug dev da keo sang Reviewing: chi chay lai dung cac case, bot tu doi trang thai Jira theo verdict.
 PROMPT_VERIFY = (

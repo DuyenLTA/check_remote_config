@@ -125,6 +125,8 @@ def tin_bug(bugs: list[dict], chon: list[int] | None = None, c: dict | None = No
     link = str(c.get("link_report") or "")
     if link.startswith("https://"):              # duong dan file tren may thi QA khong mo duoc
         dong.append(f"📄 [Mở report]({link})")
+    elif link.lower().endswith(".html"):         # publish hong -> bot dinh kem file report vao tin nay
+        dong.append(f"📄 Report: file `{link.replace(chr(92), '/').rsplit('/', 1)[-1]}` đính kèm (chưa publish được artifact)")
     for i, b in enumerate(bugs):
         dau = "☑" if chon and i in chon else "☐"
         muc = f" · {b['muc_do']}" if b.get("muc_do") else ""

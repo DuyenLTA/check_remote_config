@@ -332,9 +332,14 @@ class BuildBot(discord.Client):
         if kq.get("bugs"):
             # Luu vao tin cua build: bot khoi dong lai van tick / log tiep duoc.
             c = {**(self.q.tin_cua(job["msg_id"]) or job), "bugs": kq["bugs"], "bug_chon": [],
-                 "link_report": kq.get("link", ""), "jira": None}
+                 # link_report la duong dan file chi khi file do thuc su duoc dinh kem (tin_bug ghi "đính kèm")
+                 "link_report": kq.get("link", "") if kq.get("link", "").startswith("https://") else str(f or ""),
+                 "jira": None}
             self.q.nho_tin(c)
-            await qa.reply(bot_cong_viec.tin_bug(kq["bugs"], None, c), view=_view_bug(kq["bugs"], [], job["msg_id"]))
+            # Chua publish duoc artifact -> dinh kem luon file report vao tin bug: QA phai mo duoc report
+            # ngay tai tin can review, khong phai keo len tim tin ket qua.
+            await qa.reply(bot_cong_viec.tin_bug(kq["bugs"], None, c), files=[discord.File(f)] if f else discord.utils.MISSING,
+                           view=_view_bug(kq["bugs"], [], job["msg_id"]))
 
 
 def main() -> int:
