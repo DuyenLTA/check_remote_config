@@ -67,7 +67,8 @@ gọi `claude -p "/rc-check <pkg>"` → đăng kết quả + link artifact vào 
 - Tin dev có thể **không có tên app** (`Bản build AIP920 v1.6.0 (7)`) và **in đậm mã app** (`**AIP920**`)
 
 ## Câu hỏi còn mở
-1. Bot chưa được mời vào kênh build của dev → đang tạm nghe `qa-auto` (QA chuyển tiếp tin)
+1. ~~Bot chưa được mời vào kênh build của dev~~ — 28/10/2026 bot đã vào kênh dev (server khác server QA);
+   `DISCORD_BUILD_CHANNEL_ID` nhận nhiều ID → nghe kênh dev + `qa-auto` (vẫn nhận tin QA chuyển tiếp). Chưa thấy tin dev thật nào qua bot
 2. Lượt bot có tắt webhook `rcr-notify` để kênh không nhận tin trùng không?
 3. Chưa thử: cài bản debug đè release (App Tester chưa có bản debug), 2 máy chạy song song thật, script Ubuntu
 

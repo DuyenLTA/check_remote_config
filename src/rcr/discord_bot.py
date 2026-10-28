@@ -10,7 +10,7 @@ Cau hinh - chay duoc ca Windows lan Ubuntu. Doc lan luot: bien moi truong cua pr
 bien User cua Windows (registry), file `~/.config/rcr/bot.env` (dong KEY=VALUE; systemd
 tren Ubuntu cung doc file nay, khong doc ~/.bashrc):
   DISCORD_BOT_TOKEN        token bot (bi mat, khong in, khong ghi repo)
-  DISCORD_BUILD_CHANNEL_ID kenh dev bao build
+  DISCORD_BUILD_CHANNEL_ID kenh dev bao build (phay ngan cach: nghe them kenh QA chuyen tiep tin)
   DISCORD_QA_CHANNEL_ID    kenh bot hoi duyet + bao ket qua
   DISCORD_DUYET_USER_IDS   id nguoi duoc bam nut (phay ngan cach)
   DISCORD_QA_ROLE_ID       (tuy) role duoc bam nut
@@ -106,7 +106,7 @@ class BuildBot(discord.Client):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents)
-        self.kenh_build = int(env("DISCORD_BUILD_CHANNEL_ID"))
+        self.kenh_build = {int(x) for x in env("DISCORD_BUILD_CHANNEL_ID").split(",") if x.strip()}
         self.kenh_qa = int(env("DISCORD_QA_CHANNEL_ID"))
         self.duyet = {int(x) for x in env("DISCORD_DUYET_USER_IDS").split(",") if x.strip()}
         self.role = int(env("DISCORD_QA_ROLE_ID") or 0)
@@ -123,7 +123,8 @@ class BuildBot(discord.Client):
 
     # --- tin build -> hoi o kenh QA ----------------------------------------------------
     async def on_message(self, m: discord.Message):
-        if m.channel.id != self.kenh_build or m.author.bot:
+        # dev bao build qua webhook "Build Notification" (author.bot=True) -> nhan webhook, bo bot khac
+        if m.channel.id not in self.kenh_build or (m.author.bot and not m.webhook_id):
             return
         chu = noi_dung(m)
         tin = build_ma_app.tach(chu)
