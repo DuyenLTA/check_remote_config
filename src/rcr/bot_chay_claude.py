@@ -51,16 +51,39 @@ PROMPT = (
     "`bugs` chi gom FAIL da ra lai theo muc 5d (FAIL gia, loi tool thi khong dua vao); khong co thi []. "
     "KHONG hoi user, KHONG tu log Jira: bot dua danh sach nay len Discord cho QA tick."
 )
+# Luot verify bug dev da keo sang Reviewing: chi chay lai dung cac case, bot tu doi trang thai Jira theo verdict.
+PROMPT_VERIFY = (
+    "/rc-check {package} --serial {serial} --case \"{cases}\"\n\n"
+    "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi de VERIFY bug dev bao da fix: chi chay dung cac case "
+    "tren (bo TC mac dinh), bo muc 3c (check ID ads), van ra lai FAIL theo muc 5d. Khong co nguoi ngoi truoc may: gap diem "
+    "can nguoi quyet thi dung. Khong commit/push. KHONG doc/sua/log Jira - bot tu lam theo verdict.\n"
+    "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
+    'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
+    '"tom_tat": "<tieng Viet co dau, toi da 300 ky tu>", '
+    '"cases": [{{"case": "<ma case dung nhu tren>", "verdict": "PASS|FAIL|BLOCKED|NEEDS_HUMAN|KHONG_ON_DINH", '
+    '"thuc_te": "<so do that, tieng Viet co dau>"}}]}}\n'
+    "`verdict` FAIL chi khi da ra lai theo 5d va chac la bug that; FAIL gia / loi tool / chua chac thi NEEDS_HUMAN."
+)
+TIMEOUT_VERIFY = 40 * 60
 
 
-def lenh(package: str, serial: str) -> tuple[list[str], str]:
-    """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial."""
+def lenh(package: str, serial: str, cases: list[str] | None = None) -> tuple[list[str], str]:
+    """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
+    Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt."""
+    from .bot_verify_jira import CASE_TC_RE
+
     if not PACKAGE_RE.match(package or ""):
         raise ValueError(f"package không hợp lệ: {package!r}")
     if not SERIAL_RE.fullmatch(serial or ""):
         raise ValueError(f"serial không hợp lệ: {serial!r}")
     exe = shutil.which("claude") or "claude"
-    return [exe, "-p", "--output-format", "json", "--allowedTools", *TOOLS], PROMPT.format(package=package, serial=serial)
+    cmd = [exe, "-p", "--output-format", "json", "--allowedTools", *TOOLS]
+    if not cases:
+        return cmd, PROMPT.format(package=package, serial=serial)
+    sai = [c for c in cases if not CASE_TC_RE.fullmatch(c)]
+    if sai:
+        raise ValueError(f"case không hợp lệ: {sai!r}")
+    return cmd, PROMPT_VERIFY.format(package=package, serial=serial, cases=",".join(cases))
 
 
 def doc_ket_qua(stdout: str) -> dict:
@@ -70,7 +93,8 @@ def doc_ket_qua(stdout: str) -> dict:
     except json.JSONDecodeError:
         return {"trang_thai": "LOI", "link": "", "tom_tat": (stdout or "")[-DUOI_LOG:]}
     text = d.get("result") or ""
-    ra = {"trang_thai": "LOI" if d.get("is_error") else "XONG", "link": "", "tom_tat": text[-DUOI_LOG:], "bugs": []}
+    ra = {"trang_thai": "LOI" if d.get("is_error") else "XONG", "link": "", "tom_tat": text[-DUOI_LOG:],
+          "bugs": [], "cases": []}
     m = None
     for m in KET_QUA_RE.finditer(text):
         pass                                     # lay dong KET_QUA cuoi cung
@@ -79,6 +103,9 @@ def doc_ket_qua(stdout: str) -> dict:
             k = json.loads(m.group(1))
             ra.update({x: str(k.get(x, ra[x])) for x in ("trang_thai", "link", "tom_tat")})
             ra["bugs"] = doc_bugs(k.get("bugs"))
+            ra["cases"] = doc_cases(k.get("cases"))
+            if d.get("is_error"):              # luot loi thi KET_QUA cua model khong de len duoc
+                ra["trang_thai"] = "LOI"
         except json.JSONDecodeError:
             pass
     ra["chi_phi"] = d.get("total_cost_usd")
@@ -97,18 +124,29 @@ def doc_bugs(bugs) -> list[dict]:
     return ra[:MAX_BUG]
 
 
+def doc_cases(cases) -> list[dict]:
+    """Verdict tung case cua luot verify -> [{case, verdict, thuc_te}]; verdict la chuoi khac tap
+    cho phep thi giu nguyen de bot coi la khong ket luan (khong doi trang thai Jira)."""
+    if not isinstance(cases, list):
+        return []
+    return [{"case": str(c.get("case") or "").strip(), "verdict": str(c.get("verdict") or "").strip(),
+             "thuc_te": str(c.get("thuc_te") or "").strip()[:MAX_TRUONG_BUG]}
+            for c in cases if isinstance(c, dict) and str(c.get("case") or "").strip()][:MAX_BUG]
+
+
 def moi_truong() -> dict[str, str]:
     """Env cua luot: tat webhook `rcr-notify` (DISCORD_NOTIFY=0) - bot da bao vao chinh tin
     cua build, webhook gui them la kenh nhan hai tin cho mot viec (user chot 27/10/2026)."""
     return {**os.environ, "DISCORD_NOTIFY": "0"}
 
 
-def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path) -> dict:
+def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
+         cases: list[str] | None = None) -> dict:
     """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
-        cmd, prompt = lenh(package, serial)
+        cmd, prompt = lenh(package, serial, cases)
         p = subprocess.run(cmd, input=prompt, cwd=repo, capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=timeout, env=moi_truong())
     except subprocess.TimeoutExpired as exc:

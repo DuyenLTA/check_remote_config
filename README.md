@@ -395,12 +395,26 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
      DISCORD_QA_CHANNEL_ID=...
      DISCORD_DUYET_USER_IDS=<id người được bấm, phẩy ngăn cách>
      DISCORD_QA_ROLE_ID=<tuỳ chọn>
+     DISCORD_DEV_IDS=<id dev được tag khi báo bug, phẩy ngăn cách>
+     JIRA_URL=https://jira.apero.vn           # tuỳ chọn: bật tự verify bug Reviewing
+     JIRA_PERSONAL_TOKEN=<PAT Jira>           # cùng token với mcp-atlassian
      ```
    - Windows: biến User (`[Environment]::SetEnvironmentVariable('DISCORD_BOT_TOKEN','...','User')`).
 4. Mỗi máy điện thoại: App Tester đã đăng nhập tài khoản tester, USB debugging, màn hình không khoá.
 5. Chạy thử: `<bin>/rcr-bot`. Tự bật khi đăng nhập:
    - Ubuntu: `bash deploy/cai-bot-linux.sh` (systemd user service, log `journalctl --user -u rcr-bot -f`)
    - Windows: `powershell -ExecutionPolicy Bypass -File deploy\cai-bot-windows.ps1` (Task Scheduler, log `out/bot-run.log`)
+
+**Tự verify bug Reviewing** (có `JIRA_PERSONAL_TOKEN`): bug bot đã log lên Jira (ghi chú "tạo mới") mà dev kéo
+sang **Reviewing** → khi dev báo build mới của app đó, bot tự xếp lượt verify (tin 🔁 riêng ở kênh QA, không cần
+bấm Check): cài build, chạy lại đúng các case, **PASS → comment + Done**, **FAIL → comment + To Do**; lượt dừng /
+không ổn định / Claude không kết luận → giữ Reviewing. Bug checklist Next-Gen hoặc khác loại bản (debug/release)
+→ bỏ qua, báo "cần verify tay". Dev kéo Reviewing sau khi báo build → QA bấm **Verify lại** ở tin build / tin
+kết quả. Thiếu token → tính năng tắt, luồng Check giữ nguyên.
+
+**Báo dev**: bug vừa log Jira và bug verify vẫn FAIL được báo ở **kênh riêng của project** (cùng server với kênh
+build, tên bắt đầu bằng mã app: `aip920-…`), tag các dev trong `DISCORD_DEV_IDS`. Không có kênh / bot không có
+quyền gửi (kênh Publishing `apb…`) → bot đăng nội dung ở kênh QA để QA chuyển tay.
 
 Lệnh tay: `rcr-cai-build --package <pkg> --version "4.3.0 (40)" --loai debug|release [--serial S]` (cài đúng
 bản từ App Tester), thêm `--chi-kiem` để chỉ xem App Tester đang có những bản nào.

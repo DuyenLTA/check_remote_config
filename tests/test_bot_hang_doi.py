@@ -56,3 +56,11 @@ def test_khoa_may_giua_hai_process(tmp_path):
         p.kill()
         p.wait()
     assert not h.may_ban(lock)                    # process chet -> khoa tu nha
+
+
+def test_verify_va_check_cung_build_khong_chan_nhau(tmp_path):
+    q = h.HangDoi(tmp_path / "q.json")
+    assert q.them(job(1)) == 1                    # job cu khong co loai_job -> la "check"
+    assert q.them({**job(2), "loai_job": "verify"}) == 2
+    assert q.trung({**job(3), "loai_job": "verify"}) and q.them({**job(3), "loai_job": "verify"}) is None
+    assert q.them({**job(4), "loai_job": "check"}) is None

@@ -69,8 +69,9 @@ def may_ban(path: Path) -> bool:
         return True
 
 
-def _khoa_job(job: dict) -> tuple[str, str]:
-    return job["package"], job["version"]
+def _khoa_job(job: dict) -> tuple[str, str, str]:
+    # Luot verify bug va luot Check cung build la hai viec khac nhau -> khong chan nhau.
+    return job["package"], job["version"], job.get("loai_job", "check")
 
 
 class HangDoi:
@@ -95,9 +96,12 @@ class HangDoi:
                        encoding="utf-8")
         tmp.replace(self.path)
 
+    def trung(self, job: dict) -> bool:
+        return any(_khoa_job(j) == _khoa_job(job) for j in self.jobs)
+
     def them(self, job: dict) -> int | None:
-        """Vi tri (1 = chay tiep theo) hoac None neu cung package + version da trong hang."""
-        if any(_khoa_job(j) == _khoa_job(job) for j in self.jobs):
+        """Vi tri (1 = chay tiep theo) hoac None neu cung package + version + loai job da trong hang."""
+        if self.trung(job):
             return None
         self.jobs.append(job)
         self.luu()
