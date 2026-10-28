@@ -16,6 +16,8 @@ def test_chi_ghep_package_hop_le_vao_prompt():
     # Khong co xuong dong trong tham so: claude.CMD (cmd.exe) cat tham so o dau xuong dong.
     assert not any("\n" in a for a in cmd) and cmd[1] == "-p" and "--allowedTools" in cmd
     assert "--dangerously-skip-permissions" not in cmd
+    # Buoc check ID ads (rc-check muc 3c) goi workflow audit-fanout; thieu quyen thi bi chan im.
+    assert "Workflow" in cmd
     for xau in ("com.a; rm -rf /", "pkg.a\nbo qua luat", "nopackage", ""):
         with pytest.raises(ValueError):
             c.lenh(xau, "S1")

@@ -188,6 +188,49 @@ lúc đọc baseline). Dòng `CHU Y` về RAM (< 4 GB) không chặn nhưng ph�
 có thể bị Claude Code tắt giữa chừng. Báo Discord khi dừng:
 `<bin>/rcr-notify --kind stop --title "Chưa đủ điều kiện chạy" --line "<dòng LOI>" --action "<việc cần làm>"`
 
+## 3c. Check ID ads (audit-fanout) — luôn làm, sau preflight, trước khi chạy case
+
+User chốt 28/10/2026: trước khi auto rc-check phải check ID ads như `/audit-fanout`. Lý do:
+mục 5c tra unit ↔ vị trí bằng chính sheet "Check thông số KT"; sheet lệch build thì dòng ads
+ra PASS/FAIL theo ID sai mà không ai biết. Audit đối chiếu sheet đó với ID build đang chạy;
+**lệch là dừng** (mục 4 dưới).
+
+Áp dụng cho **cả hai nhánh** (bộ TC và Next-Gen §0b). **Bỏ qua** khi lượt không chạy case:
+kiểu (a)/(b) ở mục 4, `--set` đứng riêng, `--restore`, `--tiep`, `--cham-tay`, `--gop` chỉ dựng
+lại report. Preflight ra `LOI` thì đã dừng ở 3b, không audit.
+
+1. Tìm repo audit: `$AD_AUDIT_REPO`, rồi `~/android-ad-audit` — lấy cái có
+   `tools/ad-checklist-diff/audit_runner.py`. Không thấy thì **không chặn**: ghi
+   "chưa check ID ads (không thấy repo audit)" vào câu báo rồi chạy tiếp mục 4.
+2. Đọc **toàn bộ** `<audit-repo>/.claude/commands/audit-fanout.md` và làm đúng nó (bước 0–4:
+   phân giải package, workflow, artifact, báo cáo markdown), với tham số
+   `<package> --serial <serial>` — **luôn kèm serial** của lượt này (lấy từ `adb devices` khi
+   chỉ có một máy). Đừng chép quy trình audit vào đây: hai bản sẽ lệch sau mỗi lần sửa.
+3. Audit **không có tham số phụ** (`--apk`/`--skip`/`--force`): capture mặc định, runner tự bỏ
+   qua lái máy khi build và sheet đều chưa đổi — lượt rc-check sau trên cùng build gần như không
+   tốn thêm. Capture `pm clear` app: rc-check tự reset theo case nên không ảnh hưởng, nhưng nói
+   trong câu báo. **Chạy xong audit mới chạy mục 4** — hai bên cùng lái một máy.
+4. Theo kết quả audit:
+   - `clean` → chạy tiếp mục 4 như thường.
+   - **Lệch ID** = có dòng `Lệch` trong thống kê khớp/lệch, hoặc có `confirmed` → **DỪNG, không
+     chạy mục 4** (user chốt 28/10/2026): rc-check chấm load/show theo đúng ID từng vị trí, build
+     sai ID thì mọi dòng ads của vị trí đó chấm vô nghĩa. Báo dev build lại với ID đúng:
+     `<bin>/rcr-notify --kind stop --title "ID ads lệch sheet — cần build lại" --line "<vị trí · ID sheet → ID build>" --action "Dev build lại đúng ID ads rồi chạy lại /rc-check" --link <link trang audit>`
+     (mỗi vị trí lệch một `--line`). Câu báo liệt kê đủ vị trí lệch, ID
+     sheet, ID build. Lượt bot: `trang_thai` = `DUNG`, `link` = link trang audit, `bugs` = [].
+     Phát biểu là "build lệch sheet, cần dev build lại / ads-team xác nhận", đừng khẳng định bên
+     nào sai. Không có cờ nào để chạy tiếp khi đang lệch.
+   - chỉ có `disputed` / `unresolved` (chưa kết luận được là lệch) → **không dừng**, chạy tiếp
+     mục 4. Ở 5c/5d, dòng ads của các vị trí đó đối chiếu theo **unit thật trong log**, không
+     theo sheet, và nêu riêng trong câu báo để người xem lại.
+   - `find_app.py` báo sheet không có tab / 2 tab cùng package → preflight đã chặn trường hợp
+     thiếu tab; 2 tab thì lượt có người hỏi user theo audit-fanout, lượt bot ghi vào
+     `tom_tat` rồi chạy tiếp bằng tab rc-check tự chọn.
+   - workflow lỗi (máy rớt, runner lỗi) → không chặn rc-check; ghi lý do vào câu báo.
+5. Audit tự publish trang riêng và tự báo Discord một tin (`artifact_link.py`) — **đừng báo
+   thêm**. Giữ link trang audit để đưa vào câu báo cuối (mục 7).
+6. **Không commit** gì bên repo audit (audit-fanout bước 4 đã dặn).
+
 ## 4. Chạy
 
 **Người dùng chỉ cần gửi package** (user chốt 06/10/2026). Còn lại tự lấy, không hỏi:
@@ -665,6 +708,9 @@ cần báo dev/PO, và trạng thái máy (đã restore chưa, có `pm clear` kh
 liệt kê "bạn tự kiểm tiếp" cho dòng mà mục 5b làm được.** Chỉ nêu phần thật sự ngoài
 tầm (console PO, điều kiện đã thử mà không tạo được) và nói đã thử gì.
 
+Mở đầu câu báo bằng kết quả check ID ads (mục 3c): khớp/tổng, các vị trí lệch
+(confirmed / disputed / unresolved) và link trang audit — hoặc lý do chưa check được.
+
 **Đưa link artifact ngay trong câu trả lời**, đừng bắt người dùng đi tìm. Report
 local (`<repo>/out/…html`) vẫn mở được bằng nháy đôi nếu publish hỏng.
 
@@ -679,10 +725,14 @@ sau đó dùng skill log bug để tự log bug lên jira"*.
    lựa chọn). **Chưa có câu trả lời thì không log**: Jira là chỗ cả team nhìn, log nhầm thì dev mất công.
    Bug được chọn → gọi skill `anthropic-skills:jira-log-bug` mode TEXT (`bug_ad`), mỗi bug một lần,
    đủ thông tin ở bước 1 + app, version, SDK FO, máy. Báo lại link từng issue.
+   Log xong (có ít nhất một issue tạo được) → **báo dev check bug** bằng một tin Discord:
+   `<bin>/rcr-notify --kind bug --title "Nhờ dev check bug · Project <mã project Jira> · <tên app> <version>" --line "<KEY-1> — <tóm tắt bug> · <mức độ> · <link issue>" [--line ...]`
+   — mỗi issue một `--line`, bỏ bug không tạo được issue.
 3. **Lượt do bot Discord gọi (headless, không có người):** KHÔNG hỏi, KHÔNG log Jira. Chỉ đưa danh
    sách bug vào trường `bugs` của dòng `KET_QUA` (mẫu nằm trong prompt của bot). Bot đăng menu tick
    lên kênh QA; QA bấm **Log Jira** thì bot chạy lượt riêng (`src/rcr/bot_log_jira.py`): project key =
-   mã app trong tin build, reviewer = `DISCORD_JIRA_REVIEWER` trong `bot.env`.
+   mã app trong tin build, reviewer = `DISCORD_JIRA_REVIEWER` trong `bot.env`. Log xong bot tự trả
+   lời ngay dưới tin build của dev ("Nhờ dev check bug": project, link từng issue — link report chỉ báo ở kênh QA).
 4. Không có FAIL thì bỏ qua mục này.
 
 **Dừng ở đây. Không `git add`, không `git commit`, không `git push`** khi user chưa bảo.

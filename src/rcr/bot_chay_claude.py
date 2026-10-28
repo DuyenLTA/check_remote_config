@@ -24,11 +24,13 @@ from pathlib import Path
 
 SERIAL_RE = re.compile(r"[A-Za-z0-9.:_-]+")
 PACKAGE_RE = re.compile(r"^[a-zA-Z][\w]*(\.[a-zA-Z_][\w]*)+$")
-TOOLS = ["Bash", "Read", "Edit", "Write", "Artifact", "Skill"]
+# Workflow: buoc check ID ads (rc-check.md muc 3c) chay workflow audit-fanout.
+TOOLS = ["Bash", "Read", "Edit", "Write", "Artifact", "Skill", "Workflow"]
 KET_QUA_RE = re.compile(r"^KET_QUA:\s*(\{.*\})\s*$", re.M)
-# Nhanh bo TC chay lau hon nhieu nhanh checklist Next-Gen.
-TIMEOUT_BO_TC = 120 * 60
-TIMEOUT_NEXT_GEN = 30 * 60
+# Nhanh bo TC chay lau hon nhieu nhanh checklist Next-Gen. Ca hai cong ~15 phut cho
+# buoc check ID ads (capture + agent phan), build chua doi thi audit bo qua nhanh.
+TIMEOUT_BO_TC = 135 * 60
+TIMEOUT_NEXT_GEN = 45 * 60
 DUOI_LOG = 300
 # Menu chon cua Discord toi da 25 lua chon; moi truong cat ngan de tin khong phinh.
 MAX_BUG = 25
@@ -38,7 +40,7 @@ MAX_TRUONG_BUG = 1000
 PROMPT = (
     "/rc-check {package} --serial {serial}\n\n"
     "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi, khong co nguoi ngoi truoc may. Gap diem can nguoi quyet "
-    "(ad_click, preflight LOI, man la) thi dung, khong tu chay tiep. Khong commit/push.\n"
+    "(ad_click, preflight LOI, ID ads lech sheet, man la) thi dung, khong tu chay tiep. Khong commit/push.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
     '"tom_tat": "<tieng Viet, toi da 300 ky tu: so PASS/FAIL hoac ly do dung>", '

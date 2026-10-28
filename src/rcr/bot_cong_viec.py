@@ -136,3 +136,26 @@ def tin_jira(kq: dict, so_bug: int) -> str:
     if kq.get("chi_phi") is not None:
         dong.append(f"Chi phí: ${kq['chi_phi'] or 0:.2f}")
     return "\n".join(dong)
+
+
+def tin_bao_dev(c: dict, kq: dict, bugs: list[dict]) -> str | None:
+    """Tin tra loi duoi tin build cua dev sau khi log Jira: project + link tung issue.
+
+    None khi khong co issue nao tao duoc -> khong lam phien dev bang tin rong.
+    """
+    theo_case = {b["case"]: b for b in bugs}
+    issues = [i for i in kq.get("issues") or []
+              if i.get("key") and not i.get("ghi_chu", "").startswith("bỏ qua")]
+    if not issues:
+        return None
+    dong = [f"🐞 **Nhờ dev check bug** — Project **{c['ma']}** · {c['ten']} `{c['version']}`",
+            f"Đã log {len(issues)} bug lên Jira:"]
+    for i in issues:
+        b = theo_case.get(i["case"], {})
+        muc = f" · {b['muc_do']}" if b.get("muc_do") else ""
+        tieu_de = f" — {b['tieu_de'][:120]}" if b.get("tieu_de") else ""
+        # URL hien nguyen van (khong giau sau ten issue) de dev copy duoc; <> tat khung preview.
+        link = f"\n  <{i['link']}>" if i.get("link") else ""
+        dong.append(f"• **{i['key']}**{tieu_de}{muc}{link}")
+    t = "\n".join(dong)
+    return t if len(t) <= 1900 else t[:1880] + "\n… (xem Jira)"

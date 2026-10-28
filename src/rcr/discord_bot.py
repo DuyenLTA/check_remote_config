@@ -213,6 +213,19 @@ class BuildBot(discord.Client):
         c["jira"] = kq
         self.q.nho_tin(c)
         await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
+        tin_dev = bot_cong_viec.tin_bao_dev(c, kq, [bugs[i] for i in chon])
+        if tin_dev:
+            await self._bao_dev(c, tin_dev, it.message)
+
+    async def _bao_dev(self, c: dict, tin: str, tin_qa: discord.Message):
+        """Tra loi ngay duoi tin build de dev thay; khong lay duoc tin build thi gui o kenh QA."""
+        try:
+            kenh_id, msg_id = (int(x) for x in c["link_tin"].rstrip("/").split("/")[-2:])
+            kenh = self.get_channel(kenh_id) or await self.fetch_channel(kenh_id)
+            await (await kenh.fetch_message(msg_id)).reply(tin)
+        except Exception as exc:             # noqa: BLE001 - bao dev hong khong duoc lam mat ket qua Jira
+            log.warning("khong bao duoc dev o tin build: %s", exc)
+            await tin_qa.reply(f"⚠️ Không trả lời được tin build ({exc}) — gửi tin này cho dev:\n{tin}"[:2000])
 
     # --- chia job cho cac may ----------------------------------------------------------
     async def worker(self):
