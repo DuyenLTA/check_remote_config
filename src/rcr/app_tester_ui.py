@@ -165,7 +165,9 @@ async def cai(client, serial, package, version, loai, out_dir: Path) -> dict:
     # Da cai hay chua: hoi dumpsys, khong suy tu nut (open_button "Install" = tai roi chua cai).
     truoc = await ban_dang_cai(client, serial, package)
     dung_loai = bool(truoc) and truoc["debuggable"] == (loai == "debug")
-    if dung_loai and truoc["version"] == version:
+    # Cung version co the la lan day cu (dev day lai cung version): dumpsys khong phan biet duoc,
+    # chi bo qua khi release da chon dang hien nut Open; con Download/Install thi cai de.
+    if dung_loai and truoc["version"] == version and b["nut"] not in ("tai", "da_tai"):
         await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
         return {"package": package, "version": version, "debuggable": truoc["debuggable"],
                 "da_cai": False, "go_ban_cu": False}

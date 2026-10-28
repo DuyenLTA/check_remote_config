@@ -52,7 +52,18 @@ def test_cung_version_hai_release_phan_biet_bang_note():
     assert len(r13) == 2 and r13[0]["nut"] == "ha_cap"
     assert "fix bug r1" in r13[0]["note"] and "next-gen" in r13[1]["note"]
     ban, ly_do = s.chon_ban(cac, "1.3.0 (13)", "release")
-    assert ban is None and "2 bản release" in ly_do                     # khong chon bua
+    assert ly_do == "" and "fix bug r1" in ban["note"]                  # lay lan day moi nhat (3:10 PM)
+
+
+def test_trung_version_lay_lan_day_moi_nhat_theo_ngay_khong_theo_thu_tu():
+    cac = [{"version": "2.2.0 (13)", "loai": "debug", "ngay": "Oct 9, 2026 at 9:05 AM", "note": "debug r1"},
+           {"version": "2.3.0 (14)", "loai": "debug", "ngay": "Oct 20, 2026 at 8:00 AM", "note": "debug"},
+           {"version": "2.2.0 (13)", "loai": "debug", "ngay": "Oct 9, 2026 at 4:40 PM", "note": "debug r2"},
+           {"version": "2.2.0 (13)", "loai": "release", "ngay": "Oct 10, 2026 at 1:00 PM", "note": "release"}]
+    assert s.chon_ban(cac, "2.2.0 (13)", "debug")[0]["note"] == "debug r2"
+    la = [{"version": "1.0.0 (1)", "loai": "release", "ngay": "?", "note": "tren"},
+          {"version": "1.0.0 (1)", "loai": "release", "ngay": "??", "note": "duoi"}]
+    assert s.chon_ban(la, "1.0.0 (1)", "release")[0]["note"] == "tren"  # khong doc duoc ngay -> ban tren cung
 
 
 def test_chon_ban_theo_loai():

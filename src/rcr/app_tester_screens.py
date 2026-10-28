@@ -13,6 +13,7 @@ Cung mot version co the co NHIEU release (1.3.0 (13) hai ban: "fix bug r1" va
 from __future__ import annotations
 
 import re
+from datetime import datetime
 
 APP_TESTER = "dev.firebase.appdistribution"
 INSTALLER = "com.google.android.packageinstaller"
@@ -101,8 +102,20 @@ def cac_ban(nodes) -> list[dict]:
     return ra
 
 
+def _luc_day(b: dict) -> datetime:
+    """Ngay App Tester ghi (`Oct 15, 2026 at 3:10 PM`); doc khong duoc -> coi la cu nhat."""
+    try:
+        return datetime.strptime(b["ngay"], "%b %d, %Y at %I:%M %p")
+    except ValueError:
+        return datetime.min
+
+
 def chon_ban(cac: list[dict], version: str, loai: str) -> tuple[dict | None, str]:
-    """Dung 1 release cung version + loai -> (release, ""); khong thi (None, ly do). Khong chon bua."""
+    """Release dung version + loai -> (release, ""); khong co thi (None, ly do).
+
+    Dev day lai cung version + loai nhieu lan -> lay lan day moi nhat (user chot 28/10/2026).
+    App Tester xep moi o tren: `max` giu ban dau tien khi ngay bang nhau / khong doc duoc ngay.
+    """
     cung_ver = [b for b in cac if b["version"] == version]
     if not cung_ver:
         return None, f"App Tester chưa có {version}"
@@ -110,9 +123,7 @@ def chon_ban(cac: list[dict], version: str, loai: str) -> tuple[dict | None, str
     if not dung:
         co = ", ".join(sorted({b["loai"] for b in cung_ver}))
         return None, f"{version} chưa có bản {loai} (mới có: {co})"
-    if len(dung) > 1:
-        return None, f"{version} có {len(dung)} bản {loai}: " + "; ".join(b["ngay"] for b in dung)
-    return dung[0], ""
+    return max(dung, key=_luc_day), ""
 
 
 def khoa_ban(b: dict) -> tuple[str, str, str]:
