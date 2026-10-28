@@ -58,8 +58,54 @@ def kt02(bc: dict, log_cham: str | None, package: str) -> dict:
     roi = bc.get("cham_roi_splash_s")
     if roi is None:
         return kq("KT-02", ten, SAI, f"Mạng chậm: đứng ở splash quá 120s (timeout {moc:.0f}s, {nguon})")
-    return kq("KT-02", ten, KHOP if roi <= moc + DU_SPLASH_S else SAI,
-              f"Mạng chậm (proxy 3s, 8 KB/s): rời splash sau {roi}s, timeout {moc:.0f}s ({nguon}) → {bc.get('cham_man')}")
+    ly = f"Mạng chậm (proxy 3s, 8 KB/s): rời splash sau {roi}s, timeout {moc:.0f}s ({nguon}) → {bc.get('cham_man')}"
+    if roi <= moc + DU_SPLASH_S:
+        return kq("KT-02", ten, KHOP, ly)
+    # Timeout la cua inter splash (spec "60 s tong inter splash"), tinh tu request inter splash dau tien.
+    # Thoi gian truoc do (UMP, khoi tao MobileAds qua mang cham) khong thuoc timeout nay.
+    cua_so = _inter_splash_s(log_cham or "", package)
+    if cua_so is None:
+        return kq("KT-02", ten, SAI, ly)
+    inter_s, truoc_s, bc_dong = cua_so
+    ly_inter = (f"{ly}; inter splash {inter_s:.1f}s (request inter đầu → rời splash), "
+                f"{truoc_s:.1f}s trước đó là khởi tạo trước khi xin inter")
+    return kq("KT-02", ten, KHOP if inter_s <= moc + DU_SPLASH_S else SAI, ly_inter, bc_dong)
+
+
+_THOI_GIAN = re.compile(r"^(\d\d-\d\d \d\d:\d\d:\d\d\.\d+)")
+
+
+def _inter_splash_s(log: str, package: str) -> tuple[float, float, list[str]] | None:
+    """(giay tu request inter splash dau -> rời splash, giay tu mo app -> request do, dong bang chung).
+
+    Mo app = START launcher cua package; roi splash = START dau tien cua package khong phai Splash.
+    Thieu moc nao -> None (giu cach cham theo tong thoi gian splash)."""
+    from datetime import datetime
+
+    def gio(dong_log: str):
+        m = _THOI_GIAN.match(dong_log)
+        # nam 2000 (nhuan) chi de strptime khong canh bao / khong hong ngay 29-02; chi dung hieu so
+        return datetime.strptime("2000-" + m.group(1), "%Y-%m-%d %H:%M:%S.%f") if m else None
+
+    mo = roi = None
+    mo_dong = roi_dong = ""
+    for d in log.splitlines():
+        if "ActivityTaskManager: START" not in d or f"cmp={package}/" not in d:
+            continue
+        if mo is None and "LAUNCHER" in d:
+            mo, mo_dong = gio(d), d
+        elif mo is not None and "Splash" not in d.split(f"cmp={package}/", 1)[1].split()[0]:
+            roi, roi_dong = gio(d), d
+            break
+    req = next((e for e in loc(doc_events(log), "track_ad_request")
+                if fmt(e) == "interstitial" and "Splash" in e["params"].get("ga_screen_class", "")), None)
+    if not (mo and roi and req) or gio(req["t"]) is None:
+        return None
+    t_req = gio(req["t"])
+    if not (mo <= t_req <= roi):
+        return None
+    return ((roi - t_req).total_seconds(), (t_req - mo).total_seconds(),
+            [mo_dong.strip()[:160], dong(req), roi_dong.strip()[:160]])
 
 
 def kt03_04(demo: dict) -> list[dict]:

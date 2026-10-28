@@ -204,6 +204,32 @@ def test_kt02_mang_cham_theo_timeout():
     assert M.kt02({}, None, PKG)["ket"] == "DO_TAY"
 
 
+# Log that AI Song 2.2.0 (SDK FO 3.7.0), Pixel 6, 28/10/2026, proxy 3 s + 8 KB/s: roi splash 74,5 s sau khi mo,
+# nhung inter splash chi 60,0 s tinh tu request inter dau (14,5 s truoc do la UMP + khoi tao MobileAds).
+_AISONG = "aisong.generator.creatsong.music"
+_KT02_MO = ("10-28 11:46:06.375  1902  2779 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN "
+            "cat=[android.intent.category.LAUNCHER] flg=0x10000000 xflg=0x4 "
+            f"cmp={_AISONG}/.presentation.splash.SplashActivity}} with LAUNCH_MULTIPLE from uid 2000")
+_KT02_REQ = ("10-28 11:46:20.893  6366 28364 V FA-SVC  : Logging event: origin=app,name=track_ad_request,"
+             "params=Bundle[{network_status=1, adunitid=ca-app-pub-4973559944609228/8542403210, ga_event_origin(_o)=app, "
+             "ga_screen_class(_sc)=SplashActivity, ga_screen_id(_si)=4163825046757852587, ad_format=INTERSTITIAL, "
+             "ad_platform=Admob}]")
+_KT02_ROI = ("10-28 11:47:20.879  1902  3551 I ActivityTaskManager: START u0 {xflg=0x4 "
+             f"cmp={_AISONG}/com.visionlab.tutorial.vsltemplate4.language.language1.VslTemplate4Language14Activity}} "
+             "with LAUNCH_MULTIPLE from uid 10572")
+
+
+def test_kt02_timeout_tinh_tu_request_inter_splash_khong_tu_luc_mo_app():
+    bc = {"cham_roi_splash_s": 74.5}
+    r = M.kt02(bc, "\n".join([_KT02_MO, _KT02_REQ, _KT02_ROI]), _AISONG)
+    assert r["ket"] == "KHOP" and "inter splash 60.0s" in r["ly_do"] and "14.5s" in r["ly_do"]
+    # inter splash tu request toi roi splash qua 60 s -> van Sai
+    req_som = _KT02_REQ.replace("11:46:20.893", "11:46:10.000")
+    assert M.kt02(bc, "\n".join([_KT02_MO, req_som, _KT02_ROI]), _AISONG)["ket"] == "SAI"
+    # thieu request inter splash trong log -> khong suy duoc cua so, giu Sai theo tong thoi gian splash
+    assert M.kt02(bc, "\n".join([_KT02_MO, _KT02_ROI]), _AISONG)["ket"] == "SAI"
+
+
 def test_ump_khong_form_la_ngoai_pham_vi_ev31_lech_nguon_la_sai():
     log = PROC + "\n" + _app("AdsConsentManager", "3: Publisher misconfiguration: no form(s) configured")
     assert {r["ket"] for r in M.kt05_06(log, PKG)} == {"KHONG_AP_DUNG"}
@@ -243,6 +269,10 @@ def test_cham_thu_muc_cham_tay_cham_lai_va_report(tmp_path):
         sdk_nextgen_cham.cham_tay(data, "EV-07", "PASS", "x")
     with pytest.raises(RcError):
         sdk_nextgen_cham.cham_tay(data, "EV-99", "KHOP", "x")
+    # checklist ghi "khong co thi N/A" (vd collapsible banner) -> do tay dua vao muc ngoai pham vi
+    sdk_nextgen_cham.cham_tay(data, "HV-09", "KHONG_AP_DUNG", "banner Home log collapsible=false, app không có collapsible")
+    assert _ket(data["ket_qua"], "HV-09")["ket"] == "KHONG_AP_DUNG"
+    assert sdk_nextgen_cham.dem(data)["KHONG_AP_DUNG"] >= 1
     html = sdk_nextgen_report.render(data)
     assert "<title>SDK Next-Gen check</title>" in html and 'data-v="todo"' in html and "Mục 4" in html
 

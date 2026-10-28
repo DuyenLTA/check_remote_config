@@ -4,8 +4,8 @@
       thu bang chung tren may vao out/sdk-<pkg>-<gio>/ roi cham + xuat report
   rcr-sdk-check --cham-lai DIR
       cham lai tu log da thu (khong can may) - cung log, cung ket qua
-  rcr-sdk-check --cham-tay DIR --ma EV-07 --ket KHOP|SAI --ly-do "..."
-      ghi dong do tay (dong code tra DO_TAY), dung lai report
+  rcr-sdk-check --cham-tay DIR --ma EV-07 --ket KHOP|SAI|KHONG_AP_DUNG --ly-do "..."
+      ghi dong do tay (dong code tra DO_TAY), dung lai report; KHONG_AP_DUNG = muc ngoai pham vi / N/A
 
 stdout: mot dong JSON {thu_muc, report, dem}. Log tien do ra stderr.
 """

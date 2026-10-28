@@ -15,10 +15,12 @@ from . import sdk_nextgen_cham_build, sdk_nextgen_cham_ev_3a, sdk_nextgen_cham_e
 from .models import RcError
 from .sdk_nextgen_cham_build import MARK_TAG
 from .sdk_nextgen_events import _TT, chan_khi_offline, crash, doc_events, loc, tach_moc
-from .sdk_nextgen_ket import DO_TAY, KHOP, SAI
+from .sdk_nextgen_ket import DO_TAY, KHONG_AP_DUNG, KHOP, SAI
 
 KET_QUA = "ket-qua.json"
 KET_TAY = (KHOP, SAI)
+# Do tay con duoc dua dong vao muc "Ngoai pham vi / khong ap dung" (checklist ghi N/A, luat 2/4 WORKFLOW).
+KET_GHI_TAY = KET_TAY + (KHONG_AP_DUNG,)
 
 
 def _doc(d: Path, ten: str) -> str | None:
@@ -107,9 +109,9 @@ def doc(d: Path) -> dict:
 
 
 def cham_tay(data: dict, ma: str, ket: str, ly_do: str, ai: str = "Claude") -> dict:
-    """Ghi ket qua do tay cho dong `ma` (thuong la DO_TAY). Chi nhan Khop/Sai + ly do co so do."""
-    if ket not in KET_TAY:
-        raise RcError("--ket phải là KHOP hoặc SAI")
+    """Ghi ket qua do tay cho dong `ma` (thuong la DO_TAY): Khop/Sai, hoac Khong ap dung + ly do co so do."""
+    if ket not in KET_GHI_TAY:
+        raise RcError("--ket phải là KHOP, SAI hoặc KHONG_AP_DUNG (ngoài phạm vi / N/A)")
     if not (ly_do or "").strip():
         raise RcError("--ly-do bắt buộc: ghi số đo / cách đo để người đọc kiểm lại được")
     hit = [r for r in data["ket_qua"] if r["ma"] == ma]

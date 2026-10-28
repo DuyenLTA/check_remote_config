@@ -34,8 +34,10 @@ AAPT2 = find_aapt2()
 apk, out = sys.argv[1], sys.argv[2]
 country = sys.argv[3] if len(sys.argv) > 3 else 'VN'
 
-res = subprocess.run([AAPT2, 'dump', 'resources', apk], capture_output=True, text=True).stdout
-badge = subprocess.run([AAPT2, 'dump', 'badging', apk], capture_output=True, text=True).stdout
+# utf-8 explicitly: on Windows the default codepage cannot decode non-ASCII resource strings, the reader thread
+# dies and .stdout comes back None
+res = subprocess.run([AAPT2, 'dump', 'resources', apk], capture_output=True, encoding='utf-8', errors='replace').stdout
+badge = subprocess.run([AAPT2, 'dump', 'badging', apk], capture_output=True, encoding='utf-8', errors='replace').stdout
 pkg = re.search(r"package: name='([^']+)'", badge).group(1)
 ver = sys.argv[4] if len(sys.argv) > 4 else re.search(r"versionName='([^']+)'", badge).group(1)
 
