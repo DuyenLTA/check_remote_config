@@ -220,6 +220,8 @@ bằng mắt (đúng design, đúng màu), rà PASS giả bằng ảnh chụp, c
 
 ### Publish report thành artifact
 
+Kết quả check ID ads (`/rc-check` bước audit, trang `<AD_AUDIT_REPO>/tools/ad-checklist-diff/out/<package>-artifact.html`) được đọc bằng code (`audit_tom_tat.py`): bot Discord thêm dòng "🔎 ID ads" + đính kèm trang audit (chỉ khi audit chạy trong lượt), report Next-Gen và report nhánh TC có khối "Check ID ads" ở đầu (audit cùng ngày với lượt chạy; Next-Gen lưu vào `ket-qua.json` nên `--cham-tay`/`--cham-lai` vẫn giữ).
+
 Report HTML đã sẵn khuôn artifact (mở đầu bằng `<title>`, không bọc `html/head/body`) nên
 publish thẳng file được. Tool **không tự publish**: nó chạy ở `127.0.0.1`, không có đường tới
 claude.ai — Claude publish rồi ghi link lại:

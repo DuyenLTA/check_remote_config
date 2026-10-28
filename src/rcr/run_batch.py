@@ -7,9 +7,11 @@ tro toi noi dung khong con nua - `run_case` tra ve baseline dang dung.
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 from . import (
+    audit_tom_tat,
     net_ctl,
     ad_positions,
     fo_screens,
@@ -47,7 +49,10 @@ async def _try_restore(client, baseline, log_fn) -> None:
 
 
 def ghi_report(baseline, tc_info, records, app_label, report: str, log_fn=_noop) -> None:
-    page = report_html.build(report_data.page_data(baseline, tc_info, records, app_label))
+    data = report_data.page_data(baseline, tc_info, records, app_label)
+    # Khoi "Check ID ads": audit cung ngay voi luot chay nay (khong co -> bao chua check).
+    data["audit"] = audit_tom_tat.tim(baseline.package, ngay=date.today())
+    page = report_html.build(data)
     path = Path(report)
     luot_file.ghi_nguyen_tu(path, page)
     log_fn(f"Report: {path} ({len(page) // 1024}KB)")

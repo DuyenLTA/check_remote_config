@@ -24,11 +24,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from pathlib import Path
 
 import discord
 
-from . import (bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
+from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
                bot_log_jira, build_ma_app)
 from .adb_client import AdbClient
 from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
@@ -292,12 +293,16 @@ class BuildBot(discord.Client):
         await qa.edit(content=f"{dau}\nĐã cài{ghi}. Đang chạy /rc-check…")
         timeout = (bot_chay_claude.TIMEOUT_NEXT_GEN if job["loai_ban"] == "release"
                    else bot_chay_claude.TIMEOUT_BO_TC)
+        bat_dau = time.time()
         kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, REPO, timeout, OUT)
         chu = bot_cong_viec.TRANG_THAI.get(kq["trang_thai"], ("", kq["trang_thai"]))[1]
         await qa.edit(content=f"{dau}\n{chu}")
         f = bot_cong_viec.file_report(kq, OUT)
-        await qa.reply(bot_cong_viec.tin_ket_qua(job, kq, f) + f"\nMáy: {ten}",
-                       file=discord.File(f) if f else discord.utils.MISSING,
+        # Trang audit ID ads chon bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.
+        audit = audit_tom_tat.tim(job["package"], tu_luc=bat_dau)
+        files = [discord.File(x) for x in audit_tom_tat.dinh_kem(f, audit)]
+        await qa.reply((bot_cong_viec.tin_ket_qua(job, kq, f) + f"\nMáy: {ten}\n{audit_tom_tat.dong_tin(audit)}")[:2000],
+                       files=files or discord.utils.MISSING,
                        view=_nut(("verify", "Verify lại", XAM), msg_id=job["msg_id"]))
         if kq.get("bugs"):
             # Luu vao tin cua build: bot khoi dong lai van tick / log tiep duoc.

@@ -15,11 +15,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import sys
 import time
+from datetime import date, datetime
 from pathlib import Path
 
-from . import sdk_nextgen_cham, sdk_nextgen_report, sdk_nextgen_thu_log
+from . import audit_tom_tat, sdk_nextgen_cham, sdk_nextgen_report, sdk_nextgen_thu_log
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .cli_check import _stdio_utf8, pick_serial
@@ -30,7 +32,29 @@ def _log(msg: str) -> None:
     print(msg, file=sys.stderr, flush=True)
 
 
+def _ngay_chay(d: Path) -> date:
+    """Ngay luot thu bang chung: tu ten thu muc sdk-<pkg>-YYMMDD-HHMMSS (khong doi khi dung lai report)."""
+    m = re.search(r"-(\d{6})-\d{6}$", d.name)
+    try:
+        return datetime.strptime(m.group(1), "%y%m%d").date() if m else date.today()
+    except ValueError:
+        return date.today()
+
+
+def _audit(d: Path, data: dict) -> dict | None:
+    """Audit ID ads cua app cung ngay voi luot chay. Luu vao meta ket-qua.json: --cham-tay / --cham-lai
+    dung lai report thi giu ban da luu neu trang audit sau do bi audit ban build khac ghi de."""
+    tt = audit_tom_tat.tim(data["meta"].get("package") or "", ngay=_ngay_chay(d))
+    if tt or not (d / sdk_nextgen_cham.KET_QUA).exists():
+        return tt
+    try:
+        return sdk_nextgen_cham.doc(d)["meta"].get("audit")
+    except (OSError, ValueError, KeyError):
+        return None
+
+
 def _xuat(d: Path, data: dict) -> dict:
+    data["meta"]["audit"] = _audit(d, data)
     sdk_nextgen_cham.ghi(d, data)
     report = sdk_nextgen_report.ghi(data, d / "report.html")
     return {"thu_muc": str(d), "report": str(report), "dem": sdk_nextgen_cham.dem(data)}

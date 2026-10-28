@@ -19,6 +19,7 @@ import json
 import time
 
 from . import report_row
+from .audit_tom_tat import khoi_html
 from .report_css import CSS
 from .report_js import JS
 
@@ -85,6 +86,7 @@ def build(data: dict) -> str:
     <div class="meta">{meta}</div>
   </header>
   {warn}
+  {khoi_html(data.get("audit"))}
   <div class="tally" id="tally"></div>
 
   <section class="card">
