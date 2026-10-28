@@ -89,23 +89,10 @@ def dong_tin(tt: dict | None) -> str:
         return CHUA_CHECK
     d = f"🔎 ID ads: {tt['khop']}/{tt['tong']} khớp · {tt['lech']} lệch · {tt['ngoai_sheet']} ID ngoài sheet"
     if tt["lech"] > 0:
-        d += f"\n⚠️ {tt['lech']} ID lệch sheet — xem trang audit đính kèm"
+        d += f"\n⚠️ {tt['lech']} ID lệch sheet — xem tab Check ID ads trong report"
     if tt.get("canh_bao"):
         d += f"\n⚠️ {tt['canh_bao'][:200]}"
     return d
-
-
-def dinh_kem(report: Path | None, tt: dict | None) -> list[Path]:
-    """File dinh kem Discord: report (neu co) + trang audit (khong trung, tong <= gioi han mot tin)."""
-    files = [report] if report else []
-    if tt and tt.get("trang") and Path(tt["trang"]) not in files:
-        try:
-            tong = sum(Path(x).stat().st_size for x in files) + Path(tt["trang"]).stat().st_size
-        except OSError:
-            return files
-        if tong <= MAX_TRANG:
-            files.append(Path(tt["trang"]))
-    return files
 
 
 def khoi_html(tt: dict | None) -> str:

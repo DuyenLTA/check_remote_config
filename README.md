@@ -220,7 +220,7 @@ bằng mắt (đúng design, đúng màu), rà PASS giả bằng ảnh chụp, c
 
 ### Publish report thành artifact
 
-Kết quả check ID ads (`/rc-check` bước audit, trang `<AD_AUDIT_REPO>/tools/ad-checklist-diff/out/<package>-artifact.html`) được đọc bằng code (`audit_tom_tat.py`): bot Discord thêm dòng "🔎 ID ads" + đính kèm trang audit (chỉ khi audit chạy trong lượt), report Next-Gen và report nhánh TC có khối "Check ID ads" ở đầu (audit cùng ngày với lượt chạy; Next-Gen lưu vào `ket-qua.json` nên `--cham-tay`/`--cham-lai` vẫn giữ).
+Kết quả check ID ads (`/rc-check` bước audit, trang `<AD_AUDIT_REPO>/tools/ad-checklist-diff/out/<package>-artifact.html`) được đọc bằng code (`audit_tom_tat.py`): bot Discord thêm dòng "🔎 ID ads" vào tin và chỉ đính kèm MỘT file report. Report Next-Gen và nhánh TC có 2 tab ("Checklist"/"Bộ TC" và "Check ID ads"): tab 2 nhúng nguyên trang audit bằng `<iframe srcdoc>` (`report_tab_audit.py`, tự chứa, chạy offline), khối tóm tắt vẫn ở đầu tab 1; không có audit thì tab 2 báo "Chưa check ID ads cho build này"; report + audit quá ~9 MiB thì chỉ giữ khối tóm tắt. Audit cùng ngày với lượt chạy; Next-Gen copy trang audit vào `out/sdk-<pkg>-<giờ>/audit.html` + lưu tóm tắt trong `ket-qua.json` nên `--cham-tay`/`--cham-lai` dựng lại đúng nội dung đã lưu (không bị audit build khác ghi đè).
 
 Report HTML đã sẵn khuôn artifact (mở đầu bằng `<title>`, không bọc `html/head/body`) nên
 publish thẳng file được. Tool **không tự publish**: nó chạy ở `127.0.0.1`, không có đường tới

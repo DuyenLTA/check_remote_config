@@ -58,26 +58,13 @@ def test_tim_khong_co_trang(out):
     assert at.tim("com.khong.co", out=out) is None
 
 
-def test_dong_tin_va_dinh_kem(out, tmp_path):
+def test_dong_tin(out):
     tt = at.tim(PKG, out=out)
     d = at.dong_tin(tt)
     assert "54/54 khớp · 0 lệch · 12 ID ngoài sheet" in d and "RemoteConfigRepository" in d
     assert "ID lệch" not in d
     assert "ID lệch" in at.dong_tin({**tt, "lech": 3})
     assert at.dong_tin(None) == at.CHUA_CHECK
-    rp = tmp_path / "r.html"
-    rp.write_text("x", "utf-8")
-    assert at.dinh_kem(rp, tt) == [rp, Path(tt["trang"])]
-    assert at.dinh_kem(None, None) == [] and at.dinh_kem(rp, None) == [rp]
-    assert at.dinh_kem(Path(tt["trang"]), tt) == [Path(tt["trang"])]
-
-
-def test_dinh_kem_bo_audit_khi_vuot_gioi_han(out, tmp_path, monkeypatch):
-    tt = at.tim(PKG, out=out)
-    rp = tmp_path / "r.html"
-    rp.write_text("x", "utf-8")
-    monkeypatch.setattr(at, "MAX_TRANG", 10)
-    assert at.dinh_kem(rp, tt) == [rp]
 
 
 def test_khoi_html_co_va_khong_audit(out):

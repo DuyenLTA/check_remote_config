@@ -298,9 +298,10 @@ class BuildBot(discord.Client):
         chu = bot_cong_viec.TRANG_THAI.get(kq["trang_thai"], ("", kq["trang_thai"]))[1]
         await qa.edit(content=f"{dau}\n{chu}")
         f = bot_cong_viec.file_report(kq, OUT)
-        # Trang audit ID ads chon bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.
+        # Tom tat ID ads doc bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.
+        # Trang audit day du nam trong tab cua chinh report -> chi dinh kem mot file report.
         audit = audit_tom_tat.tim(job["package"], tu_luc=bat_dau)
-        files = [discord.File(x) for x in audit_tom_tat.dinh_kem(f, audit)]
+        files = [discord.File(f)] if f else []
         await qa.reply((bot_cong_viec.tin_ket_qua(job, kq, f) + f"\nMáy: {ten}\n{audit_tom_tat.dong_tin(audit)}")[:2000],
                        files=files or discord.utils.MISSING,
                        view=_nut(("verify", "Verify lại", XAM), msg_id=job["msg_id"]))

@@ -19,9 +19,9 @@ import json
 import time
 
 from . import report_row
-from .audit_tom_tat import khoi_html
 from .report_css import CSS
 from .report_js import JS
+from .report_tab_audit import boc
 
 E = html.escape
 
@@ -75,19 +75,8 @@ def build(data: dict) -> str:
     # `</script>` trong du lieu se dong the script som -> vo trang. Chen `\\u003c`
     # thay vi `<`: JSON hop le, va trinh duyet khong con thay the dong.
     payload = json.dumps(cases, ensure_ascii=False).replace("<", "\\u003c")
-    return f"""<title>{E(data["title"])}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="{FONTS}">
-<style>{CSS}</style>
-<div class="wrap">
-  <header style="display:flex;flex-direction:column;gap:8px">
-    <span class="eyebrow">{E(data["eyebrow"])}</span>
-    <h1>{E(data["title"])}</h1>
-    <div class="meta">{meta}</div>
-  </header>
-  {warn}
-  {khoi_html(data.get("audit"))}
-  <div class="tally" id="tally"></div>
+    # Tab 1 = bang tong ket + danh sach case (kem khoi tom tat ID ads), tab 2 = trang audit day du.
+    chinh = f"""  <div class="tally" id="tally"></div>
 
   <section class="card">
     <div class="todo">
@@ -110,6 +99,19 @@ def build(data: dict) -> str:
   <details class="find"><summary>Cách chạy &amp; giới hạn của lượt này</summary>
     <ul>{how}</ul></details>
   <p class="foot">Sinh lúc {E(time.strftime("%H:%M %d/%m/%Y"))}</p>
+"""
+    return f"""<title>{E(data["title"])}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="{FONTS}">
+<style>{CSS}</style>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <span class="eyebrow">{E(data["eyebrow"])}</span>
+    <h1>{E(data["title"])}</h1>
+    <div class="meta">{meta}</div>
+  </header>
+  {warn}
+  {boc("Bộ TC", chinh, data.get("audit"))}
 </div>
 <script>
 const DATA = {payload};

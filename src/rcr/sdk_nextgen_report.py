@@ -11,7 +11,7 @@ from __future__ import annotations
 import html
 from pathlib import Path
 
-from .audit_tom_tat import khoi_html
+from .report_tab_audit import boc
 from .sdk_nextgen_ket import DO_TAY, KHONG_AP_DUNG, KHOP, SAI
 
 TEMPLATE = Path(__file__).resolve().parents[2] / "sdk-check" / "assets" / "report-style-and-filter-script.html"
@@ -53,10 +53,11 @@ def render(data: dict) -> str:
                   f'<span class="l">{l}</span></button>' for f, c, x, l in
                   (("all", "", len(chinh), "Tất cả"), ("pass", "ok", n[KHOP], "Khớp"), ("fail", "bad", n[SAI], "Sai"),
                    ("todo", "bad" if n[DO_TAY] else "", n[DO_TAY], "Còn đo tay")))
-    body = [f'<div class="wrap"><header><h1>SDK Next-Gen · {_e(m.get("app_label") or m["package"])}</h1><div class="meta">'
+    dau = (f'<div class="wrap"><header><h1>SDK Next-Gen · {_e(m.get("app_label") or m["package"])}</h1><div class="meta">'
             f'<span>Package <b>{_e(m["package"])}</b></span><span>SDK FO <b>{_e(m.get("sdk") or "?")}</b></span>'
             f'<span>Máy <b>{_e(m.get("serial") or "?")}</b></span><span>Chấm lúc <b>{_e(m.get("cham_luc", ""))}</b></span>'
-            f'<span>Mục <b>{_e(", ".join(m.get("muc") or []))}</b></span></div></header>', khoi_html(m.get("audit")), f'<div class="cards">{the}</div>']
+            f'<span>Mục <b>{_e(", ".join(m.get("muc") or []))}</b></span></div></header>')
+    body = [f'<div class="cards">{the}</div>']
     if sai:
         body.append('<section class="todo"><h2>Cần báo dev</h2><ol>' + "".join(
             f'<li><b>{_e(r["ma"])}</b> {_e(r["ten"])}: {_e(r["ly_do"])}</li>' for r in sai) + "</ol></section>")
@@ -67,9 +68,11 @@ def render(data: dict) -> str:
         body.append('<section class="sec"><h2>Ngoài phạm vi / không áp dụng</h2><ul>' + "".join(
             f'<li><b>{_e(r["ma"])}</b> {_e(r["ten"])}: {_e(r["ly_do"])}</li>' for r in ngoai) + "</ul></section>")
     body.append('<footer class="foot"><p>Lượt chạy: ' + _e(", ".join(f"{k} (ad_click {v})" for k, v in clicks.items()))
-                + "</p><p>Dòng chấm bởi code cho cùng kết quả khi chấm lại cùng bộ log (rcr-sdk-check --cham-lai).</p></footer></div>")
+                + "</p><p>Dòng chấm bởi code cho cùng kết quả khi chấm lại cùng bộ log (rcr-sdk-check --cham-lai).</p></footer>")
+    # Tab 1 = checklist (kem khoi tom tat ID ads), tab 2 = trang audit day du -> mot file report.
+    thanh = dau + boc("Checklist", "".join(body), m.get("audit")) + "</div>"
     return (f'<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f"<title>SDK Next-Gen check</title>{style}</head><body>{''.join(body)}{script}</body></html>")
+            f"<title>SDK Next-Gen check</title>{style}</head><body>{thanh}{script}</body></html>")
 
 
 def ghi(data: dict, path: Path) -> Path:

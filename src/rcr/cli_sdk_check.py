@@ -21,7 +21,7 @@ import time
 from datetime import date, datetime
 from pathlib import Path
 
-from . import audit_tom_tat, sdk_nextgen_cham, sdk_nextgen_report, sdk_nextgen_thu_log
+from . import audit_tom_tat, report_tab_audit, sdk_nextgen_cham, sdk_nextgen_report, sdk_nextgen_thu_log
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .cli_check import _stdio_utf8, pick_serial
@@ -42,15 +42,19 @@ def _ngay_chay(d: Path) -> date:
 
 
 def _audit(d: Path, data: dict) -> dict | None:
-    """Audit ID ads cua app cung ngay voi luot chay. Luu vao meta ket-qua.json: --cham-tay / --cham-lai
-    dung lai report thi giu ban da luu neu trang audit sau do bi audit ban build khac ghi de."""
-    tt = audit_tom_tat.tim(data["meta"].get("package") or "", ngay=_ngay_chay(d))
-    if tt or not (d / sdk_nextgen_cham.KET_QUA).exists():
-        return tt
-    try:
-        return sdk_nextgen_cham.doc(d)["meta"].get("audit")
-    except (OSError, ValueError, KeyError):
-        return None
+    """Audit ID ads cua app cho report. Ban da luu trong ket-qua.json (kem audit.html trong thu muc luot)
+    duoc uu tien: --cham-tay / --cham-lai dung lai dung noi dung cu du trang audit sau do bi audit ban
+    build khac ghi de. Chua co ban luu thi lay audit cung ngay voi luot chay va copy vao thu muc luot."""
+    cu = None
+    if (d / sdk_nextgen_cham.KET_QUA).exists():
+        try:
+            cu = sdk_nextgen_cham.doc(d)["meta"].get("audit")
+        except (OSError, ValueError, KeyError):
+            cu = None
+    if cu and (d / report_tab_audit.BAN_SAO).is_file():
+        return cu
+    tt = audit_tom_tat.tim(data["meta"].get("package") or "", ngay=_ngay_chay(d)) or cu
+    return report_tab_audit.luu_ban_sao(tt, d)
 
 
 def _xuat(d: Path, data: dict) -> dict:
