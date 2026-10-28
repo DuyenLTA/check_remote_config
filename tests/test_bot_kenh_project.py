@@ -64,3 +64,16 @@ def test_khong_co_kenh_thi_bao_o_kenh_qa():
 
 def test_dev_ids_bo_rac():
     assert kp.dev_ids("1, x,2,") == [1, 2] and kp.dev_ids("") == []
+
+
+def test_tin_build_o_server_test_thi_tim_kenh_project_o_server_khac():
+    """QA gui lai tin build o qa-auto (server test, khong co kenh project) -> van bao dung kenh dev."""
+    k = _Kenh("aip922-nexsus-ai-video-official-group")
+    test = SimpleNamespace(me=object(), text_channels=[_Kenh("qa-auto")])
+    that = SimpleNamespace(me=object(), text_channels=[_Kenh("aip920-x"), k])
+    bot = SimpleNamespace(dev_ids="", guilds=[test, that],
+                          get_guild=lambda gid: test if gid == 1535317341943107676 else None)
+    tin = _Tin()
+    c = {"ma": "AIP922", "link_tin": "https://discord.com/channels/1535317341943107676/1562794153082097695/1"}
+    asyncio.run(kp.bao(bot, c, "🐞 Nhờ dev check bug", tin))
+    assert k.sent and k.sent[0][0] == "🐞 Nhờ dev check bug" and tin.replies == []

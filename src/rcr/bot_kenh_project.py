@@ -28,18 +28,21 @@ def chon_kenh(kenh: list, ma: str, co_quyen) -> object | None:
 
 
 async def _kenh_project(bot, c: dict):
+    """Uu tien server chua tin build; khong co thi tim o cac server khac bot dang o. QA hay gui lai
+    tin build o kenh QA (server test, khong co kenh project) - luot AIP922 28/10/2026 hong vi vay."""
     m = LINK_RE.search(c.get("link_tin") or "")
-    if not m:
-        return None
-    g = bot.get_guild(int(m.group(1)))
-    if g is None:
-        return None
+    g_tin = bot.get_guild(int(m.group(1))) if m else None
+    cac_server = [g_tin] if g_tin is not None else []
+    cac_server += [g for g in getattr(bot, "guilds", None) or [] if g is not g_tin]
+    for g in cac_server:
+        def co_quyen(k, g=g) -> bool:
+            p = k.permissions_for(g.me)
+            return p.view_channel and p.send_messages
 
-    def co_quyen(k) -> bool:
-        p = k.permissions_for(g.me)
-        return p.view_channel and p.send_messages
-
-    return chon_kenh(sorted(g.text_channels, key=lambda k: k.position), c.get("ma", ""), co_quyen)
+        kenh = chon_kenh(sorted(g.text_channels, key=lambda k: k.position), c.get("ma", ""), co_quyen)
+        if kenh is not None:
+            return kenh
+    return None
 
 
 async def bao(bot, c: dict, tin: str, tin_qa) -> None:
