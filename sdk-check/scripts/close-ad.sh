@@ -30,8 +30,10 @@ CLOSE = re.compile(r'^(close|close ad|đóng|skip|skip ad|bỏ qua|continue to a
 def inside(a, b):
     return a[0] >= b[0] and a[1] >= b[1] and a[2] <= b[2] and a[3] <= b[3]
 hit = None
+# custom-close: X of the AdMob native ad validator page (test device + native test ad), opened when a
+# tap lands on a native; it is an AdActivity too (AIP882 4.3.0 OPPO 29/10/2026: FO looped 'close_not_found' 11 min)
 for n in nodes:
-    if g(n, 'resource-id').split('/')[-1] == 'dismiss-button':
+    if g(n, 'resource-id').split('/')[-1] in ('dismiss-button', 'custom-close'):
         hit = box(n); break
 if hit is None:
     for n in nodes:

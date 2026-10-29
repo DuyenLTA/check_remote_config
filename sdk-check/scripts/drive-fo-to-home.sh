@@ -34,14 +34,15 @@ for step in $(seq 1 90); do
         *) tap 'buttonLanguageNext|imageButtonLanguageNext' && mark lang_next ;;
       esac ;;
     *Onboarding*)
-      # test devices: the AdMob native validator popup can sit on top of the Next/Get Started button
-      bash "$D/dismiss-native-validator.sh" >/dev/null && mark validator_dismiss
+      # AdMob native validator popup (test devices) covers the button centre; tapping its Dismiss opens the
+      # validator page on OPPO (AIP882 29/10/2026) -> never touch the popup, tap the button's right edge
       if tap 'btnTimeoutSkip|btnSkip'; then mark ob_fullscreen_skip
       else bash "$D/tap-by-id.sh" 'btnNextOnboarding|Next' right >/dev/null; fi ;;
     *Question*)
-      bash "$D/dismiss-native-validator.sh" >/dev/null && mark validator_dismiss
+      # AdMob native validator popup (test devices) covers the button centre; tapping its Dismiss opens the
+      # validator page on OPPO (AIP882 29/10/2026) -> never touch the popup, tap the button's right edge
       # pick an item only when no Next button yet (tapping a selected item unselects it and hides Next)
-      tap 'btnNextQuestion|btnNextOnboardingImage' || { tap 'tvQuestionTitle'; sleep 0.8; tap 'btnNextQuestion|btnNextOnboardingImage|Next|Go to Home'; } && mark q_next ;;
+      bash "$D/tap-by-id.sh" 'btnNextQuestion|btnNextOnboardingImage' right >/dev/null || { tap 'tvQuestionTitle'; sleep 0.8; bash "$D/tap-by-id.sh" 'btnNextQuestion|btnNextOnboardingImage|Next|Go to Home' right >/dev/null; } && mark q_next ;;
     *Billing*)
       sleep 2; tap 'Close Billing Screen|ivClose|btnClose' || adb shell input tap 100 130; mark billing_close ;;
     *Paywall*|*revcat*)

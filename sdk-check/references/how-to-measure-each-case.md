@@ -76,7 +76,7 @@ Bẫy: **logcat có thể làm rơi dòng `FA-SVC Logging event`** (chatty) → 
 
 - Sub test còn hạn làm app bỏ paywall / ẩn ads → kiểm `play.google.com/store/account/subscriptions` (trang có lúc "Server error", thử link có `?sku=&package=`).
 - Bản mới có thể hỏi quyền thông báo trước splash → `pm grant <pkg> android.permission.POST_NOTIFICATIONS` sau `pm clear`.
-- **Popup "AdMob native ad validator"** (chỉ máy test + native test) nổi đè lên nút của app (vd "Get Started" OB4): bấm nút mà trúng popup → mở trang validator (AdActivity), nhìn như native che nút. KHÔNG phải bug app — bấm "Dismiss" trên popup trước. Kiểm bằng screencap trước khi kết luận "native che nút" (HT-06).
+- **Popup "AdMob native ad validator"** (chỉ máy test + native test) nổi đè lên nút của app (vd "Get Started" OB4): bấm nút mà trúng popup → mở trang validator (AdActivity), nhìn như native che nút. KHÔNG phải bug app. **Đừng chạm vào popup, kể cả nút "Dismiss" hay "What is this?"**: trên OPPO, bấm Dismiss qua adb không tắt được popup mà lại mở trang validator (AIP882, 29/10/2026). Mỗi lần native refresh lại chồng thêm một popup. Hãy bấm vào phần nút của app không bị che (`tap-by-id.sh '<id>' right`, tức mép phải nút). Lỡ mở trang validator thì `close-ad.sh` đóng bằng `custom-close`. Kiểm bằng screencap trước khi kết luận "native che nút" (HT-06).
 - Tap nhầm vào native → mở Chrome/validator → BACK. Tap toạ độ đáy màn khi có thanh điều hướng = bấm Home/Recents.
 - Native hay no-fill sau nhiều lần mở liên tục → chờ rồi chạy lại, đừng kết luận app lỗi.
 - Luôn gỡ proxy: `settings put global http_proxy :0; adb reverse --remove-all`.

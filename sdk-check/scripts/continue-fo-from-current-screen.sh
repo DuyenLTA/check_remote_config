@@ -24,11 +24,13 @@ for step in $(seq 1 60); do
         *) bash "$D/tap-by-id.sh" 'buttonLanguageNext|imageButtonLanguageNext' >/dev/null && mark lang_next ;;
       esac ;;
     *Onboarding*)
-      bash "$D/dismiss-native-validator.sh" >/dev/null
+      # AdMob native validator popup (test devices) covers the button centre; tapping its Dismiss opens the
+      # validator page on OPPO (AIP882 29/10/2026) -> never touch the popup, tap the button's right edge
       if bash "$D/tap-by-id.sh" 'btnTimeoutSkip|btnSkip' >/dev/null; then :
       else bash "$D/tap-by-id.sh" 'btnNextOnboarding|Next' right >/dev/null; fi ;;
     *Question*)
-      bash "$D/dismiss-native-validator.sh" >/dev/null
+      # AdMob native validator popup (test devices) covers the button centre; tapping its Dismiss opens the
+      # validator page on OPPO (AIP882 29/10/2026) -> never touch the popup, tap the button's right edge
       # pick an item only when no Next button yet (tapping a selected item unselects it and hides Next)
       bash "$D/tap-by-id.sh" 'btnNextQuestion|btnNextOnboardingImage' right >/dev/null && { mark q_next; continue; }
       bash "$D/tap-by-id.sh" 'tvQuestionTitle|ivQuestion|itemQuestion' >/dev/null; sleep 0.8

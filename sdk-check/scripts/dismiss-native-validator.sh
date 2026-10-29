@@ -2,9 +2,11 @@
 export MSYS_NO_PATHCONV=1  # Git Bash: keep /sdcard/... paths for adb as-is
 PY=$(python3 -c "" >/dev/null 2>&1 && echo python3 || echo python)  # Windows python3 is a Store stub
 # Test devices only: the "AdMob native ad validator" popup is not in the uiautomator tree and can cover
-# app buttons (Next / Go to Home / btnSkip). Find its blue "Dismiss" button on a screenshot and tap it.
+# app buttons (Next / Go to Home / btnSkip). This only REPORTS the popup: tapping its "Dismiss" does not close
+# it on OPPO and opens the validator page instead (AIP882 29/10/2026, each mis-tap cost a close-ad round).
+# Tap the covered button's free edge instead: tap-by-id.sh '<id>' right.
 # The screenshot is piped straight into Python (no temp file: Git Bash /tmp paths mean nothing to Windows Python).
-# exit 0 = tapped, 1 = no popup found.
+# exit 1 always (never taps); prints where the popup is when one is found.
 xy=$(adb exec-out screencap -p | $PY -I -c '
 import io, sys
 from PIL import Image
@@ -20,4 +22,4 @@ if best:
     if max(ys) - min(ys) < 200: print((x0 + x1) // 2, (min(ys) + max(ys)) // 2)
 ')
 [ -z "$xy" ] && exit 1
-adb shell input tap $xy; echo "validator dismiss @ $xy"
+echo "validator popup @ $xy - not tapped: use tap-by-id.sh <id> right"; exit 1
