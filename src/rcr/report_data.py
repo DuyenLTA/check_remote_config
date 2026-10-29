@@ -123,6 +123,8 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         "lich_su_verdict": result.get("lich_su_verdict") or [],
         "khong_on_dinh": bool(result.get("khong_on_dinh")),
         "ad_click": result.get("ad_click", 0),
+        # Lan dau bi ad_click (may test AdMob) roi chay lai sach: report van phai thay.
+        "ad_click_lan_truoc": result.get("ad_click_lan_truoc", 0),
         # Click GMA ghi khi tool khong thao tac gi - bug cua app/ad, khong chan luot.
         "ad_click_tu_ban": result.get("ad_click_tu_ban", 0),
         # Ten truong JSON TC dat lech gia tri server cua cung key (rc_json_lech).

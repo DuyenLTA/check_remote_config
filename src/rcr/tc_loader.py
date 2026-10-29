@@ -18,6 +18,7 @@ lay sheet dau tien tim thay header.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from pathlib import Path
 
 from .models import Case, RcError
@@ -118,6 +119,29 @@ def parse_rows(rows: list[tuple], source: str = "") -> list[Case]:
             f"{source or 'File'}: tim thay header nhung khong co dong case nao "
             f"(cot {_label(idx, 'n')!r} phai la so)."
         )
+    return inherit_chain(out)
+
+
+# Bo TC dang luot E2E (tab 3.6.1): checkpoint sau de trong Test Data, Precondition
+# ghi "Tiep noi SDK361-R01-01 (cung luot, khong clear data)". Khong ke thua thi
+# checkpoint ra "khong co key nao de dat" va bi bo, du config cua no la cua case goc.
+CHAIN_RE = re.compile(r"ti[eếệ]p\s+n[oốồ]i\s+([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+)", re.I)
+
+
+def inherit_chain(cases: list[Case]) -> list[Case]:
+    """Case 'Tiep noi <TC ID>' Test Data trong -> lay Test Data (+ User State) cua case do.
+
+    Case goc dung truoc trong sheet nen di mot vong la du cho ca chuoi R01-01 -> 02 -> 03.
+    """
+    by_n: dict[str, Case] = {}
+    out: list[Case] = []
+    for c in cases:
+        m = CHAIN_RE.search(c.precondition)
+        goc = by_n.get(m.group(1)) if m else None
+        if goc is not None and not c.test_data.strip():
+            c = replace(c, test_data=goc.test_data, user_state=c.user_state or goc.user_state)
+        by_n[c.n] = c
+        out.append(c)
     return out
 
 

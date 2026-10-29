@@ -214,3 +214,23 @@ def test_tai_sheet_ghi_tam_roi_thay_khong_de_file_ghi_do(tmp_path, monkeypatch):
     monkeypatch.setattr(tc_source.time, "sleep", lambda s: None)
     tc_source._ghi_thay(dich, b"PK moi hon")          # bi giu het nhip -> giu ban dang co, khong no
     assert dich.read_bytes() == b"PK moi" and list(tmp_path.glob("*.tmp")) == []
+
+
+def test_checkpoint_tiep_noi_ke_thua_test_data_ca_chuoi():
+    hdr = ("TC ID", "Feature", "Test Description", "Sub-scenario", "User State",
+           "Test Data", "Precondition", "Action", "Expected Result")
+    out = parse_rows([hdr,
+        ("SDK361-R01-01", "R01", "", "Build", "new_user", "enable_question_screen=true",
+         "1. Clear data.", "1. Xem log.", "1. SDK 3.6.1."),
+        ("SDK361-R01-02", "Splash", "", "", "new_user", "",
+         "1. Tiếp nối SDK361-R01-01 (cùng lượt, không clear data).", "1. Quan sát.", "1. Title."),
+        ("SDK361-R01-03", "OB1", "", "", "", "",
+         "1. Tiếp nối SDK361-R01-02 (cùng lượt).", "1. Quan sát OB1.", "1. Indicator."),
+        ("SDK361-S03-01", "S03", "", "", "new_user", "", "1. Thiết bị OPPO.", "1. Chờ.", "1. Inter."),
+    ])
+    by = {c.n: c for c in out}
+    assert by["SDK361-R01-02"].test_data == "enable_question_screen=true"
+    assert by["SDK361-R01-03"].test_data == "enable_question_screen=true"
+    assert by["SDK361-R01-03"].user_state == "new_user"
+    # Khong ghi "Tiep noi" thi khong doan
+    assert by["SDK361-S03-01"].test_data == ""

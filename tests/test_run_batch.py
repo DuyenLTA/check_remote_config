@@ -158,13 +158,24 @@ def test_lan_cuoi_khong_ro_thi_giu_ket_qua_da_do(monkeypatch):
     assert recs[0]["verdict"] == "FAIL"
 
 
-def test_co_ad_click_thi_khong_chay_lai_va_dung_ca_luot(monkeypatch):
-    """Do 24/10/2026: chay lai / sang case sau la di qua ad do them lan nua."""
-    click = {"verdict": "BLOCKED", "ad_click": 2,
-             "runs": [{"overrides": {}, "verdict": "BLOCKED", "ad_click": 2}]}
-    recs = run(monkeypatch, {"a": [click, "PASS"], "b": "PASS", "c": "PASS"}, lan=3)
-    assert [r["key"] for r in recs] == ["a"]
-    assert recs[0]["ad_click"] == 2 and recs[0]["lich_su_verdict"] == ["BLOCKED"]
+CLICK = {"verdict": "BLOCKED", "ad_click": 2,
+         "runs": [{"overrides": {}, "verdict": "BLOCKED", "ad_click": 2}]}
+
+
+def test_ad_click_thi_chay_lai_case_mot_lan_va_khong_dung_luot(monkeypatch):
+    """29/10/2026: moi may QA la may test AdMob - ad_click ghi vao report, chay lai
+    case bi click roi chay tiep cac case sau (truoc do dung ca luot)."""
+    recs = run(monkeypatch, {"a": [dict(CLICK), "PASS"], "b": "PASS", "c": "PASS"}, lan=3)
+    assert [r["key"] for r in recs] == ["a", "b", "c"]
+    assert recs[0]["verdict"] == "PASS" and recs[0]["lich_su_verdict"] == ["BLOCKED", "PASS"]
+    assert recs[0]["ad_click_lan_truoc"] == 2
+
+
+def test_chay_lai_van_ad_click_thi_giu_blocked_va_chay_tiep(monkeypatch):
+    recs = run(monkeypatch, {"a": [dict(CLICK), dict(CLICK)], "b": "PASS", "c": "PASS"}, lan=3)
+    assert recs[0]["verdict"] == "BLOCKED" and recs[0]["ad_click"] == 2
+    assert recs[0]["lich_su_verdict"] == ["BLOCKED", "BLOCKED"]
+    assert [r["verdict"] for r in recs[1:]] == ["PASS", "PASS"]
 
 
 def test_precondition_khong_tao_duoc_thi_blocked_va_khong_chay_lai(monkeypatch):

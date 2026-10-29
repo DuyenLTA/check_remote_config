@@ -88,7 +88,6 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             log_fn(f"    (chưa ghi được file lượt / report: {exc} — ghi lại ở case sau)")
         return tat_ca
 
-    dung_vi_click = False
     for wanted in [k.strip() for k in args.case.split(",") if k.strip()]:
         key = wanted
         if wanted in bo_qua:
@@ -146,6 +145,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             for dong in tc_lech:
                 log_fn("  CHU Y TC: " + dong)
             lich_su: list[str] = []
+            click_truoc = 0
             dau_truoc = None
             # Dieu kien may nay khong tao duoc: chay lai van chay duoi trang thai tu nhien.
             thieu_co_dinh = _thieu_co_dinh(chosen["precondition"])
@@ -186,7 +186,14 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                     v = result.get("verdict")
                     lich_su.append(v)
                     if result.get("ad_click"):
-                        break  # chay lai la di qua ad do them lan nua
+                        # Moi may QA la may test AdMob (chot 29/10/2026): click khong phai
+                        # traffic khong hop le, nhung app roi luong nen ket qua lan nay bo.
+                        # Chay lai case dung mot lan; lan sau van click thi giu BLOCKED.
+                        click_truoc += result["ad_click"]
+                        if click_truoc == result["ad_click"] and lan < toi_da:
+                            log_fn(f"    lan {lan}: {result['ad_click']} ad_click -> ghi lai, chay lai case")
+                            continue
+                        break
 
                     if v in ("PASS", "FAIL", "KEY_NOT_USED"):
                         ro_gan_nhat = result
@@ -225,6 +232,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 result = ro_gan_nhat
             if result is not None:
                 result["lich_su_verdict"] = lich_su
+                if click_truoc and not result.get("ad_click"):
+                    # Lan chay lai sach click: giu dau vet de report van ghi ad_click.
+                    result["ad_click_lan_truoc"] = click_truoc
                 if "FAIL" in lich_su and "PASS" in lich_su:
                     result["khong_on_dinh"] = True
                     log_fn(f"    KHONG ON DINH qua cac lan: {', '.join(lich_su)}")
@@ -278,14 +288,12 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         records.append(report_data.case_record(key, by_key.get(key, {}), result))
         luu()
         if result.get("ad_click"):
-            # Diem chan: case sau cung lai qua cac man ad do. Nguoi phai xem cach
-            # dong ad truoc khi chay tiep (--tiep chay not phan con lai).
-            log_fn(f"DUNG LUOT: case {key} co {result['ad_click']} ad_click. "
-                   "Kiem tra cach dong ad roi chay tiep bang --tiep")
-            dung_vi_click = True
-            break
+            # May test AdMob: ad_click khong dung luot. Case giu BLOCKED kem so click
+            # tren report, cac case sau van chay.
+            log_fn(f"    case {key} van co {result['ad_click']} ad_click sau khi chay lai "
+                   "-> BLOCKED, ghi vao report, chay tiep")
 
-    return luu(xong=not dung_vi_click)
+    return luu(xong=True)
 
 
 def _thieu_co_dinh(precondition: str) -> list[str]:

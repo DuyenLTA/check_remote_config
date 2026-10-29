@@ -174,13 +174,13 @@ async def apply_case(
         log_fn(f"    {out['ad_click_tu_ban']} ad_click khong co thao tac nao cua tool truoc do "
                "-> app/ad tu ban, ghi lai de bao dev, khong dung luot")
     if out["ad_click"]:
-        # Click vao ad la app roi luong (mo browser/store) va la traffic khong hop
-        # le tren unit that: ket qua luot nay khong dung duoc, run_batch dung ca luot.
+        # Click vao ad la app roi luong (mo browser/store): ket qua luot nay khong
+        # dung duoc. May QA deu la may test AdMob nen run_batch chay lai case, khong dung luot.
         out["verdict"] = "BLOCKED"
         out["precondition_thieu"] = (out.get("precondition_thieu") or []) + [
             f"log có {out['ad_click']} lần ad_click trong lượt — tool chỉ được đóng ad, "
-            "không được bấm vào; dừng cả lượt để người kiểm"]
-        log_fn(f"    CO {out['ad_click']} ad_click trong luot -> BLOCKED, dung ca luot")
+            "không được bấm vào; kết quả lần này không dùng được (app rời luồng)"]
+        log_fn(f"    CO {out['ad_click']} ad_click trong luot -> BLOCKED lan nay")
     # Doc lai config SAU KHI cham: app fetch Firebase luc mo, lan fetch that
     # (khong phai doc cache) kich hoat lai gia tri server va de mat patch - verify
     # o tren doc qua som (foreground +0,8s, fetch xong sau do) nen van ra OK. Do
