@@ -18,6 +18,10 @@ from datetime import datetime
 APP_TESTER = "dev.firebase.appdistribution"
 INSTALLER = "com.google.android.packageinstaller"
 PLAY_STORE = "com.android.vending"
+# OPPO/ColorOS chen man quet cai dat rieng ("No risks found" + nut "Install anyway") truoc hop cai
+# (AIP882 29/10/2026, CPH2375) -> bam "Install anyway" (user chot).
+OPPO_MARKET = "com.heytap.market"
+OPPO_CAI = "Install anyway"
 # Nut cua mot release da mo rong: tai moi / mo ban dang cai / ha cap.
 NUT_BAN = {"download_button": "tai", "open_button": "dang_cai", "downgrade_release": "ha_cap"}
 # `open_button` ghi "Install" khi APK da tai ma chua cai (bam Cancel o hop cai, do
@@ -44,7 +48,8 @@ def _co(nodes, rid: str = "", text: str = "", package: str = ""):
 
 
 def man(nodes) -> str:
-    """Ten man dang hien: danh_sach, chi_tiet, consent, hop_cai, pp_quet, pp_dang_quet, pp_an_toan, khac."""
+    """Ten man dang hien: danh_sach, chi_tiet, consent, hop_cai, pp_quet, pp_dang_quet, pp_an_toan, oppo_cai,
+    khac."""
     if _co(nodes, "consentPage"):
         return "consent"
     if _co(nodes, "appListRecyclerView"):
@@ -53,6 +58,8 @@ def man(nodes) -> str:
         return "chi_tiet"
     if _co(nodes, "button1", package=INSTALLER):
         return "hop_cai"
+    if _co(nodes, "install_status_primary_btn", package=OPPO_MARKET):
+        return "oppo_cai"
     if _co(nodes, package=PLAY_STORE):
         if _co(nodes, text="Scan app", package=PLAY_STORE):
             return "pp_quet"

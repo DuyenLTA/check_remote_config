@@ -21,7 +21,7 @@ from . import app_tester_screens as s
 from . import device_app, screencap, ui_dump
 from .adb_parsers import AdbError, parse_debuggable
 
-MAX_CUON_DS = 30          # danh sach ~50 app, moi lan cuon ~5 dong
+MAX_CUON_DS = 40          # danh sach ~93 app (29/10/2026), moi lan cuon ~5 dong
 MAX_CUON_BAN = 8          # build moi luon o dau danh sach release
 TIMEOUT_CAI = 1200.0   # mang cham: tai ~80 MB mat ~10 phut (AIP922 29/10/2026)
 NHIP = 2.0
@@ -83,6 +83,31 @@ async def ban_dang_cai(client, serial, package) -> dict:
             "cai_luc": datetime.strptime(luc.group(1), "%Y-%m-%d %H:%M:%S") if luc else None}
 
 
+async def _cuon_nua_trang(client, serial) -> None:
+    """Do danh sach app: vuot cham ~1/3 man de hai trang lien tiep trung vai dong. Vuot "up" thuong (60% man,
+    350ms) bi da troi gan tron mot trang -> dong cuoi trang (bi cat) sang trang sau da troi qua mep tren,
+    app khong bao gio hien du (AIP882 29/10/2026)."""
+    w, h = await device_app.screen_size(client, serial)
+    await client.shell(serial, "input", "swipe", str(w // 2), str(int(h * 0.7)), str(w // 2), str(int(h * 0.4)), "800")
+    await asyncio.sleep(1.2)
+
+
+def _cac_bundle(nodes) -> tuple:
+    return tuple(n.text for n in nodes if n.resource_id == "bundle_id")
+
+
+async def _ve_dau_ds(client, serial, nodes) -> None:
+    """Vuot xuong toi khi danh sach dung yen = da o dau. Vuot co dinh 8 lan khong du: ~93 app, App Tester
+    nho vi tri cuoi cua luot truoc -> bat dau do tu giua, app o dau khong bao gio thay (AIP882 29/10/2026)."""
+    truoc = _cac_bundle(nodes)
+    for _ in range(MAX_CUON_DS):
+        await _cuon(client, serial, "down", 3)
+        sau = _cac_bundle(await _nodes(client, serial))
+        if sau == truoc:
+            return
+        truoc = sau
+
+
 async def mo_chi_tiet(client, serial, package, out_dir: Path):
     """Mo App Tester toi man chi tiet cua `package`. Tra node man chi tiet."""
     await device_app.launch(client, serial, s.APP_TESTER)
@@ -105,14 +130,20 @@ async def mo_chi_tiet(client, serial, package, out_dir: Path):
     # trang: truoc day luon vuot 8 lan du app nam ngay truoc mat (QA phan nan 28/10/2026).
     dong = s.dong_app(nodes, package)
     if dong is None:
-        await _cuon(client, serial, "down", 8)
+        await _ve_dau_ds(client, serial, nodes)
+    truoc = None
     for _ in range(MAX_CUON_DS):
-        dong = dong or s.dong_app(await _nodes(client, serial), package)
+        nodes = await _nodes(client, serial)
+        dong = dong or s.dong_app(nodes, package)
         if dong:
             await _bam(client, serial, dong, 3)
             break
-        await _cuon(client, serial, "up")
-    else:
+        if _cac_bundle(nodes) == truoc:                    # vuot ma danh sach dung yen = het danh sach
+            dong = None
+            break
+        truoc = _cac_bundle(nodes)
+        await _cuon_nua_trang(client, serial)
+    if not dong:
         raise LoiCai(f"App Tester không có app {package} (tài khoản tester chưa được mời?)")
     nodes = await _nodes(client, serial)
     if s.man(nodes) == "consent":
@@ -252,7 +283,8 @@ async def _cho_cai_xong(client, serial, package, version, loai, go, out_dir, cai
         man = s.man(nodes)
         nut = {"hop_cai": s._co(nodes, "button1", package=s.INSTALLER),
                "pp_quet": s.nut_chu(nodes, "Scan app", s.PLAY_STORE),
-               "pp_an_toan": s.nut_chu(nodes, "Install", s.PLAY_STORE)}.get(man)
+               "pp_an_toan": s.nut_chu(nodes, "Install", s.PLAY_STORE),
+               "oppo_cai": s.nut_chu(nodes, s.OPPO_CAI, s.OPPO_MARKET)}.get(man)
         la = la + 1 if man in ("khac", "danh_sach", "consent") else 0
         if nut is not None:
             await _bam(client, serial, nut)

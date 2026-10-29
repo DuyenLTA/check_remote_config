@@ -111,6 +111,26 @@ def test_app_dang_hien_tren_danh_sach_thi_bam_luon(monkeypatch):
     assert da_bam == [dong] and cuon == []
 
 
+def test_ve_dau_danh_sach_vuot_toi_khi_dung_yen(monkeypatch):
+    """AIP882 29/10/2026: ~93 app, dang o cuoi danh sach -> vuot co dinh 8 lan chua toi dau."""
+    trang = [["z1", "z2"], ["m1", "m2"], ["c1", "c2"], ["a1", "a2"], ["a1", "a2"]]
+    da_vuot = []
+
+    class N:
+        def __init__(self, t):
+            self.text, self.resource_id = t, "bundle_id"
+
+    async def nodes(client, serial):
+        return [N(t) for t in trang[len(da_vuot)]]
+
+    async def cuon_(client, serial, huong, lan=1):
+        da_vuot.append(huong)
+    monkeypatch.setattr(ui, "_nodes", nodes)
+    monkeypatch.setattr(ui, "_cuon", cuon_)
+    asyncio.run(ui._ve_dau_ds(_Client(), "S1", [N(t) for t in trang[0]]))
+    assert da_vuot == ["down"] * 4     # trang a1 lap lai -> dung, khong vuot du MAX_CUON_DS
+
+
 def test_trang_chi_tiet_load_cham_thi_doi_them(monkeypatch):
     """AIP805 29/10/2026: dump ngay sau khi bam chua co trang chi tiet, vai giay sau moi hien."""
     _goi_cuon(monkeypatch, [])

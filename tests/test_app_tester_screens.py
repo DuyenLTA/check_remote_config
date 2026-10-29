@@ -25,6 +25,7 @@ def dump(ten: str):
     ("playprotect_scan_recommended", "pp_quet"),
     ("playprotect_scanning", "pp_dang_quet"),
     ("playprotect_looks_safe", "pp_an_toan"),
+    ("oppo_install_anyway", "oppo_cai"),
     ("inter_dismiss_button", "khac"),
 ])
 def test_nhan_man(ten, man):
@@ -129,3 +130,8 @@ def test_release_van_tinh_ban_chua_ro_nhu_truoc():
            _b("debug", "Oct 29, 2026 at 11:00 AM")]
     assert s.chon_ban(cac, "1.4.0 (14)", "release")[0]["note"] == "moi"
     assert s.chon_ban([_b("debug", "a")], "1.4.0 (14)", "release")[1] == "1.4.0 (14) chưa có bản release (mới có: debug)"
+
+
+def test_man_quet_cai_cua_oppo_co_nut_install_anyway():
+    nodes = dump("oppo_install_anyway")
+    assert s.nut_chu(nodes, s.OPPO_CAI, s.OPPO_MARKET).bounds.top == 552
