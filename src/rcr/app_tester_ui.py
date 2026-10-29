@@ -23,7 +23,7 @@ from .adb_parsers import AdbError, parse_debuggable
 
 MAX_CUON_DS = 30          # danh sach ~50 app, moi lan cuon ~5 dong
 MAX_CUON_BAN = 8          # build moi luon o dau danh sach release
-TIMEOUT_CAI = 600.0
+TIMEOUT_CAI = 1200.0   # mang cham: tai ~80 MB mat ~10 phut (AIP922 29/10/2026)
 NHIP = 2.0
 LAN_CHUP_LAI = 8
 LAN_DOI_TRANG = 5         # doi trang chi tiet app load: toi da 5 nhip x NHIP
@@ -222,14 +222,21 @@ async def cai(client, serial, package, version, loai, out_dir: Path) -> dict:
     if b is None or b["nut"] not in ("tai", "da_tai"):
         raise await _luu_man_la(client, serial, out_dir, f"release {version} không có nút Download/Install")
     await _bam(client, serial, b["node_nut"])
-    return await _cho_cai_xong(client, serial, package, version, loai, go, out_dir)
+    # May da co CUNG version (khong go) -> version khop ngay tu dau; phai doi moc cai doi moi la ban moi.
+    cu = truoc.get("cai_luc") if truoc and truoc["version"] == version and not go else None
+    return await _cho_cai_xong(client, serial, package, version, loai, go, out_dir, cu)
 
 
-async def _cho_cai_xong(client, serial, package, version, loai, go, out_dir) -> dict:
+async def _cho_cai_xong(client, serial, package, version, loai, go, out_dir, cai_luc_cu=None) -> dict:
+    """`cai_luc_cu`: moc cai cua ban cung version co san truoc khi bam Download. AIP922 29/10/2026: ban cu
+    3.7.0 (30) khop version ngay -> bot tuong cai xong, verify tren ban cu trong khi ban moi con dang tai
+    (cai xong 15:49, luot verify da chay 15:40). Co moc cu thi chi coi la xong khi moc cai doi."""
     het = time.monotonic() + TIMEOUT_CAI
     la = 0
     while time.monotonic() < het:
         hien = await ban_dang_cai(client, serial, package)
+        if cai_luc_cu is not None and hien.get("cai_luc") == cai_luc_cu:
+            hien = {}                     # van la ban cu: ban moi dang tai / cai
         if hien.get("version") == version and hien["debuggable"] == (loai == "debug"):
             await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
             return {"package": package, "version": version, "debuggable": hien["debuggable"],

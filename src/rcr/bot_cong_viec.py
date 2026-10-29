@@ -18,7 +18,7 @@ from .models import RcError
 
 log = logging.getLogger("rcr-bot")
 
-TIMEOUT_CAI = 900
+TIMEOUT_CAI = 1500   # > app_tester_ui.TIMEOUT_CAI + mo App Tester
 # Gioi han file dinh kem cua bot o server khong boost.
 MAX_DINH_KEM = 10 * 1024 * 1024
 TRANG_THAI = {"XONG": ("✅", "Xong"), "DUNG": ("⚠️", "Dừng — cần người xem"),
