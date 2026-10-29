@@ -69,11 +69,16 @@ def nut_chu(nodes, text: str, package: str):
 
 
 def dong_app(nodes, bundle: str):
-    """Node `bundle_id` khop CHINH XAC package, du cao de bam (khong bi cat o mep). None neu chua thay."""
+    """Node de bam vao app co `bundle_id` khop CHINH XAC package, du cao (khong bi cat o mep). None neu chua thay.
+
+    Dong package bi mep duoi cat con 32px ma ten app cung dong van hien du (AIP882 29/10/2026: trang nao
+    cung roi dung mep -> vuot qua mai, bao "khong co app") -> bam vao ten app cung dong."""
     n = _co(nodes, "bundle_id", text=bundle)
-    if n is None or n.bounds.bottom - n.bounds.top < 40:
+    if n is None:
         return None
-    return n
+    dong = n.node_id.rsplit(".", 1)[0] + "."
+    ten = next((x for x in nodes if x.resource_id == "app_name" and x.node_id.startswith(dong)), None)
+    return next((x for x in (n, ten) if x is not None and x.bounds.bottom - x.bounds.top >= 40), None)
 
 
 def _con(nodes, cha) -> list:

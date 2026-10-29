@@ -38,6 +38,12 @@ def test_tim_app_theo_bundle_id_khop_chinh_xac():
     assert s.dong_app(nodes, "com.aiheadshot.idphoto") is None   # khong khop mot phan
 
 
+def test_dong_package_bi_cat_mep_duoi_thi_bam_ten_app():
+    """AIP882 29/10/2026 (OPPO CPH2375): dong package cat con 32px o mep duoi, ten app van hien du."""
+    n = s.dong_app(dump("apptester_list_cat_mep"), "com.aivideogenerator.aiphotoeditor.beautyeditor.imagetoimage")
+    assert n is not None and n.resource_id == "app_name" and n.bounds.top == 1361
+
+
 def test_release_moi_co_nut_tai():
     cac = s.cac_ban(dump("apptester_detail_download"))
     moi = cac[0]
