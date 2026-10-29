@@ -38,7 +38,7 @@ TRUONG_BUG = ("case", "tieu_de", "precondition", "buoc", "expected", "thuc_te", 
 MAX_TRUONG_BUG = 1000
 
 PROMPT = (
-    "/rc-check {package} --serial {serial}\n\n"
+    "/rc-check {package} --serial {serial}{next_gen}\n\n"
     "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi, khong co nguoi ngoi truoc may. Gap diem can nguoi quyet "
     "(ad_click, preflight LOI, ID ads lech sheet, man la) thi dung, khong tu chay tiep. Khong commit/push.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
@@ -70,7 +70,7 @@ PROMPT_VERIFY = (
 TIMEOUT_VERIFY = 40 * 60
 # Verify dong checklist Next-Gen: chay ca checklist (rcr-sdk-check) roi do tay rieng cac ma can verify.
 PROMPT_VERIFY_CHECKLIST = (
-    "/rc-check {package} --serial {serial}\n\n"
+    "/rc-check {package} --serial {serial} --next-gen\n\n"
     "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi de VERIFY bug dev bao da fix, bug thuoc NHANH CHECKLIST "
     "Next-Gen. Chay checklist (rcr-sdk-check) cho app nhu thuong; dong nao ra DO_TAY thi CHI do tay (theo sdk-check/WORKFLOW.md) "
     "cac ma dong sau, khong do tay dong khac, bo muc 3c (check ID ads): {cases}\n"
@@ -87,9 +87,12 @@ PROMPT_VERIFY_CHECKLIST = (
 TIMEOUT_VERIFY_CHECKLIST = 70 * 60
 
 
-def lenh(package: str, serial: str, cases: list[str] | None = None) -> tuple[list[str], str]:
+def lenh(package: str, serial: str, cases: list[str] | None = None,
+         next_gen: bool = False) -> tuple[list[str], str]:
     """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
-    Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt."""
+    Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt.
+    `next_gen`: bot da cai ban release vi tin build ghi next-gen -> `--next-gen` de rc-check chay checklist
+    Next-Gen thay vi tu chon theo so SDK (chi 3.7.0) - AIP918 tutorial 3.7.1 bi chay nham bo TC, 29/10/2026."""
     from .bot_verify_jira import loai_case
 
     if not PACKAGE_RE.match(package or ""):
@@ -99,7 +102,7 @@ def lenh(package: str, serial: str, cases: list[str] | None = None) -> tuple[lis
     exe = shutil.which("claude") or "claude"
     cmd = [exe, "-p", "--output-format", "json", "--allowedTools", *TOOLS]
     if not cases:
-        return cmd, PROMPT.format(package=package, serial=serial)
+        return cmd, PROMPT.format(package=package, serial=serial, next_gen=" --next-gen" if next_gen else "")
     loai = {c: loai_case(c) for c in cases}
     sai = [c for c, lo in loai.items() if lo is None]
     if sai:
@@ -166,12 +169,12 @@ def moi_truong() -> dict[str, str]:
 
 
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
-         cases: list[str] | None = None) -> dict:
+         cases: list[str] | None = None, next_gen: bool = False) -> dict:
     """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
-        cmd, prompt = lenh(package, serial, cases)
+        cmd, prompt = lenh(package, serial, cases, next_gen)
         p = subprocess.run(cmd, input=prompt, cwd=repo, capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=timeout, env=moi_truong())
     except subprocess.TimeoutExpired as exc:

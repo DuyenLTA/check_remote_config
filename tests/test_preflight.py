@@ -178,6 +178,15 @@ def test_tham_so_sdk_thang_doc_tu_log(monkeypatch):
     assert kq["nhanh"] == "nextgen"
 
 
+def test_tin_build_ghi_next_gen_thi_ep_nhanh_checklist(monkeypatch):
+    """AIP918 2.4.0 29/10/2026: tutorial 3.7.1-alpha01 + GMA Next-Gen, ban release -> khong duoc roi vao bo TC."""
+    _gia(monkeypatch, sdk="3.7.1-alpha01")
+    assert _chay(FakeClient())["nhanh"] == "tc"                      # khong ep: giu quy tac chi 3.7.0
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", ep_nextgen=True))
+    assert kq["nhanh"] == "nextgen" and not any(m["ten"] == "Sheet testcase" for m in kq["muc"])
+    assert "theo tin build" in next(m["chi_tiet"] for m in kq["muc"] if m["ten"] == "Bản SDK FO")
+
+
 def test_la_nextgen_chi_dung_3_7_0():
     from rcr import sdk_probe
     assert sdk_probe.la_nextgen("3.7.0") and sdk_probe.la_nextgen("3.7.0-alpha02")

@@ -105,3 +105,10 @@ def test_doc_verdict_tung_case():
     kq = c.doc_ket_qua(json.dumps({"result": text}))
     assert kq["cases"] == [{"case": "3.6.1#1", "verdict": "PASS", "thuc_te": "ok"}]
     assert c.doc_ket_qua(json.dumps({"result": 'KET_QUA: {"trang_thai": "XONG"}'}))["cases"] == []
+
+
+def test_ban_release_next_gen_thi_truyen_co_cho_rc_check():
+    """Bot cai ban release vi tin build ghi next-gen -> rc-check phai chay checklist, khong tu chon theo so SDK."""
+    assert c.lenh("pkg.a", "S1", next_gen=True)[1].startswith("/rc-check pkg.a --serial S1 --next-gen" + chr(10))
+    assert c.lenh("pkg.a", "S1")[1].startswith("/rc-check pkg.a --serial S1" + chr(10))
+    assert "--next-gen" in c.lenh("pkg.a", "S1", ["EV-07"])[1].splitlines()[0]   # verify dong checklist

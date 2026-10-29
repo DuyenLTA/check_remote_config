@@ -79,7 +79,7 @@ def test_tim_auto_qa_loi_khong_lo_token(fake):
 
 def test_luot_verify_checklist_prompt_va_khong_lan_tc():
     cmd, prompt = c.lenh("pkg.a", "S1", ["EV-07", "HT-03", "1.7"])
-    assert prompt.startswith("/rc-check pkg.a --serial S1\n\n") and "--case" not in prompt.split("\n")[0]
+    assert prompt.startswith("/rc-check pkg.a --serial S1 --next-gen\n\n") and "--case" not in prompt.split("\n")[0]
     assert "rcr-sdk-check" in prompt and "EV-07, HT-03, 1.7" in prompt and "KHOP -> PASS" in prompt
     assert "KHONG doc/sua/log Jira" in prompt and '"cases"' in prompt
     assert not any("\n" in a for a in cmd)                 # prompt di qua stdin

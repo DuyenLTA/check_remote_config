@@ -196,8 +196,12 @@ async def _mo_app_mot_lan(client, serial: str, package: str) -> tuple[dict, str]
         await device_app.force_stop(client, serial, package)
 
 
-def muc_sdk(sdk: str) -> dict:
-    """Ban SDK FO quyet dinh nhanh chay: Next-Gen -> checklist, con lai -> bo TC."""
+def muc_sdk(sdk: str, ep_nextgen: bool = False) -> dict:
+    """Ban SDK FO quyet dinh nhanh chay: Next-Gen -> checklist, con lai -> bo TC.
+    `ep_nextgen`: tin build cua dev ghi next-gen (bot da cai ban release theo do) -> checklist bat ke so SDK."""
+    if ep_nextgen:
+        return _muc("Bản SDK FO", OK, f"{sdk or '?'} → Next-Gen theo tin build (--next-gen): chấm checklist "
+                                      "sdk-check/ (không chạy bộ TC)")
     if not sdk:
         return _muc("Bản SDK FO", CANH_BAO, "không thấy dòng `VslTemplate4FirstOpenSDK: Using version` trong log",
                     "Hỏi bản SDK rồi truyền --sdk X.Y.Z")
@@ -224,11 +228,15 @@ def _ram() -> dict:
     return _muc("RAM máy tính", OK, f"còn trống {gb:.1f} GB")
 
 
-async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "") -> dict:
+async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "",
+               ep_nextgen: bool = False) -> dict:
     """Kiem het, KHONG dung o muc dau tien hong: nguoi dung can thay moi viec phai lam.
 
     `sdk` (tham so --sdk) de trong thi doc tu log lan mo app. Ban Next-Gen ->
     `nhanh = "nextgen"`: bo qua sheet TC / sheet ID ads, khong bat buoc debuggable.
+    `ep_nextgen` (--next-gen): bot doc tin build ghi next-gen -> nhanh nextgen ca khi so SDK khong
+    phai 3.7.0 (AIP918 2.4.0: tutorial 3.7.1-alpha01 + GMA Next-Gen, 29/10/2026). Khong ep thi giu
+    quy tac so SDK (chi 3.7.0) user chot 27/10/2026.
     """
     window, _, _ = await client.shell(serial, "dumpsys", "window")
     power, _, _ = await client.shell(serial, "dumpsys", "power")
@@ -247,8 +255,8 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
             sdk = sdk or sdk_log
         except (AdbError, RcError) as exc:
             muc.append(_muc("Ads dùng ID thật", CANH_BAO, f"không mở được app để kiểm: {exc}"))
-    muc.append(muc_sdk(sdk))
-    nhanh = "nextgen" if sdk_probe.la_nextgen(sdk) else "tc"
+    muc.append(muc_sdk(sdk, ep_nextgen))
+    nhanh = "nextgen" if ep_nextgen or sdk_probe.la_nextgen(sdk) else "tc"
     if nhanh == "nextgen":
         muc = noi_long_nextgen(muc)
     else:

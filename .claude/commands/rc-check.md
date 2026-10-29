@@ -1,6 +1,6 @@
 ---
 description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, hoặc tự chấm checklist SDK Next-Gen khi app dùng SDK 3.7.0, trên máy thật
-argument-hint: "<package> [mục 1|2|3|4|all — chỉ khi app SDK 3.7.0: tự chấm checklist Next-Gen] [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
+argument-hint: "<package> [mục 1|2|3|4|all — chỉ khi app SDK 3.7.0: tự chấm checklist Next-Gen] [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--next-gen] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
 ---
 
 Chạy `rcr-check` một lượt: đọc baseline remote config, nạp file testcase, đặt
@@ -46,7 +46,10 @@ bộ TC như bản thường; bộ TC chưa có tab 3.6.1 thì tool chấm base 
   `"nhanh": "nextgen"`. **Không chạy các mục 4–7 dưới**: đọc toàn bộ `<repo>/sdk-check/WORKFLOW.md` và
   làm theo nó (checklist có sẵn trong `<repo>/sdk-check/references/`, report Khớp/Sai). Ở nhánh này bản
   release / ID ads test chỉ là `CHU Y`, không chặn.
-- **Bản khác** (3.5.x, 3.6.x, 3.7.1…) → nhánh bộ TC như thường. User truyền `--tc` riêng thì luôn theo `--tc`.
+- **`$ARGUMENTS` có `--next-gen`** (bot Discord truyền khi tin build của dev ghi next-gen và bot đã cài bản
+  release) → truyền `--next-gen` vào lệnh `--preflight`: nhánh **luôn** là checklist Next-Gen, **bất kể số SDK**
+  (AIP918 2.4.0: tutorial 3.7.1-alpha01 + GMA Next-Gen bị chạy nhầm bộ TC rồi chặn vì bản release, 29/10/2026).
+- **Bản khác** (3.5.x, 3.6.x, 3.7.1…) không có `--next-gen` → nhánh bộ TC như thường. User truyền `--tc` riêng thì luôn theo `--tc`.
 - Không đọc được bản (dòng `Bản SDK FO` là `CHU Y`) → hỏi user bản SDK, chạy lại preflight với `--sdk X.Y.Z`.
 - Chạy case bằng bộ TC mặc định trên app 3.7.0 thì `rcr-check` dừng kèm lỗi (bộ chung không có tab
   Next-Gen, chọn tab cũ là chấm sai bản).
@@ -169,8 +172,9 @@ khoá rồi chạy lại, đừng đi tìm bug trong app. Báo Discord:
 ## 3b. Kiểm điều kiện trước khi chạy — luôn làm
 
 ```
-cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>] --preflight
+cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>] --preflight [--next-gen]
 ```
+(`--next-gen` chỉ khi `$ARGUMENTS` có — xem 0b.)
 
 Khoảng 20 giây, kiểm hết một lượt: máy, màn hình không khoá, app đã cài, **vào được dữ liệu app
 (bản debuggable / root)**, **ads dùng ID thật** (mở app một lần, đọc log `FA-SVC` tối đa 15s),

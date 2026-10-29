@@ -132,7 +132,8 @@ async def run(args: argparse.Namespace) -> dict:
 
     if args.preflight:
         _log("Kiem dieu kien truoc khi chay...")
-        kq = await preflight.chay(client, serial, args.package, args.tc or TC_MAC_DINH, args.out_dir, args.sdk)
+        kq = await preflight.chay(client, serial, args.package, args.tc or TC_MAC_DINH, args.out_dir, args.sdk,
+                                  ep_nextgen=args.next_gen)
         preflight.in_bang(kq, _log)
         return {"serial": serial, "package": args.package, "preflight": kq}
 
@@ -269,6 +270,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--tc", help="file testcase .xlsx, hoac link Google Sheet (tu tai ban moi nhat)")
     p.add_argument("--sdk", default="",
                    help="ban SDK FO cua app, vd 3.2.0 - mac dinh tu do tu logcat")
+    p.add_argument("--next-gen", action="store_true",
+                   help="tin build ghi next-gen: --preflight chon nhanh checklist Next-Gen bat ke so SDK "
+                        "(bot Discord truyen khi da cai ban release theo tin build)")
     p.add_argument("--tab", default="",
                    help="chi chay dung mot tab, vd `--tab 3.4.0` (khong keo theo base + delta)")
     p.add_argument("--case",
