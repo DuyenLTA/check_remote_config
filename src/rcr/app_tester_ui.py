@@ -25,6 +25,7 @@ MAX_CUON_BAN = 8          # build moi luon o dau danh sach release
 TIMEOUT_CAI = 600.0
 NHIP = 2.0
 LAN_CHUP_LAI = 8
+LAN_DOI_TRANG = 5         # doi trang chi tiet app load: toi da 5 nhip x NHIP
 VERSION_RE = re.compile(r"^(?P<name>\S+) \((?P<code>\d+)\)$")
 
 
@@ -108,6 +109,18 @@ async def mo_chi_tiet(client, serial, package, out_dir: Path):
             raise await _luu_man_la(client, serial, out_dir, "tick consent xong nút Start vẫn tắt")
         await _bam(client, serial, nut, 3)
         nodes = await _nodes(client, serial)
+    # Trang chi tiet load cham hon nhip bam (AIP805 29/10/2026: dump luc bam chua co trang, anh chup
+    # vai giay sau da du) -> doc lai vai nhip truoc khi ket luan. Mang chap chon thi App Tester hien
+    # "Error fetching the app details" + nut Retry (do 29/10/2026) -> bam Retry roi doi tiep.
+    for _ in range(LAN_DOI_TRANG):
+        if s.man(nodes) == "chi_tiet" and s._co(nodes, "bundle_id", text=package) is not None:
+            break
+        thu_lai = s.nut_chu(nodes, "Retry", s.APP_TESTER)
+        if thu_lai is not None:
+            await _bam(client, serial, thu_lai, 3)
+        else:
+            await asyncio.sleep(NHIP)
+        nodes = await _nodes(client, serial)
     if s.man(nodes) != "chi_tiet" or s._co(nodes, "bundle_id", text=package) is None:
         raise await _luu_man_la(client, serial, out_dir, f"không vào được trang của {package}")
     return nodes
@@ -172,7 +185,7 @@ async def cai(client, serial, package, version, loai, out_dir: Path) -> dict:
     b = await _toi_ban(client, serial, dich)
     if b is None:
         raise await _luu_man_la(client, serial, out_dir, f"không mở được release {version} ({loai})")
-    if b["loai"] != loai:                 # note day du khac note rut gon
+    if b["loai"] not in (loai, s.CHUA_RO):   # note day du khac note rut gon
         raise LoiCai(f"release {version} mở ra là bản {b['loai']}, không phải {loai}")
     # Da cai hay chua: hoi dumpsys, khong suy tu nut (open_button "Install" = tai roi chua cai).
     truoc = await ban_dang_cai(client, serial, package)
@@ -205,6 +218,13 @@ async def _cho_cai_xong(client, serial, package, version, loai, go, out_dir) -> 
             await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
             return {"package": package, "version": version, "debuggable": hien["debuggable"],
                     "da_cai": True, "go_ban_cu": go}
+        if hien.get("version") == version:
+            # Ban cu cung version sai loai da bi go truoc khi bam cai (`go`) -> day chinh la ban vua cai.
+            # Note khong ghi loai ma co debuggable noi khac -> bao ngay, khong cho het TIMEOUT_CAI.
+            thuc = "debug" if hien["debuggable"] else "release"
+            await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
+            raise LoiCai(f"{version} cài xong kiểm cờ debuggable bằng adb: là bản {thuc}, không phải {loai} "
+                         f"(release note không ghi loại)")
         nodes = await _nodes(client, serial)
         man = s.man(nodes)
         nut = {"hop_cai": s._co(nodes, "button1", package=s.INSTALLER),

@@ -92,3 +92,34 @@ def test_open_button_ghi_install_la_da_tai_chua_cai():
     moi = s.cac_ban(dump("apptester_detail_downloaded"))[0]
     assert (moi["version"], moi["nut"]) == ("4.3.0 (40)", "da_tai")
     assert s.cac_ban(dump("apptester_detail_download"))[0]["nut"] == "tai"
+
+
+@pytest.mark.parametrize("note, loai", [
+    ("1.4.0 (14) - prodDebug\nbranch tutorial-sdk/3.6.1", "debug"),   # AIP805 29/10/2026
+    ("devDebug r2", "debug"), ("debug build", "debug"), ("Debug", "debug"),
+    ("1.4.0 (14) - prodRelease", "release"), ("ban rls", "release"), ("release build", "release"),
+    ("No release notes", "?"), ("fix bug r1", "?"), ("fix debugger crash", "?")])
+def test_loai_theo_note_ca_ten_variant(note, loai):
+    assert s.loai_theo_note(note) == loai
+
+
+def _b(loai, ngay, note="n"):
+    return {"version": "1.4.0 (14)", "loai": loai, "ngay": ngay, "note": note}
+
+
+def test_debug_khong_ghi_ro_thi_lay_ban_chua_ro_moi_nhat():
+    cac = [_b("?", "Oct 29, 2026 at 10:03 AM", "moi"), _b("release", "Oct 27, 2026 at 10:15 AM"),
+           _b("?", "Oct 20, 2026 at 9:00 AM", "cu")]
+    assert s.chon_ban(cac, "1.4.0 (14)", "debug")[0]["note"] == "moi"
+
+
+def test_co_ban_ghi_ro_debug_thi_khong_lay_ban_chua_ro():
+    cac = [_b("?", "Oct 29, 2026 at 10:03 AM", "moi"), _b("debug", "Oct 27, 2026 at 10:15 AM", "ro")]
+    assert s.chon_ban(cac, "1.4.0 (14)", "debug")[0]["note"] == "ro"
+
+
+def test_release_van_tinh_ban_chua_ro_nhu_truoc():
+    cac = [_b("?", "Oct 29, 2026 at 10:03 AM", "moi"), _b("release", "Oct 27, 2026 at 10:15 AM", "ro"),
+           _b("debug", "Oct 29, 2026 at 11:00 AM")]
+    assert s.chon_ban(cac, "1.4.0 (14)", "release")[0]["note"] == "moi"
+    assert s.chon_ban([_b("debug", "a")], "1.4.0 (14)", "release")[1] == "1.4.0 (14) chưa có bản release (mới có: debug)"

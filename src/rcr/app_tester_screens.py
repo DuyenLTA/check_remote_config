@@ -23,7 +23,19 @@ NUT_BAN = {"download_button": "tai", "open_button": "dang_cai", "downgrade_relea
 # `open_button` ghi "Install" khi APK da tai ma chua cai (bam Cancel o hop cai, do
 # 27/10/2026) - cung id voi nut "Open" cua ban dang cai.
 DA_TAI = "Install"
-DEBUG_RE = re.compile(r"\bdebug\b", re.I)
+# Ten build variant dinh lien ("1.4.0 (14) - prodDebug", AIP805 29/10/2026) -> `\bdebug\b` khong khop,
+# ban debug bi coi la release. Cho phep tien to chu cai: debug, prodDebug, devDebug.
+DEBUG_RE = re.compile(r"\b[a-z]*debug\b", re.I)
+# Note ghi ro ban release ("prodRelease", "release build", "rls"); "No release notes" KHONG tinh.
+RELEASE_RE = re.compile(r"\b(?:[a-z]*release|rls)\b(?!\s*notes?\b)", re.I)
+# Note khong ghi loai -> "?": chi biet sau khi cai, doc co debuggable bang adb (user chot 29/10/2026).
+CHUA_RO = "?"
+
+
+def loai_theo_note(note: str) -> str:
+    if DEBUG_RE.search(note):
+        return "debug"
+    return "release" if RELEASE_RE.search(note) else CHUA_RO
 
 
 def _co(nodes, rid: str = "", text: str = "", package: str = ""):
@@ -93,7 +105,7 @@ def cac_ban(nodes) -> list[dict]:
             "version": ver.text,
             "ngay": ngay.text.split("•")[0].strip(),
             "note": note.text,
-            "loai": "debug" if DEBUG_RE.search(note.text) else "release",
+            "loai": loai_theo_note(note.text),
             "mo_rong": _co(con, "caret_up") is not None,
             "nut": loai_nut,
             "node_nut": nut,
@@ -115,11 +127,15 @@ def chon_ban(cac: list[dict], version: str, loai: str) -> tuple[dict | None, str
 
     Dev day lai cung version + loai nhieu lan -> lay lan day moi nhat (user chot 28/10/2026).
     App Tester xep moi o tren: `max` giu ban dau tien khi ngay bang nhau / khong doc duoc ngay.
+    Note khong ghi loai (CHUA_RO): release van tinh nhu truoc (dev hiem ghi "release"); debug chi
+    lay khi khong co ban nao ghi ro debug - cai xong `cai` kiem co debuggable bang adb.
     """
     cung_ver = [b for b in cac if b["version"] == version]
     if not cung_ver:
         return None, f"App Tester chưa có {version}"
-    dung = [b for b in cung_ver if b["loai"] == loai]
+    dung = [b for b in cung_ver if b["loai"] == loai or (loai == "release" and b["loai"] == CHUA_RO)]
+    if not dung:
+        dung = [b for b in cung_ver if b["loai"] == CHUA_RO]
     if not dung:
         co = ", ".join(sorted({b["loai"] for b in cung_ver}))
         return None, f"{version} chưa có bản {loai} (mới có: {co})"
