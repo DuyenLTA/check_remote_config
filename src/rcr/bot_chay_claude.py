@@ -30,17 +30,27 @@ KET_QUA_RE = re.compile(r"^KET_QUA:\s*(\{.*\})\s*$", re.M)
 # Nhanh bo TC chay lau hon nhieu nhanh checklist Next-Gen. Ca hai cong ~15 phut cho
 # buoc check ID ads (capture + agent phan), build chua doi thi audit bo qua nhanh.
 TIMEOUT_BO_TC = 135 * 60
-TIMEOUT_NEXT_GEN = 45 * 60
+# Next-Gen phai do tay het cac dong DO_TAY (~20 dong), khong dung o "con N dong do tay" (29/10/2026).
+TIMEOUT_NEXT_GEN = 120 * 60
 DUOI_LOG = 300
 # Menu chon cua Discord toi da 25 lua chon; moi truong cat ngan de tin khong phinh.
 MAX_BUG = 25
 TRUONG_BUG = ("case", "tieu_de", "precondition", "buoc", "expected", "thuc_te", "muc_do")
 MAX_TRUONG_BUG = 1000
 
+# Nhanh checklist: chay het, do tay het, chi Khop/Sai; may test AdMob duoc bam ad (sdk-check/WORKFLOW.md luat 10-11).
+# Luot AIP918 2.4.0 (29/10/2026) dung vi 1 ad_click tren may test va bo 20 dong do tay - user da dan chay het.
+NHAC_NEXT_GEN = (
+    "Nhanh checklist Next-Gen: CHAY HET va DO TAY HET moi dong DO_TAY theo sdk-check/WORKFLOW.md (luat 10-11), ghi "
+    "--cham-tay ra Khop/Sai; chi bao xong khi report khong con dong Do tay. May trong danh sach may test AdMob (luat 10) "
+    "thi duoc bam quang cao de do, ad_click KHONG phai ly do dung: ghi vao report roi chay tiep. Dong that su khong do "
+    "duoc thi thu het cach roi ghi ro da thu gi va can dung thu gi.\n"
+)
 PROMPT = (
     "/rc-check {package} --serial {serial}{next_gen}\n\n"
-    "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi, khong co nguoi ngoi truoc may. Gap diem can nguoi quyet "
-    "(ad_click, preflight LOI, ID ads lech sheet, man la) thi dung, khong tu chay tiep. Khong commit/push.\n"
+    "{nhac}Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi, khong co nguoi ngoi truoc may. Gap diem can "
+    "nguoi quyet (ad_click tren may KHONG phai may test AdMob, preflight LOI, ID ads lech sheet, man la) thi dung, khong "
+    "tu chay tiep. Khong commit/push.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
     '"tom_tat": "<tieng Viet, toi da 300 ky tu: so PASS/FAIL hoac ly do dung>", '
@@ -102,7 +112,8 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
     exe = shutil.which("claude") or "claude"
     cmd = [exe, "-p", "--output-format", "json", "--allowedTools", *TOOLS]
     if not cases:
-        return cmd, PROMPT.format(package=package, serial=serial, next_gen=" --next-gen" if next_gen else "")
+        return cmd, PROMPT.format(package=package, serial=serial, next_gen=" --next-gen" if next_gen else "",
+                                  nhac=NHAC_NEXT_GEN if next_gen else "")
     loai = {c: loai_case(c) for c in cases}
     sai = [c for c, lo in loai.items() if lo is None]
     if sai:

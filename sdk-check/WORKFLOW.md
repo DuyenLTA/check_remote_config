@@ -31,8 +31,15 @@ không chạy). Script `.sh` tự chọn đúng và tắt đổi đường dẫn
    Script lái sai / parse log hụt trên app mới → tự sửa script trong `$SK/scripts/` rồi chạy lại case đó
    (như `rc-check.md` mục 5e), không giao lại user; ghi phần đã sửa trong câu báo.
 8. Hộp xin quyền: tự Allow; sau `pm clear` chạy `pm grant <pkg> android.permission.POST_NOTIFICATIONS`.
-9. Không chạm/bấm phím khi AdActivity đang hiện **quảng cáo thật** ngoài thao tác case đòi (ad_click trên unit thật là
-   dừng lượt). Bấm CTA chỉ làm ở case cần (HT-03, HV-01) và ghi rõ trong report.
+9. Không chạm/bấm phím khi AdActivity đang hiện **quảng cáo thật** ngoài thao tác case đòi (ad_click trên unit thật,
+   máy **không** phải máy test, là dừng lượt). Bấm CTA chỉ làm ở case cần (HT-03, HV-01) và ghi rõ trong report.
+10. **Máy test AdMob** (đã đăng ký Test devices, user khẳng định 29/10/2026): `18311FDF60085N` (Pixel 6). Trên máy này
+   được bấm quảng cáo để đo — kể cả bản release dùng ID thật (EV-07, EV-26, EV-27, HT-03, HV-01), mở Ad Inspector
+   (MED-02); `ad_click` trong lượt **không** dừng lượt: ghi vào report rồi chạy tiếp. Máy khác không mặc định là máy test.
+11. **Chạy hết, đo tay hết**: báo xong khi report không còn `Đo tay` — mọi dòng `DO_TAY` đo rồi ghi `--cham-tay` ra
+   Khớp/Sai. Lượt AIP918 2.4.0 (29/10/2026) dừng ở "còn 20 dòng đo tay" là sai quy trình. Dòng thật sự không đo được
+   (cần dev chỉ màn / nút, cần mua sub mà máy không có tài khoản test) thì vẫn thử hết cách, rồi ghi rõ đã thử gì và
+   cần đúng thứ gì — không để trống.
 
 ## Chạy bằng script, KHÔNG tự chấm
 
@@ -60,7 +67,8 @@ bản debug (để tool bật ads) rồi chạy lại — không phải bug dev.
   `rcr-sdk-check --cham-tay <thu_muc> --ma EV-07 --ket KHOP|SAI --ly-do "<số đo / cách đo>"`. Report còn `Đo tay` = chưa xong.
 - Code không chắc thì ra `DO_TAY`, không đoán: lượt lái FO lỗi → mọi `SAI` dựa trên log đó thành `DO_TAY`; tắt mạng mà
   máy vẫn ra internet → dòng mất mạng thành `DO_TAY`.
-- Footer report có `ad_click` từng lượt: khác 0 trên máy **không** phải máy test (ad thật) → dừng, báo user.
+- Footer report có `ad_click` từng lượt: khác 0 trên máy **không** phải máy test (ad thật) → dừng, báo user. Máy test
+  (luật 10) → ghi vào report, chạy tiếp và đo tay hết.
 
 Đo tay theo cách đo + bẫy ở `references/how-to-measure-each-case.md` và quy trình dưới.
 
