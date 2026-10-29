@@ -121,7 +121,8 @@ def test_pass_thi_comment_roi_done_fail_thi_to_do(tmp_path, monkeypatch):
         ("comment", "AIP920-13"), ("chuyen", "AIP920-13", jira.DICH_PASS),
         ("comment", "AIP920-14"), ("chuyen", "AIP920-14", jira.DICH_FAIL)]
     assert "PASS trên build 1.6.1 (8)" in goi[0][2]
-    assert "Bug reopen" in msg.replies[-1] and "AIP920-14" in msg.replies[-1]   # bao dev ca bug van FAIL
+    assert "Nhờ dev check bug" in msg.replies[-1] and "AIP920-14" in msg.replies[-1]   # bao dev ca bug van FAIL
+    assert "reopen" not in msg.replies[-1].lower()
     cuoi = msg.edits[-1]["content"]
     assert "✅ Done" in cuoi and "🔁 To Do" in cuoi and "⏭ Bỏ qua" in cuoi
 

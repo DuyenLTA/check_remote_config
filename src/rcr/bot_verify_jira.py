@@ -123,13 +123,14 @@ def tin_ket_qua(job: dict, dong: list[tuple[str, dict, str]]) -> str:
 
 
 def tin_bao_dev_fail(job: dict, dong: list[tuple[str, dict, str]]) -> str | None:
-    """Tin bao dev cuoi luot verify o kenh project: so bug van FAIL da keo ve To Do + link Jira cua
-    project, khong liet ke tung bug. None khi khong co."""
+    """Tin bao dev cuoi luot verify o kenh project khi con bug van FAIL (da keo ve To Do): cung kieu
+    tin "Nho dev check bug" thuong le, khong goi la reopen - het luot thi bao check bug nhu moi luot
+    (user chot 29/10/2026). So bug + link Jira cua project, khong liet ke. None khi khong co."""
     fail = [u for loai, u, _ in dong if loai == "todo"]
     if not fail:
         return None
     ban = f"{job.get('ma', '')}---{job['ten']}" if job.get("ten") else job.get("ma", "")
     link = link_project([u.get("link", "") for u in fail])
-    return "\n".join([f"🔁 **Bug reopen** — bản build **{ban} v{_cat(job.get('version'), 40)}**",
-                      f"Verify lại vẫn FAIL, đã kéo {len(fail)} bug về To Do: "
+    return "\n".join([f"🐞 **Nhờ dev check bug** — bản build **{ban} v{_cat(job.get('version'), 40)}**",
+                      f"Có {len(fail)} bug cần check trên Jira: "
                       + (f"<{link}>" if link else ", ".join(u["key"] for u in fail))])

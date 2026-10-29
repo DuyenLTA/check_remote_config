@@ -94,7 +94,7 @@ def test_tin_bao_dev_chi_bug_keo_to_do():
     job = {"ma": "AIP882", "ten": "AI-Video", "version": "4.3.0 (40)"}
     assert v.tin_bao_dev_fail(job, [("done", u, "")]) is None
     t = v.tin_bao_dev_fail(job, [("done", u, ""), ("todo", u, "")])
-    assert "**AIP882---AI-Video v4.3.0 (40)**" in t and "đã kéo 1 bug về To Do: AIP920-14" in t
+    assert "**AIP882---AI-Video v4.3.0 (40)**" in t and "Có 1 bug cần check trên Jira: AIP920-14" in t and t.startswith("🐞 **Nhờ dev check bug**")
     assert "Inter khong hien" not in t and "•" not in t
     u2 = {**u, "link": "https://jira.apero.vn/browse/AIP920-14"}
     assert t.replace("AIP920-14", "<https://jira.apero.vn/browse/AIP920>") == v.tin_bao_dev_fail(job, [("todo", u2, "")])
