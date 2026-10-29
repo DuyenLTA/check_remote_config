@@ -165,25 +165,38 @@ def _tin_ghi(goi, ten, jump="https://discord.com/x/1"):
     return SimpleNamespace(id=7, jump_url=jump, edit=edit, reply=reply)
 
 
-def test_qa_gui_lai_build_da_hoi_thi_bat_lai_nut_check(monkeypatch):
+def test_qa_gui_lai_build_da_hoi_thi_hoi_moi_ngay_duoi_khong_day_len_tin_cu(monkeypatch):
+    """29/10/2026: QA gui lai tin build -> tin hoi moi (nut Check) tra loi ngay duoi, khong bat lai nut tin cu."""
     goi = []
-    c = {"msg_id": 7, "ma": "AIP922", "version": "3.7.0 (30)", "package": "p", "loai_ban": "release"}
+    c = {"msg_id": 7, "ma": "AIP922", "version": "3.7.0 (30)", "package": "p", "loai_ban": "release",
+         "bugs": [{"case": "x"}], "jira": {"issues": []}, "link_tin": "cu"}
     bot = object.__new__(d.BuildBot)
-    bot.q = SimpleNamespace(tin={"7": c}, vi_tri=lambda mid: None)
-    cu = _tin_ghi(goi, "cu")
+    da_nho = {}
+    bot.q = SimpleNamespace(tin={"7": c}, vi_tri=lambda mid: None, nho_tin=lambda c: da_nho.update({c["msg_id"]: c}))
 
     async def tin_qa(mid):
-        return cu
+        raise AssertionError("khong duoc dong toi tin cu")
     bot._tin_qa = tin_qa
     monkeypatch.setattr(d.bot_cong_viec, "tin_hoi", lambda c: "hoi")
-    asyncio.run(bot._hoi_lai(_tin_ghi(goi, "moi"), {"ma": "AIP922", "version": "3.7.0 (30)"}))
-    assert goi[0][0] == "cu_edit" and goi[0][1]["view"] is not None
-    assert goi[1][0] == "moi_reply" and "Check" in goi[1][1] and cu.jump_url in goi[1][1]
+    hoi_moi = _tin_ghi(goi, "hoi_moi", jump="https://discord.com/x/9")
+    hoi_moi.id = 9
+    goi_reply = []
 
-    goi.clear()
-    bot.q.vi_tri = lambda mid: 1                       # dang cho / dang chay -> khong bat lai nut
-    asyncio.run(bot._hoi_lai(_tin_ghi(goi, "moi"), {"ma": "AIP922", "version": "3.7.0 (30)"}))
-    assert [g[0] for g in goi] == ["moi_reply"] and "đang chờ" in goi[0][1]
+    async def reply(chu, **k):
+        goi_reply.append(chu)
+        return hoi_moi
+    tin_qa_gui = SimpleNamespace(id=8, jump_url="https://discord.com/x/8", reply=reply)
+    asyncio.run(bot._hoi_lai(tin_qa_gui, {"ma": "AIP922", "version": "3.7.0 (30)"}))
+    assert len(goi_reply) == 1 and "https://discord.com/x/1" not in goi_reply[0]   # khong gui link tin cu
+    assert goi == [("hoi_moi_edit", goi[0][1])] and goi[0][1]["view"] is not None and goi[0][1]["content"] == "hoi"
+    moi = da_nho[9]
+    assert moi["link_tin"] == "https://discord.com/x/8" and moi["package"] == "p" and moi["loai_ban"] == "release"
+    assert "bugs" not in moi and "jira" not in moi                    # khong mang ket qua luot cu
+
+    goi_reply.clear(); goi.clear()
+    bot.q.vi_tri = lambda mid: 1                       # dang cho / dang chay -> chi bao trang thai ngay duoi
+    asyncio.run(bot._hoi_lai(tin_qa_gui, {"ma": "AIP922", "version": "3.7.0 (30)"}))
+    assert len(goi_reply) == 1 and "đang chờ" in goi_reply[0] and goi == []
 
 
 def test_webhook_thong_bao_o_kenh_qa_khong_hoi_lai_ma_app(monkeypatch):

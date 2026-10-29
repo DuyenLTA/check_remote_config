@@ -44,6 +44,9 @@ for step in $(seq 1 90); do
       tap 'btnNextQuestion|btnNextOnboardingImage' || { tap 'tvQuestionTitle'; sleep 0.8; tap 'btnNextQuestion|btnNextOnboardingImage|Next|Go to Home'; } && mark q_next ;;
     *Billing*)
       sleep 2; tap 'Close Billing Screen|ivClose|btnClose' || adb shell input tap 100 130; mark billing_close ;;
+    *Paywall*|*revcat*)
+      # RevenueCat paywall (no Billing in the name): X is an unlabelled node top-left
+      sleep 1.5; bash "$D/close-paywall-top-left.sh" >/dev/null && mark paywall_close ;;
     *MainActivity*)
       mark at_home; sleep 15; mark home_wait_end; exit 0 ;;
     *Launcher*|*chrome*|*vending*)

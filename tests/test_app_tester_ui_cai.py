@@ -170,3 +170,82 @@ def test_app_tester_loi_tai_trang_thi_bam_retry(monkeypatch):
     monkeypatch.setattr(ui.s, "_co", lambda n, *a, **k: object())
     asyncio.run(ui.mo_chi_tiet(_Client(), "S1", "pkg.a", Path(".")))
     assert da_bam == [dong, retry]
+
+
+def test_thong_bao_che_nut_all_apps_thi_bam_back(monkeypatch):
+    """29/10/2026: heads-up cua Linguza che nut All apps -> cu bam khong ve danh sach; phim Back ve duoc."""
+    _goi_cuon(monkeypatch, [])
+    da_bam, lenh = [], []
+
+    class Client(_Client):
+        async def shell(self, serial, *a):
+            lenh.append(a)
+
+    async def bam(client, serial, node, nghi=0):
+        da_bam.append(node)
+
+    async def khong(*a, **k):
+        return None
+
+    def man(n):
+        if any(a[-1] == "KEYCODE_BACK" for a in lenh):
+            return "chi_tiet" if len(da_bam) > 1 else "danh_sach"
+        return "chi_tiet"                                    # bam All apps bi thong bao che: van o chi tiet
+    monkeypatch.setattr(ui, "_bam", bam)
+    monkeypatch.setattr(ui.device_app, "launch", khong)
+    monkeypatch.setattr(ui.asyncio, "sleep", khong)
+    monkeypatch.setattr(ui.s, "man", man)
+    monkeypatch.setattr(ui.s, "nut_chu", lambda n, text, package: None)
+    monkeypatch.setattr(ui.s, "dong_app", lambda n, p: object())
+    monkeypatch.setattr(ui.s, "_co", lambda n, *a, **k: object())
+    asyncio.run(ui.mo_chi_tiet(Client(), "S1", "pkg.a", Path(".")))
+    assert ("input", "keyevent", "KEYCODE_BACK") in lenh and len(da_bam) == 2   # All apps + dong app
+
+
+def _cai_cung_version(monkeypatch, cai_luc, nut_sau_go="tai"):
+    """May dang cai 2.2.0 (13) debug luc `cai_luc`; App Tester co ban 2.2.0 (13) day 'Oct 29, 2026 at 2:35 PM'
+    dang hien nut Open (App Tester so versionCode)."""
+    from datetime import datetime
+    st = {"bam": [], "lenh": [], "go": False}
+    dich = _ban("dang_cai", "Oct 29, 2026 at 2:35 PM", "debug build lai")
+
+    async def mo_chi_tiet(*a):
+        return []
+
+    async def doc_cac_ban(*a):
+        return [dich]
+
+    async def toi_ban(client, serial, d):
+        return _ban(nut_sau_go, d["ngay"], d["note"]) if st["go"] else d
+
+    async def ban_dang_cai(*a):
+        return {"version": "2.2.0 (13)", "debuggable": True, "cai_luc": datetime.fromisoformat(cai_luc)}
+
+    async def bam(client, serial, node, nghi=0):
+        st["bam"].append(node)
+
+    async def cho_cai_xong(client, serial, package, version, loai, go, out_dir):
+        return {"da_cai": True, "go_ban_cu": go}
+
+    class C(_Client):
+        async def shell(self, serial, *a):
+            st["lenh"].append(a)
+            if a[:2] == ("pm", "uninstall"):
+                st["go"] = True
+    for ten, f in [("mo_chi_tiet", mo_chi_tiet), ("doc_cac_ban", doc_cac_ban), ("_toi_ban", toi_ban),
+                   ("ban_dang_cai", ban_dang_cai), ("_bam", bam), ("_cho_cai_xong", cho_cai_xong)]:
+        monkeypatch.setattr(ui, ten, f)
+    kq = asyncio.run(ui.cai(C(), "S1", "pkg.a", "2.2.0 (13)", "debug", Path(".")))
+    return kq, st
+
+
+def test_dev_day_lai_cung_version_sau_luc_cai_thi_go_va_cai_ban_moi(monkeypatch):
+    """AIP922 29/10/2026: ban 3.7.0 (30) day lai 14:35 van hien Open, may con ban 28/10 -> phai cai lai."""
+    kq, st = _cai_cung_version(monkeypatch, "2026-10-28 18:38:11")
+    assert ("pm", "uninstall", "pkg.a") in st["lenh"] and kq == {"da_cai": True, "go_ban_cu": True}
+    assert len(st["bam"]) == 1                                           # bam Download ban moi
+
+
+def test_ban_tren_app_tester_cu_hon_luc_cai_thi_bo_qua(monkeypatch):
+    kq, st = _cai_cung_version(monkeypatch, "2026-10-29 14:40:00")
+    assert kq["da_cai"] is False and st["bam"] == [] and not any(a[:2] == ("pm", "uninstall") for a in st["lenh"])

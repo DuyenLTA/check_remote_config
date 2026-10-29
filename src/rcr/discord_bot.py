@@ -57,6 +57,8 @@ def _nut(*cac: tuple[str, str, discord.ButtonStyle], msg_id: int) -> discord.ui.
 
 XANH, XAM = discord.ButtonStyle.success, discord.ButtonStyle.secondary
 NUT_HOI = (("check", "Check", XANH), ("bo", "Bỏ qua", XAM), ("verify", "Verify bug Jira", XAM))
+# QA gui lai tin build: tin hoi moi chi mang thong tin build, khong mang ket qua / bug / Jira cua luot cu.
+GIU_KHI_HOI_LAI = ("ma", "ten", "version", "next_gen", "tutorial", "sdk", "package", "loai_ban")
 NUT_BUG = (("jira", "Log Jira", XANH), ("khongbug", "Không có bug thật", XAM))
 
 
@@ -107,22 +109,22 @@ class BuildBot(discord.Client):
         return [env("DISCORD_BOT_TOKEN"), self.jira_token, env("DISCORD_WEBHOOK_URL")]
 
     async def _hoi_lai(self, m: discord.Message, tin: dict):
-        """Build da hoi roi: bat lai nut Check o tin cu (neu khong dang cho/chay) va tra loi kem link,
-        thay vi im lang. Chi lam khi QA gui o kenh QA - dev bao trung o kenh khac thi van im."""
-        c = next(t for t in self.q.tin.values() if t.get("ma") == tin["ma"] and t.get("version") == tin["version"])
-        try:
-            cu = await self._tin_qa(c["msg_id"])
-        except discord.HTTPException:            # tin cu da bi xoa -> nhac QA, khong lam gi them
-            await m.reply(f"Build **{c['ma']}** `{c['version']}` đã hỏi trước đây nhưng tin cũ không còn.",
+        """Build da hoi roi, QA gui lai tin build o kenh QA -> tin hoi MOI (nut Check) tra loi ngay duoi tin
+        QA vua gui, bo phien cu. Truoc day bot bat lai nut o tin cu va gui link -> QA bi day len tin cu
+        (user phan nan 29/10/2026). Tin cu giu nguyen (con menu log bug / ket qua). Dang cho/chay thi chi
+        bao trang thai ngay duoi, khong tao luot trung. Dev bao trung o kenh khac thi van im (o noi goi)."""
+        cung = [t for t in self.q.tin.values()
+                if t.get("ma") == tin["ma"] and t.get("version") == tin["version"] and t.get("loai_job") != "verify"]
+        if any(self.q.vi_tri(t["msg_id"]) is not None for t in cung):
+            await m.reply(f"Build **{tin['ma']}** `{tin['version']}` đang chờ / đang chạy — xong bot báo kết quả.",
                           mention_author=False)
             return
-        if self.q.vi_tri(c["msg_id"]) is not None:
-            await m.reply(f"Build **{c['ma']}** `{c['version']}` đang chờ / đang chạy: {cu.jump_url}",
-                          mention_author=False)
-            return
-        await cu.edit(content=bot_cong_viec.tin_hoi(c), view=_nut(*NUT_HOI, msg_id=cu.id))
-        await m.reply(f"Build **{c['ma']}** `{c['version']}` đã có tin hỏi — bấm **Check** ở đây để chạy lại: "
-                      f"{cu.jump_url}", mention_author=False)
+        c_cu = max(cung, key=lambda t: int(t["msg_id"]))   # snowflake tang dan -> lan hoi gan nhat
+        qa = await m.reply(f"**{c_cu['ma']}** `{c_cu['version']}`…", mention_author=False)
+        c = {k: c_cu[k] for k in GIU_KHI_HOI_LAI if k in c_cu}
+        c.update(link_tin=m.jump_url, msg_id=qa.id)
+        self.q.nho_tin(c)
+        await qa.edit(content=bot_cong_viec.tin_hoi(c), view=_nut(*NUT_HOI, msg_id=qa.id))
 
     async def on_message(self, m: discord.Message):
         if bot_hoi_dap.la_cau_hoi(self, m):      # nhan rieng / tag bot -> hoi dap, khong doc nhu tin build

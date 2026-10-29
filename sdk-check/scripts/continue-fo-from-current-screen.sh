@@ -35,6 +35,9 @@ for step in $(seq 1 60); do
       bash "$D/tap-by-id.sh" 'btnNextQuestion|btnNextOnboardingImage|Next|Continue|Go to Home' right >/dev/null && mark q_next ;;
     *Billing*)
       sleep 2; bash "$D/tap-by-id.sh" 'Close Billing Screen|ivClose|btnClose' >/dev/null || adb shell input tap 100 130; mark billing_close ;;
+    *Paywall*|*revcat*)
+      # RevenueCat paywall (no Billing in the name): X is an unlabelled node top-left
+      sleep 1.5; bash "$D/close-paywall-top-left.sh" >/dev/null && mark paywall_close ;;
     *MainActivity*) mark at_home; exit 0 ;;
     *chrome*|*Launcher*) adb shell input keyevent BACK ;;
   esac

@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from datetime import datetime
 from pathlib import Path
 
 from . import app_tester_screens as s
@@ -26,6 +27,7 @@ TIMEOUT_CAI = 600.0
 NHIP = 2.0
 LAN_CHUP_LAI = 8
 LAN_DOI_TRANG = 5         # doi trang chi tiet app load: toi da 5 nhip x NHIP
+LAN_BACK_VE_DS = 2        # bam "All apps" khong ve duoc danh sach -> phim Back toi da 2 lan
 VERSION_RE = re.compile(r"^(?P<name>\S+) \((?P<code>\d+)\)$")
 
 
@@ -69,13 +71,16 @@ async def _luu_man_la(client, serial, out_dir: Path, ly_do: str) -> LoiCai:
 
 
 async def ban_dang_cai(client, serial, package) -> dict:
-    """{version: "4.3.0 (40)", debuggable} hoac {} neu chua cai."""
+    """{version: "4.3.0 (40)", debuggable, cai_luc} hoac {} neu chua cai. `cai_luc` = lastUpdateTime
+    (gio may) hoac None: dev day lai CUNG version thi chi moc cai moi phan biet ban cu / ban moi."""
     out, _, _ = await client.shell(serial, "dumpsys", "package", package)
     name = re.search(r"versionName=(\S+)", out)
     code = re.search(r"versionCode=(\d+)", out)
     if not (name and code):
         return {}
-    return {"version": f"{name.group(1)} ({code.group(1)})", "debuggable": parse_debuggable(out)}
+    luc = re.search(r"lastUpdateTime=(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)", out)
+    return {"version": f"{name.group(1)} ({code.group(1)})", "debuggable": parse_debuggable(out),
+            "cai_luc": datetime.strptime(luc.group(1), "%Y-%m-%d %H:%M:%S") if luc else None}
 
 
 async def mo_chi_tiet(client, serial, package, out_dir: Path):
@@ -86,6 +91,14 @@ async def mo_chi_tiet(client, serial, package, out_dir: Path):
     if s.man(nodes) in ("chi_tiet", "consent"):           # App Tester nho man cu
         await _bam(client, serial, s._co(nodes, "backToAppListButton"))
         nodes = await _nodes(client, serial)
+        # Thong bao day (heads-up) cua app vua test che dung nut "All apps" o mep tren -> cu bam trung
+        # thong bao (29/10/2026, Linguza "Your daily lesson awaits"). Phim Back khong bi che.
+        for _ in range(LAN_BACK_VE_DS):
+            if s.man(nodes) == "danh_sach":
+                break
+            await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+            await asyncio.sleep(NHIP)
+            nodes = await _nodes(client, serial)
     if s.man(nodes) != "danh_sach":
         raise await _luu_man_la(client, serial, out_dir, "mở App Tester không ra danh sách app")
     # App dang hien san tren man -> bam luon. Chi khi chua thay moi len dau (keo lam moi) roi do tung
@@ -190,13 +203,16 @@ async def cai(client, serial, package, version, loai, out_dir: Path) -> dict:
     # Da cai hay chua: hoi dumpsys, khong suy tu nut (open_button "Install" = tai roi chua cai).
     truoc = await ban_dang_cai(client, serial, package)
     dung_loai = bool(truoc) and truoc["debuggable"] == (loai == "debug")
-    # Cung version co the la lan day cu (dev day lai cung version): dumpsys khong phan biet duoc,
-    # chi bo qua khi release da chon dang hien nut Open; con Download/Install thi cai de.
-    if dung_loai and truoc["version"] == version and b["nut"] not in ("tai", "da_tai"):
+    # Cung version co the la lan day cu (dev day lai cung version): dumpsys khong phan biet duoc.
+    # Nut Open cung KHONG tin duoc: AIP922 3.7.0 (30) day lai 29/10 14:35 ("thay ban 28/10") van hien
+    # Open vi App Tester so versionCode, bot bo qua cai va verify tren ban 28/10. -> release day SAU luc
+    # cai tren may thi la ban moi: go ban cu roi cai lai.
+    cu_hon = bool(dung_loai and truoc.get("cai_luc") and s._luc_day(b) > truoc["cai_luc"])
+    if dung_loai and truoc["version"] == version and b["nut"] not in ("tai", "da_tai") and not cu_hon:
         await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
         return {"package": package, "version": version, "debuggable": truoc["debuggable"],
                 "da_cai": False, "go_ban_cu": False}
-    go = bool(truoc) and not dung_loai
+    go = bool(truoc) and (not dung_loai or (cu_hon and b["nut"] not in ("tai", "da_tai")))
     if b["nut"] == "ha_cap" and not go:
         raise LoiCai(f"máy đang cài {truoc.get('version')} mới hơn {version} — gỡ tay nếu muốn hạ cấp")
     if go:
