@@ -77,7 +77,8 @@ function expects(d) {
   return d.expects.map((e, i) => {
     const l = d.lines[i];
     return `<li><div class="exp">${l ? pill(l.s) : ""}<span>${esc(e)}</span>` +
-      (l ? `<span class="why">${esc(l.r)}</span>` : "") + `</div></li>`;
+      (l ? `<span class="why">${l.tay ? `<span class="taytag">✍ ${esc(l.tay)} đo tay</span> ` : ""}` +
+           `${esc(l.r)}</span>` : "") + `</div></li>`;
   }).join("");
 }
 function adsTable(d) {
@@ -103,22 +104,41 @@ function steps(d) {
     (s.r ? ` — ${esc(s.r)}` : "") + (s.blocked ? " · màn bị quảng cáo che" : "") +
     `</span></li>`).join("") + `</ol></div>`;
 }
+// Case cham tay: ket luan dua tren luot do tay -> tom tat + anh do tay o tren, luot tu dong cua tool (thuong
+// la ly do phai do tay: NEEDS_HUMAN, dung o buoc N) gap lai ben duoi (user 29/10/2026: report kho nhin).
+function tomTat(d) {
+  if (!d.tay) return d.actual;
+  const l = d.lines.find(x => x.tay);
+  return l ? `✍ Đo tay: ${l.r}` : d.actual;
+}
+function anhTay(d) {
+  if (!d.anh_tay.length) return "";
+  return `<div class="full"><h4>Ảnh lượt đo tay</h4><div class="shots lon">` + d.anh_tay.map(a =>
+    `<figure><img loading="lazy" src="${a.src}" alt="${esc(a.ten)}"><figcaption>${esc(a.ten)}</figcaption>` +
+    `</figure>`).join("") + `</div></div>`;
+}
+function luotTool(d) {
+  const ben = steps(d) + adsTable(d) + shots(d);
+  if (!d.tay) return ben;
+  return `<details class="full tool"><summary>Lượt tự động của tool (không dùng để kết luận — ` +
+    `xem vì sao phải đo tay)</summary><div class="toolbody"><div><h4>Thực tế</h4>` +
+    `<div class="box">${esc(d.actual)}</div></div>${ben}</div></details>`;
+}
 function row(d) {
   return `<div class="row" id="c${d.n}">
     <button class="rowbtn" aria-expanded="false" aria-controls="d${d.n}">
       <span class="n">#${d.n}</span>${pill(d.status)}
       <span class="t"><b>${esc(d.title)}` +
         (d.thieu && d.thieu.length ? ' <span class="pill FIX">thiếu điều kiện</span>' : "") +
-        `</b><span>${esc(d.actual)}</span></span>
+        (d.tay ? ' <span class="taytag">✍ đo tay</span>' : "") +
+        `</b><span>${esc(tomTat(d))}</span></span>
       <span class="chev" aria-hidden="true">›</span>
     </button>
     <div class="detail" id="d${d.n}">
-      <div><h4>Kỳ vọng (TC) &amp; kết quả</h4><ol>${expects(d)}</ol></div>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div><h4>Config đã đặt</h4><div class="box">${esc(d.cfg)}` +
-          (d.ep ? `<span class="why">Ép điều kiện: ${esc(d.ep)}</span>` : "") + `</div></div>
-        <div><h4>Thực tế</h4><div class="box">${esc(d.actual)}</div></div>
-      </div>
+      <div class="full"><h4>Kỳ vọng (TC) &amp; kết quả</h4><ol>${expects(d)}</ol></div>
+      ${d.tay ? "" : `<div class="full"><h4>Thực tế</h4><div class="box">${esc(d.actual)}</div></div>`}${anhTay(d)}
+      <details class="full cfg"><summary>Config đã đặt</summary><div class="box">${esc(d.cfg)}</div></details>` +
+      (d.ep ? `<div class="full why">Ép điều kiện: ${esc(d.ep)}</div>` : "") + `
       ${d.thieu && d.thieu.length ? `<div class="full fixnote"><b>Precondition chưa tạo được:</b> ` +
         esc(d.thieu.join("; ")) + ` — case chưa chạy đúng nhánh TC mô tả.</div>` : ""}
       ${d.lech && d.lech.length ? `<div class="full fixnote"><b>TC lệch giá trị server:</b> ` +
@@ -126,7 +146,7 @@ function row(d) {
       ${d.tuban ? `<div class="full fixnote"><b>Ad tự click:</b> log có ${d.tuban} ad_click khi tool ` +
         `không thao tác gì vào máy (không có lệnh input nào trong 5s trước đó) — báo dev.</div>` : ""}
       <div class="full"><h4>Precondition (TC)</h4><div class="pre">${esc(d.pre)}</div></div>
-      ${steps(d)}${adsTable(d)}${shots(d)}
+      ${luotTool(d)}
     </div>
   </div>`;
 }

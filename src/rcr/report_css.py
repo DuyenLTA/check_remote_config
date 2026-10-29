@@ -102,6 +102,14 @@ table.ads{width:100%;border-collapse:collapse;font-size:13px}
 table.ads th,table.ads td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--rule)}
 table.ads td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;text-align:right}
 table.ads th{color:var(--muted);font-weight:500}
+.taytag{display:inline-block;width:fit-content;white-space:nowrap;font-size:12px;font-weight:600;color:var(--pass);background:var(--pass-bg);border-radius:999px;padding:0 8px}
+details.cfg summary{cursor:pointer;color:var(--muted);font-size:13px}
+details.cfg .box{margin-top:6px;overflow-wrap:anywhere}
+.shots.lon figure{flex:0 0 220px}
+.shots.lon img{width:220px}
+details.tool{border:1px dashed var(--rule);border-radius:8px;padding:8px 12px}
+details.tool summary{cursor:pointer;color:var(--muted);font-size:13px}
+details.tool .toolbody{display:flex;flex-direction:column;gap:12px;margin-top:10px}
 .shots{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
 figure{margin:0;display:flex;flex-direction:column;gap:6px}
 figure img{max-width:100%;height:auto;border:1px solid var(--rule);border-radius:6px}

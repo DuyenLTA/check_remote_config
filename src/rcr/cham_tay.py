@@ -18,6 +18,21 @@ from .verdict_levels import FAIL, PASS, worst
 KET_HOP_LE = (PASS, FAIL, "NEEDS_HUMAN", "NOT_VERIFIABLE")
 
 
+def doc_anh(text: str) -> list[dict]:
+    """"out/manual/A_ob2.png,out/manual/A_ob4.png" -> [{ten, src}] anh da thu nho (JPEG data URI)."""
+    from .screencap import to_thumb
+
+    ra = []
+    for p in (x.strip() for x in (text or "").split(",")):
+        if not p:
+            continue
+        f = Path(p)
+        if not f.is_file():
+            raise RcError(f"--anh: không thấy file ảnh {p!r}")
+        ra.append({"ten": f.stem, "src": to_thumb(f.read_bytes())})
+    return ra
+
+
 def so_dong(text: str) -> list[int]:
     """"1,3" -> [1, 3]. So dong dem tu 1, theo thu tu dong tren report."""
     try:
@@ -30,13 +45,15 @@ def so_dong(text: str) -> list[int]:
 
 
 def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude",
-         dieu_kien: str = "") -> dict:
+         dieu_kien: str = "", anh: list[dict] = ()) -> dict:
     """Tra record moi: cac dong `dong` mang verdict `ket` + ly do, verdict case tinh lai.
 
     `dieu_kien`: cach luot do tay da TAO DUOC precondition ma luot tool khong tao
     duoc (vd chan domain ad bang Private DNS). Co no thi bo `precondition_thieu`
     cua luot tool va ghi cach tao vao `ep_ad_fail`. Khong go `ad_click`: click
     tren unit that thi luot do khong dung duoc, do tay lai cung khong cuu.
+    `anh`: [{ten, src (data URI)}] anh chup luot do tay - report hien ngay o case, nguoi doc khong phai tin
+    chu (user 29/10/2026: report kho nhin). Trung ten thi giu ban moi.
     """
     if dieu_kien.strip():
         record = {**record, "precondition_thieu": [],
@@ -59,7 +76,9 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
         verdict = "BLOCKED"  # dieu kien lan chay khong dat thi cham dong nao cung khong cuu duoc case
     cu = record.get("cham_tay")
     cu = cu if isinstance(cu, list) else []  # file luot cu ghi `cham_tay: true`
-    return {**record, "lines": lines, "verdict": verdict,
+    cu_anh = {a["ten"]: a for a in record.get("anh_tay") or []}
+    cu_anh.update({a["ten"]: a for a in anh if a.get("src")})
+    return {**record, "lines": lines, "verdict": verdict, "anh_tay": list(cu_anh.values()),
             "pending": sum(1 for l in lines if l["v"] not in (PASS, FAIL) and l.get("scope") != "po"),
             "cham_tay": cu + [{"dong": n, "v": ket, "ly_do": ly_do.strip(), "ai": ai, "luc": ngay} for n in dong]}
 
@@ -75,7 +94,8 @@ def chay(args, log_fn) -> dict:
     i = vi_tri[0]
     truoc = records[i].get("verdict")
     records[i] = cham(records[i], so_dong(args.dong), args.ket, args.ly_do,
-                      dieu_kien=getattr(args, "dieu_kien_dat", "") or "")
+                      dieu_kien=getattr(args, "dieu_kien_dat", "") or "",
+                      anh=doc_anh(getattr(args, "anh", "") or ""))
     log_fn(f"{args.case}: dòng {args.dong} → {args.ket}; verdict case {truoc} → {records[i]['verdict']}")
     meta = {k: v for k, v in data.items() if k not in ("records", "phien_ban", "xong")}
     report = args.report or data.get("report") or ""

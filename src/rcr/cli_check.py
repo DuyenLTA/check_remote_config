@@ -315,6 +315,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="ghi ket qua cham tay vao file luot (kem --case, --dong, --ket, --ly-do) "
                         "roi dung lai report, khong can may")
     p.add_argument("--dong", default="", help="so dong Expected cham tay, dem tu 1, vd 2 hoac 1,3")
+    p.add_argument("--anh", default="", help="kem --cham-tay: anh chup luot do tay (phay ngan cach), nhung vao report ngay o case")
     p.add_argument("--ket", default="", help="PASS | FAIL | NEEDS_HUMAN | NOT_VERIFIABLE")
     p.add_argument("--ly-do", default="", help="so do / cach do, hien tren report")
     p.add_argument("--dieu-kien-dat", default="",

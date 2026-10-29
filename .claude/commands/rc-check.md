@@ -537,6 +537,22 @@ làm hết các bước dưới đây:
      GIF gốc (centerCrop + autocontrast): chỉ số khung tăng rồi rơi về đầu = một lần lặp
    - log app thường trả lời thẳng: `adb logcat -d | grep <Activity>` (vd
      `Splash media ready … source=DATA_DISK_CACHE view=1080x2280`)
+   - bước "Xem logcat tag X" (version Lib Ads, Adjust, FB ID…) **là chấm được**: lọc đúng tag
+     như check ID ads, tìm theo **nhãn** (`Version Lib Ads`) chứ không theo giá trị kỳ vọng
+     (29/10/2026 AIP805: chỉ tìm `1.2.9` không thấy rồi ghi NOT_VERIFIABLE, thật ra build là
+     1.2.10). Tag `FOR_TESTER_CONFIG` chỉ in khi bật tester mode: `pm clear` → `pm grant <pkg>
+     android.permission.POST_NOTIFICATIONS` (hộp xin quyền che icon thì bấm không ăn) → mở app,
+     chờ ~1,5s → bấm `splashAppIcon` 25 lần, có toast "Change to tester ad mode" là được.
+     Tab "các tag check" của sheet TC ghi tag nào check gì
+   - resume / ẩn app: bấm **Home** rồi mở lại bằng **icon** (`monkey -p <pkg> -c
+     android.intent.category.LAUNCHER 1`), không mở qua Recent — nhiều máy không coi Recent là
+     ẩn app (user 29/10/2026). Android 11 không có dòng `topResumedActivity`, đọc `mResumedActivity`
+   - inter có hiện full màn / lộ nền app không: chụp liên tục `screencap` ~0,15s/khung từ lúc
+     bấm tới khi inter đứng yên. Dải trắng status bar được; nhìn thấy màn app phía sau là lỗi
+   - precondition đòi máy khác (OPPO, Samsung…): **nhắn qa-auto** (trả lời dưới tin build) nhờ
+     cắm máy đó, máy lên là tự chạy tiếp — không để NEEDS_HUMAN, không chỉ hỏi ở terminal.
+     App trên máy mới là bản store (không `DEBUGGABLE`, `run-as` lỗi) thì `pm path` + `pull`
+     APK debug từ máy cũ, gỡ bản store, cài APK debug
 4. Chấm từng dòng với **số đo thật** làm lý do. Report gửi đi **chỉ có PASS / FAIL**
    (user nhắc lần 3, 06/10/2026: *"không được phép need_human với not_verifiable
    blocked"*). Điều kiện chưa đạt thì tự ép, tự chạy lại; lỗi đọc/race của tool thì
@@ -549,13 +565,23 @@ làm hết các bước dưới đây:
 6. Ghi từng dòng đã đo vào file lượt bằng lệnh, **đừng sửa tay JSON**:
    ```
    cd <repo> && <bin>/rcr-check --package <pkg> --cham-tay out/run-x.luot.json \
-     --case 3.4.0#SDK340-UI-001 --dong 1,4 --ket PASS --ly-do "<số đo + cách đo>"
+     --case 3.4.0#SDK340-UI-001 --dong 1,4 --ket PASS --ly-do "<số đo + cách đo>" \
+     --anh out/manual/A_ob2.png,out/manual/A_ob4.png
    ```
+   **Luôn kèm `--anh`** ảnh chụp màn đã dùng để chấm (đúng màn của case, không phải ảnh chung cả lượt): report
+   nhúng ảnh ngay ở case, đưa kết luận đo tay lên đầu và gập lượt tự động của tool lại — người đọc nhìn ảnh là
+   kiểm được, không phải tin chữ (user 29/10/2026: report khó nhìn). Dòng chấm theo log / số đo không có màn
+   hình thì không cần ảnh.
    Tool tính lại verdict case (dòng xấu nhất, trừ PO; precondition thiếu / có ad_click thì
    vẫn BLOCKED), giữ dấu vết `cham_tay` (ai, lúc nào, lý do) và dựng lại report. Hạ PASS giả
    cũng bằng lệnh này (`--ket NEEDS_HUMAN`). Lượt đo tay **đã tạo được** precondition mà lượt
    tool không tạo được thì thêm `--dieu-kien-dat "<cách tạo>"`: bỏ `precondition_thieu` của lượt
    tool, ghi cách tạo lên report (không gỡ `ad_click`). Rồi publish
+   **Không nối `--cham-tay` qua `| head`/`| tail`**: pipe đóng sớm làm tool chết ngay sau khi dựng report,
+   **trước khi ghi file lượt** → lần chấm mất (29/10/2026). Đẩy output vào file rồi đọc lại verdict trong JSON.
+   User báo **đã sửa TC** → tải lại sheet, đối chiếu mọi case bị ảnh hưởng, chấm lại **và** sửa câu kỳ
+   vọng `lines[].e` theo TC mới (`--cham-tay` chỉ đổi verdict, report sẽ hiện "1.2.9 … PASS"), publish
+   vào link cũ, báo qa-auto — không hỏi "có sửa report không" (user 29/10/2026: *"ô kh sửa lại report à"*)
 
 ## 5c. Rà PASS giả TRƯỚC khi báo — bắt buộc
 

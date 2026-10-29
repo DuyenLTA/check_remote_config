@@ -75,6 +75,12 @@ def _config(rec: dict) -> str:
     return " · ".join(phan)
 
 
+def _ly_do(r: str) -> dict:
+    """'Claude chấm tay: OB2 ...' -> {r: 'OB2 ...', tay: 'Claude'}; ly do cua tool giu nguyen."""
+    ai, sep, con = (r or "").partition(" chấm tay: ")
+    return {"r": con, "tay": ai} if sep and ai and len(ai) <= 20 else {"r": r, "tay": ""}
+
+
 def build(rec: dict) -> dict:
     """Mot ban ghi case -> mot muc `DATA`. Chi du lieu, khong HTML."""
     return {
@@ -90,8 +96,10 @@ def build(rec: dict) -> dict:
         "expects": [l["e"] for l in (rec.get("lines") or [])],
         # `s` la nhan da dich cua RIENG dong do - mot case PASS van co the co
         # dong N/A, va nguoc lai.
-        "lines": [{"s": nhan_cua(l["v"]), "r": l["r"], "v": l["v"]}
-                  for l in (rec.get("lines") or [])],
+        "lines": [{"s": nhan_cua(l["v"]), "v": l["v"], **_ly_do(l["r"])} for l in (rec.get("lines") or [])],
+        # Case co dong cham tay: report dua ket luan do tay len dau, luot tool gap lai (user 29/10/2026).
+        "tay": bool(rec.get("cham_tay")),
+        "anh_tay": rec.get("anh_tay") or [],
         "po": rec.get("po", 0),
         "pending": rec.get("pending", 0),
         "thieu": rec.get("precondition_thieu") or [],

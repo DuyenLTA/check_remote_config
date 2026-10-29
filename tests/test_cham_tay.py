@@ -71,3 +71,32 @@ def test_so_dong():
         cham_tay.so_dong("0")
     with pytest.raises(RcError):
         cham_tay.so_dong("a")
+
+
+def test_cham_tay_kem_anh_va_report_tach_ly_do(tmp_path):
+    """29/10/2026: report kho nhin - case cham tay phai co anh + ket luan do tay o tren."""
+    import io
+
+    from PIL import Image
+
+    from rcr import report_row
+    f = tmp_path / "A_ob2.png"
+    b = io.BytesIO()
+    Image.new("RGB", (1080, 2400), "white").save(b, "PNG")
+    f.write_bytes(b.getvalue())
+    anh = cham_tay.doc_anh(str(f))
+    assert anh[0]["ten"] == "A_ob2" and anh[0]["src"].startswith("data:image/jpeg;base64,")
+    rec = {"key": "3.6.1#X-1", "verdict": "NEEDS_HUMAN", "actual": "lái 1 bước, dừng ở bước 1",
+           "lines": [{"e": "OB2 'FR - OB2 title'", "v": "NEEDS_HUMAN", "r": "tool không dịch được bước"}]}
+    moi = cham_tay.cham(rec, [1], "PASS", "lượt A: OB2 'FR - OB2 title'", anh=anh)
+    moi = cham_tay.cham(moi, [1], "PASS", "lượt A lại", anh=anh)          # trung ten anh -> giu 1
+    assert moi["verdict"] == "PASS" and len(moi["anh_tay"]) == 1
+    d = report_row.build(moi)
+    assert d["tay"] and d["anh_tay"][0]["ten"] == "A_ob2"
+    assert d["lines"][0] == {"s": d["lines"][0]["s"], "v": "PASS", "r": "lượt A lại", "tay": "Claude"}
+    assert report_row.build(rec)["lines"][0]["tay"] == "" and not report_row.build(rec)["tay"]
+
+
+def test_anh_khong_ton_tai_thi_bao_loi(tmp_path):
+    with pytest.raises(RcError, match="không thấy file ảnh"):
+        cham_tay.doc_anh(str(tmp_path / "khong-co.png"))
