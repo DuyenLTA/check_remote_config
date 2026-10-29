@@ -200,7 +200,8 @@ async def mo_lai(client, serial: str, package: str, out: Path, log_fn) -> list[i
 
 async def fo(client, serial: str, package: str, out: Path, log_fn) -> tuple[str, str]:
     """-> (nhat ky, loi). Loi khac rong = lai FO khong toi Home: cham Sai tren log nay khong tin duoc."""
-    marks = (out / "marks-fo.txt").as_posix()
+    # Tuyet doi: _bash chay voi cwd=SCRIPTS, duong dan tuong doi (out/...) tro nham cho, script khong ghi duoc marks
+    marks = (out.resolve() / "marks-fo.txt").as_posix()
     loi = ""
     async with GhiLog(client, serial, out / "log-fo.txt"):
         await _moi(client, serial, package)
@@ -237,7 +238,7 @@ async def offline(client, serial: str, package: str, out: Path, log_fn) -> dict:
             log_fn("  bật mạng lại, đi tiếp FO")
             await _moc(client, serial, "mang bat")
             ra["offline_bat_lai"] = await net_ctl.bat(client, serial)
-            ok, _ = _bash(serial, "continue-fo-from-current-screen.sh", (out / "marks-offline.txt").as_posix(),
+            ok, _ = _bash(serial, "continue-fo-from-current-screen.sh", (out.resolve() / "marks-offline.txt").as_posix(),
                           "Onboarding|Question|MainActivity", timeout=150)
             ra["offline_di_tiep_ok"] = ok
             await asyncio.sleep(10)  # cho ad o man sau load

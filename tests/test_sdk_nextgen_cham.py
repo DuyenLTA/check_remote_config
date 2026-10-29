@@ -299,6 +299,39 @@ def test_dem_event_quang_cao_trong_log_mo_lanh(tmp_path):
     assert T.dem_ads(tmp_path / "khong-co.txt") == -1          # khong doc duoc -> khong bo FO
 
 
+def test_lai_fo_truyen_duong_dan_marks_tuyet_doi(tmp_path, monkeypatch):
+    """Nexus AI 3.7.0 (28/10/2026): --out-dir tuong doi + _bash cwd=SCRIPTS -> script khong ghi duoc marks, FO hong."""
+    import asyncio
+    import contextlib
+    from pathlib import Path
+    from rcr import sdk_nextgen_thu_log as T
+
+    goi: list[tuple] = []
+    monkeypatch.setattr(T, "_bash", lambda serial, script, *a, timeout: (goi.append((script, a)), (True, ""))[1])
+
+    async def _rong(*a, **k):
+        return ("", "", 0)
+    for ten in ("_moi", "_moc"):
+        monkeypatch.setattr(T, ten, _rong)
+    monkeypatch.setattr(T.device_app, "launch", _rong)
+    monkeypatch.setattr(T.asyncio, "sleep", _rong)
+
+    class _Client:
+        shell = staticmethod(_rong)
+
+    class _Ctx(contextlib.nullcontext):
+        async def __aenter__(self):
+            return None
+
+        async def __aexit__(self, *a):
+            return False
+    monkeypatch.setattr(T, "GhiLog", lambda *a, **k: _Ctx())
+    monkeypatch.chdir(tmp_path)
+    asyncio.run(T.fo(_Client(), "S", "com.a.b", Path("out/sdk-x"), lambda s: None))
+    marks = [a for script, args in goi for a in args if a.endswith("marks-fo.txt")]
+    assert marks and all(Path(m).is_absolute() for m in marks)
+
+
 def test_bo_luot_fo_thi_dong_dua_vao_fo_thanh_do_tay():
     from rcr.sdk_nextgen_ket import DO_TAY, KHONG_AP_DUNG, KHOP, SAI
     ket = [{"ma": "EV-07", "ket": KHOP, "ly_do": "khong ban trung"},     # Khop vi log FO rong -> khong tin
