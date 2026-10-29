@@ -28,6 +28,7 @@ INTER_XML = (Path(__file__).parent / "fixtures" / "uidump_inter_dismiss_button.x
 def khong_cho_nut_dong_ad(monkeypatch):
     """Dump gia khong co nut dong ad -> dung cho 15s moi test."""
     monkeypatch.setattr(case_drive, "CHO_NUT_DONG_AD", 0)
+    fo_flow._AD.clear()                      # nho quang cao theo may: test truoc khong duoc lan sang
 
 
 def fake(activity=COMPONENT, xml=APP_XML):
@@ -89,9 +90,11 @@ def test_quang_cao_che_man_hinh_van_cho_buoc_QUAN_SAT_di_tiep():
     assert not adb.cmds_with("input tap")
 
 
-def test_inter_con_che_sau_buoc_cuoi_thi_dong_bang_nut_dong_cua_ad():
-    """Case chi quan sat de inter nam do toi force-stop -> 2 ad_click (Lingix 6.4.0#16)."""
-    adb = fake(AD_COMPONENT, INTER_XML)
+def test_inter_con_che_sau_buoc_cuoi_thi_dong_bang_nut_dong_cua_ad(monkeypatch):
+    """Case chi quan sat de inter nam do toi force-stop -> 2 ad_click (Lingix 6.4.0#16). Dem nguoc da het."""
+    monkeypatch.setattr(case_drive, "CHO_NUT_DONG_AD", 5)
+    monkeypatch.setattr(fo_flow, "POLL_SECONDS", 0)
+    adb = fake(AD_COMPONENT, INTER_XML.replace('text="1"', 'text=""'))
     out = drive(adb, ["Mở app (old user)", "Chờ Splash", "Kiểm tra logcat"])
     assert out["status"] == "DONE"
     # bam dung chu "Đóng" trong dismiss-button (162,2022-285,2121), khong bam "More"
@@ -275,3 +278,12 @@ def test_dung_lai_dump_van_do_animation_neu_man_do_chua_do(monkeypatch):
                                        ["Quan sát icon.", "Quan sát tiếp."],
                                        do_anim=True, man_dau=APP_XML))
     assert len(goi) == 1 and out["steps"][0].get("anim")      # do 1 lan, khong do lai
+
+
+def test_nut_dong_con_dem_nguoc_thi_khong_bam(monkeypatch):
+    """29/10/2026: bam "Đóng" luc nut con dem "1" = cham vao ad -> ad_click. Phai doi dem nguoc het."""
+    monkeypatch.setattr(case_drive, "CHO_NUT_DONG_AD", 0.3)
+    monkeypatch.setattr(fo_flow, "POLL_SECONDS", 0)
+    adb = fake(AD_COMPONENT, INTER_XML)                     # dump that: dismiss-button "Đóng 1"
+    drive(adb, ["Mở app (old user)", "Chờ Splash", "Kiểm tra logcat"])
+    assert not adb.cmds_with("input tap")

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from pathlib import Path
 
 from . import device_app, fo_steps, ui_dump
@@ -57,6 +58,29 @@ def rules() -> dict:
     return yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}
 
 
+# Doi quang cao chay het thoi gian roi moi bam dong (user 29/10/2026: bam som = cham vao ad = ad_click):
+# moi quang cao (theo may) nho luc thay lan dau + vi tri nut dong lan doc truoc. Nut phai giu nguyen qua 2 lan
+# doc lien tiep; con dem nguoc thi cho, qua TRAN_DEM_NGUOC (so trong creative bi doc nham la dem nguoc) thi thoi.
+TRAN_DEM_NGUOC = 20.0                  # user 29/10/2026: 40s qua lau; inter thuong cho dong sau 5-15s
+QUANG_CAO_MOI_SAU = 12.0              # khong doc AdActivity qua lau -> lan sau la quang cao khac
+_AD: dict[str, tuple[float, object, float]] = {}    # serial -> (luc thay, bounds nut lan truoc, lan doc cuoi)
+
+
+def nut_dong_ad(serial: str, nodes: list, bay_gio: float | None = None):
+    """Nut dong quang cao DA bam duoc an toan, hoac None (doc lai vong sau)."""
+    now = time.monotonic() if bay_gio is None else bay_gio
+    bat_dau, truoc, cuoi = _AD.get(serial, (now, None, now))
+    if now - cuoi > QUANG_CAO_MOI_SAU:
+        bat_dau, truoc = now, None
+    node = fo_steps.find_close_ad(nodes, cho_dem_nguoc=now - bat_dau < TRAN_DEM_NGUOC)
+    hien = node.bounds if node else None
+    if node is None or hien != truoc:          # chua co nut / nut vua hien hoac doi cho -> doc lai cho chac
+        _AD[serial] = (bat_dau, hien, now)
+        return None
+    _AD.pop(serial, None)
+    return node
+
+
 async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
     """Dong ad toan man con che sau case chi quan sat -> mo ta da bam, "" neu khong can/khong thay nut.
 
@@ -70,7 +94,7 @@ async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
         _pkg, activity = await device_app.focus(client, serial)
         if "AdActivity" not in activity:
             return ""
-        node = fo_steps.find_close_ad(ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial))))
+        node = nut_dong_ad(serial, ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial))))
         if node:
             await _tap(client, serial, node)
             return f"dong quang cao con che man ({node.label})"
@@ -123,7 +147,7 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
         await _tap(client, serial, node)
         return f"nut tiep tuc ({node.label})", True
     if step.get("tap_close_ad"):
-        node = fo_steps.find_close_ad(nodes)
+        node = nut_dong_ad(serial, nodes)
         if not node:
             return "", True   # chua thay nut dong: vong sau cho them roi tim lai, khong bam mu
         await _tap(client, serial, node)

@@ -47,6 +47,12 @@ CLOSE_DESCS = ("close", "dismiss", "đóng")
 AD_CLOSE_IDS = ("dismiss-button",)
 AD_CLOSE_WORDS = re.compile(r"^(close|close ad|đóng|skip|skip ad|bỏ qua|continue to app|tiếp tục.*ứng dụng|"
                             r"interstitial close button|×)$", re.I)
+# Dem nguoc cua quang cao toan man. Cau "... sau/in N s", "N giây" -> dem nguoc o dau tren man cung tinh. So tron
+# 1-2 chu so chi tinh khi nam DE / SAT nut dong (dong ho dem hien tai cho nut dong): Sorapix 24/10/2026 co so "1"
+# o thanh "More" canh nut Dong (so trang carousel) trong khi nut Dong da bam duoc.
+DEM_NGUOC_CAU = re.compile(r"^\d{1,2}\s*(s|sec|giây)$|(sau|in|trong)\s+\d{1,2}\s*(s|sec|giây)?\b", re.I)
+SO_TRON = re.compile(r"^\d{1,2}$")
+SAT_NUT_DONG = 30                     # px quanh nut dong van coi la "cho cua nut dong"
 # Phan man hinh (theo ti le) de tim nut chinh: duoi bang cau hoi, khong phai ca man.
 BOTTOM_BAND = 0.45
 MIN_WIDTH = 0.20
@@ -149,18 +155,38 @@ def _trong(a, b) -> bool:
             and a.bounds.right <= b.bounds.right and a.bounds.bottom <= b.bounds.bottom)
 
 
-def find_close_ad(nodes: list[DeviceNode]) -> DeviceNode | None:
+def _sat(a, b, le: int = SAT_NUT_DONG) -> bool:
+    return not (a.bounds.right < b.bounds.left - le or a.bounds.left > b.bounds.right + le
+                or a.bounds.bottom < b.bounds.top - le or a.bounds.top > b.bounds.bottom + le)
+
+
+def dang_dem_nguoc(nodes: list[DeviceNode], nut: DeviceNode | None = None) -> bool:
+    """Quang cao con dang dem nguoc ("Đóng sau 3s", "Skip in 4", so "5" ngay cho nut dong): CHUA duoc bam dong.
+    Bam trong luc dem nguoc la cham vao quang cao -> GMA ghi ad_click (user 29/10/2026: "phai doi no chay het
+    thoi gian roi hang bam")."""
+    for n in nodes:
+        if not n.visible:
+            continue
+        for t in (n.text.strip(), n.content_desc.strip()):
+            if t and (DEM_NGUOC_CAU.search(t) or (SO_TRON.match(t) and nut is not None and _sat(n, nut))):
+                return True
+    return False
+
+
+def find_close_ad(nodes: list[DeviceNode], cho_dem_nguoc: bool = True) -> DeviceNode | None:
     """Node can bam de dong quang cao toan man, hoac None (KHONG bam gi thay vi bam mu).
 
     Bam vao CHU dong ben trong nut, khong vao tam nut: Sorapix 24/10/2026 co node
     "More" de len nua phai `dismiss-button`. Khong tru vung quang cao nhu `find_close`:
     o AdActivity ca man la quang cao nen tru di thi khong con gi.
+    Con dem nguoc hoac nut dong chua bat (enabled=false) -> None: doi quang cao chay het thoi gian.
+    `cho_dem_nguoc=False`: da cho qua tran (so trong creative bi doc nham la dem nguoc) -> bo qua dem nguoc.
     """
-    pool = [n for n in nodes if n.visible and not n.bounds.empty]
+    pool = [n for n in nodes if n.visible and n.enabled and not n.bounds.empty]
     nut = next((n for n in pool if n.resource_id in AD_CLOSE_IDS), None)
     if nut is None:
         nut = next((n for n in pool if AD_CLOSE_WORDS.match(n.text.strip()) or AD_CLOSE_WORDS.match(n.content_desc.strip())), None)
-    if nut is None:
+    if nut is None or (cho_dem_nguoc and dang_dem_nguoc(nodes, nut)):
         return None
     chu = [n for n in pool if n is not nut and AD_CLOSE_WORDS.match(n.text.strip()) and _trong(n, nut)]
     return chu[0] if chu else nut

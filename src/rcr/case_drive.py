@@ -65,7 +65,7 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
 # Nhin tiep bay nhieu giay sau cu bam X tool tu lam: du thay trang roi di + man ke.
 SAU_TU_BAM_X = 6.0
 # Cho nut dong cua inter con che sau buoc cuoi (nut bam duoc sau ~5s, nhu luat AdActivity).
-CHO_NUT_DONG_AD = 15.0
+CHO_NUT_DONG_AD = 25.0   # doi quang cao chay het dem nguoc (fo_flow.TRAN_DEM_NGUOC 20s) roi moi dong
 
 
 async def drive(client, serial: str, package: str, steps, log_fn=_noop,
