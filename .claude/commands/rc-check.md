@@ -54,6 +54,13 @@ bộ TC như bản thường; bộ TC chưa có tab 3.6.1 thì tool chấm base 
 - Chạy case bằng bộ TC mặc định trên app 3.7.0 / 3.7.1 thì `rcr-check` dừng kèm lỗi (bộ chung không có tab
   Next-Gen, chọn tab cũ là chấm sai bản).
 
+## 0c. Máy test AdMob — áp dụng cả nhánh bộ TC lẫn Next-Gen
+
+**Mọi máy QA cắm vào đều là máy test AdMob** (user chốt 29/10/2026: "máy nào cũng là máy test"). Nên:
+- `ad_click` (trong case, trong capture của bước 3c check ID ads, hay SDK tự bắn) **không** phải lý do dừng chờ
+  người: ghi vào report rồi chạy tiếp. Được bấm quảng cáo khi case / dòng checklist cần đo.
+- Lượt AIP805 1.4.0 (14) 29/10/2026 dừng ở 3c vì "máy chưa đăng ký test device" — sai.
+
 ## 1. Tool này làm được tới đâu — nói trước, đừng để người dùng tưởng nhầm
 
 Làm được: đặt giá trị remote config **không cần quyền admin Firebase**, không
@@ -340,6 +347,10 @@ BACK), không được bấm vào; click trên unit thật là traffic không h�
 nên kết quả case đó không dùng được. Case đó không chạy lại, các case sau không chạy. **Đây
 là điểm chặn của người**: báo ngay, kèm case + unit đang show, **không tự `--tiep`**:
 `<bin>/rcr-notify --kind stop --title "Có ad_click trong lượt" --line "<case> · <N> ad_click" --action "Kiểm cách đóng ad trước khi chạy tiếp"`
+
+**Mọi máy là máy test AdMob (mục 0c):** ad_click không phải traffic không hợp lệ, **không** dừng chờ người:
+ghi ad_click vào report (case + unit), chạy lại riêng case bị ad_click (`--case <key>`, kết quả lần đầu không
+dùng được vì app rời luồng), rồi `--tiep` chạy nốt các case còn lại.
 
 Case có giá trị lựa chọn (`layout1/2/3`) chạy **nhiều lượt** — mỗi giá trị một
 lượt mở app, `run.runs` là từng lượt. Verdict của case = lượt xấu nhất.

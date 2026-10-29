@@ -118,5 +118,7 @@ def test_next_gen_dan_do_tay_het_va_khong_dung_vi_ad_click_tren_may_test():
     """AIP918 29/10/2026: luot dung vi ad_click tren may test, bo 20 dong do tay."""
     p = c.lenh("pkg.a", "S1", next_gen=True)[1]
     assert "DO TAY HET" in p and "may test AdMob" in p and "ad_click KHONG phai ly do dung" in p
+    # AIP805 29/10/2026: nhanh bo TC cung khong duoc dung vi ad_click (moi may la may test)
+    assert "ad_click KHONG phai ly do dung" in c.lenh("pkg.a", "S1")[1]
     assert "DO TAY HET" not in c.lenh("pkg.a", "S1")[1]                 # nhanh bo TC giu prompt cu
     assert c.TIMEOUT_NEXT_GEN >= 120 * 60
