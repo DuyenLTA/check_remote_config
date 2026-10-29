@@ -36,6 +36,16 @@ class JiraLoi(RuntimeError):
     pass
 
 
+def link_project(links: list[str]) -> str:
+    """Link Jira cua project (`<jira>/browse/<PROJECT>`) suy tu link issue dau tien hop le: bao dev
+    bang link nay thay vi liet ke tung bug (user chot 29/10/2026 - liet ke dai). Khong co -> ""."""
+    for link in links:
+        goc, _, key = str(link or "").rstrip("/").rpartition("/")
+        if KEY_RE.fullmatch(key) and goc.endswith("/browse"):
+            return f"{goc}/{key.rsplit('-', 1)[0]}"
+    return ""
+
+
 def bat(url: str, token: str) -> bool:
     """Tinh nang verify chi bat khi co token va URL https."""
     return bool(token) and url.startswith("https://")

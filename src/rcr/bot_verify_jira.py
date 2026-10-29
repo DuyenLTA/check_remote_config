@@ -11,6 +11,8 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from .bot_jira_rest import link_project
+
 # `<tab>#<so|TC ID>` (tab co the co dau cach: `daily checkin#4`) hoac TC ID tran (`SDK350-OB3X-013`).
 CASE_TC_RE = re.compile(r"^[\w.]+(?: [\w.]+)*#[\w.-]+$|^SDK\d{3}-[\w-]+$")
 # Ma dong checklist Next-Gen (sdk-check/references): `EV-07`, `HT-03`, `KT-02`, `MED-02`, `HV-01`, `1.7`.
@@ -121,16 +123,13 @@ def tin_ket_qua(job: dict, dong: list[tuple[str, dict, str]]) -> str:
 
 
 def tin_bao_dev_fail(job: dict, dong: list[tuple[str, dict, str]]) -> str | None:
-    """Tin bao dev o kenh project: bug verify lai van FAIL, da keo ve To Do. None khi khong co."""
+    """Tin bao dev cuoi luot verify o kenh project: so bug van FAIL da keo ve To Do + link Jira cua
+    project, khong liet ke tung bug. None khi khong co."""
     fail = [u for loai, u, _ in dong if loai == "todo"]
     if not fail:
         return None
     ban = f"{job.get('ma', '')}---{job['ten']}" if job.get("ten") else job.get("ma", "")
-    ra = [f"🔁 **Bug reopen** — bản build **{ban} v{_cat(job.get('version'), 40)}**",
-          f"Verify lại vẫn FAIL, đã kéo {len(fail)} bug về To Do:"]
-    for u in fail:
-        tieu_de = f" — {_cat(u['bug'].get('tieu_de'), 120)}" if u["bug"].get("tieu_de") else ""
-        link = f"\n  <{u['link']}>" if u["link"] else ""
-        ra.append(f"• **{u['key']}**{tieu_de}{link}")
-    chu = "\n".join(ra)
-    return chu if len(chu) <= MAX_TIN else chu[: MAX_TIN - 1] + "…"
+    link = link_project([u.get("link", "") for u in fail])
+    return "\n".join([f"🔁 **Bug reopen** — bản build **{ban} v{_cat(job.get('version'), 40)}**",
+                      f"Verify lại vẫn FAIL, đã kéo {len(fail)} bug về To Do: "
+                      + (f"<{link}>" if link else ", ".join(u["key"] for u in fail))])

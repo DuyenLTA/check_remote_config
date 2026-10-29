@@ -114,7 +114,8 @@ def test_tin_bao_dev_co_project_va_link_jira():
                      {"case": "6.4.0#1", "key": "", "link": "", "ghi_chu": "bỏ qua: thiếu field"}]}
     t = v.tin_bao_dev({**CASE, "link_report": "https://claude.ai/artifact/x"}, kq, BUGS[:2])
     assert "bản build **AIP882---AI-Video v4.3.0 (40)**" in t
-    assert "**AIP882-7**" in t and "<https://j/AIP882-7>" in t and "Đã log 1 bug" in t and "6.4.0#1" not in t
+    assert "Đã log 1 bug lên Jira: AIP882-7" in t and "6.4.0#1" not in t
+    assert "•" not in t and t.count("\n") == 1          # tong ket cuoi luot, khong liet ke tung bug
     # Link report chi bao o kenh QA, dev khong can.
     assert "claude.ai/artifact/x" not in t and "xác nhận" not in t and "Fix xong" not in t and len(t) <= 2000
 

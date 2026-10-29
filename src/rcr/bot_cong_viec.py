@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from . import ad_units_sheet, build_ma_app, tc_source
+from . import bot_jira_rest as jira_rest
 from .models import RcError
 
 log = logging.getLogger("rcr-bot")
@@ -154,25 +155,16 @@ def tin_jira(kq: dict, so_bug: int) -> str:
 
 
 def tin_bao_dev(c: dict, kq: dict, bugs: list[dict]) -> str | None:
-    """Tin tra loi duoi tin build cua dev sau khi log Jira: project + link tung issue.
-
-    None khi khong co issue nao tao duoc -> khong lam phien dev bang tin rong.
+    """Tin bao dev cuoi luot log Jira: so bug + link Jira cua project, khong liet ke
+    tung bug (dai). None khi khong co issue nao tao duoc -> khong lam phien dev bang tin rong.
     """
-    theo_case = {b["case"]: b for b in bugs}
     issues = [i for i in kq.get("issues") or []
               if i.get("key") and not i.get("ghi_chu", "").startswith("bỏ qua")]
     if not issues:
         return None
     # Ghi dung nhu dong dau tin build cua dev ("AIP882---AI-Video v4.3.0 (40)") cho dev khoi nham ban.
     ban = f"{c['ma']}---{c['ten']}" if c.get("ten") else c["ma"]
-    dong = [f"🐞 **Nhờ dev check bug** — bản build **{ban} v{c['version']}**",
-            f"Đã log {len(issues)} bug lên Jira:"]
-    for i in issues:
-        b = theo_case.get(i["case"], {})
-        muc = f" · {b['muc_do']}" if b.get("muc_do") else ""
-        tieu_de = f" — {b['tieu_de'][:120]}" if b.get("tieu_de") else ""
-        # URL hien nguyen van (khong giau sau ten issue) de dev copy duoc; <> tat khung preview.
-        link = f"\n  <{i['link']}>" if i.get("link") else ""
-        dong.append(f"• **{i['key']}**{tieu_de}{muc}{link}")
-    t = "\n".join(dong)
-    return t if len(t) <= 1900 else t[:1880] + "\n… (xem Jira)"
+    link = jira_rest.link_project([i.get("link", "") for i in issues])
+    return "\n".join([f"🐞 **Nhờ dev check bug** — bản build **{ban} v{c['version']}**",
+                      f"Đã log {len(issues)} bug lên Jira: "
+                      + (f"<{link}>" if link else ", ".join(i["key"] for i in issues))])

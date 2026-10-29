@@ -176,3 +176,10 @@ def test_da_comment_theo_dong_dau(fake):
     assert jr.da_comment(URL, TOKEN, "AIP920-13", "[Bot auto verify] FAIL tren build 1")
     fake["tra"].append({"comments": [{"body": "khac"}]})
     assert not jr.da_comment(URL, TOKEN, "AIP920-13", "[Bot auto verify] FAIL tren build 1")
+
+
+def test_link_project_tu_link_issue():
+    links = ["", "https://jira.apero.vn/browse/x) OR 1=1", "https://jira.apero.vn/browse/AIP922-106",
+             "https://jira.apero.vn/browse/AIP922-107"]
+    assert jr.link_project(links) == "https://jira.apero.vn/browse/AIP922"
+    assert jr.link_project(["", "https://j/AIP922-106"]) == ""      # khong phai link /browse/ -> khong doan
