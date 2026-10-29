@@ -35,6 +35,7 @@ def fake(monkeypatch):
         return _Resp(json.dumps(r).encode() if r is not None else b"")
 
     monkeypatch.setattr(jr._MO, "open", urlopen)
+    monkeypatch.setattr(jr, "CHO_THU_LAI", 0)
     return st
 
 
@@ -82,7 +83,7 @@ def test_chuyen_theo_ten_khong_phan_biet_hoa_thuong(fake):
 
 def test_khong_co_transition_thi_loi(fake):
     fake["tra"].append({"transitions": [{"id": "11", "name": "To Do"}]})
-    with pytest.raises(jr.JiraLoi, match="khong co transition 'Done'"):
+    with pytest.raises(jr.JiraLoi, match=r"khong co transition 'Done'.*To Do -> \?"):
         jr.chuyen(URL, TOKEN, "AIP920-13", "Done")
     assert len(fake["req"]) == 1
 
@@ -110,7 +111,7 @@ def test_loi_http_khong_lo_token(fake, ma):
 
 
 def test_mat_mang(fake):
-    fake["tra"].append(urllib.error.URLError("timed out"))
+    fake["tra"] += [urllib.error.URLError("timed out")] * jr.SO_LAN_THU
     with pytest.raises(jr.JiraLoi, match="khong ket noi"):
         jr.comment(URL, TOKEN, "AIP920-13", "x")
 
@@ -128,3 +129,50 @@ def test_khong_theo_redirect_de_khong_lo_token():
 
 def test_key_co_xuong_dong_bi_loai(fake):
     assert jr.dang_reviewing(URL, TOKEN, ["AIP920-13\n"]) == [] and fake["req"] == []
+
+
+# Workflow bug that tren jira.apero.vn (AIP922-106, 29/10/2026): tu Reviewing chi co 2 transition nay.
+REVIEWING = {"transitions": [{"id": "91", "name": "Reject Issue", "to": {"name": "Reopened"}},
+                             {"id": "101", "name": "Close Issue", "to": {"name": "Closed"}}]}
+
+
+@pytest.mark.parametrize("dich, tid", [(jr.DICH_FAIL, "91"), (jr.DICH_PASS, "101")])
+def test_reviewing_chon_theo_trang_thai_dich(fake, dich, tid):
+    fake["tra"] += [REVIEWING, None]
+    jr.chuyen(URL, TOKEN, "AIP922-106", dich)
+    assert json.loads(fake["req"][1].data) == {"transition": {"id": tid}}
+
+
+def test_ten_transition_uu_tien_theo_thu_tu(fake):
+    fake["tra"] += [{"transitions": [{"id": "5", "name": "Reject Issue", "to": {"name": "Reopened"}},
+                                     {"id": "11", "name": "To Do", "to": {"name": "To Do"}}]}, None]
+    jr.chuyen(URL, TOKEN, "AIP920-13", jr.DICH_FAIL)
+    assert json.loads(fake["req"][1].data) == {"transition": {"id": "11"}}
+
+
+def test_mat_ket_noi_thi_thu_lai(fake):
+    rot = urllib.error.URLError(TimeoutError("10060"))
+    fake["tra"] += [rot, rot, {"id": "1"}]
+    jr.comment(URL, TOKEN, "AIP922-106", "x")
+    assert len(fake["req"]) == 3
+
+
+def test_mat_ket_noi_mai_thi_loi_sau_so_lan_thu(fake):
+    fake["tra"] += [urllib.error.URLError(TimeoutError("10060"))] * jr.SO_LAN_THU
+    with pytest.raises(jr.JiraLoi, match="khong ket noi duoc"):
+        jr.dang_reviewing(URL, TOKEN, ["AIP920-13"])
+    assert len(fake["req"]) == jr.SO_LAN_THU
+
+
+def test_timeout_doc_phan_hoi_khong_gui_lai(fake):
+    fake["tra"] += [TimeoutError("read"), {"id": "1"}]
+    with pytest.raises(jr.JiraLoi):
+        jr.comment(URL, TOKEN, "AIP920-13", "x")
+    assert len(fake["req"]) == 1                 # POST co the da ghi -> gui lai la comment trung
+
+
+def test_da_comment_theo_dong_dau(fake):
+    fake["tra"].append({"comments": [{"body": "[Bot auto verify] FAIL tren build 1\nchi tiet"}]})
+    assert jr.da_comment(URL, TOKEN, "AIP920-13", "[Bot auto verify] FAIL tren build 1")
+    fake["tra"].append({"comments": [{"body": "khac"}]})
+    assert not jr.da_comment(URL, TOKEN, "AIP920-13", "[Bot auto verify] FAIL tren build 1")

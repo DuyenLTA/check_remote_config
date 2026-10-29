@@ -1,5 +1,7 @@
 """Luot bot tu verify bug dev da keo sang Reviewing: xep job (tin build moi / QA bam Verify lai)
 roi chay tren may - cai build, chay lai dung cac case, PASS -> Done, FAIL -> To Do (kem comment).
+Ten transition tuy workflow (Reviewing -> "Reject Issue"/Reopened, "Close Issue"/Closed): xem
+`jira.DICH_PASS` / `jira.DICH_FAIL`.
 
 Comment Jira truoc roi moi chuyen trang thai: chuyen loi thi bang chung van nam tren issue.
 Truoc khi doi trang thai hoi lai Jira: issue ai do da keo khoi Reviewing trong luc chay thi bo.
@@ -109,10 +111,13 @@ async def _doi_trang_thai(bot, job: dict, kq: dict, ten: str) -> list[tuple[str,
             dong.append(("giu", u, _ly_do_giu(kq, u)))
             continue
         try:
-            await asyncio.to_thread(jira.comment, bot.jira_url, bot.jira_token, u["key"],
-                                    v.noi_dung_comment(u, kl, job, kq, ten))
+            chu = v.noi_dung_comment(u, kl, job, kq, ten)
+            # Lan truoc comment xong nhung chuyen loi -> Verify lai khong comment trung.
+            if not await asyncio.to_thread(jira.da_comment, bot.jira_url, bot.jira_token, u["key"],
+                                           chu.split("\n", 1)[0]):
+                await asyncio.to_thread(jira.comment, bot.jira_url, bot.jira_token, u["key"], chu)
             await asyncio.to_thread(jira.chuyen, bot.jira_url, bot.jira_token, u["key"],
-                                    "Done" if kl == "PASS" else "To Do")
+                                    jira.DICH_PASS if kl == "PASS" else jira.DICH_FAIL)
             dong.append(("done" if kl == "PASS" else "todo", u, ""))
         except Exception as exc:               # noqa: BLE001 - mot issue loi khong chan issue sau
             log.warning("verify %s: %s", u["key"], exc)

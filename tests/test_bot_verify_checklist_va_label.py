@@ -130,5 +130,5 @@ def test_verify_checklist_chay_prompt_checklist_timeout_dai_va_map_verdict(tmp_p
     monkeypatch.setattr(jira, "dang_reviewing", lambda u, t, keys: list(keys))
     asyncio.run(bj.chay(bot, job, "S1", "Pixel", Path("."), tmp_path))
     assert da_chay == [(c.TIMEOUT_VERIFY_CHECKLIST, ["EV-07", "HT-03"])]
-    assert [g for g in goi if g[0] == "chuyen"] == [("chuyen", "AIP920-30", "Done")]   # KHOP -> Done; DO_TAY giu Reviewing
+    assert [g for g in goi if g[0] == "chuyen"] == [("chuyen", "AIP920-30", jira.DICH_PASS)]   # KHOP -> Done; DO_TAY giu Reviewing
     assert "Giữ Reviewing" in bot.msg.edits[-1]["content"]

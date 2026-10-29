@@ -416,7 +416,10 @@ hay checklist Next-Gen) mang **label `auto-qa`** + một dòng marker cuối des
 của app đó (kể cả build không ghi SDK, như build fix bug: build đó không có tin hỏi Check, chỉ có lượt verify), bot tìm bug Reviewing theo label (JQL `project = <MÃ> AND labels = "auto-qa" AND status = Reviewing`,
 tối đa 50) + bug bot log cũ chưa có label (theo state), gộp theo key, rồi xếp lượt verify (tin 🔁 riêng ở kênh QA,
 không cần bấm Check): cài build, chạy lại đúng các case trong marker, **PASS → comment + Done**,
-**FAIL → comment + To Do**; lượt dừng / không ổn định / Claude không kết luận → giữ Reviewing.
+**FAIL → comment + To Do** rồi tag dev ở kênh project; lượt dừng / không ổn định / Claude không kết luận → giữ Reviewing.
+Từ Reviewing, workflow bug không có transition tên "To Do"/"Done": bot chọn theo tên **hoặc** trạng thái đích —
+FAIL → `Reject Issue` (Reopened, nằm ở cột To Do), PASS → `Close Issue` (Closed, cột Done). Mất kết nối Jira
+(VPN rớt) → tự thử lại 4 lần; vẫn lỗi thì giữ Reviewing, bấm **Verify lại** — đã có comment của bot thì không comment trùng.
 Mỗi lượt chạy **một nhóm case**: mã bộ TC (`<tab>#<số>`) chạy bằng `--case`; mã dòng checklist Next-Gen
 (`EV-07`, `HT-03`, `KT-02`, `MED-02`, `1.7`…) chạy checklist `rcr-sdk-check` rồi đo tay riêng các mã đó nếu `DO_TAY`
 (timeout 70 phút), `KHOP → PASS`, `SAI → FAIL`, còn lại giữ Reviewing. Lẫn hai nhóm → chạy nhóm đông hơn, nhóm kia

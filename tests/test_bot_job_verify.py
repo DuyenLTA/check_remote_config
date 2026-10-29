@@ -58,8 +58,9 @@ def _bot(tmp_path, token="pat"):
 BUILD = {"ma": "AIP920", "ten": "", "version": "1.6.1 (8)", "package": "pkg.a", "loai_ban": "debug", "link_tin": "l"}
 
 
-def _jira(monkeypatch, reviewing, loi_chuyen=(), tu_jira=()):
+def _jira(monkeypatch, reviewing, loi_chuyen=(), tu_jira=(), da_co=()):
     goi = []
+    monkeypatch.setattr(jira, "da_comment", lambda u, t, k, dau: k in da_co)
     monkeypatch.setattr(jira, "tim_auto_qa", lambda u, t, project: list(tu_jira))
     monkeypatch.setattr(jira, "dang_reviewing", lambda u, t, keys: [k for k in keys if k in reviewing])
     monkeypatch.setattr(jira, "comment", lambda u, t, k, chu: goi.append(("comment", k, chu)))
@@ -96,8 +97,8 @@ def test_xep_mot_job_cho_cac_bug_reviewing(tmp_path, monkeypatch):
     assert "đã trong hàng đợi" in asyncio.run(bj.xep(bot, BUILD, _Kenh()))   # bam Verify lai lan nua
 
 
-def _chay(tmp_path, monkeypatch, kq, reviewing_sau, cai=None, loi_chuyen=()):
-    goi = _jira(monkeypatch, {"AIP920-13", "AIP920-14", "AIP920-15"}, loi_chuyen)
+def _chay(tmp_path, monkeypatch, kq, reviewing_sau, cai=None, loi_chuyen=(), da_co=()):
+    goi = _jira(monkeypatch, {"AIP920-13", "AIP920-14", "AIP920-15"}, loi_chuyen, da_co=da_co)
     bot = _bot(tmp_path)
     asyncio.run(bj.xep(bot, BUILD, _Kenh()))
     job = bot.q.jobs[0]
@@ -117,8 +118,8 @@ def test_pass_thi_comment_roi_done_fail_thi_to_do(tmp_path, monkeypatch):
     goi, da_chay, msg = _chay(tmp_path, monkeypatch, kq, {"AIP920-13", "AIP920-14"})
     assert da_chay == [["3.6.1#1", "3.6.1#2"]]
     assert [(g[0], g[1]) + ((g[2],) if g[0] == "chuyen" else ()) for g in goi] == [
-        ("comment", "AIP920-13"), ("chuyen", "AIP920-13", "Done"),
-        ("comment", "AIP920-14"), ("chuyen", "AIP920-14", "To Do")]
+        ("comment", "AIP920-13"), ("chuyen", "AIP920-13", jira.DICH_PASS),
+        ("comment", "AIP920-14"), ("chuyen", "AIP920-14", jira.DICH_FAIL)]
     assert "PASS trên build 1.6.1 (8)" in goi[0][2]
     assert "Bug reopen" in msg.replies[-1] and "AIP920-14" in msg.replies[-1]   # bao dev ca bug van FAIL
     cuoi = msg.edits[-1]["content"]
@@ -137,7 +138,13 @@ def test_issue_doi_trang_thai_luc_chay_va_jira_loi_mot_issue(tmp_path, monkeypat
     assert [g[1] for g in goi] == ["AIP920-14", "AIP920-14"]           # AIP920-13 da roi Reviewing -> bo
     kq2 = dict(kq)
     goi, _, msg = _chay(tmp_path / "b", monkeypatch, kq2, {"AIP920-13", "AIP920-14"}, loi_chuyen={"AIP920-13"})
-    assert ("chuyen", "AIP920-14", "Done") in goi and "Jira lỗi" in msg.edits[-1]["content"]
+    assert ("chuyen", "AIP920-14", jira.DICH_PASS) in goi and "Jira lỗi" in msg.edits[-1]["content"]
+
+
+def test_da_co_comment_bot_thi_chi_chuyen_khong_comment_trung(tmp_path, monkeypatch):
+    kq = {"trang_thai": "XONG", "cases": [{"case": "3.6.1#1", "verdict": "PASS"}, {"case": "3.6.1#2", "verdict": "FAIL"}]}
+    goi, _, _ = _chay(tmp_path, monkeypatch, kq, {"AIP920-13", "AIP920-14"}, da_co={"AIP920-14"})
+    assert [(g[0], g[1]) for g in goi] == [("comment", "AIP920-13"), ("chuyen", "AIP920-13"), ("chuyen", "AIP920-14")]
 
 
 def test_cai_loi_thi_khong_chay_claude_khong_dong_jira(tmp_path, monkeypatch):
