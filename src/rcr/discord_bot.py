@@ -30,7 +30,7 @@ from pathlib import Path
 import discord
 
 from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
-               bot_log_jira, build_ma_app)
+               bot_log_jira, build_ma_app, cai_apk_tu_drive)
 from .adb_client import AdbClient
 from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
 from .adb_parsers import AdbError
@@ -126,7 +126,29 @@ class BuildBot(discord.Client):
         self.q.nho_tin(c)
         await qa.edit(content=bot_cong_viec.tin_hoi(c), view=_nut(*NUT_HOI, msg_id=qa.id))
 
+    async def _nhan_link_drive(self, m: discord.Message) -> bool:
+        """QA tra loi tin hoi cua bot kem link Google Drive (ban debug) -> gan link vao build do: bam Check /
+        Verify thi tai APK tu link thay cho App Tester (user chot 29/10/2026). True khi da xu ly tin nay."""
+        ref = getattr(getattr(m, "reference", None), "message_id", None)
+        c = self.q.tin_cua(ref) if ref and m.channel.id == self.kenh_qa else None
+        link = cai_apk_tu_drive.tim_link(m.content or "") if c is not None else ""
+        if not link or not self._duoc_duyet(m.author):
+            return False
+        c["drive"] = link
+        self.q.nho_tin(c)
+        try:                                     # tin hoi cu ghi ro se tai tu Drive
+            cu = await self._tin_qa(ref)
+            if c.get("loai_job") != "verify":
+                await cu.edit(content=bot_cong_viec.tin_hoi(c), view=_nut(*NUT_HOI, msg_id=cu.id))
+        except discord.HTTPException:
+            pass
+        await m.reply(f"📦 Đã nhận link Drive cho **{c['ma']}** `{c['version']}` — bấm **Check** / **Verify** ở tin "
+                      "hỏi, bot sẽ tải APK từ link này thay cho App Tester.", mention_author=False)
+        return True
+
     async def on_message(self, m: discord.Message):
+        if not m.author.bot and await self._nhan_link_drive(m):
+            return
         if bot_hoi_dap.la_cau_hoi(self, m):      # nhan rieng / tag bot -> hoi dap, khong doc nhu tin build
             await bot_hoi_dap.tra_loi_tin(self, m, REPO, OUT)
             return
@@ -326,8 +348,10 @@ class BuildBot(discord.Client):
     async def _chay(self, job: dict, serial: str, ten: str):
         qa = await self._tin_qa(job["msg_id"])
         dau = f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**"
-        await qa.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} từ App Tester…")
-        cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial)
+        nguon = "từ link Drive" if job.get("drive") else "từ App Tester"
+        await qa.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…")
+        cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
+                                      job.get("drive", ""))
         if "loi" in cai:
             # Thuong la App Tester chua co ban (dev chua day) -> de nguoi bam thu lai sau.
             await qa.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}",

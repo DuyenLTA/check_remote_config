@@ -122,6 +122,21 @@ def tin_ket_qua(job: dict, dong: list[tuple[str, dict, str]]) -> str:
     return chu if len(chu) <= MAX_TIN else chu[: MAX_TIN - 1] + "…"
 
 
+def tin_tom_tat_verify(job: dict, kq: dict) -> str:
+    """Tin tra loi duoi tin verify: CHI cac bug dang verify (ma bug, ma dong, PASS/FAIL, so do), do code soan.
+    Truoc day dang nguyen `tom_tat` cua Claude - ke ca so ca checklist ("1 Sai (EV-11), 19 Do tay") -> QA
+    tuong bug van FAIL du bug da Done (user 29/10/2026)."""
+    ra = []
+    for u in job.get("verify") or []:
+        kl = ket_luan(kq, u) or "chưa kết luận"
+        tt = _thuc_te(kq, u)
+        ra.append(f"• **{u['key']}** `{u['case']}`: **{kl}**" + (f" — {_cat(tt, 300)}" if tt else ""))
+    if kq.get("trang_thai") != "XONG":
+        ra.append(f"Lượt dừng: {_cat(kq.get('tom_tat'), 300)}")
+    chu = "\n".join(ra) or _cat(kq.get("tom_tat"), 300)
+    return chu if len(chu) <= MAX_TIN else chu[: MAX_TIN - 1] + "…"
+
+
 def tin_bao_dev_fail(job: dict, dong: list[tuple[str, dict, str]]) -> str | None:
     """Tin bao dev cuoi luot verify o kenh project khi con bug van FAIL (da keo ve To Do): cung kieu
     tin "Nho dev check bug" thuong le, khong goi la reopen - het luot thi bao check bug nhu moi luot

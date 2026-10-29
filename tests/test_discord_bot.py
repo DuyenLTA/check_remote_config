@@ -271,3 +271,41 @@ def test_build_khong_ghi_sdk_van_verify_bug_reviewing_nhung_khong_hoi_check(monk
     m.channel = SimpleNamespace(id=1)                       # QA gui lai o qa-auto: da xep verify roi
     asyncio.run(bot.on_message(m))
     assert gui == [] and xep == []
+
+
+def test_tra_loi_tin_hoi_kem_link_drive_thi_gan_vao_build(monkeypatch):
+    """29/10/2026: ban debug QA gui link Drive bang cach reply tin hoi -> Check / Verify tai tu link."""
+    link = "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz/view?usp=sharing"
+    c = {"msg_id": 7, "ma": "AIP922", "ten": "", "version": "3.7.0 (30)", "package": "p", "loai_ban": "debug"}
+    bot = object.__new__(d.BuildBot)
+    bot.kenh_qa, bot.duyet, bot.role = 5, {11}, None
+    da_nho = []
+    bot.q = SimpleNamespace(tin_cua=lambda mid: c if mid == 7 else None, nho_tin=da_nho.append)
+    goi = []
+    cu = _tin_ghi(goi, "cu")
+
+    async def tin_qa(mid):
+        return cu
+    bot._tin_qa = tin_qa
+    tra_loi = []
+
+    async def reply(chu, **k):
+        tra_loi.append(chu)
+
+    def tin(noi_dung, ref=7, nguoi=11):
+        return SimpleNamespace(reference=SimpleNamespace(message_id=ref), channel=SimpleNamespace(id=5),
+                               content=noi_dung, author=SimpleNamespace(id=nguoi, roles=[]), reply=reply)
+    assert asyncio.run(bot._nhan_link_drive(tin(f"bản debug <{link}>")))
+    assert c["drive"] == link and da_nho == [c] and "Drive" in tra_loi[0]
+    assert goi[0][0] == "cu_edit" and "link Drive" in goi[0][1]["content"]        # tin hoi ghi ro nguon tai
+    assert not asyncio.run(bot._nhan_link_drive(tin("không có link")))
+    assert not asyncio.run(bot._nhan_link_drive(tin(link, ref=99)))                # khong reply tin cua bot
+    assert not asyncio.run(bot._nhan_link_drive(tin(link, nguoi=12)))              # nguoi ngoai danh sach duyet
+
+
+def test_cai_co_drive_thi_truyen_apk_url(monkeypatch):
+    goi = []
+    monkeypatch.setattr(d.bot_cong_viec, "_cli", lambda args, timeout: goi.append(args) or {})
+    d.bot_cong_viec.cai("p", "1.0 (1)", "debug", "S1", "https://drive.google.com/file/d/X/view")
+    d.bot_cong_viec.cai("p", "1.0 (1)", "debug", "S1")
+    assert goi[0][-2:] == ["--apk-url", "https://drive.google.com/file/d/X/view"] and "--apk-url" not in goi[1]

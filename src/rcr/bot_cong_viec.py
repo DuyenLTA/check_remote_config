@@ -54,8 +54,11 @@ def _cli(args: list[str], timeout: int) -> dict:
     return {"loi": loi}
 
 
-def cai(package: str, version: str, loai: str, serial: str) -> dict:
-    return _cli(["--package", package, "--version", version, "--loai", loai, "--serial", serial], TIMEOUT_CAI)
+def cai(package: str, version: str, loai: str, serial: str, drive: str = "") -> dict:
+    """Co `drive` (link Drive QA tra loi vao tin hoi) -> tai APK tu link, khong qua App Tester."""
+    them = ["--apk-url", drive] if drive else []
+    return _cli(["--package", package, "--version", version, "--loai", loai, "--serial", serial, *them],
+                TIMEOUT_CAI)
 
 
 def ten_may(serial: str, model: str) -> str:
@@ -69,6 +72,8 @@ def dau_tin(c: dict) -> str:
 def tin_hoi(c: dict) -> str:
     """Tin o kenh QA khi thay build moi: hoi co chay khong."""
     goc = f"\n[Tin build]({c['link_tin']})" if c.get("link_tin") else ""
+    if c.get("drive"):                    # QA tra loi kem link Drive (ban debug) -> khong qua App Tester
+        return f"{dau_tin(c)}\n📦 tải APK từ link Drive QA gửi rồi chạy /rc-check. Chạy không?{goc}"
     ghi = {"release": "next-gen → tải bản release",
            "debug": "không phải next-gen → tải bản có note `debug`"}[c["loai_ban"]]
     return f"{dau_tin(c)}\n{ghi} từ App Tester rồi chạy /rc-check. Chạy không?{goc}"

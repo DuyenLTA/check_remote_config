@@ -410,6 +410,12 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
    - Ubuntu: `bash deploy/cai-bot-linux.sh` (systemd user service, log `journalctl --user -u rcr-bot -f`)
    - Windows: `powershell -ExecutionPolicy Bypass -File deploy\cai-bot-windows.ps1` (Task Scheduler, log `out/bot-run.log`)
 
+**Bản debug từ Google Drive:** QA **trả lời (Reply) vào tin hỏi của bot** kèm link Drive của file `.apk` (file để
+"Ai có link đều xem được"). Bot gắn link vào build đó, tin hỏi đổi thành "📦 tải APK từ link Drive" → bấm **Check** /
+**Verify** thì bot tải APK từ link rồi `adb install` thay cho App Tester. APK khác chữ ký bản đang cài → gỡ rồi cài
+(mất data app). Cài xong bot đối chiếu: sai package hoặc version khác tin build → dừng, không chạy test. Chạy tay:
+`rcr-cai-build --package <pkg> --version "<x.y.z (n)>" --apk-url <link Drive> --serial <S>`.
+
 **Tự verify bug Reviewing** (có `JIRA_PERSONAL_TOKEN`): bug do tool log (từ bot Discord, `rc-check` trong terminal
 hay checklist Next-Gen) mang **label `auto-qa`** + một dòng marker cuối description
 `AUTOQA case=<mã case> ban=<debug|release> pkg=<package>`. Dev kéo bug sang **Reviewing** → khi dev báo build mới

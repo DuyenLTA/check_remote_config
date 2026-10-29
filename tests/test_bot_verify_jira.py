@@ -98,3 +98,15 @@ def test_tin_bao_dev_chi_bug_keo_to_do():
     assert "Inter khong hien" not in t and "•" not in t
     u2 = {**u, "link": "https://jira.apero.vn/browse/AIP920-14"}
     assert t.replace("AIP920-14", "<https://jira.apero.vn/browse/AIP920>") == v.tin_bao_dev_fail(job, [("todo", u2, "")])
+
+
+def test_tin_tom_tat_verify_chi_bug_dang_verify():
+    """29/10/2026: tin duoi ghi so ca checklist ('1 Sai (EV-11)') -> QA tuong bug van FAIL du da Done."""
+    job = {"verify": [{"key": "AIP922-106", "case": "MED-01", "bug": {}}]}
+    kq = {"trang_thai": "XONG", "tom_tat": "24 Khớp, 1 Sai (EV-11), 19 Đo tay",
+          "cases": [{"case": "MED-01", "verdict": "KHOP", "thuc_te": "4 adapter COMPLETE 10/10 lần mở lạnh"}]}
+    t = v.tin_tom_tat_verify(job, kq)
+    assert t == "• **AIP922-106** `MED-01`: **PASS** — 4 adapter COMPLETE 10/10 lần mở lạnh"
+    assert "EV-11" not in t and "Đo tay" not in t
+    dung = v.tin_tom_tat_verify(job, {"trang_thai": "DUNG", "tom_tat": "máy khoá", "cases": []})
+    assert "chưa kết luận" in dung and "Lượt dừng: máy khoá" in dung

@@ -20,7 +20,7 @@ from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
 
 log = logging.getLogger("rcr-bot")
-TRUONG_BUILD = ("ma", "ten", "version", "package", "loai_ban", "link_tin")
+TRUONG_BUILD = ("ma", "ten", "version", "package", "loai_ban", "link_tin", "drive")
 # Build dang duoc xep (giua cac await cua `xep`): tin build den hai kenh / QA bam Verify lai cung luc
 # -> lan sau thay ngay, khong gui tin "Cho chay" thua.
 _DANG_XEP: set[tuple[str, str]] = set()
@@ -133,8 +133,10 @@ async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> 
         await vm.edit(content=f"{v.tin_ket_qua(job, [])}\n⏭ Bỏ — đã có build mới hơn `{moi}` chờ verify.")
         return
     dau = f"{v.tin_ket_qua(job, [])} · máy **{ten}**"
-    await vm.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} từ App Tester…")
-    cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial)
+    nguon = "từ link Drive" if job.get("drive") else "từ App Tester"
+    await vm.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…")
+    cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
+                                  job.get("drive", ""))
     if "loi" in cai:
         await vm.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}", view=nut(vm.id, ("check", "Thử lại")))
         return
@@ -148,7 +150,7 @@ async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> 
     await vm.edit(content=f"{v.tin_ket_qua(job, dong)}\nMáy: {ten}", view=nut(vm.id, ("verify", "Verify bug Jira")))
     f = bot_cong_viec.file_report(kq, out)
     link = f"\nReport: {kq['link']}" if kq.get("link") and not f else ""
-    await vm.reply(f"{kq.get('tom_tat', '')[:1500]}{link}", file=discord.File(f) if f else discord.utils.MISSING)
+    await vm.reply(f"{v.tin_tom_tat_verify(job, kq)}{link}", file=discord.File(f) if f else discord.utils.MISSING)
     tin_dev = v.tin_bao_dev_fail(job, dong)
     if tin_dev:                              # bug van FAIL -> bao dev o kenh project
         await bot_kenh_project.bao(bot, job, tin_dev, vm)
