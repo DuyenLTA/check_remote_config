@@ -225,18 +225,21 @@ def test_log_jira_xong_bao_duoc_dev_thi_khong_dang_them_o_kenh_qa(monkeypatch):
         "issues": [{"case": "6.4.0#44", "key": "AIP920-9", "link": "u", "ghi_chu": "tạo mới"}], "loi": ""})
     gui = []
 
-    async def bao(bot, c, tin, tin_qa, kenh=SimpleNamespace(mention="#aip920-dev")):
+    da_keys = []
+
+    async def bao(bot, c, tin, tin_qa, keys=(), kenh=SimpleNamespace(mention="#aip920-dev")):
         gui.append(tin)
+        da_keys.append(list(keys))
         return kenh
     monkeypatch.setattr(d.bot_kenh_project, "bao", bao)
     bot, c = _bot(), {**_c(), "bug_chon": [1]}
     it = _It()
     asyncio.run(bot._review_bug(it, "jira", c))
-    assert gui and "AIP920-9" in gui[0]
+    assert gui and "AIP920-9" in gui[0] and da_keys == [["AIP920-9"]]      # tag theo assignee cua bug vua log
     assert not [g for g in it.goi if g[0] == "reply"]
     assert it.goi[-1][0] == "msg_edit" and "đã báo dev ở #aip920-dev" in it.goi[-1][2]["content"]
 
-    async def bao_hong(bot, c, tin, tin_qa):
+    async def bao_hong(bot, c, tin, tin_qa, keys=()):
         return None                                   # khong bao duoc dev -> bao o kenh QA
     monkeypatch.setattr(d.bot_kenh_project, "bao", bao_hong)
     c2, it = {**_c(), "bug_chon": [1]}, _It()

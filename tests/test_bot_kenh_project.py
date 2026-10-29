@@ -77,3 +77,15 @@ def test_tin_build_o_server_test_thi_tim_kenh_project_o_server_khac():
     c = {"ma": "AIP922", "link_tin": "https://discord.com/channels/1535317341943107676/1562794153082097695/1"}
     asyncio.run(kp.bao(bot, c, "🐞 Nhờ dev check bug", tin))
     assert k.sent and k.sent[0][0] == "🐞 Nhờ dev check bug" and tin.replies == []
+
+
+def test_tag_dev_theo_assignee():
+    """29/10/2026: tag ca 2 dev khong on -> chi tag dev duoc giao bug (ten Jira, khong phan biet dau/hoa)."""
+    bang = kp.bang_dev("Nguyễn Tấn Dũng:111; Hà Đức Trung:222;sai")
+    assert bang == {"nguyen tan dung": 111, "ha duc trung": 222}
+    a = {"AIP927-1": ["dungnt2", "Nguyễn Tấn Dũng"], "AIP927-2": ["trunghd", "HÀ ĐỨC TRUNG"],
+         "AIP927-3": [], "AIP927-4": ["ai do", "Người Khác"]}
+    assert kp.dev_theo_assignee(a, ["AIP927-1"], bang, [111, 222]) == [111]
+    assert kp.dev_theo_assignee(a, ["AIP927-1", "AIP927-2"], bang, [111, 222]) == [111, 222]
+    assert kp.dev_theo_assignee(a, ["AIP927-3"], bang, [111, 222]) == [111, 222]          # chua giao -> tag nhu cu
+    assert kp.dev_theo_assignee(a, ["AIP927-2", "AIP927-4"], bang, [111, 222]) == [222, 111]  # 1 bug la -> them mac dinh

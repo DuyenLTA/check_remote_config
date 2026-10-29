@@ -153,4 +153,4 @@ async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> 
     await vm.reply(f"{v.tin_tom_tat_verify(job, kq)}{link}", file=discord.File(f) if f else discord.utils.MISSING)
     tin_dev = v.tin_bao_dev_fail(job, dong)
     if tin_dev:                              # bug van FAIL -> bao dev o kenh project
-        await bot_kenh_project.bao(bot, job, tin_dev, vm)
+        await bot_kenh_project.bao(bot, job, tin_dev, vm, [u["key"] for loai, u, _ in dong if loai == "todo"])

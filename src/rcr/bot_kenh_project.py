@@ -1,17 +1,24 @@
 """Bao dev o kenh rieng cua project (tin bug vua log Jira, bug verify van FAIL).
 
 Kenh project nam cung server voi kenh build cua dev, ten bat dau bang ma app viet thuong
-(`aip920-ai-english-official-group`). Tag dev mac dinh lay tu `DISCORD_DEV_IDS` (user chot
-28/10/2026: tam thoi tag co dinh, chua co bang ma app -> dev). Khong tim duoc kenh / bot khong
-co quyen gui (kenh Publishing) -> dang o kenh QA kem noi dung de QA chuyen tay.
+(`aip920-ai-english-official-group`). Tag dev theo NGUOI DUOC GIAO (assignee Jira) cua cac bug trong tin
+(user chot 29/10/2026: tag ca 2 dev khong on): bang `DISCORD_DEV_THEO_ASSIGNEE` = `ten:discord_id;...`
+(ten hien thi hoac login Jira, khong phan biet dau / hoa thuong) - nam o cau hinh may vi repo public.
+Bug chua giao / assignee khong co trong bang / Jira loi -> tag `DISCORD_DEV_IDS` nhu truoc.
+Khong tim duoc kenh / bot khong co quyen gui (kenh Publishing) -> dang o kenh QA kem noi dung de QA chuyen tay.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
+import unicodedata
 
 import discord
+
+from . import bot_jira_rest as jira
+from .cau_hinh_bot import env
 
 log = logging.getLogger("rcr-bot")
 LINK_RE = re.compile(r"/channels/(\d+)/(\d+)(?:/(\d+))?")
@@ -19,6 +26,48 @@ LINK_RE = re.compile(r"/channels/(\d+)/(\d+)(?:/(\d+))?")
 
 def dev_ids(gia_tri: str) -> list[int]:
     return [int(x) for x in (gia_tri or "").split(",") if x.strip().isdigit()]
+
+
+def _chuan(ten: str) -> str:
+    """'Nguyễn Tấn Dũng' -> 'nguyen tan dung' de so khop ten assignee."""
+    s = unicodedata.normalize("NFD", ten or "").replace("đ", "d").replace("Đ", "D")
+    return " ".join("".join(c for c in s if unicodedata.category(c) != "Mn").casefold().split())
+
+
+def bang_dev(gia_tri: str) -> dict[str, int]:
+    """`DISCORD_DEV_THEO_ASSIGNEE` ('Nguyễn Tấn Dũng:7847...;dungnt2:7847...') -> {ten chuan: discord id}."""
+    ra = {}
+    for phan in (gia_tri or "").split(";"):
+        ten, _, i = phan.rpartition(":")
+        if ten.strip() and i.strip().isdigit():
+            ra[_chuan(ten)] = int(i)
+    return ra
+
+
+def dev_theo_assignee(assignee: dict[str, list[str]], keys: list[str], bang: dict[str, int],
+                      mac_dinh: list[int]) -> list[int]:
+    """Discord id can tag cho cac bug `keys`; bug nao khong ra dev trong bang -> them ca `mac_dinh`."""
+    ra, thieu = [], False
+    for k in keys:
+        i = next((bang[_chuan(t)] for t in assignee.get(k, []) if _chuan(t) in bang), None)
+        if i is None:
+            thieu = True
+        elif i not in ra:
+            ra.append(i)
+    return ra + [i for i in mac_dinh if i not in ra] if thieu or not ra else ra
+
+
+async def ids_can_tag(bot, keys: list[str]) -> list[int]:
+    mac_dinh = dev_ids(getattr(bot, "dev_ids", ""))
+    bang = bang_dev(env("DISCORD_DEV_THEO_ASSIGNEE"))
+    if not keys or not bang or not jira.bat(getattr(bot, "jira_url", ""), getattr(bot, "jira_token", "")):
+        return mac_dinh
+    try:
+        a = await asyncio.to_thread(jira.assignee, bot.jira_url, bot.jira_token, keys)
+    except jira.JiraLoi as exc:               # Jira loi: van bao dev, tag nhu cu
+        log.warning("khong doc duoc assignee %s: %s", keys, exc)
+        return mac_dinh
+    return dev_theo_assignee(a, keys, bang, mac_dinh)
 
 
 def chon_kenh(kenh: list, ma: str, co_quyen) -> object | None:
@@ -45,11 +94,11 @@ async def _kenh_project(bot, c: dict):
     return None
 
 
-async def bao(bot, c: dict, tin: str, tin_qa):
-    """Gui `tin` o kenh project cua `c['ma']`, tag dev; that bai thi tra loi duoi `tin_qa`.
-    Tra kenh da gui (None khi phai bao o kenh QA)."""
+async def bao(bot, c: dict, tin: str, tin_qa, keys: list[str] = ()):
+    """Gui `tin` o kenh project cua `c['ma']`, tag dev theo assignee cua bug `keys`; that bai thi tra loi duoi
+    `tin_qa`. Tra kenh da gui (None khi phai bao o kenh QA)."""
     try:
-        ids = dev_ids(getattr(bot, "dev_ids", ""))
+        ids = await ids_can_tag(bot, list(keys))
         tag = " ".join(f"<@{i}>" for i in ids)
         noi_dung = f"{tag}\n{tin}" if tag else tin
         kenh = await _kenh_project(bot, c)

@@ -110,6 +110,21 @@ def dang_reviewing(url: str, token: str, keys: list[str]) -> list[str]:
     return [i["key"] for i in (d or {}).get("issues", [])]
 
 
+def assignee(url: str, token: str, keys: list[str]) -> dict[str, list[str]]:
+    """{key: [login, ten hien thi]} cua nguoi duoc giao; issue chua giao -> []. Key sai mau bi loai."""
+    sach = sorted({k for k in keys if KEY_RE.fullmatch(k)})
+    if not sach:
+        return {}
+    q = urllib.parse.urlencode({"jql": f"key in ({', '.join(sach)})", "fields": "assignee",
+                                "maxResults": len(sach), "validateQuery": "warn"})
+    d = _goi(url, token, "GET", f"/rest/api/2/search?{q}")
+    ra = {}
+    for i in (d or {}).get("issues", []):
+        a = (i.get("fields") or {}).get("assignee") or {}
+        ra[i["key"]] = [x for x in (a.get("name"), a.get("displayName")) if x]
+    return ra
+
+
 def tim_auto_qa(url: str, token: str, project: str) -> list[dict]:
     """Bug dang Reviewing mang label `auto-qa` cua project: [{key, link, summary, marker}]; marker la
     {case, loai_ban, package} doc tu description, None khi thieu / sai mau. Toi da MAX_AUTO_QA issue."""

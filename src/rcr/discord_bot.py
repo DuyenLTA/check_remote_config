@@ -297,7 +297,8 @@ class BuildBot(discord.Client):
         c["jira"] = kq
         self.q.nho_tin(c)
         tin_dev = bot_cong_viec.tin_bao_dev(c, kq, [bugs[i] for i in chon])
-        kenh_dev = await self._bao_dev(c, tin_dev, it.message) if tin_dev else None
+        keys = [i["key"] for i in kq.get("issues") or [] if i.get("key")]
+        kenh_dev = await self._bao_dev(c, tin_dev, it.message, keys) if tin_dev else None
         # Log du + bao duoc dev o kenh project -> khong dang them tin o kenh QA (user chot 28/10/2026),
         # chi sua dong trang thai cua tin menu. Thieu issue / Jira bao loi / khong bao duoc dev -> bao o QA.
         if kenh_dev is not None and so == len(chon) and not kq.get("loi"):
@@ -306,10 +307,10 @@ class BuildBot(discord.Client):
         else:
             await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
 
-    async def _bao_dev(self, c: dict, tin: str, tin_qa: discord.Message):
-        """Bao o kenh rieng cua project (user chot 28/10/2026), tag dev; khong gui duoc thi bao o kenh QA.
-        Tra kenh da gui, None khi da phai bao o kenh QA."""
-        return await bot_kenh_project.bao(self, c, tin, tin_qa)
+    async def _bao_dev(self, c: dict, tin: str, tin_qa: discord.Message, keys: list[str] = ()):
+        """Bao o kenh rieng cua project (user chot 28/10/2026), tag dev duoc giao bug `keys`; khong gui duoc
+        thi bao o kenh QA. Tra kenh da gui, None khi da phai bao o kenh QA."""
+        return await bot_kenh_project.bao(self, c, tin, tin_qa, keys)
 
     # --- chia job cho cac may ----------------------------------------------------------
     async def worker(self):
