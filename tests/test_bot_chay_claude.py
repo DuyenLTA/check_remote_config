@@ -73,6 +73,7 @@ def test_luot_bot_tat_webhook(tmp_path, monkeypatch):
     monkeypatch.setenv("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/x/y")
     c.chay("pkg.a", "S1", tmp_path, 60, tmp_path / "out")
     assert goi["env"]["DISCORD_NOTIFY"] == "0"
+    assert goi["env"]["CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"] == "0"   # khong giet workflow audit sau 10 phut
     assert goi["env"]["DISCORD_WEBHOOK_URL"]          # van giu env khac (PATH, ...)
 
 

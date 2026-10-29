@@ -53,6 +53,8 @@ PROMPT = (
     "nguoi quyet (preflight LOI, ID ads lech sheet, man la) thi dung, khong tu chay tiep. Moi may deu la may test AdMob "
     "(rc-check.md muc 0c): ad_click KHONG phai ly do dung - ghi vao report, chay lai case bi ad_click roi chay tiep. "
     "Khong commit/push.\n"
+    "Workflow audit chay nen: CHO thong bao no xong roi lam tiep trong CUNG luot nay; KHONG ScheduleWakeup, KHONG "
+    "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
     '"tom_tat": "<tieng Viet, toi da 300 ky tu: so PASS/FAIL hoac ly do dung>", '
@@ -177,8 +179,11 @@ def doc_cases(cases) -> list[dict]:
 
 def moi_truong() -> dict[str, str]:
     """Env cua luot: tat webhook `rcr-notify` (DISCORD_NOTIFY=0) - bot da bao vao chinh tin
-    cua build, webhook gui them la kenh nhan hai tin cho mot viec (user chot 27/10/2026)."""
-    return {**os.environ, "DISCORD_NOTIFY": "0"}
+    cua build, webhook gui them la kenh nhan hai tin cho mot viec (user chot 27/10/2026).
+
+    `claude -p` mac dinh chi cho viec nen 10 phut roi giet: AIP882 29/10/2026 workflow audit (~15 phut) bi giet,
+    luot ket thuc chua chay case nao. Cho vo han - timeout cua luot (TIMEOUT_*) van chan tren."""
+    return {**os.environ, "DISCORD_NOTIFY": "0", "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"}
 
 
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
