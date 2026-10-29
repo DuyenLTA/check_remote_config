@@ -37,6 +37,19 @@ if hit is None:
     for n in nodes:
         if CLOSE.match(g(n, 'text').strip()) or CLOSE.match(g(n, 'content-desc').strip()):
             hit = box(n); break
+if hit is None and nodes:
+    # Icon-only X (AIP882 4.3.0 OPPO 29/10/2026: GMA next-gen web creative, no id, no label - only a square
+    # View holding an Image at the top-right corner; the script looped 'close_not_found' for 10 min).
+    # Accept only a small square in the top-right corner that wraps an Image: never a creative area.
+    W = max(box(n)[2] for n in nodes if box(n)); H = max(box(n)[3] for n in nodes if box(n))
+    imgs = [box(n) for n in nodes if g(n, 'class') == 'android.widget.Image' and box(n)]
+    for n in nodes:
+        b = box(n)
+        if len(b) != 4: continue
+        w, h = b[2] - b[0], b[3] - b[1]
+        if 32 <= w <= 100 and abs(w - h) <= 16 and b[1] < H * 0.2 and b[2] >= W * 0.85 \
+           and not g(n, 'content-desc') and any(inside(i, b) for i in imgs):
+            hit = b; break
 if hit and hit[2] > hit[0] and hit[3] > hit[1]:
     # prefer the close word's own text node inside the button (stays clear of overlapping CTA nodes)
     lab = [box(n) for n in nodes if CLOSE.match(g(n, 'text').strip()) and inside(box(n), hit)]
