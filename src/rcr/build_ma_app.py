@@ -9,7 +9,7 @@ Thieu mot trong hai -> None; discord_bot hoi o kenh QA chu khong im lang.
 Link (Drive, Firebase) bo truoc khi tim: trong link co so giong version.
 
 Luat chon nhanh (user chot 28/10/2026):
-  - tin co so SDK tutorial 3.7.0 (KHONG phai versionName) hoac chu next-gen -> checklist Next-Gen,
+  - tin co so SDK tutorial 3.7.0 / 3.7.1 (KHONG phai versionName) hoac chu next-gen -> checklist Next-Gen,
     cai ban release (release khong debuggable, chi cham duoc Next-Gen)
   - so SDK khac (3.5.4, 3.6.1, 3.6.2, 3.7.2...) hoac "revert next-gen" -> bo TC theo tab, ban debug
   - build KHONG apply SDK (build chuc nang, fix bug) -> bo qua: chua co workflow cho loai nay
@@ -35,8 +35,8 @@ LINK_RE = re.compile(r"https?://\S+")
 MENTION_RE = re.compile(r"<[@#][!&]?\d+>")
 # Dau dinh dang markdown Discord: dev go "Ban build **AIP920** v1.6.0 (7)" (do 2026-10-27).
 MARKDOWN_RE = re.compile(r"\*\*|__|~~|\|\||`|\*")
-# Tutorial 3.7.0 = Next-Gen (user chot 2026-10-27) - cham duoc tren ban release.
-NEXT_GEN_TUTORIAL = "3.7.0"
+# Tutorial 3.7.0 = Next-Gen (user chot 2026-10-27), them 3.7.1 (2026-10-29) - cham duoc tren ban release.
+NEXT_GEN_TUTORIAL = ("3.7.0", "3.7.1")
 
 
 def _sach(text: str) -> str:
@@ -91,10 +91,10 @@ def tach(text: str, ma_kenh: str = "") -> dict | None:
 
 
 def loai_ban(tin: dict) -> str:
-    """"release" khi tin ghi next-gen hoac SDK 3.7.0 ma khong revert, con lai "debug" (bo TC theo tab)."""
+    """"release" khi tin ghi next-gen hoac SDK 3.7.0 / 3.7.1 ma khong revert, con lai "debug" (bo TC theo tab)."""
     if tin["next_gen"] is False:
         return "debug"
-    if tin["next_gen"] or tin["tutorial"] == NEXT_GEN_TUTORIAL:
+    if tin["next_gen"] or tin["tutorial"] in NEXT_GEN_TUTORIAL:
         return "release"
     return "debug"
 

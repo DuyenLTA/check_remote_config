@@ -33,6 +33,8 @@ def test_tin_apply_next_gen_cai_ban_release():
 @pytest.mark.parametrize("ghi_chu, loai", [
     ("", "debug"),                              # khong nhac next-gen -> debug chay duoc moi nhanh
     ("apply tutorial 3.7.0", "release"),        # tutorial 3.7.0 = Next-Gen
+    ("apply tutorial 3.7.1-alpha01", "release"),  # 3.7.1 cung la Next-Gen (user chot 29/10/2026)
+    ("apply tutorial 3.7.2", "debug"),
     ("apply tutorial 3.6.1", "debug"),
     ("revert next gen, tutorial 3.7.0", "debug"),
 ])

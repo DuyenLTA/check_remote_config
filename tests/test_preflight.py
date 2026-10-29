@@ -159,7 +159,7 @@ def test_sdk_3_7_0_chay_checklist_next_gen_khong_can_sheet_hay_debuggable(monkey
 
 def test_sdk_khac_3_7_0_van_chay_bo_tc(monkeypatch):
     # 3.6.1 = ban "revert next-gen" (tin build AIP882 4.3.0, 27/10/2026) -> bo TC
-    for sdk in ("3.5.3", "3.6.0", "3.6.1", "3.6.1-alpha02", "3.7.1", "3.8.0"):
+    for sdk in ("3.5.3", "3.6.0", "3.6.1", "3.6.1-alpha02", "3.7.2", "3.8.0"):
         _gia(monkeypatch, sdk=sdk)
         kq = _chay(FakeClient())
         assert kq["nhanh"] == "tc", sdk
@@ -180,17 +180,17 @@ def test_tham_so_sdk_thang_doc_tu_log(monkeypatch):
 
 def test_tin_build_ghi_next_gen_thi_ep_nhanh_checklist(monkeypatch):
     """AIP918 2.4.0 29/10/2026: tutorial 3.7.1-alpha01 + GMA Next-Gen, ban release -> khong duoc roi vao bo TC."""
-    _gia(monkeypatch, sdk="3.7.1-alpha01")
-    assert _chay(FakeClient())["nhanh"] == "tc"                      # khong ep: giu quy tac chi 3.7.0
+    _gia(monkeypatch, sdk="3.7.2")
+    assert _chay(FakeClient())["nhanh"] == "tc"                      # khong ep: so SDK ngoai 3.7.0/3.7.1
     kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", ep_nextgen=True))
     assert kq["nhanh"] == "nextgen" and not any(m["ten"] == "Sheet testcase" for m in kq["muc"])
     assert "theo tin build" in next(m["chi_tiet"] for m in kq["muc"] if m["ten"] == "Bản SDK FO")
 
 
-def test_la_nextgen_chi_dung_3_7_0():
+def test_la_nextgen_chi_3_7_0_va_3_7_1():
     from rcr import sdk_probe
-    assert sdk_probe.la_nextgen("3.7.0") and sdk_probe.la_nextgen("3.7.0-alpha02")
-    assert not any(sdk_probe.la_nextgen(v) for v in ("3.6.1", "3.6.1-alpha02", "3.7.1", "3.7.10", "3.5.3", "", "x"))
+    assert all(sdk_probe.la_nextgen(v) for v in ("3.7.0", "3.7.0-alpha02", "3.7.1", "3.7.1-alpha01"))
+    assert not any(sdk_probe.la_nextgen(v) for v in ("3.6.1", "3.6.1-alpha02", "3.7.2", "3.7.10", "3.5.3", "", "x"))
 
 
 class DnsClient(FakeClient):

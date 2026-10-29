@@ -1,6 +1,6 @@
-# Nhánh `/rc-check` cho app SDK FO 3.7.0: chấm checklist SDK Next-Gen
+# Nhánh `/rc-check` cho app SDK FO 3.7.0 / 3.7.1: chấm checklist SDK Next-Gen
 
-Vào đây từ `.claude/commands/rc-check.md` mục 0b — `--preflight` đọc được app dùng **SDK FO 3.7.0** (bộ TC không có
+Vào đây từ `.claude/commands/rc-check.md` mục 0b — `--preflight` đọc được app dùng **SDK FO 3.7.0 / 3.7.1** (bộ TC không có
 bản này). Tham số: package, mục cần chấm (`1|2|3|4|all`, mặc định `all`), có thể kèm checklist dán vào. Bản SDK ghi
 lên header report lấy từ dòng `Bản SDK FO` của preflight.
 

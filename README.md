@@ -78,7 +78,7 @@ theo thứ tự `git rev-parse --show-toplevel` → `$RC_RUNNER_REPO` →
 mỗi lần `git pull`. Lệnh mới chỉ hiện ở phiên Claude Code mở sau đó.
 
 Cùng lệnh `/rc-check` còn **tự chấm checklist nâng cấp SDK quảng cáo Next-Gen** khi app dùng SDK FO
-**đúng 3.7.0** (bản này không có bộ TC; 3.6.1 đã revert next-gen nên chạy bộ TC): `--preflight` đọc bản SDK từ log lúc mở app rồi chọn nhánh, không cần
+**3.7.0 / 3.7.1** (các bản này không có bộ TC; 3.6.1 đã revert next-gen nên chạy bộ TC): `--preflight` đọc bản SDK từ log lúc mở app rồi chọn nhánh, không cần
 gõ gì thêm. Quy trình ở `sdk-check/WORKFLOW.md`; script, checklist gốc và cách đo nằm trong `sdk-check/`.
 Cả 4 mục chấm bằng code: `rcr-sdk-check --package <pkg> --muc 1,2,3,4` — cùng bộ log thì cùng kết quả
 (`--cham-lai <thư mục>`); dòng code không chấm chắc được ra `DO_TAY`, đo tay rồi ghi bằng `--cham-tay`.

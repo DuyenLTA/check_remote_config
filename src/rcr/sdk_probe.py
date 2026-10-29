@@ -29,10 +29,11 @@ log = logging.getLogger(__name__)
 
 TAG = "VslTemplate4FirstOpenSDK"
 # Ban SDK FO di cung GMA Next-Gen ma khong co bo TC: cham theo checklist `sdk-check/`.
-# User chot 27/10/2026: Next-Gen la tutorial CHINH XAC 3.7.0 (hau to -alphaNN van tinh).
+# User chot 27/10/2026: Next-Gen la tutorial 3.7.0; 29/10/2026 them 3.7.1 (AIP918 2.4.0). Hau to -alphaNN
+# van tinh; ban khac (3.7.2, 3.8.0...) chay bo TC.
 # 3.6.1 tung la ban Next-Gen nhung da "revert next-gen" (tin build AIP882 4.3.0) -> chay bo TC
 # nhu cac ban khac.
-NEXTGEN_SDK = (3, 7, 0)
+NEXTGEN_SDK = {(3, 7, 0), (3, 7, 1)}
 LOGCAT_TIMEOUT = 20.0
 WAIT_AFTER_LAUNCH = 15.0
 POLL_INTERVAL = 1.5
@@ -57,7 +58,7 @@ async def read_log(client, serial: str, pid: str) -> str:
 
 def la_nextgen(sdk: str) -> bool:
     """Ban SDK FO cham theo checklist Next-Gen thay vi bo TC."""
-    return tc_catalog.parse_version(sdk) == NEXTGEN_SDK
+    return tc_catalog.parse_version(sdk) in NEXTGEN_SDK
 
 
 def last_version(log_text: str) -> str:
