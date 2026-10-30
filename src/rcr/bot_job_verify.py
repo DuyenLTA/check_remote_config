@@ -138,7 +138,9 @@ async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> 
     cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
                                   job.get("drive", ""))
     if "loi" in cai:
-        await vm.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}", view=nut(vm.id, ("check", "Thử lại")))
+        hoi = bot_cong_viec.hoi_link_drive(job)
+        await vm.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}" + (f"\n{hoi}" if hoi else ""),
+                      view=nut(vm.id, ("check", "Thử lại")))
         return
     cases = sorted({u["case"] for u in job["verify"]})
     ck = v.loai_case(cases[0]) == "checklist"        # phan_loai chi cho qua mot nhom moi luot

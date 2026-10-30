@@ -151,6 +151,7 @@ def test_da_co_comment_bot_thi_chi_chuyen_khong_comment_trung(tmp_path, monkeypa
 def test_cai_loi_thi_khong_chay_claude_khong_dong_jira(tmp_path, monkeypatch):
     goi, da_chay, msg = _chay(tmp_path, monkeypatch, {}, set(), cai={"loi": "App Tester chưa có bản"})
     assert goi == [] and da_chay == [] and "Cài không được" in msg.edits[-1]["content"]
+    assert "link Google Drive" in msg.edits[-1]["content"]          # hoi QA gui link Drive cua APK
 
 
 def test_build_moi_hon_dang_cho_thi_bo_luot_build_cu(tmp_path, monkeypatch):
@@ -163,3 +164,11 @@ def test_build_moi_hon_dang_cho_thi_bo_luot_build_cu(tmp_path, monkeypatch):
     monkeypatch.setattr(bj.bot_cong_viec, "cai", lambda *a: (_ for _ in ()).throw(AssertionError("khong duoc cai")))
     asyncio.run(bj.chay(bot, cu, "S1", "Pixel", Path("."), tmp_path))
     assert goi == [] and "1.6.2 (9)" in bot.msg.edits[-1]["content"]
+
+
+def test_hoi_link_drive_chi_khi_chua_cai_tu_drive():
+    """29/10/2026: App Tester chua co ban debug -> hoi QA gui link Drive; da cai tu Drive ma hong thi khong hoi lai."""
+    from rcr import bot_cong_viec
+    c = {"ma": "AIP927", "version": "1.0.0 (1)", "loai_ban": "debug"}
+    assert "link Google Drive" in bot_cong_viec.hoi_link_drive(c) and "debug" in bot_cong_viec.hoi_link_drive(c)
+    assert bot_cong_viec.hoi_link_drive({**c, "drive": "https://drive.google.com/file/d/x/view"}) is None
