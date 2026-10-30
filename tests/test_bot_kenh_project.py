@@ -118,3 +118,19 @@ def test_doc_ten_nguoi_gui_tin_build(monkeypatch):
     assert asyncio.run(kp.ids_can_tag(bot, [], C)) == [222]
     tac_gia.global_name = None                                      # webhook / nguoi khac gui -> tag nhu cu
     assert asyncio.run(kp.ids_can_tag(bot, [], C)) == [1, 2]
+
+
+def test_login_jira_cua_dev_gui_build(monkeypatch):
+    monkeypatch.setattr(kp, "env", lambda ten: "Nguyễn Tấn Dũng:111;DungNT2:111;TrungHD:222")
+    tac_gia = SimpleNamespace(name="DungNT2-Assistant", global_name=None, nick=None)
+
+    class _KenhBuild:
+        async def fetch_message(self, i):
+            return SimpleNamespace(author=tac_gia)
+    bot = SimpleNamespace(get_channel=lambda i: _KenhBuild())
+    assert asyncio.run(kp.login_jira_gui_build(bot, C)) == "dungnt2"
+    tac_gia.name = "Nguyễn Tấn Dũng"                          # ho ten, khong phai login Jira
+    assert asyncio.run(kp.login_jira_gui_build(bot, C)) is None
+    tac_gia.name = "Build Notification"
+    assert asyncio.run(kp.login_jira_gui_build(bot, C)) is None
+    assert asyncio.run(kp.login_jira_gui_build(bot, {"ma": "AIP882"})) is None

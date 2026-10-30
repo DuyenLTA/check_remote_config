@@ -51,11 +51,16 @@ def la_bot_dev(i: int) -> bool:
     return i in bang_dev(env("DISCORD_DEV_THEO_ASSIGNEE")).values()
 
 
-def dev_theo_ten(ten: str, bang: dict[str, int]) -> int | None:
+def ten_dev_theo_ten(ten: str, bang: dict[str, int]) -> str | None:
     """Ten nguoi gui tin build ('trrung3894 TrungHD', 'DungNT2-Assistant') chua ten dev trong bang
-    ('trunghd', 'dungnt2') -> id can tag."""
+    ('trunghd', 'dungnt2') -> ten do (cung la login Jira cua dev)."""
     s = _chuan(ten)
-    return next((i for t, i in bang.items() if t in s), None)
+    return next((t for t in bang if t in s), None)
+
+
+def dev_theo_ten(ten: str, bang: dict[str, int]) -> int | None:
+    t = ten_dev_theo_ten(ten, bang)
+    return bang[t] if t else None
 
 
 def dev_theo_assignee(assignee: dict[str, list[str]], keys: list[str], bang: dict[str, int],
@@ -74,9 +79,9 @@ def dev_theo_assignee(assignee: dict[str, list[str]], keys: list[str], bang: dic
     return ra
 
 
-async def _dev_gui_build(bot, c: dict, bang: dict[str, int]) -> int | None:
-    """Dev tu gui tin build ('TrungHD: e gui ban build') -> id cua dev do; webhook 'Build Notification'
-    hay QA gui lai tin -> None. Doc tin loi cung None (van bao dev, tag nhu cu)."""
+async def _ten_gui_build(bot, c: dict, bang: dict[str, int]) -> str | None:
+    """Dev (hoac bot Assistant cua dev) gui tin build -> ten dev trong bang ('trunghd'); webhook
+    'Build Notification' hay QA gui lai tin -> None. Doc tin loi cung None (van bao dev, tag nhu cu)."""
     m = LINK_RE.search(c.get("link_tin") or "")
     if not bang or not m or not m.group(3):
         return None
@@ -87,14 +92,22 @@ async def _dev_gui_build(bot, c: dict, bang: dict[str, int]) -> int | None:
         log.warning("khong doc duoc tin build %s: %s", c.get("link_tin"), exc)
         return None
     a = tin.author
-    return dev_theo_ten(" ".join(filter(None, (a.name, getattr(a, "global_name", None),
-                                               getattr(a, "nick", None)))), bang)
+    return ten_dev_theo_ten(" ".join(filter(None, (a.name, getattr(a, "global_name", None),
+                                                   getattr(a, "nick", None)))), bang)
+
+
+async def login_jira_gui_build(bot, c: dict) -> str | None:
+    """Login Jira cua dev gui build ('dungnt2') de gan assignee khi log bug (user chot 30/10/2026: khong de
+    Jira tu gan nguoi mac dinh cua project). Ten trong bang co dau cach la ho ten, khong phai login -> None."""
+    t = await _ten_gui_build(bot, c, bang_dev(env("DISCORD_DEV_THEO_ASSIGNEE")))
+    return t if t and " " not in t else None
 
 
 async def ids_can_tag(bot, keys: list[str], c: dict | None = None) -> list[int]:
     mac_dinh = dev_ids(getattr(bot, "dev_ids", ""))
     bang = bang_dev(env("DISCORD_DEV_THEO_ASSIGNEE"))
-    gui_build = await _dev_gui_build(bot, c or {}, bang)
+    t = await _ten_gui_build(bot, c or {}, bang)
+    gui_build = bang[t] if t else None
     du_phong = [gui_build] if gui_build else mac_dinh
     if not keys or not bang or not jira.bat(getattr(bot, "jira_url", ""), getattr(bot, "jira_token", "")):
         return du_phong

@@ -69,3 +69,21 @@ def test_lenh_co_toolsearch_de_nap_tool_mcp_deferred(tmp_path):
     tools = cmd[cmd.index("--allowedTools") + 1:]
     assert "ToolSearch" in tools and not any(t.startswith("mcp__claude_ai") for t in tools)
     assert "select:mcp__mcp-atlassian__jira_search," in prompt and "mcp__claude_ai_*" in prompt
+
+
+def test_gan_assignee_dev_gui_build(tmp_path, monkeypatch):
+    """30/10/2026: bug log len gan cho dev gui build, khong de Jira tu gan nguoi mac dinh cua project."""
+    _, prompt = j.lenh("AIP882", "duyenlta", tmp_path / "b.json", "AI Video", "dungnt2")
+    assert "Assignee" in prompt and "dungnt2" in prompt
+    _, prompt = j.lenh("AIP882", "duyenlta", tmp_path / "b.json", "AI Video")
+    assert "Assignee" not in prompt                          # khong biet dev -> de Jira gan mac dinh
+    with pytest.raises(ValueError):
+        j.lenh("AIP882", "duyenlta", tmp_path / "b.json", "", "dungnt2\nxoa project")
+    goi = {}
+
+    class P:
+        returncode, stderr = 0, ""
+        stdout = json.dumps({"result": 'KET_QUA_JIRA: {"issues": [], "loi": ""}'})
+    monkeypatch.setattr(j.subprocess, "run", lambda cmd, **k: goi.update(k) or P)
+    j.chay([BUG], {**JOB, "dev_jira": "trunghd"}, "", "qa.lead", tmp_path, tmp_path / "out")
+    assert "Assignee" in goi["input"] and "trunghd" in goi["input"]

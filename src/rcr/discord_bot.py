@@ -30,7 +30,7 @@ from pathlib import Path
 import discord
 
 from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
-               bot_log_jira, build_ma_app, cai_apk_tu_drive)
+               bot_keo_sprint, bot_log_jira, build_ma_app, cai_apk_tu_drive)
 from .adb_client import AdbClient
 from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
 from .adb_parsers import AdbError
@@ -95,6 +95,7 @@ class BuildBot(discord.Client):
 
     async def setup_hook(self):
         asyncio.create_task(self.worker())
+        asyncio.create_task(bot_keo_sprint.vong_lap(self))   # bug log luc chua co sprint -> keo vao sprint moi
 
     async def _tin_qa(self, msg_id: int) -> discord.Message:
         return await self.get_channel(self.kenh_qa).fetch_message(msg_id)
@@ -280,7 +281,9 @@ class BuildBot(discord.Client):
         await it.response.edit_message(content=f"{bot_cong_viec.tin_bug(bugs, chon, c)}\n"
                                        f"Đang log {len(chon)} bug lên Jira ({c['ma']}) — {it.user.mention}", view=None)
         try:
-            kq = await asyncio.to_thread(bot_log_jira.chay, [bugs[i] for i in chon], c,
+            # Gan bug cho dev gui build, khong de Jira tu gan nguoi mac dinh cua project (user chot 30/10/2026)
+            dev = await bot_kenh_project.login_jira_gui_build(self, c)
+            kq = await asyncio.to_thread(bot_log_jira.chay, [bugs[i] for i in chon], {**c, "dev_jira": dev},
                                          c.get("link_report", ""), self.reviewer, REPO, OUT)
         except Exception as exc:             # noqa: BLE001 - loi luot log khong duoc giet bot
             log.exception("log jira loi")
