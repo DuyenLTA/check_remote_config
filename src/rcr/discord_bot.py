@@ -10,7 +10,7 @@ Cau hinh - chay duoc ca Windows lan Ubuntu. Doc lan luot: bien moi truong cua pr
 bien User cua Windows (registry), file `~/.config/rcr/bot.env` (dong KEY=VALUE; systemd
 tren Ubuntu cung doc file nay, khong doc ~/.bashrc):
   DISCORD_BOT_TOKEN        token bot (bi mat, khong in, khong ghi repo)
-  DISCORD_BUILD_CHANNEL_ID kenh dev bao build (phay ngan cach: nghe them kenh QA chuyen tiep tin)
+  DISCORD_BUILD_CHANNEL_ID kenh nhan build ngoai kenh project (qa-auto; phay ngan cach)
   DISCORD_QA_CHANNEL_ID    kenh bot hoi duyet + bao ket qua
   DISCORD_DUYET_USER_IDS   id nguoi duoc bam nut (phay ngan cach)
   DISCORD_QA_ROLE_ID       (tuy) role duoc bam nut
@@ -29,8 +29,8 @@ from pathlib import Path
 
 import discord
 
-from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
-               bot_keo_sprint, bot_log_jira, build_ma_app, cai_apk_tu_drive)
+from . import (audit_tom_tat, bot_bat_tin_lo, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
+               bot_jira_rest, bot_keo_sprint, bot_log_jira, build_ma_app, cai_apk_tu_drive)
 from .adb_client import AdbClient
 from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
 from .adb_parsers import AdbError
@@ -38,6 +38,7 @@ from .adb_parsers import AdbError
 REPO = Path(__file__).resolve().parents[2]
 OUT = REPO / "out"
 log = logging.getLogger("rcr-bot")
+CHO_JIRA, SO_LAN_JIRA = 5 * 60, 6     # Jira mat ket noi khi xep verify: thu lai moi 5 phut, toi da 30 phut
 
 
 
@@ -97,12 +98,19 @@ class BuildBot(discord.Client):
         asyncio.create_task(self.worker())
         asyncio.create_task(bot_keo_sprint.vong_lap(self))   # bug log luc chua co sprint -> keo vao sprint moi
 
+    async def on_ready(self):
+        """Lan ket noi dau cua tien trinh: phat lai tin build bi lo trong luc bot tat (on_ready con chay lai
+        moi lan reconnect - chi quet mot lan)."""
+        if getattr(self, "_da_quet_tin_lo", False):
+            return
+        self._da_quet_tin_lo = True
+        try:
+            log.info("quet tin build bi lo: %d tin", await bot_bat_tin_lo.quet(self))
+        except Exception:                    # noqa: BLE001 - quet loi khong duoc lam chet bot
+            log.exception("quet tin build bi lo loi")
+
     async def _tin_qa(self, msg_id: int) -> discord.Message:
         return await self.get_channel(self.kenh_qa).fetch_message(msg_id)
-
-    def _server_build(self) -> set[int]:
-        """Server chua kenh build chung - chi nghe kenh project trong cac server nay."""
-        return {k.guild.id for k in map(self.get_channel, self.kenh_build) if k is not None and k.guild}
 
     # --- tin build -> hoi o kenh QA ----------------------------------------------------
     def bi_mat(self) -> list[str]:
@@ -157,12 +165,13 @@ class BuildBot(discord.Client):
         # (DungNT2-Assistant, co trong bang tag dev) -> nhan; bo bot khac
         if m.author.bot and not m.webhook_id and not bot_kenh_project.la_bot_dev(m.author.id):
             return
-        # Ngoai kenh build chung, nghe ca kenh rieng cua tung project (`aip922-...`, cung server voi kenh
-        # build): dev se chuyen sang bao build o kenh project (user chot 28/10/2026).
+        # Chi nhan build o kenh rieng cua tung project (`aip922-...`, moi server bot dang o) va kenh trong
+        # DISCORD_BUILD_CHANNEL_ID (qa-auto). Kenh chung build-notification bo tu 30/10/2026 (user chot: chat
+        # thuong o do bi bot hoi nham la tin build).
         o_kenh_build = m.channel.id in self.kenh_build
         ma_kenh = "" if o_kenh_build else build_ma_app.ma_cua_kenh(
             getattr(getattr(m.channel, "parent", None) or m.channel, "name", ""))
-        if not o_kenh_build and not (ma_kenh and m.guild and m.guild.id in self._server_build()):
+        if not o_kenh_build and not (ma_kenh and m.guild):
             return
         chu = noi_dung(m)
         tin = build_ma_app.tach(chu, ma_kenh)
@@ -206,12 +215,24 @@ class BuildBot(discord.Client):
 
     async def _xep_verify(self, c: dict, kenh) -> None:
         """Tim bug bot da log cua app dang Reviewing -> xep luot verify tren build `c`."""
-        try:                                 # loi verify khong duoc lam hong tin Check vua gui
-            tom_tat = await bot_job_verify.xep(self, c, kenh)
-            log.info("verify %s: %s", c["ma"], tom_tat)
-        except Exception as exc:             # noqa: BLE001
-            log.exception("xep verify loi")
-            await kenh.send(f"⚠️ Không kiểm được bug Reviewing của **{c['ma']}**: {exc}"[:2000])
+        # Mang toi Jira chap chon vai phut (VPN) -> im lang doi roi thu lai, chi bao QA khi het luot van loi
+        # (user phan nan 30/10/2026: bao loi ket noi tieng Anh ngay lan dau, ma app khong co bug Reviewing nao).
+        for lan in range(SO_LAN_JIRA):
+            try:                             # loi verify khong duoc lam hong tin Check vua gui
+                tom_tat = await bot_job_verify.xep(self, c, kenh)
+                log.info("verify %s: %s", c["ma"], tom_tat)
+                return
+            except bot_jira_rest.JiraMatKetNoi as exc:
+                log.warning("verify %s: Jira chua ket noi duoc (lan %d): %s", c["ma"], lan + 1, exc)
+                if lan < SO_LAN_JIRA - 1:
+                    await asyncio.sleep(CHO_JIRA)
+            except Exception as exc:         # noqa: BLE001
+                log.exception("xep verify loi")
+                await kenh.send(f"⚠️ Không kiểm được bug Reviewing của **{c['ma']}**: {exc}"[:2000])
+                return
+        await kenh.send(f"⚠️ Chưa kiểm được bug Reviewing của **{c['ma']}** `{c['version']}`: Jira không kết nối "
+                        f"được suốt {SO_LAN_JIRA * CHO_JIRA // 60} phút (VPN?). Kết nối lại thì bấm **Verify bug Jira** "
+                        f"ở tin Check, build không có tin Check thì gửi lại tin build để bot kiểm lại.")
 
     # --- bam nut -------------------------------------------------------------------------
     def _duoc_duyet(self, user) -> bool:

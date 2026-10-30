@@ -334,3 +334,67 @@ def test_tin_build_cua_bot_assistant_dev_van_doc(monkeypatch):
     assert gui == []
     asyncio.run(bot.on_message(tin(111)))               # Assistant cua dev -> doc tin (khong ra version -> hoi QA)
     assert len(gui) == 1 and "không đọc được" in gui[0]
+
+
+class _KenhGhi:
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, chu, **kw):
+        self.sent.append(chu)
+
+
+def _xep_verify_voi(monkeypatch, loi: list) -> tuple[list, _KenhGhi]:
+    """`loi`: moi lan goi xep lay mot phan tu - Exception thi raise, con lai tra tom tat."""
+    goi = []
+
+    async def xep(bot, c, kenh):
+        goi.append(1)
+        r = loi.pop(0)
+        if isinstance(r, Exception):
+            raise r
+        return r
+
+    monkeypatch.setattr(d.bot_job_verify, "xep", xep)
+    monkeypatch.setattr(d, "CHO_JIRA", 0)
+    k = _KenhGhi()
+    asyncio.run(object.__new__(d.BuildBot)._xep_verify({"ma": "AIP936", "version": "1.0.0 (2)"}, k))
+    return goi, k
+
+
+def test_jira_mat_ket_noi_thi_im_lang_thu_lai(monkeypatch):
+    mat = d.bot_jira_rest.JiraMatKetNoi("Jira GET /rest/api/2/search khong ket noi duoc: [WinError 10060]")
+    goi, k = _xep_verify_voi(monkeypatch, [mat, mat, "AIP936: không có bug nào của bot đang Reviewing."])
+    assert len(goi) == 3 and k.sent == []
+
+
+def test_jira_mat_ket_noi_het_luot_thi_bao_tieng_viet(monkeypatch):
+    mat = d.bot_jira_rest.JiraMatKetNoi("khong ket noi duoc: [WinError 10060]")
+    goi, k = _xep_verify_voi(monkeypatch, [mat] * d.SO_LAN_JIRA)
+    assert len(goi) == d.SO_LAN_JIRA and len(k.sent) == 1
+    assert "Jira không kết nối được" in k.sent[0] and "WinError" not in k.sent[0]
+
+
+def test_loi_jira_khac_bao_ngay_khong_thu_lai(monkeypatch):
+    goi, k = _xep_verify_voi(monkeypatch, [d.bot_jira_rest.JiraLoi("Jira GET -> HTTP 401: x")])
+    assert len(goi) == 1 and "HTTP 401" in k.sent[0]
+
+
+def test_chi_nhan_build_o_kenh_project_va_qa_auto_bo_kenh_chung(monkeypatch):
+    gui = []
+
+    async def send(chu, **k):
+        gui.append(chu)
+    monkeypatch.setattr(d.bot_hoi_dap, "la_cau_hoi", lambda bot, m: False)
+    bot = object.__new__(d.BuildBot)
+    bot.kenh_qa, bot.kenh_build = 1, {1}
+    bot.get_channel = lambda cid: SimpleNamespace(send=send)
+
+    def tin(kenh_id, ten):
+        return SimpleNamespace(author=SimpleNamespace(bot=True, id=5), webhook_id=4, guild=SimpleNamespace(id=9),
+                               channel=SimpleNamespace(id=kenh_id, name=ten), content="Bản build AIP918 nhé",
+                               jump_url="u")
+    asyncio.run(bot.on_message(tin(7, "build-notification")))     # kenh chung: bo qua
+    assert gui == []
+    asyncio.run(bot.on_message(tin(8, "aip918-abc-official-group")))   # kenh project, server nao cung nhan
+    assert len(gui) == 1 and "không đọc được" in gui[0]

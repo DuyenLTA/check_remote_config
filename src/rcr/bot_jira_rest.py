@@ -36,6 +36,11 @@ class JiraLoi(RuntimeError):
     pass
 
 
+class JiraMatKetNoi(JiraLoi):
+    """Thu lai SO_LAN_THU lan van khong ket noi duoc Jira (VPN / mang chap chon) - request chua toi server,
+    noi goi doi mot luc roi thu lai duoc, khong phai loi cua du lieu."""
+
+
 def link_project(links: list[str]) -> str:
     """Link Jira cua project (`<jira>/browse/<PROJECT>`) suy tu link issue dau tien hop le: bao dev
     bang link nay thay vi liet ke tung bug (user chot 29/10/2026 - liet ke dai). Khong co -> ""."""
@@ -69,7 +74,7 @@ def _goi(url: str, token: str, method: str, path: str, body: dict | None = None)
             return _goi_mot_lan(url, token, method, path, body)
         except _MatKetNoi as e:
             if lan == SO_LAN_THU - 1:
-                raise JiraLoi(str(e)) from None
+                raise JiraMatKetNoi(str(e)) from None
             time.sleep(CHO_THU_LAI)
 
 
