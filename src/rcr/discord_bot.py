@@ -391,7 +391,7 @@ class BuildBot(discord.Client):
         bat_dau = time.time()
         # Ban release chi cai khi tin build ghi next-gen (build_ma_app.loai_ban) -> ep rc-check nhanh checklist.
         kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, REPO, timeout, OUT,
-                                     None, job["loai_ban"] == "release")
+                                     None, job["loai_ban"] == "release", job.get("tutorial") or "")
         chu = bot_cong_viec.TRANG_THAI.get(kq["trang_thai"], ("", kq["trang_thai"]))[1]
         await qa.edit(content=f"{dau}\n{chu}")
         f = bot_cong_viec.file_report(kq, OUT)

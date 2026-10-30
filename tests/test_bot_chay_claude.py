@@ -123,3 +123,11 @@ def test_next_gen_dan_do_tay_het_va_khong_dung_vi_ad_click_tren_may_test():
     assert "ad_click KHONG phai ly do dung" in c.lenh("pkg.a", "S1")[1]
     assert "DO TAY HET" not in c.lenh("pkg.a", "S1")[1]                 # nhanh bo TC giu prompt cu
     assert c.TIMEOUT_NEXT_GEN >= 120 * 60
+
+
+def test_so_sdk_tin_build_truyen_sdk_cho_rc_check():
+    """AIP882 4.3.0: tin build ghi tutorial 3.6.1 -> rc-check chay theo 3.6.1, khong theo so app in ra."""
+    assert c.lenh("pkg.a", "S1", sdk="3.6.1")[1].startswith("/rc-check pkg.a --serial S1 --sdk 3.6.1" + chr(10))
+    assert c.lenh("pkg.a", "S1", next_gen=True, sdk="3.7.1-alpha01")[1].splitlines()[0] ==         "/rc-check pkg.a --serial S1 --next-gen --sdk 3.7.1-alpha01"
+    with pytest.raises(ValueError):
+        c.lenh("pkg.a", "S1", sdk="3.6.1 --keep")

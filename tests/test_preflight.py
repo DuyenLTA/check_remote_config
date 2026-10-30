@@ -45,6 +45,8 @@ def _gia(monkeypatch, debuggable=True, co_tab=True, ram=8.0,
                         lambda p, o: ({"id_101": "x"}, "1 vị trí") if co_tab
                         else ({}, f"sheet {ad_units_sheet.THIEU_TAB} {p}"))
     monkeypatch.setattr(preflight, "ram_trong_gb", lambda: ram)
+    # khong doc plan tuan that tren may (doi chieu plan test rieng o test_plan_tuan.py)
+    monkeypatch.setattr(preflight, "muc_plan", lambda *a, **k: preflight._muc("Plan tuần", "ok", "khớp plan"))
 
 
 def _chay(client):
@@ -149,12 +151,30 @@ def test_unit_ads_doc_ca_hai_ten_param():
     assert preflight.unit_ads(events) == [TEST_NATIVE, THAT_INTER]
 
 
-def test_sdk_3_7_0_chay_checklist_next_gen_khong_can_sheet_hay_debuggable(monkeypatch):
-    _gia(monkeypatch, sdk="3.7.0", debuggable=False, co_tab=False)
+def test_sdk_3_7_0_chay_checklist_next_gen_khong_can_sheet_tc_hay_debuggable(monkeypatch):
+    _gia(monkeypatch, sdk="3.7.0", debuggable=False)
     kq = _chay(FakeClient())
     assert kq["nhanh"] == "nextgen" and kq["sdk"] == "3.7.0" and kq["ok"]
     assert _trang_thai(kq, "Vào được dữ liệu app") == "canh_bao"
-    assert not any(m["ten"].startswith("Sheet") for m in kq["muc"])
+    assert not any(m["ten"] == "Sheet testcase" for m in kq["muc"])
+    assert _trang_thai(kq, "Sheet ID ads") == "ok"
+
+
+def test_next_gen_van_phai_co_tab_id_ads_nhu_sdk_thuong(monkeypatch):
+    """User chot 30/10/2026: next-gen cung check ID ads / thong so truoc khi chay."""
+    _gia(monkeypatch, sdk="3.7.0", co_tab=False)
+    kq = _chay(FakeClient())
+    assert kq["nhanh"] == "nextgen" and not kq["ok"] and _trang_thai(kq, "Sheet ID ads") == "loi"
+
+
+def test_sdk_tin_build_khac_log_app_thi_chay_theo_tin_build(monkeypatch):
+    """AIP882 4.3.0: tin build + plan ghi 3.6.1 (revert next-gen), app in 3.7.0 -> bo TC 3.6.1, canh bao lech."""
+    _gia(monkeypatch, sdk="3.7.0")
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", "3.6.1"))
+    assert kq["nhanh"] == "tc" and kq["sdk"] == "3.6.1" and kq["ok"]
+    assert _trang_thai(kq, "SDK tin build vs log app") == "canh_bao"
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", "3.7.0"))
+    assert not any(m["ten"] == "SDK tin build vs log app" for m in kq["muc"])
 
 
 def test_sdk_khac_3_7_0_van_chay_bo_tc(monkeypatch):

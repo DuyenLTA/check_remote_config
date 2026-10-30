@@ -23,6 +23,7 @@ import time
 from pathlib import Path
 
 SERIAL_RE = re.compile(r"[A-Za-z0-9.:_-]+")
+SDK_RE = re.compile(r"\d+\.\d+\.\d+(?:-[\w.]+)?")   # so tutorial tu tin build (3.6.1, 3.7.1-alpha01)
 PACKAGE_RE = re.compile(r"^[a-zA-Z][\w]*(\.[a-zA-Z_][\w]*)+$")
 # Workflow: buoc check ID ads (rc-check.md muc 3c) chay workflow audit-fanout.
 TOOLS = ["Bash", "Read", "Edit", "Write", "Artifact", "Skill", "Workflow"]
@@ -48,7 +49,7 @@ NHAC_NEXT_GEN = (
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.
 PROMPT = (
-    "/rc-check {package} --serial {serial}{next_gen}\n\n"
+    "/rc-check {package} --serial {serial}{next_gen}{sdk}\n\n"
     "{nhac}Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi, khong co nguoi ngoi truoc may. Gap diem can "
     "nguoi quyet (preflight LOI, ID ads lech sheet, man la) thi dung, khong tu chay tiep. Moi may deu la may test AdMob "
     "(rc-check.md muc 0c): ad_click KHONG phai ly do dung - ghi vao report, chay lai case bi ad_click roi chay tiep. "
@@ -104,21 +105,26 @@ TIMEOUT_VERIFY_CHECKLIST = 70 * 60
 
 
 def lenh(package: str, serial: str, cases: list[str] | None = None,
-         next_gen: bool = False) -> tuple[list[str], str]:
+         next_gen: bool = False, sdk: str = "") -> tuple[list[str], str]:
     """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
     Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt.
     `next_gen`: bot da cai ban release vi tin build ghi next-gen -> `--next-gen` de rc-check chay checklist
-    Next-Gen thay vi tu chon theo so SDK (chi 3.7.0) - AIP918 tutorial 3.7.1 bi chay nham bo TC, 29/10/2026."""
+    Next-Gen thay vi tu chon theo so SDK (chi 3.7.0) - AIP918 tutorial 3.7.1 bi chay nham bo TC, 29/10/2026.
+    `sdk`: so tutorial trong tin build -> `--sdk`: tin build quyet nhanh + tab TC, khong theo so app in ra log
+    (AIP882 4.3.0: tin build + plan tuan ghi 3.6.1 revert next-gen, app in 3.7.0 -> chay nham checklist, 30/10/2026)."""
     from .bot_verify_jira import loai_case
 
     if not PACKAGE_RE.match(package or ""):
         raise ValueError(f"package không hợp lệ: {package!r}")
     if not SERIAL_RE.fullmatch(serial or ""):
         raise ValueError(f"serial không hợp lệ: {serial!r}")
+    if sdk and not SDK_RE.fullmatch(sdk):
+        raise ValueError(f"bản SDK không hợp lệ: {sdk!r}")
     exe = shutil.which("claude") or "claude"
     cmd = [exe, "-p", "--output-format", "json", "--allowedTools", *TOOLS]
     if not cases:
         return cmd, PROMPT.format(package=package, serial=serial, next_gen=" --next-gen" if next_gen else "",
+                                  sdk=f" --sdk {sdk}" if sdk else "",
                                   nhac=NHAC_NEXT_GEN if next_gen else "")
     loai = {c: loai_case(c) for c in cases}
     sai = [c for c, lo in loai.items() if lo is None]
@@ -189,12 +195,12 @@ def moi_truong() -> dict[str, str]:
 
 
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
-         cases: list[str] | None = None, next_gen: bool = False) -> dict:
+         cases: list[str] | None = None, next_gen: bool = False, sdk: str = "") -> dict:
     """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
-        cmd, prompt = lenh(package, serial, cases, next_gen)
+        cmd, prompt = lenh(package, serial, cases, next_gen, sdk)
         p = subprocess.run(cmd, input=prompt, cwd=repo, capture_output=True, text=True,
                            encoding="utf-8", errors="replace", timeout=timeout, env=moi_truong())
     except subprocess.TimeoutExpired as exc:

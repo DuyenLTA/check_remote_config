@@ -4,6 +4,20 @@ Vào đây từ `.claude/commands/rc-check.md` mục 0b — `--preflight` đọc
 bản này). Tham số: package, mục cần chấm (`1|2|3|4|all`, mặc định `all`), có thể kèm checklist dán vào. Bản SDK ghi
 lên header report lấy từ dòng `Bản SDK FO` của preflight.
 
+## Trước khi chạy: check ID ads + thông số như SDK thường (bắt buộc)
+
+User chốt 30/10/2026: nhánh Next-Gen cũng phải **check ID ads trước khi chạy**, như bản SDK thường — biết thông số
+build trước rồi mới chấm. Thứ tự, không bỏ bước:
+
+1. Preflight phải có dòng `Sheet ID ads` = `OK` (tab của app trong sheet "Check thông số KT"). `LOI` → dừng như
+   nhánh bộ TC: báo thiếu tab, không chạy checklist.
+2. Dòng `Plan tuần` = `LOI` (build khác yêu cầu trong plan tuần của QA) → **dừng, báo qa-auto**, không chấm
+   (`rc-check.md` mục 3b).
+3. Có dòng `SDK tin build vs log app` (số SDK tin build / `--sdk` khác số app in ra) → **không vào nhánh này**: chạy
+   theo số tin build (`rc-check.md` mục 0b). Chỉ vào đây khi bản đã chốt là 3.7.0 / 3.7.1 hoặc có `--next-gen`.
+4. Chạy check ID ads (`rc-check.md` mục 3c, audit-fanout) **xong** mới chạy `rcr-sdk-check` — hai bên cùng lái máy.
+   Câu báo mở đầu bằng kết quả audit (khớp/tổng, vị trí lệch), và bản SDK FO đã chạy theo nguồn nào (tin build / log).
+
 `$SK` = `<repo>/sdk-check` (repo tìm như `rc-check.md` mục 0). Trong đó:
 - `references/checklist-muc1-sdk-build.txt`, `checklist-muc2-hien-thi-HT.txt`, `checklist-muc3-event-EV.txt`,
   `checklist-muc4-nextgen-KT-MED-CMP-EV3x-HV-RG.txt` — checklist gốc. User dán checklist mới thì **dùng bản user dán**.

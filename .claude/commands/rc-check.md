@@ -50,6 +50,11 @@ bộ TC như bản thường; bộ TC chưa có tab 3.6.1 thì tool chấm base 
   release) → truyền `--next-gen` vào lệnh `--preflight`: nhánh **luôn** là checklist Next-Gen, **bất kể số SDK**
   (AIP918 2.4.0: tutorial 3.7.1-alpha01 + GMA Next-Gen bị chạy nhầm bộ TC rồi chặn vì bản release, 29/10/2026).
 - **Bản khác** (3.5.x, 3.6.x, 3.7.2, 3.8.x…) không có `--next-gen` → nhánh bộ TC như thường. User truyền `--tc` riêng thì luôn theo `--tc`.
+- **`$ARGUMENTS` có `--sdk X.Y.Z`** (bot truyền số tutorial trong tin build) → truyền nguyên `--sdk` vào
+  `--preflight` và mọi lệnh sau: **số trong tin build quyết nhánh + tab TC, không theo số app in ra log**. App in
+  khác (`SDK tin build vs log app` = `CHU Y`) → vẫn chạy theo tin build, ghi dòng lệch lên đầu câu báo để dev xác
+  nhận. AIP882 4.3.0 (29/10/2026): tin build + plan tuần ghi tutorial 3.6.1 (revert next-gen), app in
+  `Using version 3.7.0` → tool tự chọn checklist Next-Gen, cả lượt chấm sai bản (user: "check vô nghĩa").
 - Không đọc được bản (dòng `Bản SDK FO` là `CHU Y`) → hỏi user bản SDK, chạy lại preflight với `--sdk X.Y.Z`.
 - Chạy case bằng bộ TC mặc định trên app 3.7.0 / 3.7.1 thì `rcr-check` dừng kèm lỗi (bộ chung không có tab
   Next-Gen, chọn tab cũ là chấm sai bản).
@@ -198,6 +203,13 @@ cần làm (đừng chạy thử cho biết: 23/10/2026 cài nhầm bản releas
 lúc đọc baseline). Dòng `CHU Y` về RAM (< 4 GB) không chặn nhưng phải nói trước: lượt dài
 có thể bị Claude Code tắt giữa chừng. Báo Discord khi dừng:
 `<bin>/rcr-notify --kind stop --title "Chưa đủ điều kiện chạy" --line "<dòng LOI>" --action "<việc cần làm>"`
+
+**Dòng `Plan tuần`** (cả hai nhánh): preflight đối chiếu bản SDK (tin build `--sdk` và số app in ra log) với dòng
+của app trong tab tuần này của plan QA (link ở biến `RC_PLAN_TUAN_SHEET`). **Khác plan = `LOI` → dừng ngay, không
+check ID ads, không chạy case** (user chốt 30/10/2026: "khác yêu cầu với plan thì dừng lại báo tôi luôn vào
+qa-auto"). Gửi `rcr-notify --kind stop` như trên với nguyên dòng `Plan tuần`; lượt bot gọi thì `KET_QUA`
+`trang_thai` = `DUNG`, `tom_tat` mở đầu "Build khác plan tuần: …" (tab, plan ghi gì, build ghi/in gì) — bot đăng
+dưới tin build ở qa-auto. Plan chưa có tab tuần / không ghi SDK cho app / không tải được → `CHU Y`, chạy tiếp.
 
 ## 3c. Check ID ads (audit-fanout) — luôn làm, sau preflight, trước khi chạy case
 

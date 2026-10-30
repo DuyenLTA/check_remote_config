@@ -14,11 +14,14 @@ from __future__ import annotations
 
 import asyncio
 import ctypes
+import datetime as dt
 import json
 import sys
 from pathlib import Path
 
-from . import ad_units_sheet, app_sandbox, device_app, fa_log, net_ctl, rc_snapshot, sdk_probe, tc_source
+from . import (ad_units_sheet, app_sandbox, device_app, fa_log, net_ctl, plan_tuan, rc_snapshot, sdk_probe,
+               tc_catalog, tc_source)
+from .cau_hinh_bot import env
 from .adb_parsers import AdbError
 from .models import RcError
 
@@ -127,6 +130,51 @@ async def _app(client, serial: str, package: str) -> list[dict]:
     return ra
 
 
+def _sheet_id_ads(package: str, out_dir) -> dict:
+    """Tab cua app trong sheet "Check thong so KT" - ca nhanh bo TC lan Next-Gen (user chot 30/10/2026: next-gen
+    cung phai check ID ads / thong so nhu SDK thuong truoc khi chay)."""
+    bang, ghi_chu = ad_units_sheet.tai(package, out_dir)
+    if bang:
+        return _muc("Sheet ID ads", OK, ghi_chu)
+    return _muc("Sheet ID ads", LOI, ghi_chu, "Bổ sung tab của app vào sheet Check thông số KT (dòng Package name)")
+
+
+def muc_sdk_lech(sdk_khai: str, sdk_log: str) -> dict | None:
+    """Ban SDK khai (--sdk: bot lay tu tin build) khac ban app in ra log -> canh bao, chay theo ban khai.
+    AIP882 4.3.0 (29/10/2026): tin build + plan tuan ghi tutorial 3.6.1 (revert next-gen) nhung app in 3.7.0 ->
+    tool tu chon nhanh Next-Gen, check vo nghia."""
+    if not sdk_khai or not sdk_log or tc_catalog.parse_version(sdk_khai) == tc_catalog.parse_version(sdk_log):
+        return None
+    return _muc("SDK tin build vs log app", CANH_BAO, f"tin build ghi {sdk_khai}, app in `Using version {sdk_log}`"
+                f" → chạy theo {sdk_khai}", "Báo dev xác nhận build đã tích hợp đúng bản SDK")
+
+
+def muc_plan(package: str, sdk_khai: str, sdk_log: str, out_dir, ngay: dt.date | None = None) -> dict:
+    """Build khac yeu cau SDK trong plan tuan -> LOI, dung luot (user chot 30/10/2026: "khac plan thi dung lai
+    bao toi vao qa-auto"). Khong doc duoc plan / plan khong ghi SDK cho app -> chi CHU Y, khong chan."""
+    link = env(plan_tuan.ENV)
+    if not link:
+        return _muc("Plan tuần", CANH_BAO, f"chưa cấu hình {plan_tuan.ENV}", "Đặt link sheet plan tuần")
+    try:
+        ma = plan_tuan.ma_cua_package(tc_source.tai_ve(env("RC_AD_UNITS_SHEET") or ad_units_sheet.LINK, out_dir),
+                                      package)
+        if not ma:
+            return _muc("Plan tuần", CANH_BAO, f"không biết mã app của {package} (sheet Check thông số KT)")
+        yc = plan_tuan.yeu_cau(plan_tuan.tai(link, out_dir), ma, ngay or dt.date.today())
+    except (RcError, OSError, ValueError) as exc:
+        return _muc("Plan tuần", CANH_BAO, f"không đọc được plan tuần: {exc}")
+    if yc is None:
+        return _muc("Plan tuần", CANH_BAO, "plan chưa có tab tuần này")
+    if not yc["sdk"] and not yc["next_gen"]:
+        return _muc("Plan tuần", CANH_BAO, f"tab {yc['tab']}: {ma} không ghi bản SDK")
+    lech = plan_tuan.lech(yc, sdk_khai, sdk_log)
+    yeu = "; ".join(yc["dong"])
+    if lech:
+        return _muc("Plan tuần", LOI, f"build KHÁC plan (tab {yc['tab']}, {ma}: {yeu}) — " + "; ".join(lech),
+                    "Dừng, báo QA ở qa-auto: build không đúng yêu cầu plan, cần dev / QA xác nhận")
+    return _muc("Plan tuần", OK, f"khớp plan (tab {yc['tab']}, {ma}: {yeu})")
+
+
 def _sheets(package: str, tc: str, out_dir) -> list[dict]:
     ra = []
     try:
@@ -136,12 +184,7 @@ def _sheets(package: str, tc: str, out_dir) -> list[dict]:
         ra.append(_muc("Sheet testcase", OK, "tải được bản mới nhất" if tc_source.la_link(tc) else path))
     except RcError as exc:
         ra.append(_muc("Sheet testcase", LOI, str(exc), "Chia sẻ sheet TC hoặc gửi file .xlsx"))
-    bang, ghi_chu = ad_units_sheet.tai(package, out_dir)
-    if bang:
-        ra.append(_muc("Sheet ID ads", OK, ghi_chu))
-    else:
-        ra.append(_muc("Sheet ID ads", LOI, ghi_chu,
-                       "Bổ sung tab của app vào sheet Check thông số KT (dòng Package name)"))
+    ra.append(_sheet_id_ads(package, out_dir))
     return ra
 
 
@@ -233,7 +276,7 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
     """Kiem het, KHONG dung o muc dau tien hong: nguoi dung can thay moi viec phai lam.
 
     `sdk` (tham so --sdk) de trong thi doc tu log lan mo app. Ban Next-Gen ->
-    `nhanh = "nextgen"`: bo qua sheet TC / sheet ID ads, khong bat buoc debuggable.
+    `nhanh = "nextgen"`: bo qua sheet TC (van kiem sheet ID ads), khong bat buoc debuggable.
     `ep_nextgen` (--next-gen): bot doc tin build ghi next-gen -> nhanh nextgen ca khi so SDK khong
     phai 3.7.0 (AIP918 2.4.0: tutorial 3.7.1-alpha01 + GMA Next-Gen, 29/10/2026). Khong ep thi giu
     quy tac so SDK (chi 3.7.0) user chot 27/10/2026.
@@ -248,19 +291,24 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
            muc_private_dns(*dns), muc_snapshot(out_dir, package, serial)]
     app = await _app(client, serial, package)
     muc += app
+    sdk_khai, sdk_log = sdk, ""
     if tt == OK and app[0]["trang_thai"] == OK:
         try:
             ads, sdk_log = await _mo_app_mot_lan(client, serial, package)
             muc.append(ads)
+            lech = muc_sdk_lech(sdk, sdk_log)
+            if lech:
+                muc.append(lech)
             sdk = sdk or sdk_log
         except (AdbError, RcError) as exc:
             muc.append(_muc("Ads dùng ID thật", CANH_BAO, f"không mở được app để kiểm: {exc}"))
     muc.append(muc_sdk(sdk, ep_nextgen))
     nhanh = "nextgen" if ep_nextgen or sdk_probe.la_nextgen(sdk) else "tc"
     if nhanh == "nextgen":
-        muc = noi_long_nextgen(muc)
+        muc = noi_long_nextgen(muc) + [_sheet_id_ads(package, out_dir)]
     else:
         muc += _sheets(package, tc, out_dir)
+    muc.append(muc_plan(package, sdk_khai, sdk_log, out_dir))
     muc.append(_ram())
     return {"ok": all(m["trang_thai"] != LOI for m in muc), "muc": muc, "sdk": sdk, "nhanh": nhanh}
 
