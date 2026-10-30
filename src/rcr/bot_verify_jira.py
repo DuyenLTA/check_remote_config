@@ -69,7 +69,9 @@ def phan_loai(uv: list[dict], loai_ban_moi: str, package: str = "") -> tuple[lis
             bo.append((u, "case không chạy lại tự động được — cần verify tay"))
         elif u.get("package") and package and u["package"] != package:
             bo.append((u, f"bug của package {u['package']}, build mới là {package} — cần verify tay"))
-        elif u["loai_ban_goc"] and u["loai_ban_goc"] != loai_ban_moi:
+        # Bug log tu ban debug verify duoc tren ban release (RC doi qua Firebase testvsl, 31/10/2026); chieu nguoc
+        # lai (checklist Next-Gen ban release -> ban debug) van can verify tay.
+        elif u["loai_ban_goc"] and u["loai_ban_goc"] != loai_ban_moi and                 (u["loai_ban_goc"], loai_ban_moi) != ("debug", "release"):
             bo.append((u, f"bug từ bản {u['loai_ban_goc']}, build mới là bản {loai_ban_moi} — cần verify tay"))
         else:
             chay.append(u)

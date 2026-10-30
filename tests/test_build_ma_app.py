@@ -7,6 +7,11 @@ import pytest
 
 from rcr import build_ma_app as b
 
+
+def _nhanh(tin):
+    """Nhanh cham theo tin build (truoc 31/10/2026 trung voi loai ban cai)."""
+    return "release" if b.la_next_gen(tin) else "debug"
+
 # Hai tin that kenh build 27/10/2026 (bo mention ten nguoi).
 TIN_REVERT = ("Bản build AIP882---AI-Video v4.3.0 (40) đã được hoàn thiện. Please check\n"
               "apply tutorial 3.6.1 (revert next-gen)\n"
@@ -20,14 +25,14 @@ def test_tin_revert_next_gen_can_ban_debug():
     tin = b.tach(TIN_REVERT)
     assert tin == {"ma": "AIP882", "ten": "AI-Video", "version": "4.3.0 (40)",
                    "next_gen": False, "tutorial": "3.6.1", "sdk": True}
-    assert b.loai_ban(tin) == "debug"
+    assert _nhanh(tin) == "debug"
 
 
 def test_tin_apply_next_gen_cai_ban_release():
     tin = b.tach(TIN_NEXT_GEN)
     assert (tin["ma"], tin["version"], tin["next_gen"], tin["tutorial"]) == \
         ("ADA895", "3.0.0 (22)", True, "3.7.0")   # khong lay so trong link
-    assert b.loai_ban(tin) == "release"
+    assert _nhanh(tin) == "release"
 
 
 @pytest.mark.parametrize("ghi_chu, loai", [
@@ -40,7 +45,7 @@ def test_tin_apply_next_gen_cai_ban_release():
 ])
 def test_loai_ban_theo_ghi_chu(ghi_chu, loai):
     tin = b.tach(f"Bản build AIP924---LingoSpeak v1.2.0 (12) đã được hoàn thiện.\n{ghi_chu}")
-    assert b.loai_ban(tin) == loai
+    assert _nhanh(tin) == loai
 
 
 # Tin that kenh build 28/10/2026 - mau moi, khong con chu "Ban build".
@@ -56,13 +61,13 @@ def test_tin_mau_moi_da_len_qa():
     tin = b.tach(TIN_MAU_MOI)
     assert tin == {"ma": "AIP922", "ten": "", "version": "3.7.0 (30)", "next_gen": None, "tutorial": "3.7.0",
                    "sdk": True}
-    assert b.loai_ban(tin) == "release"
+    assert _nhanh(tin) == "release"
 
 
 def test_mau_moi_khong_lay_version_app_lam_tutorial():
     tin = b.tach("AIP922 v2.1.0 (30) đã lên QA\nv2.1.0 (30) — tutorial-sdk/3.6.1@abc\n- Tutorial SDK 3.6.1")
     assert (tin["version"], tin["tutorial"]) == ("2.1.0 (30)", "3.6.1")
-    assert b.loai_ban(tin) == "debug"
+    assert _nhanh(tin) == "debug"
 
 
 @pytest.mark.parametrize("tin", [
@@ -98,7 +103,7 @@ def test_co_ma_khong_co_version_thi_tach_ra_none_nhung_van_nhan_la_tin_app():
 ])
 def test_ban_sdk_chon_nhanh_theo_so_sdk(ghi_chu, loai):
     tin = b.tach(f"AIP922 v2.0.0 (5) đã lên QA\n{ghi_chu}")
-    assert tin["sdk"] and b.loai_ban(tin) == loai
+    assert tin["sdk"] and _nhanh(tin) == loai
 
 
 @pytest.mark.parametrize("tin", [
@@ -150,11 +155,17 @@ def test_package_lay_theo_tab_ma_app(tmp_path):
 
 def test_tin_khong_co_ten_app():
     tin = b.tach("@An Duyên @Nancy\nBản build AIP920 v1.6.0 (7) đã được hoàn thiện. ")
-    assert (tin["ma"], tin["ten"], tin["version"], b.loai_ban(tin)) == ("AIP920", "", "1.6.0 (7)", "debug")
+    assert (tin["ma"], tin["ten"], tin["version"], _nhanh(tin)) == ("AIP920", "", "1.6.0 (7)", "debug")
 
 
 def test_tin_co_in_dam_markdown():
     """Noi dung tho cua tin chuyen tiep (AIP920, 27/10/2026): ma app boc **."""
     tin = b.tach("<@1476079991161880668> <@1260451147215405152>\nBản build **AIP920** v1.6.0 (7) đã được "
                  "hoàn thiện. Please check\n- apply next-gen, apply 3.7.0\nhttps://drive.google.com/drive/folders/18vg")
-    assert (tin["ma"], tin["version"], b.loai_ban(tin)) == ("AIP920", "1.6.0 (7)", "release")
+    assert (tin["ma"], tin["version"], _nhanh(tin)) == ("AIP920", "1.6.0 (7)", "release")
+
+
+def test_luon_cai_ban_release_ke_ca_build_khong_next_gen():
+    """User chot 31/10/2026: bo TC doi RC qua Firebase testvsl, khong bat dev build them ban debug."""
+    tin = b.tach("Bản build AIP886 v2.7.0 (20) đã được hoàn thiện. apply tutorial 3.6.1")
+    assert b.loai_ban(tin) == "release" and not b.la_next_gen(tin)

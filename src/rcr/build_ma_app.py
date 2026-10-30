@@ -94,13 +94,17 @@ def tach(text: str, ma_kenh: str = "") -> dict | None:
     }
 
 
+def la_next_gen(tin: dict) -> bool:
+    """Tin ghi next-gen hoac SDK 3.7.0 / 3.7.1 ma khong revert -> checklist Next-Gen, con lai bo TC theo tab."""
+    if tin.get("next_gen") is False:
+        return False
+    return bool(tin.get("next_gen") or tin.get("tutorial") in NEXT_GEN_TUTORIAL)
+
+
 def loai_ban(tin: dict) -> str:
-    """"release" khi tin ghi next-gen hoac SDK 3.7.0 / 3.7.1 ma khong revert, con lai "debug" (bo TC theo tab)."""
-    if tin["next_gen"] is False:
-        return "debug"
-    if tin["next_gen"] or tin["tutorial"] in NEXT_GEN_TUTORIAL:
-        return "release"
-    return "debug"
+    """Ban cai tu App Tester: luon "release" (user chot 31/10/2026: khong bat dev build them ban debug - bo TC doi
+    Remote Config tren Firebase qua dieu kien `testvsl`, xem rc_firebase). Truoc do ban khong next-gen la "debug"."""
+    return "release"
 
 
 def package_cua(path, ma: str) -> str:

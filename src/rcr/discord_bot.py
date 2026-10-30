@@ -467,12 +467,12 @@ class BuildBot(discord.Client):
         ghi = " (đã gỡ bản cũ khác loại — mất data app)" if cai.get("go_ban_cu") else ""
         await qa.edit(content=f"{dau}\nĐã cài{ghi}. Đang chạy /rc-check…")
         await qa.reply(bot_cong_viec.tin_da_cai(job, ten, "/rc-check"))
-        timeout = (bot_chay_claude.TIMEOUT_NEXT_GEN if job["loai_ban"] == "release"
-                   else bot_chay_claude.TIMEOUT_BO_TC)
+        next_gen = build_ma_app.la_next_gen(job)
+        timeout = bot_chay_claude.TIMEOUT_NEXT_GEN if next_gen else bot_chay_claude.TIMEOUT_BO_TC
         bat_dau = time.time()
-        # Ban release chi cai khi tin build ghi next-gen (build_ma_app.loai_ban) -> ep rc-check nhanh checklist.
+        # Tin build ghi next-gen -> ep rc-check nhanh checklist; con lai bo TC (ban release doi RC qua Firebase).
         kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, REPO, timeout, OUT,
-                                     None, job["loai_ban"] == "release", job.get("tutorial") or "")
+                                     None, next_gen, job.get("tutorial") or "")
         chu = bot_cong_viec.TRANG_THAI.get(kq["trang_thai"], ("", kq["trang_thai"]))[1]
         await qa.edit(content=f"{dau}\n{chu}")
         f = bot_cong_viec.file_report(kq, OUT)

@@ -92,8 +92,12 @@ def tin_hoi(c: dict) -> str:
     goc = f"\n[Tin build]({c['link_tin']})" if c.get("link_tin") else ""
     if c.get("drive"):                    # QA tra loi kem link Drive (ban debug) -> khong qua App Tester
         return f"{dau_tin(c)}\n📦 tải APK từ link Drive QA gửi rồi chạy /rc-check. Chạy không?{goc}"
-    ghi = {"release": "next-gen → tải bản release",
-           "debug": "không phải next-gen → tải bản có note `debug`"}[c["loai_ban"]]
+    if c.get("loai_ban") == "debug":       # tin luu tu truoc 31/10/2026
+        ghi = "không phải next-gen → tải bản có note `debug`"
+    elif build_ma_app.la_next_gen(c):
+        ghi = "next-gen → tải bản release, chấm checklist Next-Gen"
+    else:
+        ghi = "tải bản release, đổi RC qua điều kiện `testvsl` trên Firebase"
     return f"{dau_tin(c)}\n{ghi} từ App Tester rồi chạy /rc-check. Chạy không?{goc}"
 
 

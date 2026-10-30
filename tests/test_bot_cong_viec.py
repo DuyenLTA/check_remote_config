@@ -11,9 +11,11 @@ CASE = {"ma": "AIP882", "ten": "AI-Video", "version": "4.3.0 (40)",
         "loai_ban": "debug", "link_tin": "https://discord.com/channels/1/2/3"}
 
 
-@pytest.mark.parametrize("loai, chu", [("debug", "note `debug`"), ("release", "bản release")])
-def test_tin_hoi_co_link_tin_goc_va_loai_ban(loai, chu):
-    t = v.tin_hoi({**CASE, "loai_ban": loai})
+@pytest.mark.parametrize("them, chu", [({"loai_ban": "debug"}, "note `debug`"),
+                                       ({"loai_ban": "release", "next_gen": True}, "checklist Next-Gen"),
+                                       ({"loai_ban": "release", "tutorial": "3.6.1"}, "testvsl")])
+def test_tin_hoi_co_link_tin_goc_va_loai_ban(them, chu):
+    t = v.tin_hoi({**CASE, **them})
     assert "AIP882" in t and "4.3.0 (40)" in t and chu in t and "channels/1/2/3" in t
 
 

@@ -52,7 +52,10 @@ def test_checklist_chay_duoc_va_chi_mot_nhom_moi_luot():
     assert [u["key"] for u in chay] == ["A-1", "A-2"] and [u["key"] for u, _ in bo] == ["A-3"]
     chay, bo = v.phan_loai([ck("A-1", "EV-07"), ck("A-3", "a#1")], "debug")     # hoa -> TC
     assert [u["key"] for u in chay] == ["A-3"] and "Verify bug Jira" in bo[0][1]
+    # Bug tu ban debug verify duoc tren ban release (doi RC qua Firebase testvsl, 31/10/2026); nguoc lai thi khong.
     chay, bo = v.phan_loai([ck("A-1", "EV-07")], "release")
+    assert [u["key"] for u in chay] == ["A-1"] and bo == []
+    chay, bo = v.phan_loai([{**ck("A-1", "EV-07"), "loai_ban_goc": "release"}], "debug")
     assert chay == [] and "release" in bo[0][1]
 
 
