@@ -381,6 +381,28 @@ def test_cau_tat_quang_cao_khong_map_duoc_key_thi_khong_duoc_chay_tiep():
     assert "Remote native OB2 = OFF" in d.needs_human
 
 
+WL_354 = frozenset({"enable_all_ads", "show_303_onb3_n_native_high", "auto_swipe_onb3"})
+
+
+def test_key_rc_ma_ban_build_khong_co_thi_khong_chan_ca_case():
+    """TC 3.5.4 dat `reload_303_onb3_n_native_high` cho moi case; build SDK cu khong co
+    tinh nang nay (khong co chuoi trong APK) -> bo key do, chay cac key con lai."""
+    d = ex("enable_all_ads=true\nshow_303_onb3_n_native_high=true\n"
+           "enable_inter_splash_2_screen=true\nreload_303_onb3_n_native_high=true\n"
+           "auto_swipe_onb3=false", WL_354)
+    assert d.runnable
+    assert d.overrides == {"enable_all_ads": "true", "show_303_onb3_n_native_high": "true",
+                           "auto_swipe_onb3": "false"}
+    assert "reload_303_onb3_n_native_high" in d.ignored
+
+
+def test_key_go_sai_gan_giong_key_app_van_bi_chan():
+    """`show_303_onb3_native_high` thieu `_n` - bo qua la cham tren may con bat ad 303."""
+    d = ex("enable_all_ads=true\nshow_303_onb3_native_high=false", WL_354)
+    assert not d.runnable
+    assert "show_303_onb3_native_high" in d.needs_human
+
+
 def test_param_analytics_trung_tu_ads_khong_bi_coi_la_cong_tac():
     """`source = ads_screen` co chu "ads" nhung khong bat/tat gi - van chay."""
     d = extract(case("enable_feature_aialbum = true, source = ads_screen"), WL)

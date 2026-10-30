@@ -99,6 +99,17 @@ def test_ad_vi_tri_khac_show_khong_tinh_cho_vi_tri_trong_cau():
 DA_TAP = {"steps": [{"n": 1, "action": {"kind": "tap"}, "activity": "HomeActivity", "dump": ""}]}
 
 
+def test_ma_vi_tri_gach_duoi_khong_lay_ad_vi_tri_khac():
+    """TC 3.5.4 viet `502_native_high`: truoc kia khong nhan ma -> PASS bang native 201."""
+    ads = {"units": {"native:*****877": {"type": "native", "unit": "*****877", "requested": 1,
+                                         "loaded": 1, "shown": 1, "impressions": 1,
+                                         "rc_keys": ["id_201_lfo1_n_native_high"]}},
+           "positions": ["201_lfo1_n_native_high"]}
+    out = a.check("Native full resume 502_native_high hiển thị kèm icon close; bấm close → về Home.",
+                  ads, DA_TAP, OK_CRASH)
+    assert out["verdict"] != a.PASS
+
+
 def test_khong_co_request_nao_thi_FAIL_khi_da_lai_toi_man():
     out = check("Native hiển thị trên Splash", ads=ADS_NO_BANNER, drive=DA_TAP)
     assert out["verdict"] == a.FAIL

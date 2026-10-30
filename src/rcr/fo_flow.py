@@ -81,6 +81,23 @@ def nut_dong_ad(serial: str, nodes: list, bay_gio: float | None = None):
     return node
 
 
+# Ad TEST ma khong doc duoc nut dong (X ve trong WebView, khong co node): cho het thoi gian toi thieu
+# cua inter roi BACK. Chi ad test - ad that van chi bam dung nut dong (BACK tren inter that = ad_click).
+CHO_BACK_AD_TEST = 9.0
+
+
+def nen_back_ad_test(serial: str, nodes: list, bay_gio: float | None = None) -> bool:
+    """Goi SAU `nut_dong_ad` tra None: True khi nen BACK de dong ad test khong co node nut dong."""
+    if not fo_steps.la_ad_test(nodes):
+        return False
+    now = time.monotonic() if bay_gio is None else bay_gio
+    bat_dau = _AD.get(serial, (now, None, now))[0]
+    if now - bat_dau < CHO_BACK_AD_TEST:
+        return False
+    _AD.pop(serial, None)
+    return True
+
+
 async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
     """Dong ad toan man con che sau case chi quan sat -> mo ta da bam, "" neu khong can/khong thay nut.
 
@@ -94,10 +111,14 @@ async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
         _pkg, activity = await device_app.focus(client, serial)
         if "AdActivity" not in activity:
             return ""
-        node = nut_dong_ad(serial, ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial))))
+        nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)))
+        node = nut_dong_ad(serial, nodes)
         if node:
             await _tap(client, serial, node)
             return f"dong quang cao con che man ({node.label})"
+        if nen_back_ad_test(serial, nodes):
+            await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+            return "dong quang cao test con che man bang BACK (nut X khong co node)"
         if asyncio.get_running_loop().time() >= het:
             return ""
         await asyncio.sleep(POLL_SECONDS)
@@ -148,6 +169,9 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
         return f"nut tiep tuc ({node.label})", True
     if step.get("tap_close_ad"):
         node = nut_dong_ad(serial, nodes)
+        if not node and nen_back_ad_test(serial, nodes):
+            await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+            return "dong quang cao test bang BACK (nut X khong co node)", True
         if not node:
             return "", True   # chua thay nut dong: vong sau cho them roi tim lai, khong bam mu
         await _tap(client, serial, node)

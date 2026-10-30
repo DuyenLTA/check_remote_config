@@ -47,6 +47,17 @@ CLOSE_DESCS = ("close", "dismiss", "đóng")
 AD_CLOSE_IDS = ("dismiss-button",)
 AD_CLOSE_WORDS = re.compile(r"^(close|close ad|đóng|skip|skip ad|bỏ qua|continue to app|tiếp tục.*ứng dụng|"
                             r"interstitial close button|×)$", re.I)
+# Nhan GMA in tren creative khi may la test device ("Test Ad" / "Quảng cáo thử nghiệm"). Mot so creative
+# (video WebView, Photogen 1.0.0 30/10/2026) ve nut X ma KHONG co node nao trong cay UI -> find_close_ad
+# khong bao gio thay. Ad test thi BACK dong an toan (khong tinh traffic that), ad that thi van khong BACK.
+AD_TEST_LABEL = re.compile(r"^(test ad|quảng cáo thử nghiệm)$", re.I)
+
+
+def la_ad_test(nodes: list[DeviceNode]) -> bool:
+    """Man AdActivity dang hien quang cao TEST cua GMA (co nhan test ad)."""
+    return any(AD_TEST_LABEL.match(n.text.strip()) for n in nodes if n.visible)
+
+
 # Dem nguoc cua quang cao toan man. Cau "... sau/in N s", "N giây" -> dem nguoc o dau tren man cung tinh. So tron
 # 1-2 chu so chi tinh khi nam DE / SAT nut dong (dong ho dem hien tai cho nut dong): Sorapix 24/10/2026 co so "1"
 # o thanh "More" canh nut Dong (so trang carousel) trong khi nut Dong da bam duoc.

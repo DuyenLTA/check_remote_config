@@ -251,3 +251,32 @@ def test_vuot_sang_trang_dich_thi_doc_lai_som(monkeypatch):
     out, _ = _walk_qua(monkeypatch, [_trang(1), _trang(2), _trang(3)], nghi)
     assert out["reached"]
     assert nghi == [fo_flow.POLL_SECONDS, fo_flow.SETTLE_SECONDS]
+
+
+# Inter test cua GMA (Photogen 1.0.0, 30/10/2026): nut X ve trong WebView, cay UI chi co nhan
+# "Quảng cáo thử nghiệm" + CTA, khong co node nut dong nao.
+AD_TEST_KHONG_NUT = """<?xml version='1.0' encoding='UTF-8'?>
+<hierarchy rotation="0">
+  <node index="0" class="android.widget.FrameLayout" package="com.ai.app" resource-id="android:id/content"
+        text="" content-desc="" bounds="[0,0][1080,2400]" clickable="false" enabled="true">
+    <node index="0" class="android.view.View" package="com.ai.app" resource-id="adContainer"
+          text="" content-desc="" bounds="[0,0][1080,2400]" clickable="false" enabled="true">
+      <node index="0" class="android.view.View" package="com.ai.app" resource-id=""
+            text="" content-desc="Tìm Hiểu Thêm" bounds="[214,2007][866,2128]" clickable="true" enabled="true" />
+    </node>
+    <node index="1" class="android.widget.TextView" package="com.ai.app" resource-id=""
+          text="Quảng cáo thử nghiệm" content-desc="" bounds="[297,0][782,64]" clickable="false" enabled="true" />
+  </node>
+</hierarchy>
+"""
+
+
+def test_ad_test_khong_co_node_nut_dong_van_nhan_ra_la_ad_test():
+    ns = nodes(AD_TEST_KHONG_NUT)
+    assert fo_steps.find_close_ad(ns, cho_dem_nguoc=False) is None
+    assert fo_steps.la_ad_test(ns)
+    assert fo_steps.la_ad_test(nodes(AD_TEST_KHONG_NUT.replace("Quảng cáo thử nghiệm", "Test Ad")))
+
+
+def test_ad_that_khong_phai_ad_test():
+    assert not fo_steps.la_ad_test(nodes(AD_TEST_KHONG_NUT.replace("Quảng cáo thử nghiệm", "Sponsored")))

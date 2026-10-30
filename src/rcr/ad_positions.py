@@ -17,7 +17,10 @@ POSITION_RE = re.compile(r"\b\d{3}\b|splash|home|onboarding|lfo|ob\d|result|tab\
 POS_CODE_RE = re.compile(r"\b(\d{3})\b")
 # Ma day du trong cau TC: "303-onb3-n-native-high1" -> khop key RC
 # `id_303_onb3_n_native_high1`. Chi co 3 so ("105", "tren splash") thi lay so.
-TC_CODE_RE = re.compile(r"\b\d{3}(?:-[a-z0-9]+)+", re.I)
+# TC viet ca dang gach duoi ("502_native_high", "305_onb5_n_native_high"): truoc day
+# khong nhan -> token rong -> lay moi vi tri case bat -> dong resume 502 PASS gia
+# bang native 201 (do 2026-10-30, TC SDK 3.5.4 R02-06/R04-03).
+TC_CODE_RE = re.compile(r"\b\d{3}(?:[-_][a-z0-9]+)+", re.I)
 
 
 def _position_token(text: str) -> str:

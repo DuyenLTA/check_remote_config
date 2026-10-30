@@ -6,6 +6,7 @@ key; file nay noi tung dau hieu "cho nay khong duoc doan" trong ra sao.
 
 from __future__ import annotations
 
+import difflib
 import re
 
 from . import rc_unit_codes
@@ -40,6 +41,8 @@ def cong_tac_ads_chua_map(text: str, found: dict, ignored, whitelist) -> list[st
     for key in ignored:
         if not ONOFF_RE.match(found.get(key, "")):
             continue
+        if _key_rc_app_khong_co(key, whitelist):
+            continue
         for ve in re.split(r"[\n;]", text):
             if not re.search(rf"\b{re.escape(key)}\b", ve) or not AD_WORDS_RE.search(ve):
                 continue
@@ -51,6 +54,25 @@ def cong_tac_ads_chua_map(text: str, found: dict, ignored, whitelist) -> list[st
             out.append(ve.strip())
             break
     return out
+
+
+# Ten key RC that: chu thuong, it nhat 3 khuc noi bang `_` (`reload_303_onb3_n_native_high`).
+# `OB2`, `native_ob2` khong du dang nay -> van la van xuoi can chan.
+RC_KEY_RE = re.compile(r"[a-z][a-z0-9]*(?:_[a-z0-9]+){2,}")
+
+
+def _key_rc_app_khong_co(key: str, whitelist) -> bool:
+    """Key viet dung dang ten RC ma app khong co, va khong gan giong key nao cua app.
+
+    Bo TC 3.5.4 dat `enable_inter_splash_2_screen`, `reload_202_lfo2_n_native_high`
+    cho moi case; ban build co SDK cu hon khong co tinh nang do (khong co ca chuoi
+    trong APK) -> chan ca case la chan oan 22/38 case (Photo Slideshow 1.0.0,
+    30/10/2026). Key gan giong key app (go sai mot ky tu) thi van chan: bo qua no
+    la cham tren may con bat quang cao.
+    """
+    if not RC_KEY_RE.fullmatch(key):
+        return False
+    return not difflib.get_close_matches(key, list(whitelist), n=1, cutoff=0.9)
 
 
 def mentioned(text: str, whitelist) -> set[str]:

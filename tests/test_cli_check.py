@@ -358,6 +358,21 @@ def test_app_khong_doc_key_thi_KEY_NOT_USED_va_khong_mo_app(adb_ui, monkeypatch,
     assert not adb_ui.cmds_with("force-stop") and not adb_ui.cmds_with("push")
 
 
+def test_mot_key_phu_app_khong_doc_thi_bo_key_do_chay_tiep(adb_ui, monkeypatch, capsys):
+    """Bo TC dat ca bo config moi case; mot key app khong doc khong chan ca case."""
+    async def check(client, serial, package, keys, cache_dir):
+        return {k: k != "splash_banner_change" for k in keys}
+
+    monkeypatch.setattr(dex_check, "check", check)
+    monkeypatch.setattr(cli_check, "AdbClient", lambda _p=None: adb_ui)
+    code = cli_check.main(["--package", PKG, "--set", "enable_onb3_screen=false",
+                           "--set", "splash_banner_change=false"])
+    out = json.loads(capsys.readouterr().out.strip())
+    assert code == 0
+    assert out["run"]["verdict"] == "CONFIG_OK"
+    assert out["run"]["keys_not_used"] == ["splash_banner_change"]
+
+
 def test_app_co_doc_key_thi_chay_binh_thuong(adb_ui, monkeypatch, capsys):
     async def check(client, serial, package, keys, cache_dir):
         return {k: True for k in keys}

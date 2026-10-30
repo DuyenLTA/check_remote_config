@@ -226,16 +226,25 @@ async def run_case(
     """
     # Key nen (cong tac tong ads) la moi truong, khong soi DEX - xem rc_guards.
     keys = sorted({k for r in runs for k in r} - set(rc_guards.NEN_ADS))
+    unused: list[str] = []
     if dex:
         log_fn(f"Soi {len(keys)} key trong DEX cua app...")
         used = await dex_check.check(client, baseline.serial, baseline.package, keys, out_dir)
         unused = [k for k, ok in used.items() if not ok]
-        if unused:
+        if unused and len(unused) == len(keys):
             # Key co trong config Firebase KHAC voi app doc key do: template dung
             # chung nhieu app. Chay tiep la cham mot thu app chang he doc.
             log_fn("  app KHONG doc: " + ", ".join(unused) + " -> KEY_NOT_USED, khong mo app")
             return {"verdict": "KEY_NOT_USED", "keys_not_used": unused, "runs": []}, baseline
-        log_fn("  app co doc het cac key nay")
+        if unused:
+            # Bo TC dat ca bo config (50+ key) moi case; mot key phu app khong doc
+            # khong duoc chan ca case - truoc day 13/13 case R01 cua TC 3.5.4 ra
+            # KEY_NOT_USED chi vi `show_native_full_button_skip`. Bo rieng key do,
+            # ghi lai `keys_not_used` de report noi ro dong nao dua vao key app khong doc.
+            log_fn("  app KHONG doc: " + ", ".join(unused) + " -> bo key nay, chay tiep cac key con lai")
+            runs = [{k: v for k, v in r.items() if k not in unused} for r in runs]
+        else:
+            log_fn("  app co doc het cac key nay")
 
     reset = await device_reset.prepare(client, baseline, precondition, user_state, log_fn)
     log_fn(f"Reset: {reset['mode']}" + (f" (khop '{reset['matched']}')" if reset["matched"] else ""))
@@ -245,6 +254,8 @@ async def run_case(
 
     out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
                             log_fn, man_can, precondition, runtime)
+    if unused:
+        out["keys_not_used"] = unused
     return out | {"reset": reset}, baseline
 
 
