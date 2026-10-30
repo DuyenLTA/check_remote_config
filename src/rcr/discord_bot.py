@@ -111,11 +111,8 @@ class BuildBot(discord.Client):
         asyncio.create_task(bot_keo_sprint.vong_lap(self))   # bug log luc chua co sprint -> keo vao sprint moi
 
     async def on_ready(self):
-        """Lan ket noi dau cua tien trinh: phat lai tin build bi lo trong luc bot tat (on_ready con chay lai
-        moi lan reconnect - chi quet mot lan)."""
-        if getattr(self, "_da_quet_tin_lo", False):
-            return
-        self._da_quet_tin_lo = True
+        """Moi lan ket noi (ca reconnect sau mat mang - session bi huy thi Discord khong gui lai tin cu, 30/10/2026):
+        phat lai tin build bi lo. Build da hoi roi thi tu bo, quet lai khong hoi trung."""
         try:
             log.info("quet tin build bi lo: %d tin", await bot_bat_tin_lo.quet(self))
         except Exception:                    # noqa: BLE001 - quet loi khong duoc lam chet bot
