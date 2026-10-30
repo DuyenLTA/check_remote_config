@@ -181,5 +181,5 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
 
 
 def whitelist_of(baseline) -> frozenset[str]:
-    """Whitelist = dung tap key app that su co. Khong hardcode."""
-    return frozenset(baseline.configs)
+    """Whitelist = dung tap key app that su co (server khai + app doc trong DEX). Khong hardcode."""
+    return frozenset(baseline.configs) | baseline.dex_keys

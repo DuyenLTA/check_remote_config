@@ -40,7 +40,10 @@ def build_writes(
     Thuan ham -> test duoc het cac luat khong can device.
     """
     # `<absent>` = xoa key: key khong co san thi cung da "vang" roi, khong loi.
-    unknown = sorted(k for k, v in overrides.items() if k not in baseline.configs and v != ABSENT)
+    # Key server chua khai ma app co doc (dex_keys) chi ghi vao activate - mirror
+    # khong co node cho no.
+    unknown = sorted(k for k, v in overrides.items()
+                     if k not in baseline.configs and k not in baseline.dex_keys and v != ABSENT)
     if unknown:
         raise RcError(
             "Key khong co trong remote config cua app: " + ", ".join(unknown) + ".\n"

@@ -179,3 +179,11 @@ def test_hop_quet_moi_hang_deu_co_nut_chap_nhan(ten, doi):
 def test_khong_bam_nut_tu_choi():
     nodes = dump("playprotect_looks_safe")
     assert s.nut_chap_nhan(nodes).text == "Install"
+
+
+def test_khoa_ban_khong_doi_khi_mo_rong_note():
+    """Note rut gon (dau cach) va note day du (xuong dong) cua cung release phai cung khoa."""
+    gon = {"version": "2.7.0 (20)", "ngay": "Oct 27, 2026 at 10:26 AM",
+           "note": "2.7.0 (20) Tutorial SDK 3.7.0 → 3.6.1 (case C, downgrade)"}
+    du = {**gon, "note": "2.7.0 (20)\nTutorial SDK 3.7.0 → 3.6.1 (case C, downgrade)\n- revert GMA"}
+    assert s.khoa_ban(gon) == s.khoa_ban(du)

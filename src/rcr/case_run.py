@@ -16,6 +16,7 @@ gia tri that nua.
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 
 from . import (
     act_compound,
@@ -250,7 +251,9 @@ async def run_case(
     log_fn(f"Reset: {reset['mode']}" + (f" (khop '{reset['matched']}')" if reset["matched"] else ""))
     if reset["baseline_stale"]:
         log_fn("  app da bi xoa data -> doc lai baseline")
-        baseline = await rc_baseline.read(client, baseline.serial, baseline.package)
+        # Doc lai tu may thi mat dex_keys (chi do duoc bang soi APK) -> mang sang.
+        baseline = replace(await rc_baseline.read(client, baseline.serial, baseline.package),
+                           dex_keys=baseline.dex_keys)
 
     out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
                             log_fn, man_can, precondition, runtime)

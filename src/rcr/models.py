@@ -46,6 +46,10 @@ class RcBaseline:
     # file vsl_* co 0 key giao -> state noi bo app, TUYET DOI khong ghi vao.
     non_mirror_files: tuple[str, ...] = ()
     write_mode: str = "run-as"  # run-as | root | su
+    # Key server chua khai (khong co trong `configs`) nhung app CO doc - chuoi key
+    # nam trong DEX, app dung gia tri mac dinh trong code. Bo TC dat key nay
+    # (`onboard_config_content_new` cua SDK 3.6.1) thi phai ghi them vao activate.
+    dex_keys: frozenset[str] = frozenset()
 
     @property
     def mirrored_keys(self) -> frozenset[str]:

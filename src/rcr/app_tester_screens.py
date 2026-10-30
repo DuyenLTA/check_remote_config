@@ -188,5 +188,7 @@ def chon_ban(cac: list[dict], version: str, loai: str) -> tuple[dict | None, str
 
 
 def khoa_ban(b: dict) -> tuple[str, str, str]:
-    """Khoa de gop release qua nhieu lan cuon (cung release hien o 2 dump)."""
-    return b["version"], b["ngay"], b["note"][:40]
+    """Khoa de gop release qua nhieu lan cuon (cung release hien o 2 dump). Note rut gon thay xuong dong bang
+    dau cach, note day du (release dang mo) giu xuong dong -> chuan hoa khoang trang, khong thi mo rong xong
+    khong nhan ra release vua doc (AIP886 2.7.0 (20) 30/10/2026: "khong mo duoc release")."""
+    return b["version"], b["ngay"], " ".join(b["note"].split())[:40]

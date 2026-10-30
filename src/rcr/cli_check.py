@@ -24,7 +24,8 @@ import time
 from pathlib import Path
 
 from . import (
-    ad_units, case_run, cham_tay, luot_file, preflight, rc_baseline, run_batch, sdk_probe, discord_notify,
+    ad_units, case_run, cham_tay, luot_file, preflight, rc_baseline, rc_dex_keys, run_batch, sdk_probe,
+    discord_notify,
     discord_run_message, tc_select, tc_source,
 )
 from .adb_client import AdbClient
@@ -169,6 +170,8 @@ async def run(args: argparse.Namespace) -> dict:
     expects: tuple[str, ...] = ()
     if args.set:
         runs = (parse_sets(args.set),)
+        if not args.no_dex_check:
+            baseline = await rc_dex_keys.bo_sung(client, baseline, runs[0], args.out_dir, _log)
     if args.tc:
         tc_nguon = args.tc
         if tc_source.la_link(args.tc):
@@ -207,6 +210,14 @@ async def run(args: argparse.Namespace) -> dict:
         # sheet von khong chia ban, truyen vao la doi cach chon case.
         rows, runnable, notes = tc_select.load_cases(
             args.tc, baseline, "" if chi_de_hien else sdk, args.tab)
+        bi_loai = {k for r in rows for k in r.get("ignored") or ()}
+        if bi_loai and not args.no_dex_check:
+            # Key TC dat ma server chua khai: app doc trong DEX thi nap lai bo TC voi key do.
+            moi = await rc_dex_keys.bo_sung(client, baseline, bi_loai, args.out_dir, _log)
+            if moi.dex_keys != baseline.dex_keys:
+                baseline = moi
+                rows, runnable, notes = tc_select.load_cases(
+                    args.tc, baseline, "" if chi_de_hien else sdk, args.tab)
         out["tc"] = {
             "file": args.tc, "sdk": sdk, "sdk_source": source, "notes": notes,
             "total": len(rows), "runnable": len(runnable), "cases": rows,
