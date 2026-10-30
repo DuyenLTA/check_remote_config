@@ -410,6 +410,17 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
    - Ubuntu: `bash deploy/cai-bot-linux.sh` (systemd user service, log `journalctl --user -u rcr-bot -f`)
    - Windows: `powershell -ExecutionPolicy Bypass -File deploy\cai-bot-windows.ps1` (Task Scheduler, log `out/bot-run.log`)
 
+**Thêm máy tính phụ (vd Ubuntu) chạy chung một bot, không trùng:** chỉ **một** máy là bot chính — đọc tin build, hỏi
+QA, xử lý nút, giữ hàng đợi. Máy phụ dùng **cùng token**, không đọc tin build; máy test cắm vào nó rảnh thì xin job
+từ bot chính qua một kênh điều phối riêng, tự cài + chạy `/rc-check`, kết quả vẫn hiện ở qa-auto như máy của bot chính
+(tên máy ghi `… @<tên máy phụ>`).
+1. Tạo một kênh riêng (chỉ bot + QA thấy), lấy ID → `DISCORD_DIEU_PHOI_CHANNEL_ID=<id>` ở **cả hai** máy.
+2. Máy phụ thêm vào `bot.env`: `RCR_VAI_TRO=phu`, `RCR_TEN_MAY=ubuntu` (mỗi máy phụ một tên), cùng các biến như bot
+   chính (token, kênh QA, Jira, `DISCORD_DEV_THEO_ASSIGNEE`, `RC_PLAN_TUAN_SHEET`…). Máy phụ cũng cần `adb`, `claude`
+   đã đăng nhập, repo `android-ad-audit`.
+3. Bật máy phụ như bot thường (`deploy/cai-bot-linux.sh`). Khởi động lại máy phụ giữa lượt → job đó về hàng, chạy lại.
+   Máy phụ tắt hẳn giữa lượt thì job đứng ở trạng thái đang chạy tới khi máy phụ bật lại.
+
 **Bản debug từ Google Drive:** QA **trả lời (Reply) vào tin hỏi của bot** kèm link Drive của file `.apk` (file để
 "Ai có link đều xem được"). Bot gắn link vào build đó, tin hỏi đổi thành "📦 tải APK từ link Drive" → bấm **Check** /
 **Verify** thì bot tải APK từ link rồi `adb install` thay cho App Tester. APK khác chữ ký bản đang cài → gỡ rồi cài

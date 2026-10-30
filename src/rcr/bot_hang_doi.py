@@ -111,8 +111,9 @@ class HangDoi:
         return next((i + 1 for i, j in enumerate(self.jobs) if j["msg_id"] == msg_id), None)
 
     def lay(self) -> dict | None:
-        """Job dau tien chua chay (khong xoa khoi hang toi khi `xong`). Moi may ranh goi mot lan."""
-        job = next((j for j in self.jobs if j["msg_id"] not in self.dang_chay), None)
+        """Job dau tien chua chay (khong xoa khoi hang toi khi `xong`). Moi may ranh goi mot lan.
+        `dang_o` (job da giao cho may tinh phu, luu ca qua lan khoi dong lai) cung la dang chay."""
+        job = next((j for j in self.jobs if j["msg_id"] not in self.dang_chay and not j.get("dang_o")), None)
         if job is not None:
             self.dang_chay.add(job["msg_id"])
         return job

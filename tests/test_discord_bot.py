@@ -426,3 +426,22 @@ def test_tin_build_cua_dev_duoc_tha_tim_tin_qa_gui_lai_thi_khong(monkeypatch):
     m, tha = tin(8, "aip882-artspire-official-group")
     asyncio.run(bot.on_message(m))
     assert tha == []
+
+
+def test_may_phu_bo_qua_tin_build_va_nut_chi_nghe_kenh_dieu_phoi(monkeypatch):
+    bot = object.__new__(d.BuildBot)
+    bot.vai_tro, bot.dieu_phoi, bot.kenh_qa, bot.kenh_build = "phu", 77, 1, {1}
+    nhan = []
+
+    async def nhan_dieu_phoi(m):
+        nhan.append(m)
+    bot._nhan_dieu_phoi = nhan_dieu_phoi
+    monkeypatch.setattr(d.bot_hoi_dap, "la_cau_hoi", lambda b, m: (_ for _ in ()).throw(AssertionError("khong hoi dap")))
+    tin_build = SimpleNamespace(author=SimpleNamespace(bot=True, id=5), webhook_id=4, guild=SimpleNamespace(id=9),
+                                channel=SimpleNamespace(id=8, name="aip882-x"), content="AIP882 v4.4.0 (41)")
+    asyncio.run(bot.on_message(tin_build))
+    assert nhan == []
+    dieu_phoi = SimpleNamespace(channel=SimpleNamespace(id=77), content="RCR giao ubuntu")
+    asyncio.run(bot.on_message(dieu_phoi))
+    assert nhan == [dieu_phoi]
+    asyncio.run(bot.on_interaction(SimpleNamespace(data={"custom_id": "rcr:check:1"})))   # khong tra loi nut

@@ -24,12 +24,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 import time
 from pathlib import Path
 
 import discord
 
-from . import (audit_tom_tat, bot_bat_tin_lo, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
+from . import (audit_tom_tat, bot_bat_tin_lo, bot_may_phu, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
                bot_jira_rest, bot_keo_sprint, bot_log_jira, build_ma_app, cai_apk_tu_drive)
 from .adb_client import AdbClient
 from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
@@ -88,6 +89,12 @@ def _view_bug(bugs: list[dict], chon: list[int], msg_id: int) -> discord.ui.View
 class BuildBot(discord.Client):
     duyet: frozenset[int] = frozenset()    # mac dinh khi chua __init__ (test); __init__ doc tu env
     role = 0
+    dieu_phoi = 0                           # kenh dieu phoi may phu (0 = khong dung)
+    vai_tro = "chinh"
+
+    @property
+    def la_phu(self) -> bool:
+        return self.vai_tro == "phu"
 
     def __init__(self):
         intents = discord.Intents.default()
@@ -97,7 +104,15 @@ class BuildBot(discord.Client):
         self.kenh_qa = int(env("DISCORD_QA_CHANNEL_ID"))
         self.duyet = {int(x) for x in env("DISCORD_DUYET_USER_IDS").split(",") if x.strip()}
         self.role = int(env("DISCORD_QA_ROLE_ID") or 0)
-        self.q = bot_hang_doi.HangDoi(OUT / "bot-hang-doi.json")
+        # May phu (bot_may_phu): cung token, khong doc tin build, chi chay job bot chinh giao.
+        self.vai_tro = env("RCR_VAI_TRO") or "chinh"
+        self.ten_may = env("RCR_TEN_MAY") or socket.gethostname()
+        self.dieu_phoi = int(env("DISCORD_DIEU_PHOI_CHANNEL_ID") or 0)
+        self.out = OUT
+        self.xin_cho: dict[tuple[str, str], str] = {}   # bot chinh: (may phu, serial) -> ten may test dang ranh
+        self.da_xin: dict[str, float] = {}               # may phu: serial -> luc xin job
+        self.may_san: set[str] = set()                   # may phu: serial dang cam, ready
+        self.q = bot_hang_doi.HangDoi(OUT / ("bot-hang-doi-may-phu.json" if self.la_phu else "bot-hang-doi.json"))
         self.ban: dict[str, int] = {}   # serial -> msg_id job dang chay tren may do
         self.reviewer = env("DISCORD_JIRA_REVIEWER")
         self.dang_log: set[int] = set()  # msg_id dang log Jira -> bam Log Jira hai lan khong tao trung
@@ -107,12 +122,24 @@ class BuildBot(discord.Client):
         self.hoi_lock = asyncio.Lock()          # hoi dap: moi lan mot cau
 
     async def setup_hook(self):
+        if self.la_phu:
+            asyncio.create_task(self._vong_may_phu())
+            return
         asyncio.create_task(self.worker())
         asyncio.create_task(bot_keo_sprint.vong_lap(self))   # bug log luc chua co sprint -> keo vao sprint moi
 
     async def on_ready(self):
         """Moi lan ket noi (ca reconnect sau mat mang - session bi huy thi Discord khong gui lai tin cu, 30/10/2026):
         phat lai tin build bi lo. Build da hoi roi thi tu bo, quet lai khong hoi trung."""
+        if self.la_phu:
+            return
+        lan_dau = not getattr(self, "_da_quet_tin_lo", False)
+        self._da_quet_tin_lo = True
+        if lan_dau and self.dieu_phoi:       # may phu xin lai viec ngay, khong doi XIN_LAI
+            try:
+                await bot_may_phu.gui(await self._kenh_dieu_phoi(), "chinh_khoi_dong", {"may": "chinh"})
+            except Exception as exc:         # noqa: BLE001
+                log.warning("khong bao duoc may phu: %s", exc)
         try:
             log.info("quet tin build bi lo: %d tin", await bot_bat_tin_lo.quet(self))
         except Exception:                    # noqa: BLE001 - quet loi khong duoc lam chet bot
@@ -164,7 +191,38 @@ class BuildBot(discord.Client):
                       "hỏi, bot sẽ tải APK từ link này thay cho App Tester.", mention_author=False)
         return True
 
+    async def _kenh_dieu_phoi(self):
+        return self.get_channel(self.dieu_phoi) or await self.fetch_channel(self.dieu_phoi)
+
+    async def _vong_may_phu(self):
+        await self.wait_until_ready()
+        adb = AdbClient()
+
+        async def may():
+            return [d for d in await adb.devices() if d.ready]
+        await bot_may_phu.vong_may_phu(self, await self._kenh_dieu_phoi(), may)
+
+    async def _nhan_dieu_phoi(self, m: discord.Message):
+        """Tin `RCR ...` cua chinh bot (cung token) o kenh dieu phoi; tin khac o kenh nay bo qua."""
+        if self.user is None or m.author.id != self.user.id:
+            return
+        try:
+            goi = await bot_may_phu.doc(m)
+            if goi is None:
+                return
+            if self.la_phu:
+                await bot_may_phu.nhan_o_may_phu(self, *goi, m.channel)
+            else:
+                bot_may_phu.nhan_o_may_chinh(self, *goi)
+        except Exception:                    # noqa: BLE001 - mot tin hong khong duoc giet bot
+            log.exception("tin dieu phoi loi: %s", m.content)
+
     async def on_message(self, m: discord.Message):
+        if self.dieu_phoi and m.channel.id == self.dieu_phoi:
+            await self._nhan_dieu_phoi(m)
+            return
+        if self.la_phu:                      # may phu: tin build / hoi dap la viec cua bot chinh
+            return
         if not m.author.bot and await self._nhan_link_drive(m):
             return
         if bot_hoi_dap.la_cau_hoi(self, m):      # nhan rieng / tag bot -> hoi dap, khong doc nhu tin build
@@ -254,6 +312,8 @@ class BuildBot(discord.Client):
         return user.id in self.duyet or (self.role and any(r.id == self.role for r in getattr(user, "roles", [])))
 
     async def on_interaction(self, it: discord.Interaction):
+        if self.la_phu:                      # nut bam do bot chinh tra loi
+            return
         cid = (it.data or {}).get("custom_id", "")
         if not cid.startswith("rcr:"):
             return
@@ -371,6 +431,11 @@ class BuildBot(discord.Client):
                     break
                 self.ban[d.serial] = job["msg_id"]
                 asyncio.create_task(self._chay_tren(job, d.serial, bot_cong_viec.ten_may(d.serial, d.model)))
+            if self.dieu_phoi:
+                try:
+                    await bot_may_phu.chia_viec(self, await self._kenh_dieu_phoi())
+                except Exception as exc:     # noqa: BLE001 - kenh dieu phoi loi khong chan may cua bot chinh
+                    log.warning("chia viec may phu loi: %s", exc)
             await asyncio.sleep(5)
 
     async def _chay_tren(self, job: dict, serial: str, ten: str):
