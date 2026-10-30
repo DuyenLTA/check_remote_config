@@ -80,6 +80,9 @@ def test_co_ma_khong_co_version_thi_tach_ra_none_nhung_van_nhan_la_tin_app():
     assert b.tach("AIP922 lên QA rồi nhé") is None
     assert b.co_ma_app("AIP922 lên QA rồi nhé")
     assert not b.co_ma_app("<@1476079991161880668> ok nha https://drive.google.com/ABC123")
+    assert b.co_ma_app("Bản build AIP922 đã xong") and b.co_ma_app("AIP922 4.3.0")
+    assert not b.co_ma_app("AIP918")            # chi go ma app trong kenh: noi chuyen
+    assert not b.co_ma_app("AIP918 check giúp chị cái")
 
 
 @pytest.mark.parametrize("ghi_chu, loai", [

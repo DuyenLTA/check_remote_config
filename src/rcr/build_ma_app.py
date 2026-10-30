@@ -31,6 +31,7 @@ TEN_RE = re.compile(r"\s*-+\s*(\S[^\n]*?)\s+v?\s?\d+(?:\.\d+)+\s*[(\[]", re.I)
 SDK_RE = re.compile(r"(?:tutorial|sdk|apply)(?:[\s/_-]*(?:tutorial|sdk))*[\s/_:-]*v?(\d+\.\d+\.\d+)", re.I)
 REVERT_RE = re.compile(r"revert\s+next[\s-]?gen", re.I)
 NEXT_GEN_RE = re.compile(r"next[\s-]?gen", re.I)
+DAU_HIEU_BUILD_RE = re.compile(r"build|bản|\bqa\b|apk|release|debug|\d+\.\d+", re.I)
 LINK_RE = re.compile(r"https?://\S+")
 MENTION_RE = re.compile(r"<[@#][!&]?\d+>")
 # Dau dinh dang markdown Discord: dev go "Ban build **AIP920** v1.6.0 (7)" (do 2026-10-27).
@@ -53,8 +54,11 @@ def ma_cua_kenh(ten: str) -> str:
 
 
 def co_ma_app(text: str) -> bool:
-    """Tin co ma app -> la tin can bot xu ly, doc khong ra version thi phai hoi chu khong bo qua."""
-    return bool(MA_RE.search(_sach(text)))
+    """Tin co ma app VA co dau hieu bao build (chu build/ban/QA/apk/release/debug hoac so version) -> la tin
+    bao build, doc khong ra version thi phai hoi chu khong bo qua. Chi go ma app ('AIP918') la noi chuyen
+    trong kenh, khong hoi (user phan nan 30/10/2026)."""
+    t = _sach(text)
+    return bool(MA_RE.search(t)) and bool(DAU_HIEU_BUILD_RE.search(t))
 
 
 def tach(text: str, ma_kenh: str = "") -> dict | None:
