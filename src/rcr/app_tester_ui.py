@@ -159,7 +159,7 @@ async def mo_chi_tiet(client, serial, package, out_dir: Path):
     for _ in range(LAN_DOI_TRANG):
         if s.man(nodes) == "chi_tiet" and s._co(nodes, "bundle_id", text=package) is not None:
             break
-        thu_lai = s.nut_chu(nodes, "Retry", s.APP_TESTER)
+        thu_lai = s.nut_chu(nodes, s.THU_LAI, s.APP_TESTER)
         if thu_lai is not None:
             await _bam(client, serial, thu_lai, 3)
         else:
@@ -281,11 +281,10 @@ async def _cho_cai_xong(client, serial, package, version, loai, go, out_dir, cai
                          f"(release note không ghi loại)")
         nodes = await _nodes(client, serial)
         man = s.man(nodes)
-        nut = {"hop_cai": s._co(nodes, "button1", package=s.INSTALLER),
-               "pp_quet": s.nut_chu(nodes, "Scan app", s.PLAY_STORE),
-               "pp_an_toan": s.nut_chu(nodes, "Install", s.PLAY_STORE),
-               "oppo_cai": s.nut_chu(nodes, s.OPPO_CAI, s.OPPO_MARKET)}.get(man)
-        la = la + 1 if man in ("khac", "danh_sach", "consent") else 0
+        # Hop cai Android bam theo id; hop quet cua moi hang (chu khac nhau) bam nut dong y bat ky.
+        nut = (s._co(nodes, "button1", package=s.INSTALLER) if man == "hop_cai"
+               else s.nut_chap_nhan(nodes) if man not in ("danh_sach", "chi_tiet", "consent") else None)
+        la = la + 1 if man in ("khac", "danh_sach", "consent") and nut is None else 0
         if nut is not None:
             await _bam(client, serial, nut)
         elif la >= 5:                     # hop cai "Installing…" thoang qua thi khong tinh

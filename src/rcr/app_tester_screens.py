@@ -26,7 +26,19 @@ OPPO_CAI = "Install anyway"
 NUT_BAN = {"download_button": "tai", "open_button": "dang_cai", "downgrade_release": "ha_cap"}
 # `open_button` ghi "Install" khi APK da tai ma chua cai (bam Cancel o hop cai, do
 # 27/10/2026) - cung id voi nut "Open" cua ban dang cai.
-DA_TAI = "Install"
+# Chu tren nut theo ngon ngu may: Pixel 7 de vi-VN (30/10/2026) -> "Cai dat", "Quet ung dung"...
+# khong khop chu tieng Anh -> bot bao "khong co nut Download/Install" / "man la khi dang cai".
+DA_TAI = ("Install", "Cài đặt")
+PP_QUET = ("Scan app", "Quét ứng dụng")
+PP_CAI = ("Install", "Cài đặt")
+THU_LAI = ("Retry", "Thử lại")
+# Moi may quet cai dat mot kieu (Play Protect, OPPO, Xiaomi, Samsung...; tieng Anh/Viet) -> gap hop nao
+# cung chap nhan quet + cai (user chot 30/10/2026). So khop khong phan biet hoa thuong, bo khoang trang.
+CHAP_NHAN = frozenset(c.casefold() for c in (
+    *PP_QUET, *PP_CAI, OPPO_CAI, "Install anyway", "Vẫn cài đặt", "Cài đặt bất kể", "Cài đặt dù sao",
+    "Continue installation", "Tiếp tục cài đặt", "Continue", "Tiếp tục", "Update", "Cập nhật",
+    "Allow", "Cho phép", "OK", "Đồng ý", "Got it", "Đã hiểu", "Install without scanning",
+    "Cài đặt mà không quét", "Scan", "Quét"))
 # Ten build variant dinh lien ("1.4.0 (14) - prodDebug", AIP805 29/10/2026) -> `\bdebug\b` khong khop,
 # ban debug bi coi la release. Cho phep tien to chu cai: debug, prodDebug, devDebug.
 DEBUG_RE = re.compile(r"\b[a-z]*debug\b", re.I)
@@ -42,9 +54,11 @@ def loai_theo_note(note: str) -> str:
     return "release" if RELEASE_RE.search(note) else CHUA_RO
 
 
-def _co(nodes, rid: str = "", text: str = "", package: str = ""):
+def _co(nodes, rid: str = "", text: str | tuple[str, ...] = "", package: str = ""):
+    """`text` la tuple -> khop mot trong cac chu (cung nut o cac ngon ngu may)."""
+    chu = (text,) if isinstance(text, str) else text
     return next((n for n in nodes if (not rid or n.resource_id == rid)
-                 and (not text or n.text == text) and (not package or n.package == package)), None)
+                 and (not text or n.text in chu) and (not package or n.package == package)), None)
 
 
 def man(nodes) -> str:
@@ -61,16 +75,22 @@ def man(nodes) -> str:
     if _co(nodes, "install_status_primary_btn", package=OPPO_MARKET):
         return "oppo_cai"
     if _co(nodes, package=PLAY_STORE):
-        if _co(nodes, text="Scan app", package=PLAY_STORE):
+        if _co(nodes, text=PP_QUET, package=PLAY_STORE):
             return "pp_quet"
-        if _co(nodes, text="Scanning…", package=PLAY_STORE):
-            return "pp_dang_quet"
-        if _co(nodes, text="Install", package=PLAY_STORE):
+        if _co(nodes, text=PP_CAI, package=PLAY_STORE):
             return "pp_an_toan"
+        # Dang quet (chu tuy ngon ngu) -> cho tiep, khong tinh la man la.
+        return "pp_dang_quet"
     return "khac"
 
 
-def nut_chu(nodes, text: str, package: str):
+def nut_chap_nhan(nodes):
+    """Nut dong y cua hop quet / cai bat ky (khong phai cua App Tester): None neu man khong co."""
+    return next((n for n in nodes if n.package != APP_TESTER and n.text
+                 and n.text.strip().casefold() in CHAP_NHAN), None)
+
+
+def nut_chu(nodes, text: str | tuple[str, ...], package: str):
     """Node co chu dung `text` cua `package` (nut Play Protect khong co id)."""
     return _co(nodes, text=text, package=package)
 
@@ -111,7 +131,7 @@ def cac_ban(nodes) -> list[dict]:
             continue
         nut = next((n for n in con if n.resource_id in NUT_BAN), None)
         loai_nut = NUT_BAN[nut.resource_id] if nut else ""
-        if loai_nut == "dang_cai" and nut.text == DA_TAI:
+        if loai_nut == "dang_cai" and nut.text in DA_TAI:
             loai_nut = "da_tai"
         ra.append({
             "version": ver.text,
@@ -126,10 +146,23 @@ def cac_ban(nodes) -> list[dict]:
     return ra
 
 
+NGAY_VI_RE = re.compile(r"thg (\d{1,2}) (\d{1,2}), (\d{4}) lúc (\d{1,2}):(\d{2}) (SA|CH)")
+
+
 def _luc_day(b: dict) -> datetime:
-    """Ngay App Tester ghi (`Oct 15, 2026 at 3:10 PM`); doc khong duoc -> coi la cu nhat."""
+    """Ngay App Tester ghi (`Oct 15, 2026 at 3:10 PM` / may vi-VN `thg 10 30, 2026 lúc 3:42 CH`);
+    doc khong duoc -> coi la cu nhat."""
     try:
         return datetime.strptime(b["ngay"], "%b %d, %Y at %I:%M %p")
+    except ValueError:
+        pass
+    m = NGAY_VI_RE.search(b["ngay"])
+    if not m:
+        return datetime.min
+    thang, ngay, nam, gio, phut, buoi = m.groups()
+    gio = int(gio) % 12 + (12 if buoi == "CH" else 0)
+    try:
+        return datetime(int(nam), int(thang), int(ngay), gio, int(phut))
     except ValueError:
         return datetime.min
 

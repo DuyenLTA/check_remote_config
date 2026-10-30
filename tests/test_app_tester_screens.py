@@ -135,3 +135,47 @@ def test_release_van_tinh_ban_chua_ro_nhu_truoc():
 def test_man_quet_cai_cua_oppo_co_nut_install_anyway():
     nodes = dump("oppo_install_anyway")
     assert s.nut_chu(nodes, s.OPPO_CAI, s.OPPO_MARKET).bounds.top == 552
+
+
+def dump_vi(ten: str, doi: dict[str, str]):
+    """Dump that doi chu sang tieng Viet (may de vi-VN, Pixel 7 30/10/2026)."""
+    xml = (FIX / f"uidump_{ten}.xml").read_text("utf-8")
+    for en, vi in doi.items():
+        xml = xml.replace(f'text="{en}"', f'text="{vi}"')
+    return parse_dump(xml)
+
+
+def test_may_tieng_viet_van_nhan_man_play_protect():
+    quet = dump_vi("playprotect_scan_recommended", {"Scan app": "Quét ứng dụng"})
+    assert s.man(quet) == "pp_quet"
+    assert s.nut_chu(quet, s.PP_QUET, s.PLAY_STORE) is not None
+    an_toan = dump_vi("playprotect_looks_safe", {"Install": "Cài đặt"})
+    assert s.man(an_toan) == "pp_an_toan"
+    assert s.nut_chu(an_toan, s.PP_CAI, s.PLAY_STORE) is not None
+
+
+def test_may_tieng_viet_open_button_cai_dat_la_da_tai():
+    moi = s.cac_ban(dump_vi("apptester_detail_downloaded", {"Install": "Cài đặt"}))[0]
+    assert moi["nut"] == "da_tai"
+
+
+def test_ngay_app_tester_tieng_viet():
+    assert s._luc_day({"ngay": "thg 10 30, 2026 lúc 3:42 CH"}) == s.datetime(2026, 10, 30, 15, 42)
+    assert s._luc_day({"ngay": "thg 10 30, 2026 lúc 12:21 CH"}) == s.datetime(2026, 10, 30, 12, 21)
+    assert s._luc_day({"ngay": "thg 10 30, 2026 lúc 12:05 SA"}) == s.datetime(2026, 10, 30, 0, 5)
+
+
+@pytest.mark.parametrize("ten, doi", [
+    ("playprotect_scan_recommended", {}),
+    ("playprotect_scan_recommended", {"Scan app": "Quét ứng dụng"}),
+    ("playprotect_looks_safe", {"Install": "Cài đặt"}),
+    ("oppo_install_anyway", {}),
+])
+def test_hop_quet_moi_hang_deu_co_nut_chap_nhan(ten, doi):
+    n = s.nut_chap_nhan(dump_vi(ten, doi))
+    assert n is not None and n.package != s.APP_TESTER
+
+
+def test_khong_bam_nut_tu_choi():
+    nodes = dump("playprotect_looks_safe")
+    assert s.nut_chap_nhan(nodes).text == "Install"
