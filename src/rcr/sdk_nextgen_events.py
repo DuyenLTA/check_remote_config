@@ -23,6 +23,7 @@ CUA_SO_SHOW_PAID = 3.0
 CUA_SO_PAID_VALUE = 1.0
 
 _CLASS_ERR = re.compile(r"NoClassDefFoundError|ClassNotFoundException|NoSuchMethodError")
+_PARCEL_ERR = re.compile(r"\s[EW] Parcel\s*:|BadParcelableException")
 # Lib chan request khi offline, khong goi SDK -> khong co ad_load failed (skill nextgen, LingoSpeak 10/2026).
 _FAST_FAIL = re.compile(r"no internet|failing ad request fast|MobileAds ready but no internet", re.I)
 
@@ -117,8 +118,15 @@ def dong_cua_app(text: str, package: str) -> list[str]:
 
 
 def loi_thieu_lop(text: str, package: str) -> list[str]:
-    """NoClassDefFoundError / ClassNotFoundException / NoSuchMethodError tu tien trinh app."""
-    return [d.strip() for d in dong_cua_app(text, package) if _CLASS_ERR.search(d)]
+    """NoClassDefFoundError / ClassNotFoundException / NoSuchMethodError tu tien trinh app.
+
+    Bo dong unmarshal Parcel (tag `Parcel`, `BadParcelableException`): Firebase Analytics doc extras cua
+    Activity bang boot class loader nen khong thay lop Parcelable cua app (vd VslTemplate4LanguageModel),
+    roi tu catch ("Throwable caught in onActivityCreated"). Lop van co trong app - khong phai thieu lop
+    hay xung dot SDK (AI Video 4.3.0, 29/10/2026).
+    """
+    return [d.strip() for d in dong_cua_app(text, package)
+            if _CLASS_ERR.search(d) and not _PARCEL_ERR.search(d)]
 
 
 def crash(text: str, package: str) -> list[str]:

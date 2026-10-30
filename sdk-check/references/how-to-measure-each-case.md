@@ -34,6 +34,7 @@ Tag: `FOR_TESTER_CONFIG`, `FOR_TESTER_LOAD_AD`, `FOR_TESTER_SHOW_AD`, `FOR_TESTE
 - HT-02: đo bounds view banner = 1080. Splash/Main khoá dọc → bước xoay ngang không làm được, ghi rõ.
 - HT-03 inter: bấm Learn More → Chrome → BACK về inter → X. **X ở góc phải (1032,214) hoặc trái (80,210) tuỳ creative**; bấm trượt vào video thì video dừng, X biến mất → bấm Play cho chạy hết.
 - HT-04 app open: ở Language bấm Home rồi mở lại (lần 1 load, lần 2 hiện). Log tag là `AppResumeManager: app open ad impression`, **không có tag AppOpenManager**. Đóng bằng "Continue to app" (1008,196).
+- **EV-25 (chuỗi event app open) cũng đo trong luồng tutorial**, cùng lượt với HT-04. App open/resume **chỉ có ở luồng tutorial**, Home sau FO nằm ngoài phạm vi (user chốt 29/10/2026). Tool tự chấm EV-25 bằng lượt Home → mở lại nên ra `SAI` "không có chuỗi event app open" → **không tin**: đo lại ở Language/OB rồi `--cham-tay` EV-25 theo log thật.
 - HT-05: Home khi inter splash đang hiện → mở lại → `dumpsys activity activities | grep -c 'Hist.*AdActivity'` = 1.
 - HT-06: cây view native (ad_headline, ad_media, ad_call_to_action…) + AdMob native validator ("0 implementation issues"). Layout không có icon thì không chấm thiếu icon.
 - HT-07 native video: cần creative video (MediaView có TextureView/SurfaceView). Test ad thường là ảnh tĩnh; **quảng cáo thật có thể ra video** (13/10 onboarding ra native video Loora).

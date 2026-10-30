@@ -342,3 +342,28 @@ def test_bo_luot_fo_thi_dong_dua_vao_fo_thanh_do_tay():
     ra = {r["ma"]: r for r in sdk_nextgen_cham.bo_qua_fo(ket, "bỏ lượt FO")}
     assert ra["EV-07"]["ket"] == DO_TAY and ra["HT-03"]["ket"] == DO_TAY and "bỏ lượt FO" in ra["HT-03"]["ly_do"]
     assert ra["EV-24"]["ket"] == KHOP and ra["1.1"]["ket"] == KHOP and ra["EV-12"]["ket"] == KHONG_AP_DUNG
+
+
+def test_top_doc_duoc_dumpsys_android_11_dau_hai_cham():
+    """OPPO CPH2375 Android 11 (AI Video 4.3.0, 29/10/2026): `mResumedActivity: ActivityRecord{...}` (dau `:`),
+    regex chi nhan `=` -> khong doc duoc man, KT-01/KT-02 ra SAI gia 'van dung o splash ()'."""
+    from rcr import sdk_nextgen_thu_log as T
+    a11 = "    mResumedActivity: ActivityRecord{ab2b72c u0 com.abc.app/com.visionlab.x.VslTemplate4LanguageActivity t9}\n"
+    a12 = "  topResumedActivity=ActivityRecord{1f u0 com.abc.app/.MainActivity t3}\n"
+    assert T._TOP.search(a11).group(1) == "com.visionlab.x.VslTemplate4LanguageActivity"
+    assert T._TOP.search(a12).group(1) == ".MainActivity"
+
+
+def test_loi_unparcel_cua_firebase_khong_tinh_la_thieu_lop():
+    """FA doc extras Activity bang boot class loader roi tu catch: lop van co trong app (AI Video 4.3.0, 29/10/2026)."""
+    from rcr.sdk_nextgen_events import loi_thieu_lop
+    pkg = "com.abc.app"
+    log = "\n".join([
+        "10-29 23:27:40.000  1000  1100 I ActivityManager: Start proc 10850:com.abc.app/u0a1 for activity",
+        "10-29 23:27:43.871 10850 18032 E Parcel  : java.lang.ClassNotFoundException: com.visionlab.x.VslTemplate4LanguageModel",
+        "10-29 23:27:43.871 10850 18032 E Parcel  : Caused by: java.lang.NoClassDefFoundError: Class not found using the boot class loader; no stack trace available",
+        "10-29 23:27:43.871 10850 18032 E FA      : Throwable caught in onActivityCreated: android.os.BadParcelableException: ClassNotFoundException when unmarshalling: com.visionlab.x.VslTemplate4LanguageModel",
+        "10-29 23:27:44.000 10850 10850 E AndroidRuntime: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/android/gms/ads/AdView;",
+    ])
+    ra = loi_thieu_lop(log, pkg)
+    assert len(ra) == 1 and "AdView" in ra[0]

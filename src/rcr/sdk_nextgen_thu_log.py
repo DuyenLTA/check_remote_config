@@ -52,7 +52,8 @@ def cong_trong() -> int:
 BUFFERS = "main,system,crash,events"
 _TOTAL = re.compile(r"TotalTime:\s*(\d+)")
 _MIN_SDK = re.compile(r"minSdk=(\d+)")
-_TOP = re.compile(r"(?:topResumedActivity|mResumedActivity)=\S+ \S+ \S+/(\S+)")
+# Android 12+: `topResumedActivity=ActivityRecord{...}`; Android 11 (OPPO CPH2375): `mResumedActivity: ActivityRecord{...}`
+_TOP = re.compile(r"(?:topResumedActivity|mResumedActivity)[=:]\s*\S+ \S+ \S+/(\S+)")
 
 
 def bash() -> str:
