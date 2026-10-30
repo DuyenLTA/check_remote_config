@@ -56,6 +56,15 @@ def _nut(*cac: tuple[str, str, discord.ButtonStyle], msg_id: int) -> discord.ui.
     return v
 
 
+async def _tha_tim(m) -> None:
+    """Tha ❤️ vao tin bao build de dev biet bot da nhan. Thieu quyen Add Reactions / tin da xoa -> bo qua,
+    khong duoc chan viec hoi QA."""
+    try:
+        await m.add_reaction("❤️")
+    except Exception as exc:                 # noqa: BLE001
+        log.warning("khong tha tim duoc vao tin build %s: %s", getattr(m, "jump_url", ""), exc)
+
+
 XANH, XAM = discord.ButtonStyle.success, discord.ButtonStyle.secondary
 NUT_HOI = (("check", "Check", XANH), ("bo", "Bỏ qua", XAM), ("verify", "Verify bug Jira", XAM))
 # QA gui lai tin build: tin hoi moi chi mang thong tin build, khong mang ket qua / bug / Jira cua luot cu.
@@ -77,6 +86,9 @@ def _view_bug(bugs: list[dict], chon: list[int], msg_id: int) -> discord.ui.View
 
 
 class BuildBot(discord.Client):
+    duyet: frozenset[int] = frozenset()    # mac dinh khi chua __init__ (test); __init__ doc tu env
+    role = 0
+
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
@@ -173,6 +185,10 @@ class BuildBot(discord.Client):
             getattr(getattr(m.channel, "parent", None) or m.channel, "name", ""))
         if not o_kenh_build and not (ma_kenh and m.guild):
             return
+        # QA nhan o kenh project ("test pass v1.4.0(14)... rls") khong phai tin bao build: khong tha tim, khong hoi
+        # (user chot 30/10/2026 - bot tha tim nham vao tin bao rls AIP805). QA gui lai build thi gui o qa-auto.
+        if m.channel.id != self.kenh_qa and not m.webhook_id and self._duoc_duyet(m.author):
+            return
         chu = noi_dung(m)
         tin = build_ma_app.tach(chu, ma_kenh)
         kenh = self.get_channel(self.kenh_qa)
@@ -187,6 +203,8 @@ class BuildBot(discord.Client):
                 await kenh.send(f"Bot không đọc được mã app + version (dạng `AIP922 v3.7.0 (30)`) "
                                 f"trong tin báo build — QA xem giúp: {m.jump_url}")
             return
+        if m.channel.id != self.kenh_qa:     # tin build cua dev: tha tim bao da nhan (user chot 30/10/2026)
+            await _tha_tim(m)
         cu = [t for t in self.q.tin.values() if t.get("ma") == tin["ma"] and t.get("version") == tin["version"]]
         if cu:
             # Giai doan chuyen kenh dev co the bao mot build o ca kenh chung lan kenh project.
