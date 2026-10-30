@@ -192,6 +192,23 @@ async def _make_old_user(client, baseline: RcBaseline, log_fn) -> None:
     log_fn(f"  da toi {walk['activity'].split('.')[-1]} -> tat app, lan mo sau la old user")
 
 
+async def prepare_firebase(client, baseline: RcBaseline, user_state: str = "", log_fn=lambda _m: None) -> dict:
+    """Ban release (RC doi tren server qua `testvsl`): app CHI lay RC moi o lan mo dau sau `pm clear` - tat / mo
+    lai giu ban RC cu (do 30/10/2026, AIP886 2.7.0). Nen moi luot: RC da publish TRUOC -> `pm clear` -> old_user
+    thi lai FO toi Home roi tat app (lan mo sau la old user, van giu RC cua case) -> nguoi goi mo app."""
+    serial, package = baseline.serial, baseline.package
+    await device_app.force_stop(client, serial, package)
+    app_sandbox.guard(serial, package)
+    out, err, _ = await client.shell(serial, "pm", "clear", package)
+    if "Success" not in out:
+        raise AdbError(f"pm clear {package} that bai: {(err or out).strip()}")
+    await _grant_notifications(client, serial, package)
+    if user_state == "old_user":
+        await _make_old_user(client, baseline, log_fn)
+        return {"mode": "old_user", "matched": "User State: old_user (RC qua Firebase)", "baseline_stale": False}
+    return {"mode": "clear", "matched": "RC qua Firebase: app chỉ nhận RC mới sau pm clear", "baseline_stale": False}
+
+
 async def prepare(client, baseline: RcBaseline, precondition: str = "",
                   user_state: str = "", log_fn=lambda _m: None) -> dict:
     """Dua app ve trang thai case doi. Tra ve da lam gi.

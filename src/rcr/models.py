@@ -50,6 +50,9 @@ class RcBaseline:
     # nam trong DEX, app dung gia tri mac dinh trong code. Bo TC dat key nay
     # (`onboard_config_content_new` cua SDK 3.6.1) thi phai ghi them vao activate.
     dex_keys: frozenset[str] = frozenset()
+    # write_mode "firebase" (ban release, khong run-as): {project, app_id, api_key, package, version} - RC doi
+    # tren server qua dieu kien `testvsl` (rc_firebase), `configs` la gia tri Firebase that cho version nay.
+    firebase: dict = field(default_factory=dict)
 
     @property
     def mirrored_keys(self) -> frozenset[str]:

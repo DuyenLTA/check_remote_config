@@ -44,7 +44,12 @@ async def read(client, serial: str, package: str) -> RcBaseline:
     try:
         mode = await app_sandbox.detect_mode(client, serial, package)
     except AdbError as exc:
-        raise RcError(str(exc)) from exc
+        # Ban release: khong vao duoc data app -> doi RC tren server qua dieu kien `testvsl` neu QA da dang nhap
+        # Firebase (user chot 30/10/2026: khong bat dev build them ban debug de nghiem thu SDK).
+        from . import rc_firebase, rc_firebase_app
+        if not rc_firebase.da_dang_nhap():
+            raise RcError(str(exc)) from exc
+        return await rc_firebase_app.doc_baseline(client, serial, package)
 
     names, problem = await app_sandbox.ls(client, serial, package, FILES_DIR, mode=mode)
     if problem:

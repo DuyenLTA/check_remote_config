@@ -57,15 +57,20 @@ def _noop(_msg: str) -> None:
 async def apply_case(
     client, baseline: RcBaseline, overrides: dict[str, str], keep: bool, out_dir,
     steps=(), expects=(), goto: str = "", log_fn=_noop, man_can=None,
-    precondition: str = "",
+    precondition: str = "", user_state: str = "",
 ) -> dict:
     """patch -> tat han app -> mo lai -> verify -> lai cac buoc -> restore.
+
+    Ban release (`baseline.firebase`): patch = publish RC tren server, sau do moi reset (pm clear, old_user lai FO)
+    - nguoc thu tu ban debug vi app chi nhan RC moi o lan mo dau sau pm clear.
 
     Lai buoc TRUOC khi restore: restore xong la config da ve cu, luc do bam gi
     tren app cung khong con dinh dang gi toi case nua.
     """
-    snapshot = rc_snapshot.save(baseline, out_dir) if keep else None
+    snapshot = rc_snapshot.save(baseline, out_dir) if keep and not baseline.firebase else None
     patched = await rc_patch.patch(client, baseline, overrides)
+    reset = (await device_reset.prepare_firebase(client, baseline, user_state, log_fn)
+             if baseline.firebase else None)
 
     # Xoa log TRUOC khi mo app: khong thi nhat log ads/crash cua luot truoc.
     await ad_log.clear(client, baseline.serial)
@@ -104,6 +109,8 @@ async def apply_case(
     }
     if net:
         out["net"] = net
+    if reset:
+        out["reset"] = reset
     # Case noi ve man khac splash -> lai toi do TRUOC khi cham, khong thi moi
     # dong ta UI cua man ay deu ra "chua lai toi noi".
     # Case co dong Expected ve nut X / so dem -> phai nhin NGAY khi toi trang:
@@ -247,7 +254,10 @@ async def run_case(
         else:
             log_fn("  app co doc het cac key nay")
 
-    reset = await device_reset.prepare(client, baseline, precondition, user_state, log_fn)
+    if baseline.firebase:                    # reset lam trong tung luot, SAU khi publish RC (apply_case)
+        reset = {"mode": "firebase", "matched": user_state or "", "baseline_stale": False}
+    else:
+        reset = await device_reset.prepare(client, baseline, precondition, user_state, log_fn)
     log_fn(f"Reset: {reset['mode']}" + (f" (khop '{reset['matched']}')" if reset["matched"] else ""))
     if reset["baseline_stale"]:
         log_fn("  app da bi xoa data -> doc lai baseline")
@@ -256,14 +266,14 @@ async def run_case(
                            dex_keys=baseline.dex_keys)
 
     out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                            log_fn, man_can, precondition, runtime)
+                            log_fn, man_can, precondition, runtime, user_state)
     if unused:
         out["keys_not_used"] = unused
     return out | {"reset": reset}, baseline
 
 
 async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                      log_fn, man_can=None, precondition: str = "", runtime=False) -> dict:
+                      log_fn, man_can=None, precondition: str = "", runtime=False, user_state: str = "") -> dict:
     """Case co gia tri lua chon -> nhieu luot. Verdict case = luot xau nhat.
 
     `runtime`: luot i chi lai buoc + cham dong Expected cua luot i (`runtime_steps`).
@@ -278,7 +288,7 @@ async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, got
         log_fn(head + ", ".join(f"{k}={v}" for k, v in overrides.items()))
         out = await apply_case(
             client, baseline, overrides, keep, out_dir, steps, expects, goto,
-            log_fn, man_can, precondition,
+            log_fn, man_can, precondition, user_state,
         )
         log_fn(f"    foreground sau {out['launch']['waited_s']}s · verify: "
                f"{'CONFIG_OK' if out['verify']['ok'] else 'BLOCKED'} · verdict: {out['verdict']}")

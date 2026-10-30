@@ -19,6 +19,7 @@ hong trang thai app, khong phai doi config.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 
@@ -92,6 +93,10 @@ async def patch(
     """Ghi `overrides` vao app. Raise RcError neu bat ky file nao ghi that bai."""
     if not overrides:
         raise RcError("Khong co key nao de dat.")
+    if baseline.firebase:                     # ban release: publish qua dieu kien testvsl, app mo sau pm clear
+        from . import rc_firebase
+        await asyncio.to_thread(rc_firebase.dat, baseline.firebase["project"], overrides)
+        return PatchResult(applied=dict(overrides), written=(f"firebase:{rc_firebase.DIEU_KIEN}",), fetch_time_ms=0)
     now = now_ms if now_ms is not None else int(time.time() * 1000)
     writes = build_writes(baseline, overrides, now)
     written = await _apply(client, baseline, writes)
@@ -103,7 +108,13 @@ async def restore(client, baseline: RcBaseline) -> PatchResult:
 
     Moc cu (khong phai now) la co y: app se tu fetch lai config THAT o lan mo
     sau, nen may tro ve dung trang thai truoc khi test.
+    Ban release (`firebase`): go het gia tri cua dieu kien testvsl tren server.
     """
+    if baseline.firebase:
+        from . import rc_firebase
+        await asyncio.to_thread(rc_firebase.tra_het, baseline.firebase["project"])
+        return PatchResult(applied={}, written=(f"firebase:{rc_firebase.DIEU_KIEN}",), fetch_time_ms=0,
+                           restored=True)
     writes: list[tuple[str, str]] = [
         (f"shared_prefs/{name}", raw) for name, raw in baseline.mirror_raw.items()
     ]

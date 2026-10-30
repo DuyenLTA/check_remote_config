@@ -285,3 +285,11 @@ def _out_tam(monkeypatch, tmp_path):
     from rcr import cli_check
 
     monkeypatch.setattr(cli_check, "DEFAULT_OUT", tmp_path / "out")
+
+
+@pytest.fixture(autouse=True)
+def _khong_dung_firebase_that(monkeypatch):
+    """May dev da `firebase login` thi ban release se di duong doi RC qua Firebase - test khong duoc cham server
+    that. Test rieng cua duong Firebase tu bat lai."""
+    from rcr import rc_firebase
+    monkeypatch.setattr(rc_firebase, "da_dang_nhap", lambda: False)

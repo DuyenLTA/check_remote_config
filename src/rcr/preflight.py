@@ -122,12 +122,33 @@ async def _app(client, serial: str, package: str) -> list[dict]:
                 app_sandbox.SU: "máy root (su)"}[mode]
         ra.append(_muc("Vào được dữ liệu app", OK, cach))
     except AdbError as exc:
+        fb = await _rc_qua_firebase(client, serial, package)
+        if fb is not None:
+            ra.append(fb)
+            return ra
         dong = str(exc).splitlines() or ["?"]
         # Dong 2 la ly do run-as; loi mot dong (package sai, mat may) thi lay dong dau.
         ra.append(_muc("Vào được dữ liệu app", LOI, (dong[1:] or dong)[0].strip(),
                        "Xin dev bản build bật debuggable (kiểm bằng aapt trước khi cài), "
                        "hoặc dùng máy root"))
     return ra
+
+
+async def _rc_qua_firebase(client, serial: str, package: str) -> dict | None:
+    """Ban release: doi RC tren server qua dieu kien `testvsl` (user chot 30/10/2026, khong can ban debug).
+    Chua `firebase login` -> None (bao loi ban release nhu cu)."""
+    from . import rc_firebase, rc_firebase_app
+
+    if not rc_firebase.da_dang_nhap():
+        return None
+    try:
+        bl = await rc_firebase_app.doc_baseline(client, serial, package)
+        bt = await asyncio.to_thread(rc_firebase_app.kiem_dieu_kien_test, bl.firebase)
+    except (RcError, AdbError) as exc:
+        return _muc("Vào được dữ liệu app", LOI, f"bản release, đổi RC qua Firebase chưa được: {exc}",
+                    f"Tạo điều kiện `{rc_firebase.DIEU_KIEN}` (app + version đang test) và kéo lên thứ 1")
+    return _muc("Vào được dữ liệu app", OK, f"bản release → đổi RC qua Firebase `{bl.firebase['project']}`, "
+                f"điều kiện {rc_firebase.DIEU_KIEN} ({bt})")
 
 
 def _sheet_id_ads(package: str, out_dir) -> dict:

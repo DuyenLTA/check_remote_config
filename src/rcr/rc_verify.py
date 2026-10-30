@@ -29,7 +29,16 @@ async def verify(client, baseline: RcBaseline, expected: dict[str, str]) -> Veri
     Doc ca activate.json va cac file mirror lien quan: mot key co the dung o
     activate ma sai o mirror (hoac nguoc lai) - luc do app doc mirror se hanh xu
     theo gia tri cu.
+    Ban release (`firebase`): khong doc duoc may -> so voi gia tri Firebase tra cho dung version nay.
     """
+    if baseline.firebase:
+        import asyncio
+
+        from . import rc_firebase_app
+        configs = await asyncio.to_thread(rc_firebase_app.gia_tri_that, baseline.firebase)
+        return VerifyResult(mismatches=tuple(
+            Mismatch(k, want, configs.get(k), where="firebase") for k, want in expected.items()
+            if ((k in configs) if want == ABSENT else (configs.get(k) != want))), fetch_time_ms=0)
     raw, problem = await app_sandbox.cat(
         client,
         baseline.serial,
