@@ -152,8 +152,9 @@ class BuildBot(discord.Client):
         if bot_hoi_dap.la_cau_hoi(self, m):      # nhan rieng / tag bot -> hoi dap, khong doc nhu tin build
             await bot_hoi_dap.tra_loi_tin(self, m, REPO, OUT)
             return
-        # dev bao build qua webhook "Build Notification" (author.bot=True) -> nhan webhook, bo bot khac
-        if m.author.bot and not m.webhook_id:
+        # dev bao build qua webhook "Build Notification" (author.bot=True) hoac bot Assistant cua dev
+        # (DungNT2-Assistant, co trong bang tag dev) -> nhan; bo bot khac
+        if m.author.bot and not m.webhook_id and not bot_kenh_project.la_bot_dev(m.author.id):
             return
         # Ngoai kenh build chung, nghe ca kenh rieng cua tung project (`aip922-...`, cung server voi kenh
         # build): dev se chuyen sang bao build o kenh project (user chot 28/10/2026).

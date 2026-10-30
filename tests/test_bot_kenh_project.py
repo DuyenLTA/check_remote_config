@@ -89,3 +89,32 @@ def test_tag_dev_theo_assignee():
     assert kp.dev_theo_assignee(a, ["AIP927-1", "AIP927-2"], bang, [111, 222]) == [111, 222]
     assert kp.dev_theo_assignee(a, ["AIP927-3"], bang, [111, 222]) == [111, 222]          # chua giao -> tag nhu cu
     assert kp.dev_theo_assignee(a, ["AIP927-2", "AIP927-4"], bang, [111, 222]) == [222, 111]  # 1 bug la -> them mac dinh
+
+
+def test_bug_chua_giao_dev_thi_tag_dev_gui_build():
+    """30/10/2026: round dau bug chua giao dev (Jira tu gan nguoi mac dinh) -> tag dev gui tin build."""
+    bang = kp.bang_dev("Nguyễn Tấn Dũng:111;DungNT2:111;Hà Đức Trung:222;TrungHD:222")
+    assert kp.dev_theo_ten("trrung3894 TrungHD", bang) == 222
+    assert kp.dev_theo_ten("dungpro1572k DungNT2", bang) == 111
+    assert kp.dev_theo_ten("DungNT2-Assistant", bang) == 111           # bot Assistant cua dev gui build
+    assert kp.dev_theo_ten("TrungHD-Assistant", bang) == 222
+    assert kp.dev_theo_ten("Build Notification", bang) is None
+    a = {"AIP882-110": ["quanbd", "Bùi Đình Quân"], "AIP882-111": ["dungnt2", "Nguyễn Tấn Dũng"]}
+    assert kp.dev_theo_assignee(a, ["AIP882-110"], bang, [1, 2], gui_build=222) == [222]
+    assert kp.dev_theo_assignee(a, ["AIP882-111"], bang, [1, 2], gui_build=222) == [111]   # da giao -> theo assignee
+    assert kp.dev_theo_assignee(a, ["AIP882-110"], bang, [1, 2]) == [1, 2]                  # khong biet ai gui
+
+
+def test_doc_ten_nguoi_gui_tin_build(monkeypatch):
+    monkeypatch.setattr(kp, "env", lambda ten: "TrungHD:222;DungNT2:111")
+    tac_gia = SimpleNamespace(name="trrung3894", global_name="TrungHD", nick=None)
+
+    class _KenhBuild:
+        async def fetch_message(self, i):
+            assert i == 1564553382080028742
+            return SimpleNamespace(author=tac_gia)
+
+    bot = SimpleNamespace(dev_ids="1,2", get_channel=lambda i: _KenhBuild() if i == 1562042798134263920 else None)
+    assert asyncio.run(kp.ids_can_tag(bot, [], C)) == [222]
+    tac_gia.global_name = None                                      # webhook / nguoi khac gui -> tag nhu cu
+    assert asyncio.run(kp.ids_can_tag(bot, [], C)) == [1, 2]

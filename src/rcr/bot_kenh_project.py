@@ -4,7 +4,9 @@ Kenh project nam cung server voi kenh build cua dev, ten bat dau bang ma app vie
 (`aip920-ai-english-official-group`). Tag dev theo NGUOI DUOC GIAO (assignee Jira) cua cac bug trong tin
 (user chot 29/10/2026: tag ca 2 dev khong on): bang `DISCORD_DEV_THEO_ASSIGNEE` = `ten:discord_id;...`
 (ten hien thi hoac login Jira, khong phan biet dau / hoa thuong) - nam o cau hinh may vi repo public.
-Bug chua giao / assignee khong co trong bang / Jira loi -> tag `DISCORD_DEV_IDS` nhu truoc.
+Bug chua giao cho dev trong bang (round dau, Jira tu gan nguoi mac dinh) -> tag dev da gui tin build, tim
+theo ten Discord nguoi gui ('TrungHD', 'DungNT2' co trong bang - user chot 30/10/2026). Webhook / QA gui lai
+tin build / Jira loi -> tag `DISCORD_DEV_IDS` nhu truoc.
 Khong tim duoc kenh / bot khong co quyen gui (kenh Publishing) -> dang o kenh QA kem noi dung de QA chuyen tay.
 """
 
@@ -44,9 +46,22 @@ def bang_dev(gia_tri: str) -> dict[str, int]:
     return ra
 
 
+def la_bot_dev(i: int) -> bool:
+    """Bot Assistant cua dev (id co trong bang tag dev) - tin build no gui van phai doc."""
+    return i in bang_dev(env("DISCORD_DEV_THEO_ASSIGNEE")).values()
+
+
+def dev_theo_ten(ten: str, bang: dict[str, int]) -> int | None:
+    """Ten nguoi gui tin build ('trrung3894 TrungHD', 'DungNT2-Assistant') chua ten dev trong bang
+    ('trunghd', 'dungnt2') -> id can tag."""
+    s = _chuan(ten)
+    return next((i for t, i in bang.items() if t in s), None)
+
+
 def dev_theo_assignee(assignee: dict[str, list[str]], keys: list[str], bang: dict[str, int],
-                      mac_dinh: list[int]) -> list[int]:
-    """Discord id can tag cho cac bug `keys`; bug nao khong ra dev trong bang -> them ca `mac_dinh`."""
+                      mac_dinh: list[int], gui_build: int | None = None) -> list[int]:
+    """Discord id can tag cho cac bug `keys`; bug nao khong ra dev trong bang (build moi chua giao,
+    Jira tu gan nguoi mac dinh cua project) -> them dev gui build, khong biet ai gui thi them `mac_dinh`."""
     ra, thieu = [], False
     for k in keys:
         i = next((bang[_chuan(t)] for t in assignee.get(k, []) if _chuan(t) in bang), None)
@@ -54,20 +69,41 @@ def dev_theo_assignee(assignee: dict[str, list[str]], keys: list[str], bang: dic
             thieu = True
         elif i not in ra:
             ra.append(i)
-    return ra + [i for i in mac_dinh if i not in ra] if thieu or not ra else ra
+    if thieu or not ra:
+        ra += [i for i in ([gui_build] if gui_build else mac_dinh) if i not in ra]
+    return ra
 
 
-async def ids_can_tag(bot, keys: list[str]) -> list[int]:
+async def _dev_gui_build(bot, c: dict, bang: dict[str, int]) -> int | None:
+    """Dev tu gui tin build ('TrungHD: e gui ban build') -> id cua dev do; webhook 'Build Notification'
+    hay QA gui lai tin -> None. Doc tin loi cung None (van bao dev, tag nhu cu)."""
+    m = LINK_RE.search(c.get("link_tin") or "")
+    if not bang or not m or not m.group(3):
+        return None
+    try:
+        kenh = bot.get_channel(int(m.group(2))) or await bot.fetch_channel(int(m.group(2)))
+        tin = await kenh.fetch_message(int(m.group(3)))
+    except Exception as exc:                 # noqa: BLE001 - khong doc duoc tin build khong duoc chan bao dev
+        log.warning("khong doc duoc tin build %s: %s", c.get("link_tin"), exc)
+        return None
+    a = tin.author
+    return dev_theo_ten(" ".join(filter(None, (a.name, getattr(a, "global_name", None),
+                                               getattr(a, "nick", None)))), bang)
+
+
+async def ids_can_tag(bot, keys: list[str], c: dict | None = None) -> list[int]:
     mac_dinh = dev_ids(getattr(bot, "dev_ids", ""))
     bang = bang_dev(env("DISCORD_DEV_THEO_ASSIGNEE"))
+    gui_build = await _dev_gui_build(bot, c or {}, bang)
+    du_phong = [gui_build] if gui_build else mac_dinh
     if not keys or not bang or not jira.bat(getattr(bot, "jira_url", ""), getattr(bot, "jira_token", "")):
-        return mac_dinh
+        return du_phong
     try:
         a = await asyncio.to_thread(jira.assignee, bot.jira_url, bot.jira_token, keys)
     except jira.JiraLoi as exc:               # Jira loi: van bao dev, tag nhu cu
         log.warning("khong doc duoc assignee %s: %s", keys, exc)
-        return mac_dinh
-    return dev_theo_assignee(a, keys, bang, mac_dinh)
+        return du_phong
+    return dev_theo_assignee(a, keys, bang, mac_dinh, gui_build)
 
 
 def chon_kenh(kenh: list, ma: str, co_quyen) -> object | None:
@@ -98,7 +134,7 @@ async def bao(bot, c: dict, tin: str, tin_qa, keys: list[str] = ()):
     """Gui `tin` o kenh project cua `c['ma']`, tag dev theo assignee cua bug `keys`; that bai thi tra loi duoi
     `tin_qa`. Tra kenh da gui (None khi phai bao o kenh QA)."""
     try:
-        ids = await ids_can_tag(bot, list(keys))
+        ids = await ids_can_tag(bot, list(keys), c)
         tag = " ".join(f"<@{i}>" for i in ids)
         noi_dung = f"{tag}\n{tin}" if tag else tin
         kenh = await _kenh_project(bot, c)

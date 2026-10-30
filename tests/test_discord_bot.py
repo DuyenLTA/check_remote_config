@@ -312,3 +312,25 @@ def test_cai_co_drive_thi_truyen_apk_url(monkeypatch):
     d.bot_cong_viec.cai("p", "1.0 (1)", "debug", "S1", "https://drive.google.com/file/d/X/view")
     d.bot_cong_viec.cai("p", "1.0 (1)", "debug", "S1")
     assert goi[0][-2:] == ["--apk-url", "https://drive.google.com/file/d/X/view"] and "--apk-url" not in goi[1]
+
+
+def test_tin_build_cua_bot_assistant_dev_van_doc(monkeypatch):
+    """30/10/2026: DungNT2-Assistant / TrungHD-Assistant (bot, co trong bang tag dev) gui build -> doc nhu tin dev;
+    bot khac van bo qua."""
+    gui = []
+
+    async def send(chu, **k):
+        gui.append(chu)
+    monkeypatch.setattr(d.bot_hoi_dap, "la_cau_hoi", lambda bot, m: False)
+    monkeypatch.setattr(d.bot_kenh_project, "env", lambda ten: "DungNT2:111;TrungHD:222")
+    bot = object.__new__(d.BuildBot)
+    bot.kenh_qa, bot.kenh_build = 1, {2}
+    bot.get_channel = lambda cid: SimpleNamespace(send=send)
+
+    def tin(tac_gia):
+        return SimpleNamespace(author=SimpleNamespace(bot=True, id=tac_gia), webhook_id=None,
+                               channel=SimpleNamespace(id=2), guild=None, content="AIP927 ban build moi", jump_url="u")
+    asyncio.run(bot.on_message(tin(333)))
+    assert gui == []
+    asyncio.run(bot.on_message(tin(111)))               # Assistant cua dev -> doc tin (khong ra version -> hoi QA)
+    assert len(gui) == 1 and "không đọc được" in gui[0]
