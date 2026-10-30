@@ -71,6 +71,14 @@ def hoi_link_drive(c: dict) -> str | None:
             "— bot nhận link xong thì bấm chạy lại, bot sẽ tải APK từ link đó thay cho App Tester.")
 
 
+def tin_da_cai(c: dict, ten: str, viec: str) -> str:
+    """Tin MOI (tra loi duoi tin hoi) khi tai + cai duoc build: chi sua tin cu thi kenh khong bao, QA khong
+    biet bot da tim duoc build (user chot 30/10/2026)."""
+    nguon = "link Drive" if c.get("drive") else "App Tester"
+    return (f"📲 {dau_tin(c)}\nĐã tải được bản {c.get('loai_ban') or ''} từ {nguon} và cài lên máy **{ten}** "
+            f"— đang chạy {viec}.")
+
+
 def ten_may(serial: str, model: str) -> str:
     return f"{model} ({serial[-4:]})" if model else serial
 

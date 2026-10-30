@@ -142,6 +142,7 @@ async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> 
         await vm.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}" + (f"\n{hoi}" if hoi else ""),
                       view=nut(vm.id, ("check", "Thử lại")))
         return
+    await vm.reply(bot_cong_viec.tin_da_cai(job, ten, "verify bug"))
     cases = sorted({u["case"] for u in job["verify"]})
     ck = v.loai_case(cases[0]) == "checklist"        # phan_loai chi cho qua mot nhom moi luot
     het_gio = bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY

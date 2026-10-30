@@ -404,6 +404,7 @@ class BuildBot(discord.Client):
             return
         ghi = " (đã gỡ bản cũ khác loại — mất data app)" if cai.get("go_ban_cu") else ""
         await qa.edit(content=f"{dau}\nĐã cài{ghi}. Đang chạy /rc-check…")
+        await qa.reply(bot_cong_viec.tin_da_cai(job, ten, "/rc-check"))
         timeout = (bot_chay_claude.TIMEOUT_NEXT_GEN if job["loai_ban"] == "release"
                    else bot_chay_claude.TIMEOUT_BO_TC)
         bat_dau = time.time()
