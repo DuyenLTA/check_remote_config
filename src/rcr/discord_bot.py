@@ -167,7 +167,8 @@ class BuildBot(discord.Client):
         c_cu = max(cung, key=lambda t: int(t["msg_id"]))   # snowflake tang dan -> lan hoi gan nhat
         qa = await m.reply(f"**{c_cu['ma']}** `{c_cu['version']}`…", mention_author=False)
         c = {k: c_cu[k] for k in GIU_KHI_HOI_LAI if k in c_cu}
-        c.update(link_tin=m.jump_url, msg_id=qa.id)
+        # Tin luu tu truoc 31/10/2026 con ghi "debug" -> tinh lai: gio moi build deu cai ban release.
+        c.update(link_tin=m.jump_url, msg_id=qa.id, loai_ban=build_ma_app.loai_ban(c))
         self.q.nho_tin(c)
         await qa.edit(content=bot_cong_viec.tin_hoi(c), view=_nut(*NUT_HOI, msg_id=qa.id))
 
@@ -340,6 +341,8 @@ class BuildBot(discord.Client):
                 tom_tat = f"⛔ Lỗi: {exc}"
             await it.followup.send(tom_tat[:2000], ephemeral=True)
             return
+        if not c.get("drive"):               # tin hoi tu truoc 31/10/2026 con ghi "debug" -> ban release
+            c = {**c, "loai_ban": build_ma_app.loai_ban(c)}
         vi_tri = self.q.them({**c, "nguoi_duyet": it.user.id})   # check | thu lai
         if vi_tri is None:
             await it.response.send_message("Build này đã trong hàng đợi.", ephemeral=True)
