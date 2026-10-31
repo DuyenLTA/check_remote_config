@@ -32,6 +32,14 @@ SO_LAN_THU = 3
 THU_MANG = 4          # loi mang (VPN / handshake timeout, do 31/10/2026) -> thu lai
 CHO_MANG = 5.0
 TIMEOUT = 30
+# Danh dau tham so do tool tao (key app doc ma server chua khai): chi tham so mang dau nay moi duoc xoa khi go.
+# Tham so cua nguoi khac du co mac dinh "dung gia tri trong app" van giu nguyen (user chot 31/10/2026: khong
+# dong vao bat cu thu gi ngoai gia tri cua dieu kien testvsl).
+TOOL_TAO = "rc-check tạm (chỉ có giá trị ở điều kiện testvsl) - tool tự xoá"
+
+
+def _tool_tao(p: dict) -> bool:
+    return p.get("description") == TOOL_TAO and p.get("defaultValue") == {"useInAppDefault": True}
 
 
 def _configstore() -> Path:
@@ -127,7 +135,8 @@ def gan(t: dict, gia_tri: dict[str, str], dk: str = DIEU_KIEN) -> dict:
     for key, v in gia_tri.items():
         p = _tham_so(t, key)
         if p is None:
-            p = t.setdefault("parameters", {})[key] = {"defaultValue": {"useInAppDefault": True}}
+            p = t.setdefault("parameters", {})[key] = {"defaultValue": {"useInAppDefault": True},
+                                                       "description": TOOL_TAO}
         # `<absent>` cua bo TC = app khong nhan key -> dung gia tri mac dinh trong app.
         p.setdefault("conditionalValues", {})[dk] = {"useInAppDefault": True} if v == ABSENT else {"value": str(v)}
     return t
@@ -140,8 +149,9 @@ def go(t: dict, keys, dk: str = DIEU_KIEN) -> dict:
         if p is None:
             continue
         (p.get("conditionalValues") or {}).pop(dk, None)
-        if not p.get("conditionalValues") and p.get("defaultValue") == {"useInAppDefault": True} \
-                and key in (t.get("parameters") or {}):
+        if "conditionalValues" in p and not p["conditionalValues"]:
+            del p["conditionalValues"]       # tra tham so ve y nhu luc chua gan
+        if "conditionalValues" not in p and _tool_tao(p) and key in (t.get("parameters") or {}):
             del t["parameters"][key]
     return t
 
@@ -158,7 +168,7 @@ def _bo_dieu_kien(t: dict, dk: str) -> dict:
             (ps[k].get("conditionalValues") or {}).pop(dk, None)
             if not ps[k].get("conditionalValues"):
                 ps[k].pop("conditionalValues", None)
-                if ps[k].get("defaultValue") == {"useInAppDefault": True} and ps is t.get("parameters"):
+                if _tool_tao(ps[k]) and ps is t.get("parameters"):
                     del ps[k]
     return t
 

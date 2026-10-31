@@ -24,8 +24,20 @@ def test_gan_chi_them_gia_tri_cua_testvsl_khong_dung_default_hay_dieu_kien_khac(
     assert p["defaultValue"] == {"value": "true"} and p["conditionalValues"]["language Chinese"] == {"value": "false"}
     assert p["conditionalValues"]["testvsl"] == {"value": "false"}
     assert t["parameterGroups"]["ads"]["parameters"]["show_101"]["conditionalValues"] == {"testvsl": {"value": "false"}}
-    assert t["parameters"]["key_moi"] == {"defaultValue": {"useInAppDefault": True},
+    assert t["parameters"]["key_moi"] == {"defaultValue": {"useInAppDefault": True}, "description": f.TOOL_TAO,
                                           "conditionalValues": {"testvsl": {"value": "1"}}}
+
+
+def test_khong_xoa_tham_so_mac_dinh_trong_app_cua_nguoi_khac():
+    cu = _t()
+    cu["parameters"]["cua_nguoi_khac"] = {"defaultValue": {"useInAppDefault": True}, "description": "PM tạo"}
+    t = f.go(f.gan(copy.deepcopy(cu), {"cua_nguoi_khac": "1", "key_moi": "2"}), ["cua_nguoi_khac", "key_moi"])
+    assert t["parameters"]["cua_nguoi_khac"] == cu["parameters"]["cua_nguoi_khac"] and "key_moi" not in t["parameters"]
+    f.chi_doi_dieu_kien(cu, t)
+    bi_xoa = copy.deepcopy(cu)
+    del bi_xoa["parameters"]["cua_nguoi_khac"]
+    with pytest.raises(RcError, match="ngoài điều kiện"):
+        f.chi_doi_dieu_kien(cu, bi_xoa)
 
 
 def test_go_tra_template_ve_nhu_cu():
@@ -33,8 +45,7 @@ def test_go_tra_template_ve_nhu_cu():
     t = f.go(f.gan(copy.deepcopy(goc), {"enable_resume": "false", "show_101": "false", "key_moi": "1"}),
              ["enable_resume", "show_101", "key_moi"])
     assert t["parameters"] == goc["parameters"]
-    assert t["parameterGroups"]["ads"]["parameters"]["show_101"] == {"defaultValue": {"value": "true"},
-                                                                    "conditionalValues": {}}
+    assert t["parameterGroups"] == goc["parameterGroups"]
 
 
 def test_dieu_kien_phai_co_va_dung_thu_nhat():
