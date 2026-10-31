@@ -203,12 +203,13 @@ def find_close_ad(nodes: list[DeviceNode], cho_dem_nguoc: bool = True) -> Device
     return chu[0] if chu else nut
 
 
-def language_targets(nodes: list[DeviceNode], language: str) -> list[DeviceNode]:
+def language_targets(nodes: list[DeviceNode], language: str, bien_the: str = "") -> list[DeviceNode]:
     """Cac node can bam de chon `language`, theo dung thu tu.
 
-    Hang co checkbox -> chon thang. Hang co icon bung -> bam bung roi lay BIEN
-    THE DAU TIEN ben trong (khop theo ten bien the la them mot thu phai theo doi
-    ban build: "English (US)" hay "English (United States)").
+    Hang co checkbox -> chon thang. Hang co icon bung -> bam bung roi lay bien the:
+    `bien_the` (case doi, vd "English (United States)") khop theo `fo_ngon_ngu.khop_bien_the`,
+    khong co bien the nao khop -> [] (khong bam bua bien the khac roi cham noi dung sai ngon ngu);
+    khong doi bien the -> BIEN THE DAU TIEN.
     """
     rows = [n for n in nodes if n.resource_id == TITLE_ID and n.visible]
     row = next((n for n in rows if n.text.casefold().startswith(language.casefold())), None)
@@ -219,10 +220,17 @@ def language_targets(nodes: list[DeviceNode], language: str) -> list[DeviceNode]
     if same_row and same_row[0].resource_id == CHECKBOX_ID:
         return [row]
     # Hang bung: bien the la cac hang THUT VAO nam ngay duoi hang cha.
-    below = [n for n in rows if n.bounds.top > row.bounds.bottom]
-    variants = [n for n in below if n.bounds.left > row.bounds.left]
+    variants = []
+    for n in sorted((n for n in rows if n.bounds.top > row.bounds.bottom), key=lambda n: n.bounds.top):
+        if n.bounds.left <= row.bounds.left:
+            break                     # het nhom bien the cua hang nay
+        variants.append(n)
     if variants:
-        return [variants[0]]          # da bung san - bam lai icon la GAP LAI
+        if not bien_the:
+            return [variants[0]]      # da bung san - bam lai icon la GAP LAI
+        from .fo_ngon_ngu import khop_bien_the
+        i = khop_bien_the(bien_the, [v.text for v in variants])
+        return [] if i is None else [variants[i]]
     return [row, "expanded"]          # can bung roi doc lai o vong sau
 
 
@@ -233,9 +241,26 @@ def onboarding_page(nodes: list[DeviceNode]) -> int:
     OB1/OB2/OB3. Doc theo cham chi trang: cham cua trang hien tai duoc keo DAI
     ra (do that: 53px so voi 21px cua cham thuong).
     """
-    dots = [n for n in nodes if n.resource_id == DOT_ID and n.visible]
+    dots = [n for n in nodes if n.resource_id == DOT_ID and n.visible] or _cham_khong_id(nodes)
     if not dots:
         return 0
     dots.sort(key=lambda n: n.bounds.left)
     widest = max(dots, key=lambda n: n.bounds.right - n.bounds.left)
     return dots.index(widest) + 1
+
+
+def _cham_khong_id(nodes: list[DeviceNode]) -> list[DeviceNode]:
+    """Cham chi trang KHONG co resource-id (AIP886 2.7.0: 4 view 41px, cham active 73px, cung hang y=1297-1318):
+    mot hang 3-6 node nho khong chu, khong id, cung top, dung mot cai rong han ro (>= 1,4 lan cai hep nhat)."""
+    nho = [n for n in nodes if n.visible and not n.resource_id and not (n.text or "").strip()
+           and 0 < n.bounds.bottom - n.bounds.top <= 40 and 0 < n.bounds.right - n.bounds.left <= 120]
+    hang: dict[int, list[DeviceNode]] = {}
+    for n in nho:
+        hang.setdefault(n.bounds.top // 4, []).append(n)
+    for nhom in hang.values():
+        if not 3 <= len(nhom) <= 6:
+            continue
+        rong = sorted(n.bounds.right - n.bounds.left for n in nhom)
+        if rong[-1] >= 1.4 * rong[0] and rong[-2] < 1.4 * rong[0]:
+            return nhom
+    return []

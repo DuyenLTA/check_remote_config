@@ -15,8 +15,11 @@ from __future__ import annotations
 
 import re
 
-from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_bo_cuc, assert_mau, assert_ads, assert_timing, assert_ui,
-               ui_names)
+from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_bo_cuc, assert_chu, assert_indicator,
+               assert_khong_co_ad,
+               assert_man_khong,
+               assert_anh_content, assert_mau, assert_ads, assert_splash_media, assert_tag,
+               assert_timing, assert_trong_luc, assert_ui, ui_names)
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -57,7 +60,7 @@ QUOTED_RE = re.compile(r"[\"“”']([^\"“”']{2,60})[\"“”']")
 # "Chuyen sang man Onboarding 3", "Vao man Home" - dong ta man hinh DEN duoc
 # sau buoc cuoi. Do duoc bang activity dang focus, khong phai "phai nhin mat".
 TOI_MAN_RE = re.compile(
-    r"chuy[ểe]n\s*(?:sang|qua|t[ớo]i)|v[àa]o\s*m[àa]n|[đd]i\s*(?:[đd]ến|den|t[ớo]i)|"
+    r"chuy[ểe]n\s*(?:sang|qua|t[ớo]i)|v[àa]o\s*m[àa]n|v[àa]o\s+(?:th[ẳa]ng\s+)?home\b|[đd]i\s*(?:[đd]ến|den|t[ớo]i)|"
     r"quay\s*(?:l[ạa]i|v[ềe])|hi[ểe]n\s*th[ịi]\s*m[àa]n|m[àa]n\s+\S+\s+hi[ểe]n\s*th[ịi]",
     re.I)
 
@@ -89,6 +92,34 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     if ket:
         return ket
 
+    # "Version Lib Ads = 1.2.10": doc tu log tag da xem o buoc "Xem logcat tag ...".
+    ket = assert_tag.cham(text, drive or {})
+    if ket:
+        return ket
+
+    # Nen splash theo media_url (anh phu kin / GIF lap / GIF mot lan) va "progress + inter splash".
+    ket = (assert_splash_media.cham_nen(text, drive or {})
+           or assert_splash_media.cham_progress(text, list((ads.get("units") or {}).values()), drive or {}))
+    if ket:
+        # "Nen GIF chay 1 lan ..., sub_title 'Gif once'": chu trong ngoac cung phai cham.
+        return _gop(ket, assert_chu.cham(text, drive or {}, bo_hinh_dong=True), text)
+
+    # "Trong luc X dang hien thi: ..." - X khong show thi ve sau dung mot cach vo nghia.
+    ket = assert_trong_luc.cham(text, list((ads.get("units") or {}).values()))
+    if ket:
+        return ket
+    # "Khong co native ad, hien thi icon SWIPE + text 'Swipe to next'": ve ad o vi tri case tat + ve chu.
+    ket = assert_khong_co_ad.cham(text, list((ads.get("units") or {}).values()), cfg)
+    if ket:
+        chu = assert_chu.cham(text, drive or {})
+        return ket if not chu else out(worst([ket["verdict"], chu["verdict"]]),
+                                       f"{ket['reason']}; {chu['reason']}", text)
+
+    # "Khong hien thi man Question ..., vao thang Home".
+    ket = assert_man_khong.cham(text, drive or {}) or assert_indicator.cham(text, drive or {})
+    if ket:
+        return ket
+
     # "Vi tri X co / KHONG show tai man Y" (Y khong phai man cua X): cham bang
     # event ad_show gan man, khong bang request - request o man nha la dung cho.
     ket = assert_ad_screen.cham(text, events, list((ads.get("units") or {}).values()))
@@ -114,9 +145,15 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
 
     # Vi tri cum progress/nhan so voi native/banner/man hinh: cham bang bounds. Phai truoc
     # luat ads - cau co chu "native" nhung hoi vi tri, khong hoi request.
-    ket = assert_bo_cuc.cham(text, drive or {}) or assert_mau.cham(text, drive or {}, cfg)
+    ket = assert_bo_cuc.cham(text, drive or {})
     if ket:
         return ket
+    ket = assert_mau.cham(text, drive or {}, cfg)
+    if ket:
+        # "Nen text #F5F5F5, button 'FR - Next', slider mau #1565C0, anh content OB1": ma mau chi la mot phan -
+        # chu trong ngoac va anh content cung phai cham, khong thi PASS chi nho phan mau (AIP886 R01-03).
+        return _gop(_gop(ket, assert_chu.cham(text, drive or {}), text),
+                    assert_anh_content.cham(text, drive or {}, cfg), text)
 
     # "Layout theo layout_X": cau co chu native nhung hoi BO CUC, cham bang cay UI.
     bo_cuc = ui_names.find_in(text)
@@ -128,6 +165,9 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         ket = assert_ads.log_cua_vi_tri(text, ads, scope)
         if ket:
             return ket
+    ket = assert_trong_luc.hien_thi_tron(text, don_vi, kind)
+    if ket:
+        return ket
     if kind or assert_ads.routes(text):
         return assert_ads.ad_line(text, kind, ads, drive, scope, vi_tri)
 
@@ -139,7 +179,9 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     # "Icon la animation lap, goi y huong vuot ngang theo huong chuyen man":
     # cau hoi icon CO CHUYEN DONG khong; chu "vuot ... chuyen man" chi ta huong
     # goi y. Cham bang cu vuot la PASS ma khong ai do animation (do 2026-10-06).
-    if DOI_VUOT_RE.search(text) and not ANIM_RE.search(text):
+    # Bo chu trong ngoac truoc: "Text 'Swipe to next' dung mau primary" la chu tren UI, khong phai doi vuot
+    # (AIP886 R04-01: tool vuot thu roi PASS, mau khong ai do).
+    if DOI_VUOT_RE.search(QUOTED_RE.sub("", text)) and not ANIM_RE.search(text):
         ket = assert_ui.vuot_duoc(drive)
         if ket:
             return ket
@@ -149,9 +191,13 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         if ket:
             return ket
 
-    quoted = QUOTED_RE.search(text)
-    if quoted:
-        return assert_ui._text_on_screen(quoted.group(1), drive)
+    ket = assert_chu.cham(text, drive)
+    if ket:
+        # "Bam 'FR - Go' → vao Home": chu co hien CHUA DU - ve man dich cung phai dung (AIP886 O01-02).
+        man = assert_ui._man_da_toi(text, drive) if TOI_MAN_RE.search(text) else None
+        if man:
+            return out(worst([ket["verdict"], man["verdict"]]), f"{ket['reason']}; {man['reason']}", text)
+        return ket
 
     # Ten goi cua nguoi ("icon SWIPE") -> node tren cay UI (data/ui_names.yaml).
     element = ui_names.find_in(text)
@@ -176,6 +222,13 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
                    f"dòng này tả UI của màn cần lái tới, tool mới dừng ở {where}", text)
     return out(NOT_VERIFIABLE, "dòng này phải nhìn mắt mới kết luận được (design/màu/animation)", text,
                tinh=True)
+
+
+def _gop(a: dict, b: dict | None, text: str) -> dict:
+    """Ghep hai ket qua cham cua cung mot dong (muc xau nhat thang)."""
+    if not b:
+        return a
+    return out(worst([a["verdict"], b["verdict"]]), f"{a['reason']}; {b['reason']}", text)
 
 
 def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), overrides=(),

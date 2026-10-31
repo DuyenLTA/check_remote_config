@@ -197,10 +197,28 @@ def _sua(project: str, sua, dk: str) -> int:
             moi, _ = _goi(project, tok, "PUT", gui, etag)
             return int((moi.get("version") or {}).get("versionNumber") or 0)
         except urllib.error.HTTPError as e:
+            if e.code in LOI_TAM:
+                # Firebase 5xx tam thoi (HTTP 503 luc publish, AIP886 31/10/2026): doc lai roi gan lai, If-Match
+                # van chan de thay doi cua nguoi khac.
+                time.sleep(CHO_MANG)
+                continue
             if e.code != 412:
-                raise RcError(f"publish Remote Config {project} lỗi (HTTP {e.code}): "
-                              f"{e.read()[:300].decode('utf-8', 'replace')}") from None
-    raise RcError(f"Remote Config {project} bị người khác publish liên tục, thử lại sau")
+                raise RcError(f"publish Remote Config {project} lỗi (HTTP {e.code}): {_than_loi(e)}") from None
+    raise RcError(f"Remote Config {project} bị người khác publish liên tục / Firebase lỗi tạm liên tục, thử lại sau")
+
+
+LOI_TAM = (500, 502, 503, 504)
+
+
+def _than_loi(e: urllib.error.HTTPError) -> str:
+    """Than loi Firebase (co the gzip) -> chu doc duoc, toi da 300 ky tu."""
+    raw = e.read()
+    if e.headers.get("Content-Encoding") == "gzip" or raw[:2] == b"\x1f\x8b":
+        try:
+            raw = gzip.decompress(raw)
+        except OSError:
+            pass
+    return raw[:300].decode("utf-8", "replace")
 
 
 def dat(project: str, gia_tri: dict[str, str], dk: str = DIEU_KIEN) -> int:

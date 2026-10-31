@@ -18,7 +18,7 @@ import logging
 import time
 from pathlib import Path
 
-from . import device_app, fo_steps, ui_dump
+from . import device_app, fo_ngon_ngu, fo_steps, ui_dump
 from .fo_screens import (  # noqa: F401 - tai xuat cho cho goi cu
     MAN_THEO_MA,
     SCREEN_WORDS,
@@ -50,6 +50,8 @@ DEFAULT_TIMEOUT = 180.0
 # lam pager it trang hon so trang dich). Truoc day vuot ~540 lan toi het
 # DEFAULT_TIMEOUT (do 2026-10-23, Sorapix SDK353-H202-008).
 VUOT_KET_TOI_DA = 3
+# Man chua tinh la "da ra khoi onboarding": quang cao chen giua, splash, chon ngon ngu.
+CHUA_RA_KHOI = ("AdActivity", "Splash", "Language")
 
 
 def rules() -> dict:
@@ -154,13 +156,18 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
         await client.shell(serial, "input", "keyevent", step["key"])
         return step["key"], True
     if "language" in step:
-        targets = fo_steps.language_targets(nodes, step["language"])
+        # Case doi ngon ngu rieng (`fo_ngon_ngu.CHON`) thang luat mac dinh trong yaml.
+        rieng = fo_ngon_ngu.CHON.get()
+        lang, bien_the = rieng or (step["language"], "")
+        targets = fo_steps.language_targets(nodes, lang, bien_the)
         if not targets:
-            return "", True
+            # Khong thay ngon ngu case doi: KHONG di tiep (bam Next la qua LFO bang ngon ngu khac, roi cham
+            # noi dung sai khoi) - dung o day, walk_to bao ket kem man dang dung.
+            return "", rieng is None
         await _tap(client, serial, targets[0])
         if len(targets) > 1:      # moi bung hang ra, chua chon duoc
-            return f"bung hang {step['language']}", False
-        return f"chon {step['language']}", True
+            return f"bung hang {lang}", False
+        return f"chon {bien_the or lang}", True
     if step.get("tap_continue"):
         node = fo_steps.find_continue(nodes, screen)
         if not node:
@@ -224,6 +231,11 @@ async def _qua_lfo_nhanh(client, serial: str, nodes: list, rule: dict) -> str:
     cach mot buoc hang do tu chinh danh sach; nut Next o LFO2 nam cung cho LFO1.
     """
     lang = next((st["language"] for st in rule["steps"] if "language" in st), "")
+    rieng = fo_ngon_ngu.CHON.get()
+    if rieng:
+        if rieng[1] != rieng[0]:
+            return ""           # case doi bien the cu the: bam theo toa do chi lay bien the dau -> di duong thuong
+        lang = rieng[0]
     nut_ids = [st["tap"]["resource_id"] for st in rule["steps"]
                if (st.get("tap") or {}).get("resource_id")]
     rows = sorted((n for n in nodes if n.resource_id == fo_steps.TITLE_ID and n.visible),
@@ -245,8 +257,13 @@ async def _qua_lfo_nhanh(client, serial: str, nodes: list, rule: dict) -> str:
 
 async def walk_to(client, serial: str, package: str, target: str,
                   timeout: float = DEFAULT_TIMEOUT, log_fn=lambda _m: None,
-                  vao_la_tra: bool = False, qua_lfo_nhanh: bool = False) -> dict:
+                  vao_la_tra: bool = False, qua_lfo_nhanh: bool = False, chup=None,
+                  dung_khi=None) -> dict:
     """Lai app cho toi khi activity chua `target`. Tra nhat ky duong di.
+
+    `chup(activity, xml)`: goi moi lan doc man cua app (khong goi o AdActivity) - case_run giu dump + anh cua
+    tung man DI QUA, dong Expected "OB2: 'FR - OB2 title'" cham duoc ca khi case lai tiep toi OB4.
+    `dung_khi(nodes)`: dung (reached) ngay khi man thoa dieu kien, truoc khi bam gi o man do.
 
     Khong raise khi khong toi duoc: tra `reached=False` kem man dang dung va
     cac buoc da lam, de nguoi doc biet ket o dau.
@@ -266,6 +283,8 @@ async def walk_to(client, serial: str, package: str, target: str,
     idle = 0
     waited = 0.0
 
+    # "!X": di cho toi khi RA KHOI man X (dich cua buoc "Hoan thanh OB4").
+    ra_khoi = target[1:] if target.startswith("!") else ""
     want_activity, _, want_page = target.partition("#")
     page = int(want_page) if want_page.isdigit() else 0
     # (trang vua vuot di, co vuot that) va dump truoc cu vuot - de nhan trang
@@ -275,12 +294,18 @@ async def walk_to(client, serial: str, package: str, target: str,
 
     while waited < timeout and idle < STUCK_POLLS:
         pkg, activity = await device_app.focus(client, serial)
-        if want_activity in activity:
+        if ra_khoi and pkg == package and ra_khoi not in activity and not any(
+                m in activity for m in CHUA_RA_KHOI):
+            # "Hoan thanh OB4": man sau onboarding la gi (Question / paywall / Home) tuy config - toi day la xong.
+            return {"reached": True, "activity": activity, "trail": trail}
+        if want_activity in activity and not ra_khoi:
             if not page:
                 return {"reached": True, "activity": activity, "trail": trail}
             # Cac trang OB dung chung activity -> vuot cho toi dung trang.
             xml = await ui_dump.dump(client, serial)
             nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml))
+            if chup:
+                await chup(activity, xml)
             now = fo_steps.onboarding_page(nodes)
             if now == page:
                 return {"reached": True, "activity": f"{activity} (trang {now})", "trail": trail}
@@ -360,7 +385,14 @@ async def walk_to(client, serial: str, package: str, target: str,
             index = rule["repeat_from"]
 
         try:
-            nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)))
+            xml = await ui_dump.dump(client, serial)
+            nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml))
+            if chup and "AdActivity" not in activity:
+                # Truoc khi bam: man nay dang hien dung noi dung - cham chu / mau tren man di qua.
+                await chup(activity, xml)
+            if dung_khi and dung_khi(nodes):
+                # "Bam 'FR - Go'" ma app con o splash: lai toi khi nut / o lua chon hien thi dung lai, khong bam tiep.
+                return {"reached": True, "activity": activity, "trail": trail}
             did, advance = await do_step(client, serial, steps[index], nodes, screen)
         except AdbError as exc:
             # Dump hong (uiautomator thinh thoang tra "null root node") - thu lai

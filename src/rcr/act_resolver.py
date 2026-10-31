@@ -32,14 +32,15 @@ from __future__ import annotations
 
 import re
 
-from .act_types import (Action, Background, GoTo, Net, NeedsHuman, NoOp, Rotate, Seq,
-                        Swipe, Tap, TapId, Wait, Watch)
-from . import act_compound, net_ctl
+from .act_types import (Action, Background, ChonNgonNgu, GoTo, MoLai, Net, NeedsHuman, NoOp, Rotate, Seq,
+                        Swipe, Tap, TapId, Wait, Watch, XemTag)
+from . import act_compound, act_cau_fo, net_ctl
+from .act_cau_fo import DI_QUA, MO_LAI_TU_RE, RA_KHOI_OB  # noqa: F401 - case_drive / act_exec dung qua day
 from .act_nodes import find, tap_by_text
 from .ui_dump import DeviceNode
 
-__all__ = ["Action", "Background", "GoTo", "Net", "NeedsHuman", "NoOp", "Rotate", "Seq",
-           "Swipe", "Tap", "TapId", "Wait", "Watch", "resolve", "find"]
+__all__ = ["Action", "Background", "ChonNgonNgu", "GoTo", "MoLai", "Net", "NeedsHuman", "NoOp", "Rotate", "Seq",
+           "Swipe", "Tap", "TapId", "Wait", "Watch", "XemTag", "resolve", "find"]
 
 # Buoc doi soat tren console ngoai (AdMob, Firebase, dashboard). Tool cham ads
 # bang log cua may, khong mo console - nhung day KHONG phai cho phai dung lai:
@@ -100,6 +101,9 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     ghep = act_compound.resolve(text, nodes, resolve)
     if ghep is not None:
         return ghep
+    fo = act_cau_fo.resolve(text, nodes)
+    if fo is not None:
+        return fo
     if OBSERVE_RE.match(text):
         return NoOp("bước quan sát — không thao tác, chuyển thẳng sang chấm")
     # Cau ve MANG phai xet truoc cau mo app: "Mo app khong mang" khop ca hai,

@@ -46,7 +46,7 @@ async def resume_neu_o_nen(client, serial: str, package: str, step: str, record:
     Luat co ban dich "Mo lai app" thanh "app da mo san" - dung voi luc vua
     patch config, SAI khi app dang nam nen: bo qua thi case cham man launcher.
     """
-    if not ctx["o_nen"] or not act_resolver.LAUNCH_RE.match(step):
+    if not ctx["o_nen"] or not (act_resolver.LAUNCH_RE.match(step) or act_resolver.MO_LAI_TU_RE.match(step)):
         return False
     await device_app.launch(client, serial, package)
     await device_app.wait_foreground(client, serial, package)
@@ -100,6 +100,11 @@ async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop
         await device_motion.home(client, serial)
         ctx["o_nen"] = True
         await asyncio.sleep(action.seconds)
+    elif isinstance(action, act_resolver.MoLai):
+        await device_app.launch(client, serial, ctx["package"])
+        await device_app.wait_foreground(client, serial, ctx["package"])
+        ctx["o_nen"] = False
+        await asyncio.sleep(CHO_SAU_THAO_TAC)
     elif isinstance(action, act_resolver.Rotate):
         record["xoay"] = await device_motion.xoay(client, serial, action.orientations)
 

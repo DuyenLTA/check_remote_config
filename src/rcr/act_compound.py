@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from .act_types import Background, NeedsHuman, NoOp, Rotate, Seq, Swipe, Tap, TapId, Wait, Watch
+from .act_types import Background, MoLai, NeedsHuman, NoOp, Rotate, Seq, Swipe, Tap, TapId, Wait, Watch
 
 # "Tai t0+2s: vuot trai" - moc tinh tu luc vua toi man. `case_drive` cho toi
 # moc roi moi lam ve sau dau hai cham.
@@ -34,6 +34,8 @@ NOI_TIEP_RE = re.compile(r"^\s*(?:sau\s+[đd][óo]|r[ồo]i|ti[ếe]p\s+(?:theo|
 # "O OB3, cho 3s", "O man ke cho them 5s" - ve dau chi noi dang o dau.
 O_MAN_CHO_RE = re.compile(r"^\s*[ởo]\s+[^,]{1,30}?,?\s*(?=(?:chờ|cho|đợi|doi)\b)", re.I)
 HOME_RE = re.compile(r"\bnh[ấa]n\s+home\b|\bb[ấa]m\s+home\b|\bbackground\b", re.I)
+MO_LAI_RE = re.compile(r"m[ởo]\s*l[ạa]i|\breopen\b|quay\s*l[ạa]i\s*app", re.I)
+MO_LAI_LY_DO = "mở lại app bằng icon (TC ghi Recent — nhiều máy không coi Recent là ẩn app)"
 XOAY_RE = re.compile(r"^\s*xoay\b", re.I)
 HUONG_XOAY_RE = re.compile(r"\b(ngang|d[ọo]c)\b", re.I)
 NHANH_RE = re.compile(
@@ -92,7 +94,12 @@ def resolve(text: str, nodes, base):
         return base(O_MAN_CHO_RE.sub("", text, count=1), nodes)
     if HOME_RE.search(text):
         giay = so_giay(text) or CHO_NEN_MAC_DINH
-        return Background(giay, f"nhấn Home, để app nằm nền {giay:g}s")
+        nen = Background(giay, f"nhấn Home, để app nằm nền {giay:g}s")
+        if MO_LAI_RE.search(text):
+            # "Bam Home he thong → mo lai tu Recent": truoc day chi nhan Home roi thoi, app nam nen toi cuoi
+            # case -> resume khong co request nao, S03-03 FAIL gia (AIP886 31/10/2026).
+            return Seq((nen, MoLai(MO_LAI_LY_DO)), f"nhấn Home, nằm nền {giay:g}s rồi mở lại bằng icon")
+        return nen
     if XOAY_RE.match(text):
         return _xoay(text)
     nhanh = NHANH_RE.search(text)

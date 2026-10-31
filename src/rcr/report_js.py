@@ -17,7 +17,8 @@ const THAOTAC = {
   net: "đổi trạng thái mạng", noop: "không cần thao tác",
   needs_human: "tool không tự làm được", background: "đưa app xuống nền",
   resume: "đưa app lên lại", rotate: "xoay màn hình", seq: "chuỗi thao tác",
-  watch: "theo dõi màn (đo thời gian)",
+  watch: "theo dõi màn (đo thời gian)", chon_ngon_ngu: "chọn ngôn ngữ ở LFO",
+  chup_man: "chụp màn đi qua khi lái luồng", xem_tag: "đọc log tag (bật tester mode nếu cần)",
 };
 const TILE = {
   FAIL: "sai so với Expected", BLOCKED: "chưa test được",

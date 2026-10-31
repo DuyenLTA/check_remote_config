@@ -27,6 +27,20 @@ def bo_cuc() -> dict:
     return (yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}).get("bo_cuc") or {}
 
 
+def chon_item_ids() -> tuple[str, ...]:
+    """Id cac o lua chon o man Question (muc `chon_item`) - buoc "Chon 1 item"."""
+    import yaml
+
+    return tuple(((yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}).get("chon_item") or {}).get("ids") or ())
+
+
+def chon_item_cta_ids() -> tuple[str, ...]:
+    """Id nut cta man Question (hien sau khi chon mot o)."""
+    import yaml
+
+    return tuple(((yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}).get("chon_item") or {}).get("cta") or ())
+
+
 def find_in(text: str) -> dict | None:
     """Phan tu UI ma cau nay dang noi toi. Khop ten dai truoc ten ngan."""
     low = (text or "").casefold()

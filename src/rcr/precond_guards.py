@@ -25,6 +25,10 @@ EP_DUOC = (
      "chặn đường tới ad server"),
     (re.compile(r"mock\s+.{0,20}(?:no[\s-]*fill|fail)|ep\s+unit\s+fail", re.I),
      "ép unit fail"),
+    # "Lam 303 no-fill (ID test no-fill hoac chan ad request 303)" - bo TC 3.6.1 (AIP886 31/10/2026: khong nhan
+    # cau nay nen 303 van fill + show ma case S02-01 van ra PASS).
+    (re.compile(r"(?:l[àa]m|[ée]p|ep)\s+.{0,20}no[\s-]*fill|ch[ặa]n\s+ad\s+request", re.I),
+     "ép ad không fill"),
 )
 # Dieu kien KHONG tao duoc tren may test hien tai.
 KHONG_EP_DUOC = (
@@ -95,3 +99,22 @@ def da_khong_fill(units, vi_tri, khop) -> bool:
     if not thuoc:
         return False
     return not any(u["loaded"] or u["shown"] for u in thuoc)
+
+
+# "Thiet bi OPPO" trong precondition: case chi dung tren may hang do (bug rieng ROM). Chay tren may khac
+# ma ra PASS la PASS gia (AIP886 31/10/2026: S03 doi OPPO, chay tren Pixel 6 ra PASS theo request).
+HANG_MAY = ("oppo", "samsung", "xiaomi", "redmi", "vivo", "realme", "huawei", "honor", "oneplus", "pixel",
+            "google", "motorola", "nokia", "sony", "tecno", "infinix")
+THIET_BI_RE = re.compile(r"(?:thi[ếe]t\s*b[ịi]|m[áa]y|device)\s+(" + "|".join(HANG_MAY) + r")\b", re.I)
+
+
+def thieu_may(precondition: str, hang: str, model: str = "") -> list[str]:
+    """Precondition doi may hang X ma may dang chay khong phai hang X -> ly do, [] neu khop / khong doi."""
+    m = THIET_BI_RE.search(precondition or "")
+    if not m:
+        return []
+    can = m.group(1).casefold()
+    co = f"{hang} {model}".casefold()
+    if can in co or (can == "pixel" and "google" in co) or (can == "redmi" and "xiaomi" in co):
+        return []
+    return [f"cần máy {m.group(1)}, máy đang chạy là {hang} {model}".strip()]

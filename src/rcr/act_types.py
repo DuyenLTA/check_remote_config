@@ -169,5 +169,42 @@ class TapId:
         return ra | {"lan": self.lan} if self.lan > 1 else ra
 
 
+@dataclass(frozen=True, slots=True)
+class MoLai:
+    """Dua app dang nam nen len lai BANG ICON (intent LAUNCHER), ke ca khi TC ghi "mo lai tu Recent": nhieu may
+    khong coi Recent la an app (user 29/10/2026), case resume khong ban request nao."""
+
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "resume", "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
+class ChonNgonNgu:
+    """"Chon Francais o LFO1": ngon ngu da duoc `fo_flow` chon khi lai qua LFO (xem `fo_ngon_ngu`); buoc nay chi
+    lai qua LFO neu app con dung truoc do."""
+
+    ten: str
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "chon_ngon_ngu", "language": self.ten, "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
+class XemTag:
+    """"Xem logcat tag A va B": doc dong log cua dung cac tag (bat tester mode khi co FOR_TESTER_CONFIG)."""
+
+    tags: tuple[str, ...]
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "xem_tag", "tags": list(self.tags), "reason": self.reason}
+
+
 Action = (Tap | Swipe | Wait | NoOp | GoTo | Net | NeedsHuman | Background | Rotate | Seq
-          | Watch | TapId)
+          | Watch | TapId | MoLai | ChonNgonNgu | XemTag)

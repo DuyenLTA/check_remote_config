@@ -17,10 +17,12 @@ from . import (
     fo_screens,
     assert_ads,
     case_run,
+    device_app,
     chay_lai,
     precond_guards,
     rc_json_lech,
     fo_flow,
+    fo_ngon_ngu,
     luot_file,
     rc_guards,
     rc_patch,
@@ -69,6 +71,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
     """
     by_key = {r["key"]: r for r in rows}
     records = []
+    may = await device_app.hang_may(client, baseline.serial)
     co_ket_qua = luot_file.da_xong(list(goc))
 
     def luu(xong: bool = False) -> list[dict]:
@@ -105,9 +108,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             chosen = runnable[key]
             log_fn(f"--- case {key} ---")
             row = by_key.get(key, {})
-            goto = "" if args.no_walk else fo_flow.target_for(
-                f"{row.get('label', '')} {row.get('feature', '')} {chosen['precondition']}"
-            )
+            goto = "" if args.no_walk else _goto_cua(row.get("label", ""), row.get("feature", ""),
+                                                      chosen["precondition"])
             # Ma vi tri ads noi san key cua case nam o man nao. Buoc Action cua
             # TC van bao "Hoan thanh luong FO den Home", nhung doc log o dung
             # man do la du - di tiep chi ton thoi gian.
@@ -148,7 +150,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             click_truoc = 0
             dau_truoc = None
             # Dieu kien may nay khong tao duoc: chay lai van chay duoi trang thai tu nhien.
-            thieu_co_dinh = _thieu_co_dinh(chosen["precondition"])
+            thieu_co_dinh = _thieu_co_dinh(chosen["precondition"], may, fo_ngon_ngu.tien_dk_chuoi(key, runnable))
             result = None
             ro_gan_nhat = None
             # ID cua vi tri nam cung trong app (RC khong khai `id_*`) -> khong doi slot duoc:
@@ -166,6 +168,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                             keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
                             log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
                             runtime=chosen.get("runtime", False),
+                            ngon_ngu=fo_ngon_ngu.tim_theo_chuoi(key, runnable),
                         )
                     except (RcError, AdbError) as exc:
                         if isinstance(exc, AdbTransportError):
@@ -252,7 +255,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         # Precondition doi mot dieu kien may nay khong tao duoc (throttle bang
         # thong, mediation test mode): case KHONG duoc ra PASS im lang - no
         # chua he chay dung nhanh ma TC mo ta.
-        thieu = _thieu_co_dinh(chosen["precondition"])
+        thieu = _thieu_co_dinh(chosen["precondition"], may, fo_ngon_ngu.tien_dk_chuoi(key, runnable))
         if ep:
             # Dieu kien dat hay khong la do TRANG THAI THAT: kiem bang log, du
             # da ep hay khong. Ep roi ma ad van fill thi ep hong.
@@ -296,9 +299,19 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
     return luu(xong=True)
 
 
-def _thieu_co_dinh(precondition: str) -> list[str]:
-    """Dieu kien precondition may nay KHONG tao duoc (throttle, mediation test mode...)."""
-    thieu = precond_guards.khong_ep_duoc(precondition)
+def _goto_cua(nhan: str, nhom: str, precondition: str) -> str:
+    """Man case can lai toi. NHAN cua chinh case thang ("#SDK361-R02-03 Question"): ten nhom dung chung ca cum
+    ("R02 — splash gif lap ...") co chu "splash" lam target_for tra rong cho MOI case trong nhom -> case Question
+    dung o splash (AIP886 31/10/2026). Nhan khong noi man nao moi xet nhom + precondition."""
+    if fo_flow.target_for(nhan) or "spl" in nhan.casefold():
+        return fo_flow.target_for(nhan)
+    return fo_flow.target_for(f"{nhan} {nhom} {precondition}")
+
+
+def _thieu_co_dinh(precondition: str, may: tuple[str, str] = ("", ""), chuoi: str = "") -> list[str]:
+    """Dieu kien precondition may nay KHONG tao duoc (throttle, mediation test mode, sai hang may...).
+    `chuoi`: precondition ca chuoi "Tiep noi ..." - doi may hang X o case goc thi case noi tiep cung doi."""
+    thieu = precond_guards.khong_ep_duoc(precondition) + precond_guards.thieu_may(chuoi or precondition, *may)
     if fo_screens.can_qua_lfo_nhanh(precondition):
         # Precondition cho phep "di qua LFO2 nhanh HOAC throttle": fo_flow da qua
         # LFO nhanh va case_run da kiem bang log (ad LFO2 chua show) -> khong doi

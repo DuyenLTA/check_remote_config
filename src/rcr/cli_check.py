@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 
 from . import (
-    ad_units, case_run, cham_tay, luot_file, preflight, rc_baseline, rc_dex_keys, run_batch, sdk_probe,
+    ad_units, bot_hang_doi, case_run, cham_tay, luot_file, preflight, rc_baseline, rc_dex_keys, run_batch, sdk_probe,
     discord_notify,
     discord_run_message, tc_select, tc_source,
 )
@@ -130,7 +130,17 @@ async def run(args: argparse.Namespace) -> dict:
     client = AdbClient(args.adb)
     serial = await pick_serial(client, args.serial)
     _log(f"May: {serial} · App: {args.package}")
+    # Giu khoa may suot luot (chung khoa voi bot): luot chay tay khong giu khoa thi bot thay may ranh, lay may
+    # cai build giua chung -> hai ben cung lai mot may (AIP886 31/10/2026: bot cai hong vi dump UI de nhau).
+    try:
+        with bot_hang_doi.giu_may(bot_hang_doi.khoa_may(DEFAULT_OUT, serial)):
+            return await _tren_may(args, client, serial, started, goc_tiep)
+    except BlockingIOError:
+        raise RcError(f"máy {serial} đang có lượt khác (bot hoặc rc-check khác) - chờ lượt đó xong rồi chạy lại") \
+            from None
 
+
+async def _tren_may(args: argparse.Namespace, client, serial: str, started: float, goc_tiep: list) -> dict:
     if args.preflight:
         _log("Kiem dieu kien truoc khi chay...")
         kq = await preflight.chay(client, serial, args.package, args.tc or TC_MAC_DINH, args.out_dir, args.sdk,

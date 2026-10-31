@@ -40,6 +40,7 @@ KHONG_O_MOC_RE = re.compile(r"kh[ôo]ng\s+(?:t[ựu]\s+)?chuy[ểe]n\s+(?:[ởo]
 MOT_LAN_RE = re.compile(r"đúng\s*1\s*l[ầa]n|dung\s*1\s*lan|double\s*navigate|"
                         r"chuy[ểe]n\s+m[àa]n\s+l[ầa]n\s*2|kh[ôo]ng\s+skip\s+m[àa]n", re.I)
 X_RE = re.compile(r"(?:button|n[úu]t)\s*X\b|\bX\s+(?:xu[ấa]t\s+hi[ệe]n|hi[ểe]n|hi[ệe]n)", re.I)
+OB3_RE = re.compile(r"\bOB\s*3\b|\bonb3\b|\b303\b|native\s+full|\btimer\b|chuy[ểe]n\s+m[àa]n|\bswipe\b", re.I)
 DEM_RE = re.compile(r"đ[ếe]m\s*ng[ượu][ợo]c|countdown", re.I)
 KHONG_HIEN_RE = re.compile(r"kh[ôo]ng\s+(?:hi[ểe]n\s*th[ịi]|hi[ệe]n|c[óo]|xu[ấa]t\s+hi[ệe]n)", re.I)
 # "Button X hien thi NGAY tu dau (khong co so dem nguoc)": khang dinh X HIEN, ve
@@ -108,7 +109,11 @@ def cham(text: str, tl: dict | None, cfg: dict, req_303=()) -> dict | None:
         # (luot vuot qua lai), lan cuoi co ad show; khong co thi lan cuoi.
         dau = next((v for v in reversed(luot[1:]) if v["co_ad"]), luot[-1])
     thao_tac = (tl or {}).get("thao_tac") or []
-    if (thao_tac and len(luot) == 1 and dau["roi"] is not None
+    # Chi dong NOI VE OB3: case Question co buoc "Chon 1 item" sau khi lai qua OB3 thi moi dong deu bi chan
+    # "OB3 da tu roi" (AIP886 R01-05 31/10/2026).
+    dong_ob3 = bool(OB3_RE.search(text) or X_RE.search(text) or DEM_RE.search(text) or TU_CHUYEN_RE.search(text)
+                    or BAM_X_RE.search(text) or KHONG_O_MOC_RE.search(text) or SAU_BAM_RE.search(text))
+    if (dong_ob3 and thao_tac and len(luot) == 1 and dau["roi"] is not None
             and min(thao_tac) > dau["roi"] + TRE_UIA):
         # Thao tac cua case (vuot/bam "tai t0+2s") roi vao SAU luc OB3 da tu roi: tool nhan
         # ra da toi OB3 qua tre, case chua chay dung kich ban -> moi dong deu vo nghia

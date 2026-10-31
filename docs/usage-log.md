@@ -13,6 +13,8 @@ Test tay (TB): **3 giờ** cho một bộ testcase Remote Config của một app
 | 28/10/2026 | AI Song | 2.2.0 (13) | 41 dòng (4 mục) | 35 Khớp · 0 Sai · 6 còn đo tay · 24 không áp dụng | — | https://claude.ai/artifact/R8mKMjwPDChDxHzEcLtxP6 | ? | 3 giờ | ? |
 | 29/10/2026 | Cast to TV | 1.4.0 (14) | 23 (TC SDK 3.6.1) | 20 PASS · 0 FAIL · 3 chờ máy OPPO | — | https://claude.ai/artifact/GtBN7SHzZg1GFn1i6h2kMb | ? | 3 giờ | ? |
 | 29/10/2026 | Cast to TV | 1.4.0 (14) | 23 (TC SDK 3.6.1) | 22 PASS · 0 FAIL · 1 chưa đo (306 no fill) | — | https://claude.ai/artifact/GtBN7SHzZg1GFn1i6h2kMb | ? | 3 giờ | ? |
+| 31/10/2026 | AIP886 AI Photo Video Maker (release) | 2.7.0 (20) | 23 (8 nhóm) | 19 PASS · 0 FAIL · 4 chờ (3 cần máy OPPO, 1 chờ kho fill inter resume 503) | không | https://claude.ai/artifact/HboJXYApcM4FjxX3fzAphC | 31 phút | 3 giờ | 149 phút |
+| 31/10/2026 | AIP886 AI Photo Video Maker (release, tool tự chấm) | 2.7.0 (20) | 23 (8 nhóm) | 20 PASS · 0 FAIL · 3 BLOCKED (cần máy OPPO) | không | https://claude.ai/artifact/LCwN9MDx2uFf3zA5rgMEpi | ? | 3 giờ | ? |
 
 Lượt Sorapix có 20/23 case bị kẹt vì hộp thoại xin quyền thông báo che app sau `pm clear`, mỗi
 case hết giờ chờ rồi chạy lại. Đã sửa ở commit `66ca8ec`; lượt sau sẽ bớt thời gian chờ này, chưa đo lại.

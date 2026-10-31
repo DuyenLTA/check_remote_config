@@ -186,6 +186,16 @@ async def density(client, serial: str) -> int | None:
     return parse_density(out)
 
 
+async def hang_may(client, serial: str) -> tuple[str, str]:
+    """(hang, model) cua may - doi chieu precondition "Thiet bi OPPO". Doc hong -> ("", "") (khong chan luot)."""
+    try:
+        hang, _, _ = await client.shell(serial, "getprop", "ro.product.brand")
+        model, _, _ = await client.shell(serial, "getprop", "ro.product.model")
+    except Exception:                       # noqa: BLE001 - thieu hang may chi lam mat mot canh bao
+        return "", ""
+    return hang.strip(), model.strip()
+
+
 async def restart(client, serial: str, package: str) -> dict:
     """force-stop -> mo lai -> cho len foreground. Dung sau khi patch config.
 

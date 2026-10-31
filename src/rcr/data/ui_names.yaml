@@ -66,3 +66,16 @@ bo_cuc:
   # Vung de danh cho ad o day splash: dung khi chua thay node ad nao (ad chua ve).
   vung_ad:
     ids: [flBottomAd]
+
+# "Chon 1 item" o man Question: TC chi doi chon BAT KY mot o -> bam o dau tien (tren-trai). Do that AIP886 2.7.0
+# (SDK VslTemplate4 3.6.1): anh ivQuestionImage + chu tvQuestionTitle, nut cta btnNextQuestion hien sau khi chon.
+chon_item:
+  ids: [ivQuestionImage, tvQuestionTitle, itemStyle, rootStyleItem]
+  # Nut cta hien SAU khi chon mot o ("FR - Go") - buoc "Bam '<chu cta>'" ma nut chua hien: chon o dau roi bam.
+  cta: [btnNextQuestion]
+
+# Bat tester mode: bam icon o splash 25 lan (sau khi cap quyen thong bao) -> toast "Change to tester ad mode",
+# app in tag FOR_TESTER_CONFIG. Do that AIP886 2.7.0 / AIP936 1.8.0 (SDK VslTemplate4): splashAppIcon.
+tester_mode:
+  ids: [splashAppIcon]
+  so_lan: 25

@@ -25,15 +25,18 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 
-from . import (act_compound, act_exec, act_resolver, device_app, drive_probes, fo_flow,
+from . import (act_compound, act_exec, act_resolver, chup_man, device_app, drive_probes, fo_flow,
                fo_screens,
-               fo_steps, mau_chu, quan_sat, screencap, ui_dump)
+               fo_steps, mau_chu, quan_sat, screencap, tag_logcat, ui_dump, ui_names)
 
 log = logging.getLogger(__name__)
 
 AD_HINTS = ("adactivity", "com.google.android.gms.ads")
+# App con dung truoc / o LFO: buoc "Chon <ngon ngu>" phai lai qua LFO (fo_flow chon dung ngon ngu cua case).
+CHUA_QUA_LFO = ("Splash", "Language", "AdActivity")
 
 
 def _noop(_msg: str) -> None:
@@ -45,7 +48,49 @@ def _di_qua(man_can: str | None, target: str) -> bool:
 
     `man_can` None nghia la khong biet case noi ve man nao -> di het nhu TC bao.
     """
-    return man_can is not None and fo_flow.thu_tu(target) > fo_flow.thu_tu(man_can)
+    # "!OnboardingActivity" (Hoan thanh OB4) khong co trong THU_TU -> thu_tu xep cuoi; khong duoc coi la "di qua"
+    # roi bo buoc (AIP886 R01-05: bo "Hoan thanh OB4" vi key case o OB3, man Question khong bao gio toi).
+    return man_can is not None and not target.startswith("!") and fo_flow.thu_tu(target) > fo_flow.thu_tu(man_can)
+
+
+CON_TRONG_LUONG = ("Splash", "Language", "OnboardingActivity")
+_NGOAC_RE = re.compile(r"[\"“”'‘’]([^\"“”'‘’]{1,60})[\"“”'‘’]")
+
+
+async def _lai_toi_chu(client, serial: str, package: str, step: str, mau_can, log_fn) -> dict | None:
+    """Lai luong FO toi khi chu trong ngoac cua buoc hien, hoac toi man Question co o lua chon (nut cta chi hien
+    sau khi chon). -> {xml, activity, chup} hoac None neu khong toi."""
+    chu = _NGOAC_RE.search(step).group(1).strip().casefold()
+    o = set(ui_names.chon_item_ids())
+
+    def thay(nodes) -> bool:
+        return any((n.text or "").strip().casefold() == chu for n in nodes) or any(n.resource_id in o for n in nodes)
+
+    chup, da_chup = chup_man.tao(client, serial, package, mau_can)
+    walk = await fo_flow.walk_to(client, serial, package, "MainActivity", log_fn=log_fn, chup=chup, dung_khi=thay)
+    if not walk["reached"]:
+        return None
+    _, activity = await device_app.focus(client, serial)
+    return {"xml": await ui_dump.dump(client, serial), "activity": activity, "chup": da_chup}
+
+
+def _da_qua_man(activity: str, xml: str, target: str) -> bool:
+    """App dang o man nam SAU `target` trong luong FO? Khong biet chac (OB3 khong co cham trang, khong co dump)
+    -> False, de buoc van lai nhu cu."""
+    if not activity or target.startswith("!"):
+        return False
+    if "OnboardingActivity" in activity:
+        trang = fo_steps.onboarding_page(ui_dump.app_nodes(ui_dump.parse_dump(xml))) if xml else 0
+        if not trang:
+            # OB3 native full khong co cham trang: van chac la da qua LFO va it nhat o OB1 (R01-03 "LFO2.").
+            return fo_flow.thu_tu(target) <= fo_flow.thu_tu("OnboardingActivity#1")
+        dang_o = f"OnboardingActivity#{trang}"
+    else:
+        # Chi man CHAC CHAN thuoc luong FO: MainActivity co app la man mo dau, khong suy "da qua" tu ten do.
+        dang_o = next((t for t in ("QuestionActivity", "BillingActivity") if t in activity), "")
+        if not dang_o:
+            return False
+    return fo_flow.thu_tu(dang_o) > fo_flow.thu_tu(target)
 
 
 def blocking_screen(package: str, pkg: str, activity: str) -> str:
@@ -72,7 +117,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                 man_can: str | None = None, thu_vuot: bool = False,
                 da_toi: str | None = None, do_anim: bool = False,
                 man_dau: str = "", cua_so: float = act_exec.CUA_SO_MAC_DINH,
-                ghi_khung: bool = False, thu_bam_x: bool = False, mau_can=()) -> dict:
+                ghi_khung: bool = False, thu_bam_x: bool = False, mau_can=(), man_xa: str = "") -> dict:
     """Chay lan luot cac buoc. Tra nhat ky tung buoc + dump de phase 5 cham.
 
     Man hinh bi che CHI chan buoc phai cham vao man hinh. Buoc quan sat va buoc
@@ -91,6 +136,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
     """
     done: list[dict] = []
     blocked_steps: list[int] = []
+    tag_log: dict[str, list[str]] = {}       # buoc "Xem logcat tag ..." (tag_logcat)
     ctx, dump_cu = act_exec.ctx_moi(package, cua_so, ghi_khung), ""
     t0 = time.monotonic()
     man_cu = man_dau          # dump con dung duoc vi man chua doi ("" = phai chup moi)
@@ -132,6 +178,17 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
                 ctx["trang_cu"], ctx["vuot_sau"] = trang, 0
             dump_cu = xml
             action = act_resolver.resolve(step, nodes)
+            if (isinstance(action, act_resolver.NeedsHuman) and not blocked
+                    and _NGOAC_RE.search(step) and any(m in activity for m in CON_TRONG_LUONG)):
+                # "Bam 'FR - Go'" ma app con o splash / LFO / OB: lai tiep toi khi chu do (hoac o lua chon cua man
+                # Question) hien roi moi bam (AIP886 R01-06).
+                lai = await _lai_toi_chu(client, serial, package, step, mau_can, log_fn)
+                if lai:
+                    done.extend(chup_man.danh_so(lai["chup"], len(done) + 1))
+                    xml, activity = lai["xml"], lai["activity"]
+                    nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
+                    dump_cu = xml
+                    action = act_resolver.resolve(step, nodes)
             record = {"n": index, "step": raw, "action": action.summary,
                       "activity": activity, "dump": xml,
                       "shot": shot["thumb"], "shot_warning": shot["warning"]}
@@ -192,7 +249,31 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
             elif action.cho:
                 await asyncio.sleep(action.cho)
             continue
-        if isinstance(action, act_resolver.GoTo) and _di_qua(man_can, action.target):
+        if isinstance(action, act_resolver.ChonNgonNgu):
+            # Ngon ngu da dat cho ca case (fo_ngon_ngu.CHON): moi lan qua LFO fo_flow deu chon no.
+            if not any(m in activity for m in CHUA_QUA_LFO):
+                record["action"] = {"kind": "noop", "language": action.ten,
+                                    "reason": f"đã chọn {action.ten} khi lái qua LFO"}
+                man_cu = record.get("dump", "")
+                continue
+            dich = (man_can if man_can and fo_flow.thu_tu(man_can) > fo_flow.thu_tu("Language")
+                    else "OnboardingActivity#1")
+            action = act_resolver.GoTo(dich, action.reason)
+        if (isinstance(action, act_resolver.GoTo) and action.reason.startswith(act_resolver.DI_QUA)
+                and man_xa and fo_flow.thu_tu(man_xa) > fo_flow.thu_tu(action.target)):
+            # "Di tiep qua OB2" ma Expected con noi OB4: lai toi OB4, chup moi trang di qua.
+            action = act_resolver.GoTo(man_xa, action.reason)
+        if isinstance(action, act_resolver.GoTo) and _da_qua_man(activity, record.get("dump", ""), action.target):
+            # "LFO2.", "Bam tick.", "OB3." sau khi da lai toi OB4: man do o phia sau roi - lai tiep la di toi Home
+            # roi bao "khong toi duoc" (AIP886 R01-03 31/10/2026).
+            record["action"] = {"kind": "noop", "target": action.target,
+                                "reason": f"đã qua {action.target} (đang ở {activity.split('.')[-1]})"}
+            man_cu = record.get("dump", "")
+            continue
+        if (isinstance(action, act_resolver.GoTo) and _di_qua(man_can, action.target)
+                and not action.reason.startswith(act_resolver.DI_QUA)):
+            # "Di qua OB1 → OB4" la buoc QUAN SAT moi trang (dong "khong dung khoi 'en'" can thay het OB1-OB4):
+            # khong bo vi key case nam o OB3 (AIP886 R03-03 31/10/2026 - chi thay OB1 ma ra PASS).
             # Buoc TC bao di tiep, nhung key cua case nam o man truoc do roi:
             # doc log o day la du. 16 thao tac de toi Home ton ~90 giay va
             # khong them mot so do nao cho case nay.
@@ -205,8 +286,10 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
         if isinstance(action, act_resolver.GoTo):
             # Quang cao dang che van lai duoc: `fo_flow` co luat rieng cho
             # AdActivity (cho ad chay xong roi dong), khong phai tu mo nut X.
+            chup, da_chup = chup_man.tao(client, serial, package, mau_can)
             walk = await fo_flow.walk_to(client, serial, package, action.target, log_fn=log_fn,
-                                         qua_lfo_nhanh=fo_screens.can_qua_lfo_nhanh(step))
+                                         qua_lfo_nhanh=fo_screens.can_qua_lfo_nhanh(step), chup=chup)
+            done.extend(chup_man.danh_so(da_chup, len(done) + 1))
             if not walk["reached"]:
                 # Lai hut thi phai noi ket o dau: "khong dich duoc buoc" se lam
                 # nguoi doc di sua cau TC, trong khi loi nam o bo luat fo_flow.
@@ -226,7 +309,15 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
         if isinstance(action, act_resolver.NeedsHuman):
             return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,
                     "blocked_steps": blocked_steps, "khung": ctx["khung"],
-                    "thao_tac": ctx["thao_tac"]}
+                    "thao_tac": ctx["thao_tac"], "tag_log": tag_log}
+        if isinstance(action, act_resolver.XemTag):
+            kq = await tag_logcat.xem(client, serial, package, list(action.tags))
+            for tag, dongs in kq["tags"].items():
+                tag_log.setdefault(tag, []).extend(d for d in dongs if d not in tag_log.get(tag, []))
+            record["action"] = {**action.summary, "lam": kq["lam"],
+                                "so_dong": {t: len(d) for t, d in kq["tags"].items()}}
+            log_fn(f"    {kq['lam'] or 'đọc tag'}: " + ", ".join(f"{t} {len(d)} dòng" for t, d in kq["tags"].items()))
+            continue
         if await act_exec.resume_neu_o_nen(client, serial, package, step, record, ctx):
             continue
         await act_exec.lam(client, serial, action, record, ctx, log_fn)
@@ -235,7 +326,7 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
     done.append(cuoi)
     ra = {"steps": done, "status": "DONE", "stopped_at": 0,
           "blocked_steps": blocked_steps, "final": cuoi, "khung": ctx["khung"],
-                    "thao_tac": ctx["thao_tac"]}
+          "thao_tac": ctx["thao_tac"], "tag_log": tag_log}
     # Anh cuoi da chup dung man case quan sat; inter con che thi dong ngay,
     # de no nam do toi luc force-stop la co ad_click (do 2026-10-24).
     dong = await fo_flow.dong_ad_dang_che(client, serial, CHO_NUT_DONG_AD)

@@ -15,17 +15,24 @@ gia tri that nua.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import replace
+from pathlib import Path
 
 from . import (
     act_compound,
+    apk_tai_nguyen,
     assert_ad_screen,
+    assert_splash_media,
+    case_cham_them,
+    chup_man,
     fo_screens,
     ad_log,
     case_evidence,
     fa_log,
     fo_flow,
+    fo_ngon_ngu,
     screencap,
     assert_check,
     assert_timing,
@@ -43,7 +50,9 @@ from . import (
     rc_verify,
     runtime_steps,
     sdk_probe,
+    splash_media,
     ui_dump,
+    ui_names,
 )
 from .models import RcBaseline, RcError
 
@@ -96,6 +105,13 @@ async def apply_case(
         if mat_mang:
             await net_ctl.bat(client, baseline.serial)
         raise
+    # Nen splash (anh / GIF theo media_url): chup lien tuc NGAY tu luc mo app, song song voi verify + lai buoc -
+    # splash chi song vai giay.
+    nen_splash = splash_media.cau_hinh(overrides) if any(
+        assert_splash_media.NEN_RE.search(e or "") for e in expects) else {}
+    la_gif = str(nen_splash.get("type")).lower() == "gif"
+    chup_splash = (asyncio.create_task(splash_media.chup(client, baseline.serial))
+                   if nen_splash and not la_gif else None)
     result = await rc_verify.verify(client, baseline, overrides)
 
     out = {
@@ -116,21 +132,39 @@ async def apply_case(
     # Case co dong Expected ve nut X / so dem -> phai nhin NGAY khi toi trang:
     # khong dump xac nhan, khong chup bang chung truoc (chup sau khi nhin xong).
     nhin_ngay = assert_timing.cach_quan_sat(overrides, expects)[1]
+    # Ban dich chuoi + color/primary cua APK: dong "text 'Swipe to next'" khi case chon Francais, dong "dung mau
+    # primary". Doc mot lan moi versionCode (cache).
+    tai = (await apk_tai_nguyen.doc(client, baseline.serial, baseline.package, out_dir)
+           if case_cham_them.can_tai_nguyen(expects) else {})
+    ban_dich = case_cham_them.ban_dich_cho(expects, tai)
+    primary = tai.get("primary", "") if any(case_cham_them.PRIMARY_RE.search(e or "") for e in expects) else ""
+    mau_can = tuple(sorted({f"#{h}".upper() for e in expects for h in mau_chu.HEX_RE.findall(e or "")}
+                           | ({primary} if primary else set())))
+    # Man xa nhat Expected nhac ("OB4: ..."): buoc di tiep / dung som khong duoc dung truoc man do.
+    man_xa = case_cham_them.man_xa(expects)
+    if man_can is not None and man_xa and fo_flow.thu_tu(man_xa) > fo_flow.thu_tu(man_can):
+        man_can = man_xa
+    chup, da_chup = chup_man.tao(client, baseline.serial, baseline.package, mau_can)
     if goto and result.ok:
         log_fn(f"    lai toi {goto}...")
         out["walk"] = await fo_flow.walk_to(
             client, baseline.serial, baseline.package, goto, log_fn=log_fn,
             vao_la_tra=nhin_ngay,
             qua_lfo_nhanh=fo_screens.can_qua_lfo_nhanh(precondition, *steps),
+            chup=None if nhin_ngay else chup,
         )
         log_fn(f"    {'da toi' if out['walk']['reached'] else 'KHONG toi duoc'} "
                f"{out['walk']['activity'].split('.')[-1]}")
         if out["walk"]["reached"] and not nhin_ngay:
             out["drive"] = await case_evidence._snapshot(client, baseline, out["walk"]["activity"])
+        if da_chup:
+            # Man di qua truoc man dich (OB1, OB2...) - dong Expected cua chung cham tren cac dump nay.
+            out.setdefault("drive", {"steps": []})
+            out["drive"]["steps"] = chup_man.danh_so(da_chup, 1) + (out["drive"].get("steps") or [])
     if steps and result.ok:
         # Dong "user co the vuot sang man ke" doi mot cu vuot that de chung
         # minh - bao case_drive lam sau khi moi dong khac da co bang chung.
-        thu_vuot = any(assert_check.DOI_VUOT_RE.search(e or "") for e in expects)
+        thu_vuot = any(assert_check.DOI_VUOT_RE.search(assert_check.QUOTED_RE.sub("", e or "")) for e in expects)
         thu_bam_x = (any(assert_timing.BAM_X_RE.search(e or "") for e in expects)
                      and not any(act_compound.TAP_X_RE.search(st or "") for st in steps))
         da_toi = goto if (out.get("walk") or {}).get("reached") else None
@@ -141,13 +175,61 @@ async def apply_case(
             man_dau=((out.get("drive") or {}).get("steps") or [{}])[-1].get("dump", ""),
             **dict(zip(("cua_so", "ghi_khung"), assert_timing.cach_quan_sat(overrides, expects))),
             thu_bam_x=thu_bam_x,
-            mau_can=tuple(sorted({f"#{h}".upper() for e in expects
-                                  for h in mau_chu.HEX_RE.findall(e or "")})),
+            mau_can=mau_can, man_xa=man_xa,
         )
         # Giu lai anh/dump cua chuyen lai: no la bang chung da toi dung man.
         driven["steps"] = (out.get("drive") or {}).get("steps", []) + driven["steps"]
         driven["walked"] = bool((out.get("walk") or {}).get("reached"))
         out["drive"] = driven
+    if result.ok and out.get("drive"):
+        await _hien_cta_neu_can(client, baseline, out["drive"], expects, mau_can, log_fn)
+    if result.ok and case_cham_them.can_ve_home(expects, out.get("drive")):
+        await _lai_not_toi_home(client, baseline, out["drive"], mau_can, log_fn)
+    # Mo lai app sinh them log ads -> chi lam khi case khong co dong nao ve ads.
+    if nen_splash and la_gif and result.ok and not any(splash_media.DONG_ADS_RE.search(e or "") for e in expects):
+        # GIF: quay raw-frames o lan mo lai (lan mo dau GIF bi inter splash che truoc khi het mot vong).
+        try:
+            # Ban release: them ID inter splash -> slot trong (chi tren testvsl, restore go het) roi pm clear + mo
+            # lan dau de app nhan config; lan mo lai splash khong bi inter che, giu du lau de GIF het vong.
+            giu = splash_media.id_inter_splash_trong(baseline.configs) if baseline.firebase else {}
+            if giu:
+                await rc_patch.patch(client, baseline, dict(overrides) | giu)
+                for lenh in (("am", "force-stop", baseline.package), ("pm", "clear", baseline.package),
+                             ("pm", "grant", baseline.package, "android.permission.POST_NOTIFICATIONS")):
+                    await client.shell(baseline.serial, *lenh)
+                await device_app.launch(client, baseline.serial, baseline.package)
+                await asyncio.sleep(splash_media.CHO_LAN_DAU)
+            da = await splash_media.quay_lan_mo_lai(client, baseline.serial, baseline.package)
+            sm = splash_media.phan_tich(nen_splash, da | {"xml": ""}, baseline.package, Path(out_dir) / "media")
+            sm["lan_mo_lai"] = True
+            sm["giu_splash"] = bool(giu)
+        except Exception as exc:  # noqa: BLE001 - do nen hong khong duoc lam hong ca case
+            sm = {"loi": f"quay GIF lỗi: {exc}"}
+        log_fn("    do GIF lan mo lai: " + (sm.get("loi") or " ".join(
+            f"{d['t']:.1f}:{d['khung']}" for d in (sm.get("splash") or [])[::4])))
+        out.setdefault("drive", {"steps": []})["splash_media"] = sm
+    if chup_splash:
+        da, buoc_mau = await chup_splash, None
+        da["xml"] = splash_media.dump_splash(out.get("drive"))
+        try:
+            sm = splash_media.phan_tich(nen_splash, da, baseline.package, Path(out_dir) / "media")
+            if mau_can and da.get("xml"):
+                nodes = ui_dump.app_nodes(ui_dump.parse_dump(da["xml"]), baseline.package)
+                do = [m for png in splash_media.khung_do_mau(da, sm) for m in mau_chu.do(nodes, png, list(mau_can))]
+                if do:
+                    buoc_mau = {"step": "(chụp liên tục splash)", "activity": "SplashActivity", "mau": do,
+                                "action": {"kind": "noop", "reason": "đo màu chữ trên các khung splash đã khớp media"}}
+        except Exception as exc:  # noqa: BLE001 - do nen hong khong duoc lam hong ca case
+            sm = {"loi": f"đo nền splash lỗi: {exc}"}
+        dv = out.setdefault("drive", {"steps": []})
+        dv["splash_media"] = sm
+        if buoc_mau:
+            dv.setdefault("steps", []).append(buoc_mau | {"n": len(dv["steps"]) + 1})
+    if out.get("drive"):
+        out["drive"]["ban_dich"] = ban_dich
+        mp = case_cham_them.mau_primary(expects, out["drive"], primary, ban_dich)
+        if mp:
+            out["drive"]["mau_primary"] = mp
     # Cham case ads bang LOG, khong bang mat: inter load nhanh hon banner nen no
     # de len truoc khi kip nhin thay banner.
     if out.get("drive"):
@@ -222,10 +304,46 @@ async def apply_case(
     return out
 
 
+async def _hien_cta_neu_can(client, baseline, drive: dict, expects, mau_can, log_fn) -> None:
+    """Man cuoi la Question ma Expected con chu chua thay (cta 'EN - Go' chi hien SAU khi chon mot o) -> tool thu
+    chon o dau roi chup lai (nhu buoc "thu vuot"). AIP886 R02-03 31/10/2026: buoc TC chi "Quan sat" -> FAIL gia."""
+    cuoi = (drive.get("final") or {}).get("activity") or ""
+    thieu = case_cham_them.chu_chua_thay(expects, drive)
+    if "QuestionActivity" not in cuoi or not thieu:
+        return
+    nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, baseline.serial)), baseline.package)
+    o = [n for n in nodes if n.resource_id in set(ui_names.chon_item_ids()) and n.visible and not n.bounds.empty]
+    if not o:
+        return
+    n = min(o, key=lambda n: (n.bounds.top, n.bounds.left))
+    await device_app.tap(client, baseline.serial, *n.bounds.center)
+    log_fn(f"    chưa thấy {', '.join(repr(t) for t in thieu)} ở màn Question -> thử chọn 1 ô để hiện nút cta")
+    chup, da_chup = chup_man.tao(client, baseline.serial, baseline.package, mau_can, nhan="thử chọn 1 ô")
+    import asyncio
+    await asyncio.sleep(1.0)
+    await chup(cuoi, await ui_dump.dump(client, baseline.serial))
+    drive["steps"] = (drive.get("steps") or []) + chup_man.danh_so(da_chup, len(drive.get("steps") or []) + 1)
+
+
+async def _lai_not_toi_home(client, baseline, drive: dict, mau_can, log_fn) -> None:
+    """Expected doi "vao thang Home" ma buoc cuoi con o inter / paywall: lai tiep (fo_flow dong ad khi het dem
+    nguoc, dong paywall), giu dump moi man di qua de dong "khong hien man Question" doi chieu duoc."""
+    log_fn("    Expected đòi vào Home, màn cuối còn là "
+           f"{drive['final'].get('activity', '').split('.')[-1]} -> lái tiếp tới Home")
+    chup, da_chup = chup_man.tao(client, baseline.serial, baseline.package, mau_can, nhan="lái tiếp tới Home")
+    walk = await fo_flow.walk_to(client, baseline.serial, baseline.package, "MainActivity", log_fn=log_fn,
+                                 chup=chup)
+    drive["steps"] = (drive.get("steps") or []) + chup_man.danh_so(da_chup, len(drive.get("steps") or []) + 1)
+    drive.setdefault("trails", []).append(walk.get("trail") or [])
+    if walk["reached"]:
+        drive["final"] = {**drive.get("final", {}), "activity": walk["activity"], "page": 0,
+                          "lai_tiep": "lái tiếp tới Home sau bước cuối"}
+
+
 async def run_case(
     client, baseline: RcBaseline, runs, precondition: str = "", steps=(), expects=(),
     goto: str = "", *, keep=False, out_dir=".", dex=True, log_fn=_noop, man_can=None,
-    user_state: str = "", runtime: bool = False,
+    user_state: str = "", runtime: bool = False, ngon_ngu: tuple[str, str] | None = None,
 ) -> tuple[dict, RcBaseline]:
     """Chay tron mot case. Tra (ket qua, baseline dang dung).
 
@@ -254,19 +372,28 @@ async def run_case(
         else:
             log_fn("  app co doc het cac key nay")
 
-    if baseline.firebase:                    # reset lam trong tung luot, SAU khi publish RC (apply_case)
-        reset = {"mode": "firebase", "matched": user_state or "", "baseline_stale": False}
-    else:
-        reset = await device_reset.prepare(client, baseline, precondition, user_state, log_fn)
-    log_fn(f"Reset: {reset['mode']}" + (f" (khop '{reset['matched']}')" if reset["matched"] else ""))
-    if reset["baseline_stale"]:
-        log_fn("  app da bi xoa data -> doc lai baseline")
-        # Doc lai tu may thi mat dex_keys (chi do duoc bang soi APK) -> mang sang.
-        baseline = replace(await rc_baseline.read(client, baseline.serial, baseline.package),
-                           dex_keys=baseline.dex_keys)
+    # Ngon ngu case doi chon o LFO ("Chon Francais o LFO1", "ngon ngu da chon = Francais"): dat TRUOC reset -
+    # user cu lai luong FO luc reset cung phai chon dung ngon ngu do.
+    ngon_ngu = ngon_ngu or fo_ngon_ngu.tim(precondition, steps)
+    if ngon_ngu:
+        log_fn(f"  ngôn ngữ của case: {ngon_ngu[1]} (lái qua LFO sẽ chọn ngôn ngữ này)")
+    token = fo_ngon_ngu.CHON.set(ngon_ngu)
+    try:
+        if baseline.firebase:                    # reset lam trong tung luot, SAU khi publish RC (apply_case)
+            reset = {"mode": "firebase", "matched": user_state or "", "baseline_stale": False}
+        else:
+            reset = await device_reset.prepare(client, baseline, precondition, user_state, log_fn)
+        log_fn(f"Reset: {reset['mode']}" + (f" (khop '{reset['matched']}')" if reset["matched"] else ""))
+        if reset["baseline_stale"]:
+            log_fn("  app da bi xoa data -> doc lai baseline")
+            # Doc lai tu may thi mat dex_keys (chi do duoc bang soi APK) -> mang sang.
+            baseline = replace(await rc_baseline.read(client, baseline.serial, baseline.package),
+                               dex_keys=baseline.dex_keys)
 
-    out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                            log_fn, man_can, precondition, runtime, user_state)
+        out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
+                                log_fn, man_can, precondition, runtime, user_state)
+    finally:
+        fo_ngon_ngu.CHON.reset(token)
     if unused:
         out["keys_not_used"] = unused
     return out | {"reset": reset}, baseline

@@ -530,3 +530,28 @@ def test_khong_co_co_thi_khong_dien_gi(tmp_path):
     args = cli_check.build_parser().parse_args(["--package", PKG, "--case", "1"])
     cli_check.mac_dinh_khong_claude(args)
     assert args.tc is None and args.report == ""
+
+
+def test_may_dang_bi_luot_khac_giu_khoa_thi_khong_chay(adb_ui, monkeypatch):
+    """rcr-check giu chung khoa may voi bot: may dang co luot khac -> dung ngay, khong lai chung mot may."""
+    from rcr import bot_hang_doi
+
+    monkeypatch.setattr(cli_check, "AdbClient", lambda _p=None: adb_ui)
+    with bot_hang_doi.giu_may(bot_hang_doi.khoa_may(cli_check.DEFAULT_OUT, SERIAL)):
+        assert cli_check.main(["--package", PKG, "--set", "enable_onb3_screen=false", "--no-dex-check"]) == 1
+
+
+def test_luot_dang_chay_giu_khoa_may_cho_bot_thay_ban(adb_ui, monkeypatch):
+    from rcr import bot_hang_doi
+
+    monkeypatch.setattr(cli_check, "AdbClient", lambda _p=None: adb_ui)
+    thay = []
+    goc = cli_check._tren_may
+
+    async def tren_may(*a):
+        thay.append(bot_hang_doi.may_ban(bot_hang_doi.khoa_may(cli_check.DEFAULT_OUT, SERIAL)))
+        return await goc(*a)
+    monkeypatch.setattr(cli_check, "_tren_may", tren_may)
+    assert cli_check.main(["--package", PKG, "--set", "enable_onb3_screen=false", "--no-dex-check"]) == 0
+    assert thay == [True]
+    assert not bot_hang_doi.may_ban(bot_hang_doi.khoa_may(cli_check.DEFAULT_OUT, SERIAL))
