@@ -266,7 +266,10 @@ async def _tren_may(args: argparse.Namespace, client, serial: str, started: floa
             # command /rc-check) publish file nay, ma stderr thi khong parse.
             if args.report:
                 out["report"] = args.report
-            _notify_run(args, out, started)
+            # Co agent: so tho cua tool con BLOCKED / NOT_VERIFIABLE, agent lam xong §5b-5d moi
+            # bao (tin ket qua cua bot) -> tool chi tu bao khi chay khong Claude.
+            if args.khong_claude:
+                _notify_run(args, out, started)
             return out
     elif args.case:
         raise RcError("--case can di kem --tc <file.xlsx>.")
