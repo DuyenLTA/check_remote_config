@@ -143,15 +143,16 @@ một ký tự là patch nhầm app hàng xóm. `$ARGUMENTS` không có chuỗi 
 `com.abc.xyz` thì **dừng và hỏi**. Trước khi hỏi, báo Discord (lỗi gửi thì bỏ qua):
 `<bin>/rcr-notify --kind stop --title "Thiếu / sai package" --line="<$ARGUMENTS>" --action "Gửi package id dạng com.abc.xyz"`
 
-App phải cho vào vùng dữ liệu riêng — một trong hai:
+Đổi RC theo một trong ba đường:
 
-- app là bản build **debuggable** (`run-as`), hoặc
-- máy đã **root** (`su`) — đường này bản release cũng patch được
+- app là bản build **debuggable** (`run-as`) hoặc máy đã **root** (`su`) → patch file RC trên máy;
+- **bản release (mặc định của bot)** → đổi RC trên Firebase, chỉ qua giá trị của điều kiện `testvsl`.
+  Cần máy đang chạy lượt đã `firebase login` và điều kiện `testvsl` đã có, đứng thứ 1.
 
-Không đường nào vào được thì tool in nguyên lý do (`run-as: ...` / `su: ...`).
-In lại nguyên văn cho người dùng: đó là thứ duy nhất phân biệt "app không
-debuggable" với "chưa cài app" với "SELinux chặn". **Không đi vòng, không gợi ý
-sửa APK** — phải xin dev bản bật `debuggable`.
+**Không xin dev bản debuggable** cho bản release (user chốt chạy release, nhắc lại 02/11/2026). Preflight
+báo `LOI` ở dòng "Vào được dữ liệu app" thì in nguyên văn kèm việc cần làm: chưa / hết hạn đăng nhập →
+`firebase login` (hoặc `--reauth`) trên máy chạy lượt; thiếu `testvsl` → nhắc QA tạo. Không đi vòng, không
+gợi ý sửa APK.
 
 Kiểm APK trước khi cài, khỏi gỡ app xong mới biết sai bản:
 

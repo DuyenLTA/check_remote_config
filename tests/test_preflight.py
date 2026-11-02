@@ -63,12 +63,16 @@ def test_du_dieu_kien_thi_san_sang(monkeypatch):
     assert kq["ok"] and all(m["trang_thai"] == "ok" for m in kq["muc"])
 
 
-def test_ban_release_bao_loi_kem_ly_do_run_as(monkeypatch):
-    """23/10/2026 cai nham ban release 3 lan - phai biet TRUOC khi chay."""
+def test_ban_release_chua_firebase_login_thi_bao_dang_nhap_khong_xin_debug(monkeypatch):
+    """Ban release doi RC qua Firebase (user chot chay release): may chua `firebase login` -> bao dang nhap,
+    khong quay ve "xin dev ban debuggable" (AIP886 2.7.0 (20) tren Ubuntu 02/11/2026)."""
+    from rcr import rc_firebase
     _gia(monkeypatch, debuggable=False)
+    monkeypatch.setattr(rc_firebase, "da_dang_nhap", lambda: False)
     kq = _chay(FakeClient())
     m = next(m for m in kq["muc"] if m["ten"] == "Vào được dữ liệu app")
-    assert not kq["ok"] and m["trang_thai"] == "loi" and "not debuggable" in m["chi_tiet"]
+    assert not kq["ok"] and m["trang_thai"] == "loi" and "firebase login" in m["viec_can_lam"]
+    assert "debuggable" not in m["viec_can_lam"]
 
 
 def test_may_khoa_man_hinh_la_loi(monkeypatch):

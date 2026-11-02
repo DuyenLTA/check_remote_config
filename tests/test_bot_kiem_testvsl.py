@@ -43,9 +43,12 @@ def test_kiem_testvsl_chi_doc(firebase, dieu_kien, co_loi):
     assert (loi is None) if co_loi is None else (co_loi in loi)
 
 
-def test_chua_firebase_login_thi_de_rc_check_bao(monkeypatch):
+def test_chua_firebase_login_thi_bao_dang_nhap_truoc_khi_chay(monkeypatch):
+    """02/11/2026 AIP886 tren Ubuntu: chua firebase login -> Claude chay roi dung o "xin ban debuggable". Bao truoc."""
     monkeypatch.setattr(rc_firebase, "da_dang_nhap", lambda: False)
-    assert asyncio.run(k.THAT("S1", "pkg.a")) is None
+    loi = asyncio.run(k.THAT("S1", "pkg.a"))
+    t = k.tin_nhac({"ma": "AIP886", "version": "2.7.0 (20)", "nguoi_duyet": 7}, loi, set())
+    assert "firebase login" in t and "testvsl" not in t and "debuggable" not in t
 
 
 def test_chi_kiem_ban_release_nhanh_bo_tc():

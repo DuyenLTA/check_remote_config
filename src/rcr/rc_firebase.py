@@ -69,6 +69,10 @@ def _mang(goi):
 
 
 HET_HAN = "đăng nhập Firebase hết hạn"
+# Ban release doi RC qua Firebase: may chay luot (ca may phu Ubuntu) chua `firebase login` thi khong duoc quay ve
+# "xin dev ban debuggable" (AIP886 2.7.0 (20) tren Ubuntu 02/11/2026) - user da chot chay ban release.
+CHUA_DANG_NHAP = "máy này chưa đăng nhập Firebase (`firebase login`)"
+LOI_DANG_NHAP = (HET_HAN, CHUA_DANG_NHAP)
 
 
 def token() -> str:

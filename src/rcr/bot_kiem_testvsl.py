@@ -24,9 +24,9 @@ def doi_rc_firebase(job: dict, checklist: bool) -> bool:
 
 async def loi_testvsl(serial: str, package: str) -> str | None:
     """Ly do chua chay duoc (thieu `testvsl`, khong dung thu 1, khong nhac version dang test...) hoac None khi on.
-    May chua `firebase login` -> None: rc-check tu bao loi do."""
+    May chua `firebase login` -> bao dang nhap ngay, khong de Claude chay roi dung o "xin ban debuggable"."""
     if not rc_firebase.da_dang_nhap():
-        return None
+        return rc_firebase.CHUA_DANG_NHAP
     try:
         info = await rc_firebase_app.thong_tin_tren_may(AdbClient(), serial, package)
         await asyncio.to_thread(rc_firebase_app.kiem_dieu_kien_test, info)
@@ -39,9 +39,9 @@ def tin_nhac(job: dict, loi: str, duyet) -> str:
     """Tag nguoi bam Check (luot verify tu xep thi tag cac QA duoc duyet)."""
     ai = [job["nguoi_duyet"]] if job.get("nguoi_duyet") else sorted(duyet or [])
     tag = " ".join(f"<@{i}>" for i in ai)
-    if rc_firebase.HET_HAN in loi:       # loi dang nhap tren may bot, khong phai thieu testvsl -> khong nho tao condition
+    if any(x in loi for x in rc_firebase.LOI_DANG_NHAP):       # loi dang nhap tren may bot, khong phai thieu testvsl -> khong nho tao condition
         return (f"⛔ {tag} **{job.get('ma', '')}** `{job.get('version', '')}` — chưa chạy được bản release: {loi}\n"
-                f"Người quản máy bot chạy `firebase login --reauth` trên máy bot, xong bấm **Chạy lại** "
+                f"Người quản máy bot chạy `firebase login` (hết hạn: `firebase login --reauth`) trên máy chạy lượt, xong bấm **Chạy lại** "
                 f"(lượt verify: **Verify lại**) ở tin của lượt.")
     return (f"⛔ {tag} **{job.get('ma', '')}** `{job.get('version', '')}` — chưa chạy được bản release: {loi}\n"
             f"Nhờ tạo / sửa điều kiện `{rc_firebase.DIEU_KIEN}` trên Firebase (app.id + version đang test), kéo lên "
