@@ -14,7 +14,8 @@ POSITION_RE = re.compile(r"\b\d{3}\b|splash|home|onboarding|lfo|ob\d|result|tab\
 # Ma vi tri (202, 304...) khong kem chu "native"/"inter" -> tra loai tu TEN
 # KEY RC THAT cua app (`show_202_lfo2_n_native_high` -> native). Du lieu that,
 # khong phai bang tu doan.
-POS_CODE_RE = re.compile(r"\b(\d{3})\b")
+# "fill 100%", "3.6.0" khong phai ma vi tri (AIP936 RG01-02: dong progress bi quy cho vi tri `100`).
+POS_CODE_RE = re.compile(r"(?<![\d.])\b(\d{3})\b(?!%|\.\d)")
 # Ma day du trong cau TC: "303-onb3-n-native-high1" -> khop key RC
 # `id_303_onb3_n_native_high1`. Chi co 3 so ("105", "tren splash") thi lay so.
 # TC viet ca dang gach duoi ("502_native_high", "305_onb5_n_native_high"): truoc day

@@ -23,6 +23,7 @@ from . import (
     rc_json_lech,
     fo_flow,
     fo_ngon_ngu,
+    luong_toan_bo,
     luot_file,
     rc_guards,
     rc_patch,
@@ -122,7 +123,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             trong_cau = assert_ads.case_position(chosen["expects"])
             if trong_cau:
                 tokens.add(trong_cau)
-            man_can = None if args.full_walk else fo_flow.man_sau_cung(tokens)
+            man_can = (None if args.full_walk or luong_toan_bo.can_di_het(chosen["expects"], row.get("label", ""))
+                       else fo_flow.man_sau_cung(tokens))
             # Precondition doi ad KHONG FILL: ep bang cach doi `id_*` sang mot
             # slot khong ton tai. Khong ep thi case chay duoi dung trang thai
             # tu nhien cua may, va ba case ta ba dieu kien khac nhau deu ra

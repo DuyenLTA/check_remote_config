@@ -25,10 +25,49 @@ def _da_qua(drive: dict) -> list[str]:
     return [t for t in ten if t]
 
 
-def cham(text: str, drive: dict) -> dict | None:
+# "Khong hien thi OB1, OB3, OB5, Question": ca danh sach sau dong tu phu dinh.
+DANH_SACH_RE = re.compile(r"(?:,|\bv[àa]\b|&)\s*(question|ob\s*\d|lfo\s*\d)\b", re.I)
+OB_RE = re.compile(r"^(ob|lfo)\s*(\d)$", re.I)
+
+
+def _trang_ob(text: str, m) -> list[str]:
+    """Moi trang OB/LFO trong danh sach phu dinh (ob1, ob3...) - mot Activity chua MOI trang OB."""
+    ten = [m.group("man")] + DANH_SACH_RE.findall(text[m.end():].split(".")[0])
+    return [f"{x.group(1).lower()}{x.group(2)}" for t in ten if (x := OB_RE.match(t.strip()))]
+
+
+def _cham_trang(trang: list[str], events) -> dict | None:
+    """Trang OB cham bang event `<trang>_view` cua app: VslTemplate4OnboardingActivity chua ca OB1..OB5,
+    thay Activity do khong noi duoc OB1 co hien hay khong (AIP936 RG04-01: OB2/OB4 hien -> FAIL oan)."""
+    views = {e.get("name", "") for e in events or ()}
+    if not any(v.endswith("_view") for v in views):
+        return None
+    co = [t.upper() for t in trang if f"{t}_view" in views]
+    if co:
+        return out(FAIL, f"có event {', '.join(c.lower() + '_view' for c in co)} — {', '.join(co)} vẫn hiện", co)
+    return out(PASS, f"không có event {', '.join(t + '_view' for t in trang)} — {', '.join(t.upper() for t in trang)} "
+                     "không hiện", "")
+
+
+def cham(text: str, drive: dict, events=()) -> dict | None:
     m = MAN_KHONG_RE.search(text)
     if not m:
         return None
+    trang = _trang_ob(text, m)
+    if trang:
+        ket = _cham_trang(trang, events)
+        con = [t for t in DANH_SACH_RE.findall(text[m.end():].split(".")[0]) if not OB_RE.match(t.strip())]
+        if ket and not con:
+            return ket
+        if ket:
+            # Con man khac trong danh sach (Question): cham them bang Activity nhu cu.
+            phu = cham(f"Không hiển thị {con[0]}", drive)
+            return ket if not phu else out(FAIL if FAIL in (ket["verdict"], phu["verdict"]) else
+                                           (phu["verdict"] if ket["verdict"] == PASS else ket["verdict"]),
+                                           f"{ket['reason']}; {phu['reason']}", "")
+        if not ket:
+            return out(NEEDS_HUMAN, "app không bắn event màn (*_view) nên không phân biệt được trang OB "
+                                    "trong cùng một OnboardingActivity", "")
     dich = fo_screens.target_for(m.group("man"))
     if not dich:
         return None

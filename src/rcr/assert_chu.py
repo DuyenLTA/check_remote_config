@@ -18,6 +18,8 @@ NGOAC_RE = re.compile(r"[\"“”'‘’]([^\"“”'‘’]{2,80})[\"“”'‘
 # Ve phu dinh dung TRUOC chuoi trong cung ve: "khong co 'KEY CU ...'", "KHONG dung khoi 'en' (...)".
 PHU_DINH_RE = re.compile(r"\bkh[ôo]ng\b|\bch[ẳa]ng\b|\bno\b|\bnot\b|\bwithout\b", re.I)
 # Duoi "..." la cho TC luoc phan con lai, khong phai chu tren man.
+MA_NGON_NGU_RE = re.compile(r"^[a-z]{2,3}[-_][a-z]{2,4}$", re.I)
+KHOI_RE = re.compile(r"(?:kh[ốo]i|language_code\s*=?)\s*$", re.I)
 DUOI_RE = re.compile(r"\s*(?:\.{3}|…)\s*$")
 # Ve hinh anh dong / GIF ma chu khong chung minh duoc.
 HINH_DONG_RE = re.compile(r"\bgif\b|video_loop|frame\s+cu[ốo]i|ch[ạa]y\s+\d+\s+l[ầa]n|l[ặa]p\s+li[êe]n\s+t[ụu]c", re.I)
@@ -47,6 +49,10 @@ def _chuoi(text: str) -> list[tuple[str, bool]]:
     for m in NGOAC_RE.finditer(text):
         chu = DUOI_RE.sub("", m.group(1)).strip(" -–")
         if len(chu) < NGAN_NHAT:
+            continue
+        # "Noi dung khoi 'EN-us'": ma ngon ngu (language_code) cua khoi config, khong phai chu tren man
+        # (AIP936 R02-02: tim 'EN-us' tren man -> FAIL oan du ca 3 title deu dung).
+        if MA_NGON_NGU_RE.match(chu) or KHOI_RE.search(text[:m.start()]):
             continue
         # Ve chua chuoi: tu dau phay/cham phay gan nhat truoc no toi chuoi.
         truoc = re.split(r"[,;]", text[:m.start()])[-1]

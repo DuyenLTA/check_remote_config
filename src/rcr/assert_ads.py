@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 
-from . import ad_positions, assert_ad_rules
+from . import ad_positions, assert_ad_nhieu_ve, assert_ad_rules
 from .ad_positions import (  # noqa: F401 - tai xuat cho cho goi cu
     case_position,
     vi_tri_cua_case,
@@ -145,7 +145,7 @@ def _units(ads: dict, kind: str) -> list[dict]:
 
 
 def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
-            vi_tri=()) -> dict:
+            vi_tri=(), cfg=None) -> dict:
     """`kind` rong nghia la xet moi loai ad.
 
     `scope` la vi tri unit ma CA case noi toi, dung cho dong khong tu nhac ten
@@ -177,6 +177,11 @@ def ad_line(text: str, kind: str, ads: dict, drive: dict, scope: str = "",
         token = ad_positions._position_token(text) or scope
         return assert_ad_rules.impression(
             text, units, actual, token, ad_positions._khop_vi_tri, ad_positions.da_biet(token, biet))
+
+    # Nhieu vi tri trong mot dong / ve khang dinh + ve phu dinh: cham TUNG vi tri.
+    ket = assert_ad_nhieu_ve.cham(text, _units(ads, ""), biet, cfg, tapped(drive))
+    if ket:
+        return ket
 
     # Cau PHU DINH co chu "alternate" ("khong duoc goi ke ca trong alternate")
     # khong phai cau ta thu tu preload - kiem NEGATIVE truoc.

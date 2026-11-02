@@ -57,8 +57,29 @@ def _anh_trang(drive: dict, trang: int):
         nen = max(anh, key=lambda n: (n.bounds.right - n.bounds.left) * (n.bounds.bottom - n.bounds.top))
         man = max(nodes, key=lambda n: (n.bounds.right, n.bounds.bottom)).bounds
         img = Image.open(io.BytesIO(base64.b64decode(st["shot"].split(",", 1)[1]))).convert("RGB")
-        return img, nen.bounds, (man.right, man.bottom), st.get("n")
+        return img, nen.bounds, (man.right, man.bottom), st.get("n"), _lop_phu(nodes, nen.bounds)
     return None
+
+
+def _lop_phu(nodes, b) -> list:
+    """Khung chu / nut nam DE len anh nen (ctlContent ban trong suot, title, nut Next): khong phai anh content.
+    So ca vung thi lop phu ~50% trang lam lech tang gap doi (AIP936 R01-03: dung OB1.png ma lech 37,7 > nguong 28)."""
+    ra = []
+    for n in nodes:
+        o = n.bounds
+        if not n.visible or o.empty or o is b or o.right <= b.left or o.left >= b.right or o.bottom <= b.top or o.top >= b.bottom:
+            continue
+        if (n.resource_id or "").endswith(("ctlContent", "ctlButton")) or (n.text or "").strip():
+            ra.append(o)
+    return ra
+
+
+def _mat_na(b, phu) -> list[bool]:
+    """Mat na 54x120 tren vung anh nen: False o diem bi lop phu che. Che gan het thi so ca vung nhu cu."""
+    bw, bh = (b.right - b.left) / 54, (b.bottom - b.top) / 120
+    na = [not any(o.left <= b.left + (i % 54 + .5) * bw <= o.right and o.top <= b.top + (i // 54 + .5) * bh <= o.bottom
+                  for o in phu) for i in range(54 * 120)]
+    return na if sum(na) >= 54 * 120 * 0.2 else [True] * (54 * 120)
 
 
 def cham(text: str, drive: dict, cfg: dict | None) -> dict | None:
@@ -73,13 +94,13 @@ def cham(text: str, drive: dict, cfg: dict | None) -> dict | None:
     co = _anh_trang(drive, trang)
     if not co:
         return out(NEEDS_HUMAN, f"chưa có ảnh chụp trang OB{trang} để so ảnh content", text)
-    img, b, (w, h), buoc = co
+    img, b, (w, h), buoc, phu = co
     sx, sy = img.width / w, img.height / h
     vung = img.crop((round(b.left * sx), round(b.top * sy), round(b.right * sx), round(b.bottom * sy)))
     from PIL import Image
 
     vung = vung.resize((54, 120), Image.BILINEAR)
-    na = [True] * (54 * 120)
+    na = _mat_na(b, phu)
     sai = {}
     for n in range(1, 7):
         u = (khoi.get(f"onb{n}") or {}).get("content")

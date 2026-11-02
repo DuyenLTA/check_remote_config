@@ -116,7 +116,7 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
                                        f"{ket['reason']}; {chu['reason']}", text)
 
     # "Khong hien thi man Question ..., vao thang Home".
-    ket = assert_man_khong.cham(text, drive or {}) or assert_indicator.cham(text, drive or {})
+    ket = assert_man_khong.cham(text, drive or {}, events) or assert_indicator.cham(text, drive or {})
     if ket:
         return ket
 
@@ -169,7 +169,7 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     if ket:
         return ket
     if kind or assert_ads.routes(text):
-        return assert_ads.ad_line(text, kind, ads, drive, scope, vi_tri)
+        return assert_ads.ad_line(text, kind, ads, drive, scope, vi_tri, cfg)
 
     if LUONG_RE.search(text):
         ket = assert_ui.luong_thong(drive)
