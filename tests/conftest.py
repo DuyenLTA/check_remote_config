@@ -293,3 +293,14 @@ def _khong_dung_firebase_that(monkeypatch):
     that. Test rieng cua duong Firebase tu bat lai."""
     from rcr import rc_firebase
     monkeypatch.setattr(rc_firebase, "da_dang_nhap", lambda: False)
+
+
+@pytest.fixture(autouse=True)
+def _testvsl_san_sang(monkeypatch):
+    """Bot kiem dieu kien testvsl tren Firebase that (keo APK qua adb) truoc luot release -> test mac dinh coi la
+    san sang; test cua chinh buoc kiem (test_bot_kiem_testvsl) goi ham that qua `bot_kiem_testvsl.THAT`."""
+    from rcr import bot_kiem_testvsl
+
+    async def san_sang(serial, package):
+        return None
+    monkeypatch.setattr(bot_kiem_testvsl, "loi_testvsl", san_sang)

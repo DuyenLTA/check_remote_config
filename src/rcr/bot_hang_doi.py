@@ -120,11 +120,20 @@ class HangDoi:
     def _ranh(self, j: dict) -> bool:
         return j["msg_id"] not in self.dang_chay and not j.get("dang_o")
 
+    def _dang_test(self, j: dict) -> bool:
+        """Dang cai / chay test tren mot may (chinh hoac phu). Da co `kq` = chi con gui ket qua, khong dung RC."""
+        return not self._ranh(j) and j.get("kq") is None
+
     def lay(self) -> dict | None:
         """Job dau tien chua chay (khong xoa khoi hang toi khi `xong`). Moi may ranh goi mot lan.
         `dang_o` (job da giao cho may tinh phu, luu ca qua lan khoi dong lai) cung la dang chay.
         Job da co `kq` (chay xong, chi con gui ket qua) khong can may -> `lay_cho_gui`."""
-        job = next((j for j in self.jobs if self._ranh(j) and j.get("kq") is None), None)
+        # Cung package thi chay LAN LUOT: luot bo TC go het gia tri `testvsl` cua Firebase project luc doc baseline /
+        # luc QA bam Dung -> hai luot cung app song song (Check + verify cung build, hai build) xoa RC cua nhau
+        # giua case, ra PASS/FAIL sai. Job sau cho; job khac app van chay o may ranh.
+        ban = {j.get("package") for j in self.jobs if self._dang_test(j)}
+        job = next((j for j in self.jobs if self._ranh(j) and j.get("kq") is None and j.get("package") not in ban),
+                   None)
         if job is not None:
             self.dang_chay.add(job["msg_id"])
         return job

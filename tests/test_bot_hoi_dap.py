@@ -47,7 +47,18 @@ def test_boi_canh_tach_dang_chay_va_cho():
     jobs = [{"msg_id": 7, "ma": "AIP938", "version": "2.2.0 (13)"},
             {"msg_id": 8, "ma": "AIP920", "version": "1.6.1 (8)", "loai_job": "verify"}]
     ctx = h.boi_canh(jobs, {"S1": 7}, tin)
-    assert "máy S1: AIP938 2.2.0 (13) (check)" in ctx and "Chờ trong hàng: AIP920 1.6.1 (8) (verify)" in ctx
+    assert "máy S1: AIP938 2.2.0 (13) (check)" in ctx and "AIP920 1.6.1 (8) (verify)" in ctx.split("Chờ trong hàng")[1]
+
+
+def test_boi_canh_tach_job_may_phu_va_job_dang_gui_lai():
+    jobs = [{"msg_id": 7, "ma": "AIP938", "version": "1", "dang_o": "ubuntu:S8"},
+            {"msg_id": 8, "ma": "AIP920", "version": "2", "kq": {"trang_thai": "XONG"}},
+            {"msg_id": 9, "ma": "AIP805", "version": "3"}]
+    ctx = h.boi_canh(jobs, {}, {})
+    dong = dict(d[2:].split(": ", 1) for d in ctx.splitlines())
+    assert "máy phụ ubuntu:S8: AIP938 1 (check)" in dong["Đang chạy"]
+    assert dong["Chạy xong, đang gửi lại kết quả (mất mạng)"] == "AIP920 2 (check)"
+    assert dong["Chờ trong hàng (cùng app thì chạy lần lượt)"] == "AIP805 3 (check)"
 
 
 def _m(guild=True, mentions=(), bot=False, content="", uid=1):

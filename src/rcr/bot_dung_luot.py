@@ -15,7 +15,7 @@ import logging
 
 import discord
 
-from . import bot_cong_viec, bot_may_phu, bot_tien_trinh, bot_verify_jira, rc_firebase_app
+from . import bot_cong_viec, bot_kiem_testvsl, bot_may_phu, bot_tien_trinh, bot_verify_jira, rc_firebase_app
 from .adb_client import AdbClient
 
 log = logging.getLogger("rcr-bot")
@@ -30,7 +30,7 @@ def view_dung(msg_id: int) -> discord.ui.View:
 
 def danh_dau_pha_rc(job: dict, next_gen_hay_checklist: bool) -> None:
     """Goi ngay truoc khi chay Claude: luot nay co the gan RC `testvsl` khong (de biet co can don khi Dung)."""
-    if job.get("loai_ban") == "release" and not job.get("drive") and not next_gen_hay_checklist:
+    if bot_kiem_testvsl.doi_rc_firebase(job, next_gen_hay_checklist):
         job["pha"] = PHA_RC
 
 

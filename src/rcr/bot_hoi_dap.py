@@ -89,9 +89,14 @@ def boi_canh(jobs: list[dict], dang_chay: dict[str, int], tin: dict[str, dict]) 
     def ten(j: dict) -> str:
         return f"{j.get('ma', '')} {j.get('version', '')} ({j.get('loai_job', 'check')})"
     chay = [f"máy {s}: {ten(tin.get(str(mid)) or {})}" for s, mid in dang_chay.items()]
-    cho = [ten(j) for j in jobs if j.get("msg_id") not in dang_chay.values()]
+    phu = [f"máy phụ {j['dang_o']}: {ten(j)}" for j in jobs if j.get("dang_o")]
+    con = [j for j in jobs if j.get("msg_id") not in dang_chay.values() and not j.get("dang_o")]
+    gui = [ten(j) for j in con if j.get("kq") is not None]      # chay xong, mat mang -> dang gui lai ket qua
+    cho = [ten(j) for j in con if j.get("kq") is None]
     return (f"- Giờ máy tính: {time.strftime('%Y-%m-%d %H:%M')}\n"
-            f"- Đang chạy: {'; '.join(chay) or 'không'}\n- Chờ trong hàng: {'; '.join(cho) or 'không'}")
+            f"- Đang chạy: {'; '.join(chay + phu) or 'không'}\n"
+            + (f"- Chạy xong, đang gửi lại kết quả (mất mạng): {'; '.join(gui)}\n" if gui else "")
+            + f"- Chờ trong hàng (cùng app thì chạy lần lượt): {'; '.join(cho) or 'không'}")
 
 
 def la_cau_hoi(bot, m) -> bool:

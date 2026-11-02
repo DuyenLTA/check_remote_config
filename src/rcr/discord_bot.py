@@ -30,7 +30,7 @@ from pathlib import Path
 
 import discord
 
-from . import (audit_tom_tat, bot_bat_tin_lo, bot_dung_luot, bot_gui_lai, bot_tien_trinh, bot_may_phu, bot_verify_jira, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
+from . import (audit_tom_tat, bot_bat_tin_lo, bot_dung_luot, bot_gui_lai, bot_kiem_testvsl, bot_tien_trinh, bot_may_phu, bot_verify_jira, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
                bot_jira_rest, bot_keo_sprint, bot_log_jira, build_ma_app, cai_apk_tu_drive)
 from .adb_client import AdbClient
 from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
@@ -533,9 +533,16 @@ class BuildBot(discord.Client):
                           view=_nut(("check", "Thử lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
             return False
         ghi = " (đã gỡ bản cũ khác loại — mất data app)" if cai.get("go_ban_cu") else ""
+        next_gen = build_ma_app.la_next_gen(job)
+        if bot_kiem_testvsl.doi_rc_firebase(job, next_gen):
+            loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
+            if loi:                          # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Firebase
+                await qa.edit(content=f"{dau}\nĐã cài{ghi}. ⛔ Chưa chạy: điều kiện `testvsl` chưa sẵn sàng.",
+                              view=_nut(("check", "Chạy lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
+                await qa.reply(bot_kiem_testvsl.tin_nhac(job, loi, self.duyet))
+                return False
         await qa.edit(content=f"{dau}\nĐã cài{ghi}. Đang chạy /rc-check…")
         await qa.reply(bot_cong_viec.tin_da_cai(job, ten, "/rc-check"))
-        next_gen = build_ma_app.la_next_gen(job)
         timeout = bot_chay_claude.TIMEOUT_NEXT_GEN if next_gen else bot_chay_claude.TIMEOUT_BO_TC
         bat_dau = time.time()
         bot_dung_luot.danh_dau_pha_rc(job, next_gen)       # Dung tu day -> phai don RC testvsl

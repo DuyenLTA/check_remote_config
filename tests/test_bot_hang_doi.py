@@ -94,3 +94,20 @@ def test_bam_huy_tra_lai_nut_check(tmp_path):
     asyncio.run(bot._huy(it, c))
     assert bot.q.jobs == [] and "Đã huỷ" in goi[0]["content"]
     assert [b.custom_id for b in goi[0]["view"].children][0] == "rcr:check:5"
+
+
+def test_cung_package_chay_lan_luot_khac_package_van_song_song(tmp_path):
+    q = h.HangDoi(tmp_path / "q.json")
+    q.them(job(1, "pkg.a", "1.0 (1)"))
+    q.them({**job(2, "pkg.a", "1.0 (1)"), "loai_job": "verify"})     # verify cung build
+    q.them(job(3, "pkg.b"))
+    q.them(job(4, "pkg.a", "1.1 (2)"))                               # build moi cua cung app
+    assert q.lay()["msg_id"] == 1
+    assert q.lay()["msg_id"] == 3                                     # pkg.a dang chay -> nhay sang pkg.b
+    assert q.lay() is None
+    q.cap_nhat(q.jobs[0], kq={"trang_thai": "XONG"})                 # job 1 chay xong, chi con gui -> mo pkg.a
+    assert q.lay()["msg_id"] == 2
+    q.jobs[1].pop("kq", None)
+    q.dang_chay.discard(2)
+    q.jobs[1]["dang_o"] = "ubuntu:S8"                                 # job 2 o may phu cung chan pkg.a
+    assert q.lay() is None

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import discord
 
-from . import bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_jira_marker, bot_kenh_project
+from . import bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_jira_marker, bot_kenh_project, bot_kiem_testvsl
 from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
 
@@ -151,9 +151,16 @@ async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, ou
         await vm.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}" + (f"\n{hoi}" if hoi else ""),
                       view=nut(vm.id, ("check", "Thử lại")))
         return False
-    await vm.reply(bot_cong_viec.tin_da_cai(job, ten, "verify bug"))
     cases = sorted({u["case"] for u in job["verify"]})
     ck = v.loai_case(cases[0]) == "checklist"        # phan_loai chi cho qua mot nhom moi luot
+    if bot_kiem_testvsl.doi_rc_firebase(job, ck):
+        loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
+        if loi:                              # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Jira / Firebase
+            await vm.edit(content=f"{dau}\n⛔ Chưa chạy: điều kiện `testvsl` chưa sẵn sàng.",
+                          view=nut(vm.id, ("verify", "Verify lại")))
+            await vm.reply(bot_kiem_testvsl.tin_nhac(job, loi, getattr(bot, "duyet", ())))
+            return False
+    await vm.reply(bot_cong_viec.tin_da_cai(job, ten, "verify bug"))
     het_gio = bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY
     bot_dung_luot.danh_dau_pha_rc(job, ck)            # Dung tu day -> phai don RC testvsl
     await vm.edit(content=f"{dau}\nĐang chạy lại {len(cases)} {'dòng checklist' if ck else 'case'}…")

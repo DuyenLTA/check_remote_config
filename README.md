@@ -423,6 +423,12 @@ từ bot chính qua một kênh điều phối riêng, tự cài + chạy `/rc-c
    lại kênh điều phối (tin `xong` có thể lạc lúc bot chính khởi động lại), không thấy thì đưa job về hàng đợi và báo
    ở qa-auto. Tin `xong` đến muộn của job đã thu hồi bị bỏ qua.
 
+**Cùng app chạy lần lượt:** hai job cùng package (Check + verify cùng build, hai build của một app) không chạy song
+song — lượt bộ TC gỡ hết giá trị `testvsl` của project lúc đọc baseline, chạy song song sẽ xoá RC của nhau giữa case.
+**Kiểm `testvsl` trước khi chạy** (bản release, nhánh bộ TC): cài xong bot đọc (chỉ GET) Remote Config — chưa có điều
+kiện `testvsl`, không đứng thứ 1 hay không nhắc version đang test → không chạy Claude, tag người bấm Check nhờ tạo /
+sửa rồi bấm **Chạy lại**. Bot không bao giờ tự tạo / sửa condition, default hay tham số của người khác.
+
 **Hàng đợi:** job đã duyệt đang chờ có nút **Huỷ** (bấm nhầm Check, dev báo đẩy nhầm bản) → bỏ khỏi hàng, tin trả
 lại nút Check / Verify lại. Lượt **đang chạy** có nút **Dừng**: bot giết cả cây tiến trình của lượt (Claude,
 `rc-check`, adb — Windows `taskkill /T`, Ubuntu theo process group + lệnh mang `--serial <máy>`), khoá máy được nhả.

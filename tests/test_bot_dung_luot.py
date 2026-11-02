@@ -230,8 +230,8 @@ def test_khong_don_testvsl_khi_luot_khac_cung_app_dang_chay(tmp_path, monkeypatc
     bot = _bot(tmp_path)
     bot.q.them({"msg_id": 9, "package": "pkg.a", "version": "1"})
     bot.q.them({"msg_id": 10, "package": "pkg.a", "version": "1", "loai_job": "verify"})
-    bot.q.lay()
-    bot.q.lay()                              # ca hai dang chay tren hai may
+    # Hang doi da cho cung app chay lan luot; chot chan nay phong job cung app con chay tu truoc (vd may phu).
+    bot.q.dang_chay.update({9, 10})
     job = {**bot.q.jobs[0], "ma": "AIP920", "ten": "", "pha": bd.PHA_RC}
     asyncio.run(bd.sau_khi_dung(bot, job, "S1", "Pixel", "x"))
     assert "lượt khác của cùng app" in bot.msg.edits[-1]["content"]
