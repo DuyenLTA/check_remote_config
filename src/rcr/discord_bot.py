@@ -30,7 +30,7 @@ from pathlib import Path
 
 import discord
 
-from . import (audit_tom_tat, bot_bat_tin_lo, bot_dung_luot, bot_gui_lai, bot_kiem_testvsl, bot_tien_trinh, bot_may_phu, bot_verify_jira, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
+from . import (audit_tom_tat, bot_bat_tin_lo, bot_canh_may, bot_dung_luot, bot_gui_lai, bot_kiem_testvsl, bot_tien_trinh, bot_may_phu, bot_verify_jira, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
                bot_jira_rest, bot_keo_sprint, bot_log_jira, build_ma_app, cai_apk_tu_drive)
 from .adb_client import AdbClient
 from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
@@ -452,7 +452,13 @@ class BuildBot(discord.Client):
                 may = [d for d in await adb.devices() if d.ready]
             except AdbError as exc:
                 log.warning("khong doc duoc danh sach may: %s", exc)
-                may = []
+                may = None                   # khong biet may nao con -> khong canh mat may nhip nay
+            if may is not None:
+                try:                         # may dang chay luot mat ket noi qua han -> tu dung luot
+                    await bot_canh_may.kiem(self, {d.serial for d in may})
+                except Exception:            # noqa: BLE001 - canh may loi khong chan chia job
+                    log.exception("canh may loi")
+            may = may or []
             # Job chay xong nhung chua gui duoc ket qua truoc khi bot tat -> chi gui lai, khong can may.
             for job in self.q.lay_cho_gui():
                 asyncio.create_task(self._chay_tren(job, "", job.get("ten_may") or "?"))

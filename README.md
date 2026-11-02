@@ -429,6 +429,8 @@ song — lượt bộ TC gỡ hết giá trị `testvsl` của project lúc đ�
 kiện `testvsl`, không đứng thứ 1 hay không nhắc version đang test → không chạy Claude, tag người bấm Check nhờ tạo /
 sửa rồi bấm **Chạy lại**. Bot không bao giờ tự tạo / sửa condition, default hay tham số của người khác.
 
+**Mất máy giữa lượt:** máy đang chạy lượt vắng khỏi `adb devices` (rút cáp / offline / unauthorized) liên tục 5 phút → bot tự **Dừng** lượt như QA bấm, báo ở tin của lượt. Máy đã mất thì không kéo được APK để gỡ `testvsl` → tin ghi rõ để QA kiểm tra tay (lượt sau của app cũng tự dọn khi đọc baseline).
+
 **Hàng đợi:** job đã duyệt đang chờ có nút **Huỷ** (bấm nhầm Check, dev báo đẩy nhầm bản) → bỏ khỏi hàng, tin trả
 lại nút Check / Verify lại. Lượt **đang chạy** có nút **Dừng**: bot giết cả cây tiến trình của lượt (Claude,
 `rc-check`, adb — Windows `taskkill /T`, Ubuntu theo process group + lệnh mang `--serial <máy>`), khoá máy được nhả.

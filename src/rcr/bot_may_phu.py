@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 
 import discord
 
-from . import bot_chay_claude, bot_cong_viec, bot_gui_lai, bot_hang_doi, bot_tien_trinh
+from . import bot_canh_may, bot_chay_claude, bot_cong_viec, bot_gui_lai, bot_hang_doi, bot_tien_trinh
 
 log = logging.getLogger("rcr-bot")
 TIEN_TO = "RCR"
@@ -206,6 +206,7 @@ async def vong_may_phu(bot, kenh, danh_sach_may) -> None:
         try:
             may = await danh_sach_may()
             bot.may_san = {d.serial for d in may}
+            await bot_canh_may.kiem(bot, bot.may_san)   # may dang chay luot mat ket noi qua han -> tu dung
             for d in may:
                 if d.serial in bot.ban or bot_hang_doi.may_ban(bot_hang_doi.khoa_may(bot.out, d.serial)):
                     bot.da_xin.pop(d.serial, None)
