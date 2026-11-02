@@ -386,8 +386,8 @@ Gửi tay một tin (slash command dùng cho các điểm dừng agent tự xử
 ## Bot build-watch (`rcr-bot`) — Windows và Ubuntu
 
 Dev đăng tin `Bản build <MÃ> v<x.y.z> (<code>) …` (hoặc QA chuyển tiếp tin đó) → bot hỏi ở kênh QA kèm
-nút **Check** → người được duyệt bấm → bot tải đúng bản từ App Tester (tin ghi next-gen: bản release, còn
-lại: release có note `debug`) → chạy `/rc-check` bằng Claude headless → trả kết quả + link report vào tin.
+nút **Check** → người được duyệt bấm → bot **gỡ app đang có trên máy** (mất data app) rồi tải lại bản release
+đúng version từ App Tester — không dùng nút Open, kể cả máy đã có đúng version → chạy `/rc-check` bằng Claude headless → trả kết quả + link report vào tin.
 Cắm nhiều máy thì mỗi máy chạy một build, song song.
 
 1. Cài thêm: `<bin>/python -m pip install -e ".[dev,bot]"`.

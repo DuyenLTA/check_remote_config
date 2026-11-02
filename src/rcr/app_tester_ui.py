@@ -238,52 +238,33 @@ async def cai(client, serial, package, version, loai, out_dir: Path) -> dict:
     m = VERSION_RE.match(version)
     if not m:
         raise LoiCai(f"version phải dạng '4.3.0 (40)': {version!r}")
+    # Luon go app dang co roi tai lai tu App Tester (user chot 30/10, nhac lai 02/11/2026). Ban cung version
+    # dang cai lam App Tester hien "Open" (khong tin duoc: lan day cu / app da go van hien), bot tung bo qua cai
+    # hoac bao "App Tester chua co" (AIP886 2.7.0 (20) 02/11/2026). Go truoc -> release nao cung hien Download.
+    truoc = await ban_dang_cai(client, serial, package)
+    if truoc:
+        await client.shell(serial, "pm", "uninstall", package)
     nodes = await mo_chi_tiet(client, serial, package, out_dir)
     dich, ly_do = s.chon_ban(await doc_cac_ban(client, serial, nodes, version), version, loai)
     if dich is None:
-        raise LoiCai(ly_do)
+        raise await _luu_man_la(client, serial, out_dir, ly_do)
     b = await _toi_ban(client, serial, dich)
     if b is None:
         raise await _luu_man_la(client, serial, out_dir, f"không mở được release {version} ({loai})")
     if b["loai"] not in (loai, s.CHUA_RO):   # note day du khac note rut gon
         raise LoiCai(f"release {version} mở ra là bản {b['loai']}, không phải {loai}")
-    # Da cai hay chua: hoi dumpsys, khong suy tu nut (open_button "Install" = tai roi chua cai).
-    truoc = await ban_dang_cai(client, serial, package)
-    dung_loai = bool(truoc) and truoc["debuggable"] == (loai == "debug")
-    # Cung version co the la lan day cu (dev day lai cung version): dumpsys khong phan biet duoc.
-    # Nut Open cung KHONG tin duoc: AIP922 3.7.0 (30) day lai 29/10 14:35 ("thay ban 28/10") van hien
-    # Open vi App Tester so versionCode, bot bo qua cai va verify tren ban 28/10. -> release day SAU luc
-    # cai tren may thi la ban moi: go ban cu roi cai lai.
-    cu_hon = bool(dung_loai and truoc.get("cai_luc") and s._luc_day(b) > truoc["cai_luc"])
-    if dung_loai and truoc["version"] == version and b["nut"] not in ("tai", "da_tai") and not cu_hon:
-        await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
-        return {"package": package, "version": version, "debuggable": truoc["debuggable"],
-                "da_cai": False, "go_ban_cu": False}
-    go = bool(truoc) and (not dung_loai or (cu_hon and b["nut"] not in ("tai", "da_tai")))
-    if b["nut"] == "ha_cap" and not go:
-        raise LoiCai(f"máy đang cài {truoc.get('version')} mới hơn {version} — gỡ tay nếu muốn hạ cấp")
-    if go:
-        # debug <-> release khac chu ky -> Android tu choi cai de; go truoc (mat data app).
-        await client.shell(serial, "pm", "uninstall", package)
-        b = await _toi_ban(client, serial, dich)
-    if b is None or b["nut"] not in ("tai", "da_tai"):
+    if b["nut"] not in ("tai", "da_tai"):
         raise await _luu_man_la(client, serial, out_dir, f"release {version} không có nút Download/Install")
     await _bam(client, serial, b["node_nut"])
-    # May da co CUNG version (khong go) -> version khop ngay tu dau; phai doi moc cai doi moi la ban moi.
-    cu = truoc.get("cai_luc") if truoc and truoc["version"] == version and not go else None
-    return await _cho_cai_xong(client, serial, package, version, loai, go, out_dir, cu)
+    return await _cho_cai_xong(client, serial, package, version, loai, bool(truoc), out_dir)
 
 
-async def _cho_cai_xong(client, serial, package, version, loai, go, out_dir, cai_luc_cu=None) -> dict:
-    """`cai_luc_cu`: moc cai cua ban cung version co san truoc khi bam Download. AIP922 29/10/2026: ban cu
-    3.7.0 (30) khop version ngay -> bot tuong cai xong, verify tren ban cu trong khi ban moi con dang tai
-    (cai xong 15:49, luot verify da chay 15:40). Co moc cu thi chi coi la xong khi moc cai doi."""
+async def _cho_cai_xong(client, serial, package, version, loai, go, out_dir) -> dict:
+    """Doi app cai xong. App da go truoc khi bam Download -> version khop la ban vua cai, khong nham ban cu."""
     het = time.monotonic() + TIMEOUT_CAI
     la = 0
     while time.monotonic() < het:
         hien = await ban_dang_cai(client, serial, package)
-        if cai_luc_cu is not None and hien.get("cai_luc") == cai_luc_cu:
-            hien = {}                     # van la ban cu: ban moi dang tai / cai
         if hien.get("version") == version and hien["debuggable"] == (loai == "debug"):
             await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
             return {"package": package, "version": version, "debuggable": hien["debuggable"],

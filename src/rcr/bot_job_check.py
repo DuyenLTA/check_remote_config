@@ -39,7 +39,7 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
         await qa.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}",
                       view=nut(("check", "Thử lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
         return False
-    ghi = " (đã gỡ bản cũ khác loại — mất data app)" if cai.get("go_ban_cu") else ""
+    ghi = " (đã gỡ bản cũ rồi tải lại — mất data app)" if cai.get("go_ban_cu") else ""
     next_gen = build_ma_app.la_next_gen(job)
     if bot_kiem_testvsl.doi_rc_firebase(job, next_gen):
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
