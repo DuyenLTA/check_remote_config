@@ -327,3 +327,26 @@ def test_mo_app_tester_thi_bat_man_truoc(monkeypatch):
     with pytest.raises(DaMo):
         asyncio.run(ui.mo_chi_tiet(Client(), "S1", "pkg.a", Path(".")))
     assert lenh == [("input", "keyevent", "KEYCODE_WAKEUP"), ("wm", "dismiss-keyguard"), ("launch", ui.s.APP_TESTER)]
+
+
+def test_dump_null_root_thi_bat_man_doi_roi_chup_lai(monkeypatch):
+    """02/11/2026 Pixel 4: dump "null root node" vai chuc giay du man sang -> bat man, doi, chup lai."""
+    lan, lenh = [0], []
+
+    async def dump(client, serial):
+        lan[0] += 1
+        if lan[0] < 3:
+            raise ui.AdbError("uiautomator dump that bai: ERROR: null root node returned by UiTestAutomationBridge.")
+        return "<hierarchy/>"
+
+    class Client(_Client):
+        async def shell(self, serial, *a, **k):
+            lenh.append(a)
+
+    async def khong(*a, **k):
+        return None
+    monkeypatch.setattr(ui.ui_dump, "dump", dump)
+    monkeypatch.setattr(ui.ui_dump, "parse_dump", lambda x: ["ok"])
+    monkeypatch.setattr(ui.asyncio, "sleep", khong)
+    assert asyncio.run(ui._nodes(Client(), "S1")) == ["ok"] and lan[0] == 3
+    assert lenh.count(("input", "keyevent", "KEYCODE_WAKEUP")) == 2

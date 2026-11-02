@@ -26,6 +26,7 @@ MAX_CUON_BAN = 8          # build moi luon o dau danh sach release
 TIMEOUT_CAI = 1200.0   # mang cham: tai ~80 MB mat ~10 phut (AIP922 29/10/2026)
 NHIP = 2.0
 LAN_CHUP_LAI = 8
+CHO_NULL_ROOT = 4.0       # dump "null root node": 8 lan x (~1s dump + 1s bat man + 4s) ~ 45s moi bo
 LAN_DOI_TRANG = 5         # doi trang chi tiet app load: toi da 5 nhip x NHIP
 LAN_BACK_VE_DS = 2        # bam "All apps" khong ve duoc danh sach -> phim Back toi da 2 lan
 VERSION_RE = re.compile(r"^(?P<name>\S+) \((?P<code>\d+)\)$")
@@ -47,13 +48,18 @@ async def danh_thuc(client, serial) -> None:
 async def _nodes(client, serial):
     # Vong xoay "Downloading…" chay lien tuc -> uiautomator bao "could not get idle
     # state" (do 27/10/2026, AIP882 4.3.0). Cho nhip roi chup lai, khong dung luot.
+    # "null root node" keo dai hang chuc giay ngay ca khi man sang, App Tester dang mo (Pixel 4, AIP936 1.9.0,
+    # 02/11/2026: 13:40 va 14:03 dump hong, 14:05 dump lai duoc) -> bat man lai + doi lau hon roi chup lai.
     for lan in range(LAN_CHUP_LAI):
         try:
             return ui_dump.parse_dump(await ui_dump.dump(client, serial))
         except AdbError as exc:
-            if "idle state" not in str(exc) or lan == LAN_CHUP_LAI - 1:
+            null_root = "null root node" in str(exc)
+            if not (null_root or "idle state" in str(exc)) or lan == LAN_CHUP_LAI - 1:
                 raise
-            await asyncio.sleep(1.0)
+            if null_root:
+                await danh_thuc(client, serial)
+            await asyncio.sleep(CHO_NULL_ROOT if null_root else 1.0)
 
 
 async def _bam(client, serial, node, nghi: float = NHIP) -> None:
