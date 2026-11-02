@@ -69,6 +69,11 @@ def may_ban(path: Path) -> bool:
         return True
 
 
+# Trang thai cua MOT luot chay (ket qua, buoc da gui, may phu dang giu). Job moi xep tu tin build cu
+# (bam Check / Thu lai) khong duoc mang theo: mang `kq` thi bot chi gui lai ket qua cu ma khong chay.
+TRUONG_LUOT = ("kq", "dong", "da_bao", "da_bao_bug", "da_bao_dev", "ten_may", "bat_dau", "dang_o", "giao_luc")
+
+
 def _khoa_job(job: dict) -> tuple[str, str, str]:
     # Luot verify bug va luot Check cung build la hai viec khac nhau -> khong chan nhau.
     return job["package"], job["version"], job.get("loai_job", "check")
@@ -103,6 +108,8 @@ class HangDoi:
         """Vi tri (1 = chay tiep theo) hoac None neu cung package + version + loai job da trong hang."""
         if self.trung(job):
             return None
+        for k in TRUONG_LUOT:
+            job.pop(k, None)
         self.jobs.append(job)
         self.luu()
         return len(self.jobs)
@@ -110,13 +117,40 @@ class HangDoi:
     def vi_tri(self, msg_id: int) -> int | None:
         return next((i + 1 for i, j in enumerate(self.jobs) if j["msg_id"] == msg_id), None)
 
+    def _ranh(self, j: dict) -> bool:
+        return j["msg_id"] not in self.dang_chay and not j.get("dang_o")
+
     def lay(self) -> dict | None:
         """Job dau tien chua chay (khong xoa khoi hang toi khi `xong`). Moi may ranh goi mot lan.
-        `dang_o` (job da giao cho may tinh phu, luu ca qua lan khoi dong lai) cung la dang chay."""
-        job = next((j for j in self.jobs if j["msg_id"] not in self.dang_chay and not j.get("dang_o")), None)
+        `dang_o` (job da giao cho may tinh phu, luu ca qua lan khoi dong lai) cung la dang chay.
+        Job da co `kq` (chay xong, chi con gui ket qua) khong can may -> `lay_cho_gui`."""
+        job = next((j for j in self.jobs if self._ranh(j) and j.get("kq") is None), None)
         if job is not None:
             self.dang_chay.add(job["msg_id"])
         return job
+
+    def lay_cho_gui(self) -> list[dict]:
+        """Job da chay xong tren may nhung chua gui duoc ket qua (bot tat / mat mang giua luc gui):
+        chi gui lai ket qua, khong chay lai lan nua."""
+        cac = [j for j in self.jobs if self._ranh(j) and j.get("kq") is not None]
+        self.dang_chay.update(j["msg_id"] for j in cac)
+        return cac
+
+    def huy(self, msg_id: int) -> str:
+        """QA bam Huy: "da_huy" (bo khoi hang) | "dang_chay" (dang chay tren may - khong huy giua luot
+        vi co the con RC testvsl dang gan tren Firebase) | "khong_co" (da xong / khong trong hang)."""
+        job = next((j for j in self.jobs if j["msg_id"] == msg_id), None)
+        if job is None:
+            return "khong_co"
+        if not self._ranh(job) or job.get("kq") is not None:
+            return "dang_chay"
+        self.xong(job)
+        return "da_huy"
+
+    def cap_nhat(self, job: dict, **truong) -> None:
+        """Ghi ket qua / buoc da gui vao job roi luu file -> bot khoi dong lai biet lam tiep tu dau."""
+        job.update(truong)
+        self.luu()
 
     def xong(self, job: dict) -> None:
         self.jobs = [j for j in self.jobs if j["msg_id"] != job["msg_id"]]

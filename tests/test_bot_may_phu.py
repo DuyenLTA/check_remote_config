@@ -41,15 +41,15 @@ def test_bot_chinh_giao_job_cho_may_phu_xin_va_khong_giao_trung(tmp_path):
 
 def test_xong_luu_tin_bug_va_bo_job_khoi_hang(tmp_path):
     bot = _bot(tmp_path)
-    bot.q.them({**_job(1), "dang_o": "ubuntu:S9"})
+    bot.q.cap_nhat(bot.q.jobs[bot.q.them(_job(1)) - 1], dang_o="ubuntu:S9")
     mp.nhan_o_may_chinh(bot, "xong", {"may": "ubuntu", "msg_id": 1, "tin": {**_job(1), "bugs": [{"case": "EV-27"}]}})
     assert bot.q.jobs == [] and bot.q.tin_cua(1)["bugs"] == [{"case": "EV-27"}]
 
 
 def test_may_phu_khoi_dong_lai_hoac_tra_job_thi_job_ve_hang(tmp_path):
     bot = _bot(tmp_path)
-    bot.q.them({**_job(1), "dang_o": "ubuntu:S9"})
-    bot.q.them({**_job(2), "dang_o": "ubuntu2:S1"})
+    bot.q.cap_nhat(bot.q.jobs[bot.q.them(_job(1)) - 1], dang_o="ubuntu:S9")
+    bot.q.cap_nhat(bot.q.jobs[bot.q.them(_job(2)) - 1], dang_o="ubuntu2:S1")
     bot.xin_cho = {("ubuntu", "S8"): "x", ("ubuntu2", "S1"): "y"}
     mp.nhan_o_may_chinh(bot, "khoi_dong", {"may": "ubuntu"})
     assert bot.q.lay()["msg_id"] == 1 and list(bot.xin_cho) == [("ubuntu2", "S1")]
@@ -105,3 +105,55 @@ def test_bot_chinh_khoi_dong_lai_thi_may_phu_xin_lai_ngay(tmp_path):
     bot.da_xin = {"S9": 123.0}
     asyncio.run(mp.nhan_o_may_phu(bot, "chinh_khoi_dong", {"may": "chinh"}, _Kenh()))
     assert bot.da_xin == {}
+
+
+def test_may_phu_tat_han_qua_han_thi_thu_hoi_job(tmp_path):
+    bot, k = _bot(tmp_path), _Kenh()
+    bot.q.them(_job(1))
+    bot.q.them(_job(2))
+    bot.q.jobs[1]["dang_o"] = "ubuntu:S8"                    # giao tu ban cu, chua co giao_luc
+    mp.nhan_o_may_chinh(bot, "xin", {"may": "ubuntu", "serial": "S9"})
+    asyncio.run(mp.chia_viec(bot, k))                         # job 1 -> ubuntu:S9
+    t0 = bot.q.jobs[0]["giao_luc"]
+    kenh = _KenhLichSu([])
+    assert asyncio.run(mp.thu_hoi_job_treo(bot, kenh, t0 + 60)) == []          # job 2 bat dau tinh han tu day
+    assert asyncio.run(mp.thu_hoi_job_treo(bot, kenh, t0 + mp.HAN_MAY_PHU)) == []
+    thu = asyncio.run(mp.thu_hoi_job_treo(bot, kenh, t0 + mp.HAN_MAY_PHU + 61))
+    assert [j["msg_id"] for j in thu] == [1, 2] and thu[0]["dang_o"] == "ubuntu:S9"
+    q2 = bot_hang_doi.HangDoi(tmp_path / "q.json")            # luu file: khoi dong lai van chay lai
+    assert q2.lay()["msg_id"] == 1 and "dang_o" not in q2.jobs[0]
+    # may phu bao xong muon (job da chay lai o may khac): khong xoa job dang chay
+    mp.nhan_o_may_chinh(bot, "xong", {"may": "ubuntu", "msg_id": 1, "tin": {**_job(1), "bugs": [1]}})
+    assert [j["msg_id"] for j in bot.q.jobs] == [1, 2] and "bugs" not in (bot.q.tin_cua(1) or {})
+
+
+class _TinDp:
+    def __init__(self, loai, d):
+        self.content = f"RCR {loai} ubuntu"
+        self.attachments = [SimpleNamespace(read=self._doc(d))]
+
+    @staticmethod
+    def _doc(d):
+        async def read():
+            return json.dumps(d).encode()
+        return read
+
+
+class _KenhLichSu:
+    def __init__(self, tin):
+        self.tin = tin
+
+    def history(self, after=None, limit=None):
+        async def gen():
+            for m in self.tin:
+                yield m
+        return gen()
+
+
+def test_tin_xong_bi_lo_luc_bot_chinh_khoi_dong_thi_khong_chay_lai(tmp_path):
+    bot = _bot(tmp_path)
+    bot.q.cap_nhat(bot.q.jobs[bot.q.them(_job(1)) - 1], dang_o="ubuntu:S9", giao_luc=1000.0)
+    kenh = _KenhLichSu([_TinDp("xin", {"may": "ubuntu", "serial": "S9"}),
+                        _TinDp("xong", {"may": "ubuntu", "msg_id": 1, "tin": {**_job(1), "bugs": [1]}})])
+    assert asyncio.run(mp.thu_hoi_job_treo(bot, kenh, 1000.0 + mp.HAN_MAY_PHU + 1)) == []
+    assert bot.q.jobs == [] and bot.q.tin_cua(1)["bugs"] == [1]

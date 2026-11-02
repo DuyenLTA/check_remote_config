@@ -24,15 +24,22 @@ import io
 import json
 import logging
 import time
+from datetime import datetime, timezone
 
 import discord
 
-from . import bot_cong_viec, bot_hang_doi
+from . import bot_chay_claude, bot_cong_viec, bot_gui_lai, bot_hang_doi
 
 log = logging.getLogger("rcr-bot")
 TIEN_TO = "RCR"
 XIN_LAI = 15 * 60       # xin roi ma chua duoc giao (bot chinh khoi dong lai, mat yeu cau) -> xin lai
 NHIP = 10
+SO_LAN_GUI_XONG = 10
+# May phu tat han giua luot thi khong bao gi gui `khoi_dong` / `xong` -> job dung "dang chay" mai. Qua han nay
+# (luot dai nhat + cai + du phong; may phu chi gui lai ket qua toi da bot_gui_lai.HAN_GUI_LAI_MAY_PHU, nam trong
+# phan du phong) thi may phu chac chan da thoi chay lan gui -> thu hoi, khong chay trung.
+HAN_MAY_PHU = (max(bot_chay_claude.TIMEOUT_BO_TC, bot_chay_claude.TIMEOUT_NEXT_GEN,
+                   bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST) + bot_cong_viec.TIMEOUT_CAI + 15 * 60)
 
 
 async def gui(kenh, loai: str, du_lieu: dict) -> None:
@@ -61,6 +68,46 @@ def tra_ve_hang(bot, may: str) -> int:
     return so
 
 
+async def _tin_xong_bi_lo(kenh, job: dict) -> dict | None:
+    """Tin `RCR xong` cua job o kenh dieu phoi tu luc giao. Tin den luc bot chinh dang khoi dong lai thi
+    Discord khong phat lai -> doc lich su kenh truoc khi ket luan may phu da chet."""
+    tu = datetime.fromtimestamp(job["giao_luc"], tz=timezone.utc)
+    async for m in kenh.history(after=tu, limit=500):
+        if not (m.content or "").startswith(f"{TIEN_TO} xong"):
+            continue
+        goi = await doc(m)
+        if goi and goi[1].get("msg_id") == job["msg_id"]:
+            return goi[1]
+    return None
+
+
+async def thu_hoi_job_treo(bot, kenh, bay_gio: float | None = None) -> list[dict]:
+    """Job giao cho may phu qua `HAN_MAY_PHU` ma chua `xong` -> ve hang (chay lai o may ranh). Tra cac job
+    da thu hoi de bot bao QA. Job giao tu ban cu (chua co `giao_luc`) tinh han tu luc nay."""
+    bay_gio = time.time() if bay_gio is None else bay_gio
+    thu, doi = [], False
+    for j in list(bot.q.jobs):
+        if not j.get("dang_o"):
+            continue
+        if "giao_luc" not in j:
+            j["giao_luc"], doi = bay_gio, True
+        elif bay_gio - j["giao_luc"] > HAN_MAY_PHU:
+            xong = await _tin_xong_bi_lo(kenh, j)
+            if xong is not None:             # may phu da xong, chi la tin bi lo
+                log.info("tin xong bi lo cua %s %s: danh dau xong", j.get("ma"), j.get("version"))
+                nhan_o_may_chinh(bot, "xong", xong)
+                continue
+            log.warning("may phu %s im qua han voi %s %s: thu hoi job", j["dang_o"], j.get("ma"), j.get("version"))
+            thu.append({**j})
+            j.pop("dang_o")
+            j.pop("giao_luc")
+            bot.q.dang_chay.discard(j["msg_id"])
+            doi = True
+    if doi:
+        bot.q.luu()
+    return thu
+
+
 def nhan_o_may_chinh(bot, loai: str, d: dict) -> None:
     may = str(d.get("may") or "")
     if not may:
@@ -71,11 +118,14 @@ def nhan_o_may_chinh(bot, loai: str, d: dict) -> None:
     elif loai == "xin":
         bot.xin_cho[(may, str(d["serial"]))] = str(d.get("ten") or d["serial"])
     elif loai in ("xong", "tra"):
-        job = next((j for j in bot.q.jobs if j["msg_id"] == d.get("msg_id")), None)
-        if loai == "xong" and d.get("tin"):
-            bot.q.nho_tin(d["tin"])
+        # Chi nhan khi job con dang giao cho chinh may nay: job da bi thu hoi (thu_hoi_job_treo) roi chay lai o
+        # may khac thi tin den muon khong duoc xoa job dang chay / ghi de tin cua luot moi.
+        job = next((j for j in bot.q.jobs if j["msg_id"] == d.get("msg_id")
+                    and str(j.get("dang_o", "")).startswith(f"{may}:")), None)
         if job is None:
             return
+        if loai == "xong" and d.get("tin"):
+            bot.q.nho_tin(d["tin"])
         if loai == "xong":
             bot.q.xong(job)
         else:
@@ -92,7 +142,7 @@ async def chia_viec(bot, kenh) -> None:
             return
         may, serial = khoa
         ten = bot.xin_cho.pop(khoa)
-        job["dang_o"] = f"{may}:{serial}"
+        job["dang_o"], job["giao_luc"] = f"{may}:{serial}", time.time()
         bot.q.luu()
         try:
             await gui(kenh, "giao", {"may": may, "serial": serial, "ten": ten, "job": job,
@@ -134,7 +184,13 @@ async def _chay_job(bot, job: dict, serial: str, ten: str, kenh) -> None:
     finally:
         sau = bot.q.tin_cua(job["msg_id"])
         doi = json.dumps(sau, sort_keys=True, ensure_ascii=False) != truoc
-        await gui(kenh, "xong", {"may": bot.ten_may, "msg_id": job["msg_id"], "tin": sau if doi else None})
+        for lan in range(SO_LAN_GUI_XONG):   # mat tin xong -> bot chinh doi HAN_MAY_PHU roi moi biet
+            try:
+                await gui(kenh, "xong", {"may": bot.ten_may, "msg_id": job["msg_id"], "tin": sau if doi else None})
+                break
+            except bot_gui_lai.LOI_MANG as exc:
+                log.warning("chua gui duoc tin xong (lan %d): %s", lan + 1, exc)
+                await asyncio.sleep(bot_gui_lai.CHO_GUI_LAI)
 
 
 async def vong_may_phu(bot, kenh, danh_sach_may) -> None:

@@ -419,7 +419,15 @@ từ bot chính qua một kênh điều phối riêng, tự cài + chạy `/rc-c
    chính (token, kênh QA, Jira, `DISCORD_DEV_THEO_ASSIGNEE`, `RC_PLAN_TUAN_SHEET`…). Máy phụ cũng cần `adb`, `claude`
    đã đăng nhập, repo `android-ad-audit`.
 3. Bật máy phụ như bot thường (`deploy/cai-bot-linux.sh`). Khởi động lại máy phụ giữa lượt → job đó về hàng, chạy lại.
-   Máy phụ tắt hẳn giữa lượt thì job đứng ở trạng thái đang chạy tới khi máy phụ bật lại.
+   Máy phụ tắt hẳn giữa lượt: quá 175 phút (lượt dài nhất + cài + dự phòng) không báo xong thì bot chính kiểm
+   lại kênh điều phối (tin `xong` có thể lạc lúc bot chính khởi động lại), không thấy thì đưa job về hàng đợi và báo
+   ở qa-auto. Tin `xong` đến muộn của job đã thu hồi bị bỏ qua.
+
+**Hàng đợi:** job đã duyệt đang chờ có nút **Huỷ** (bấm nhầm Check, dev báo đẩy nhầm bản) → bỏ khỏi hàng, tin trả
+lại nút Check / Verify lại. Lượt **đang chạy** không huỷ giữa chừng (có thể còn giá trị RC `testvsl` đang gắn).
+**Mất mạng lúc báo kết quả:** chạy xong là kết quả ghi vào `out/bot-hang-doi.json` trước khi gửi; gửi lỗi mạng thì
+trả máy test, 60 giây gửi lại một lần (tối đa 12 giờ, máy phụ 10 phút); bot khởi động lại thì chỉ gửi lại kết quả,
+không chạy lại. Bước đã gửi (tin kết quả, menu bug, đổi Jira, báo dev) không gửi trùng.
 
 **Bản debug từ Google Drive:** QA **trả lời (Reply) vào tin hỏi của bot** kèm link Drive của file `.apk` (file để
 "Ai có link đều xem được"). Bot gắn link vào build đó, tin hỏi đổi thành "📦 tải APK từ link Drive" → bấm **Check** /

@@ -64,3 +64,33 @@ def test_verify_va_check_cung_build_khong_chan_nhau(tmp_path):
     assert q.them({**job(2), "loai_job": "verify"}) == 2
     assert q.trung({**job(3), "loai_job": "verify"}) and q.them({**job(3), "loai_job": "verify"}) is None
     assert q.them({**job(4), "loai_job": "check"}) is None
+
+
+def test_huy_chi_bo_job_dang_cho(tmp_path):
+    q = h.HangDoi(tmp_path / "q.json")
+    for i in (1, 2, 3, 4):
+        q.them({"msg_id": i, "package": f"p{i}", "version": "1"})
+    q.lay()                                              # job 1 dang chay tren may
+    q.jobs[2]["dang_o"] = "ubuntu:S9"                    # job 3 dang chay o may phu
+    q.cap_nhat(q.jobs[3], kq={"trang_thai": "XONG"})     # job 4 chay xong, cho gui ket qua
+    assert [q.huy(i) for i in (1, 3, 4)] == ["dang_chay"] * 3
+    assert q.huy(2) == "da_huy" and q.huy(2) == "khong_co"
+    assert [j["msg_id"] for j in h.HangDoi(tmp_path / "q.json").jobs] == [1, 3, 4]
+
+
+def test_bam_huy_tra_lai_nut_check(tmp_path):
+    import asyncio
+    from types import SimpleNamespace
+    from rcr import discord_bot as d
+    bot = object.__new__(d.BuildBot)
+    bot.q = h.HangDoi(tmp_path / "q.json")
+    c = {"msg_id": 5, "ma": "AIP920", "ten": "Lingix", "version": "1.0 (1)", "package": "pkg.a"}
+    bot.q.them(dict(c))
+    goi = []
+
+    async def edit_message(**k):
+        goi.append(k)
+    it = SimpleNamespace(user=SimpleNamespace(mention="@qa"), response=SimpleNamespace(edit_message=edit_message))
+    asyncio.run(bot._huy(it, c))
+    assert bot.q.jobs == [] and "Đã huỷ" in goi[0]["content"]
+    assert [b.custom_id for b in goi[0]["view"].children][0] == "rcr:check:5"

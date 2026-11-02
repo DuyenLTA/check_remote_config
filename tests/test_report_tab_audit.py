@@ -111,7 +111,7 @@ def test_bot_chi_dinh_kem_mot_file_report(out, tmp_path, monkeypatch):
 
     bot = object.__new__(discord_bot.BuildBot)
     bot._tin_qa = _tin_qa
-    bot.q = SimpleNamespace(tin_cua=lambda _i: None, nho_tin=lambda _c: None)
+    bot.q = SimpleNamespace(tin_cua=lambda _i: None, nho_tin=lambda _c: None, cap_nhat=lambda j, **t: j.update(t))
     monkeypatch.setattr(discord_bot.bot_cong_viec, "cai", lambda *a: {})
     monkeypatch.setattr(discord_bot.bot_chay_claude, "chay",
                         lambda *a: {"trang_thai": "xong", "link": str(rp)})

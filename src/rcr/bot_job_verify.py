@@ -64,6 +64,7 @@ async def _xep(bot, c: dict, kenh) -> str:
     job["msg_id"] = vm.id
     bot.q.nho_tin(job)
     vi_tri = bot.q.them(job)
+    await vm.edit(view=nut(vm.id, ("huy", "Huỷ")))    # QA bo luot dang cho (vd dev bao day nham ban)
     return f"Đã xếp verify {len(chay)} bug Reviewing của {c['ma']} — vị trí {vi_tri} trong hàng đợi."
 
 
@@ -127,33 +128,53 @@ async def _doi_trang_thai(bot, job: dict, kq: dict, ten: str) -> list[tuple[str,
 
 async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> None:
     vm = await bot._tin_qa(job["msg_id"])
+    # Co kq = da chay xong, lan truoc gui ket qua loi mang (bot_gui_lai) -> chi gui lai, khong cai / chay lai.
+    if job.get("kq") is None and not await _cai_va_chay(bot, job, vm, serial, ten, repo, out):
+        return
+    await _bao_ket_qua(bot, job, vm, out)
+
+
+async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, out: Path) -> bool:
     moi = _build_moi_hon(bot, job)
     if moi:
         # Fix thuong chi co o build moi: verify build cu co the keo To Do truoc khi build moi kip chay.
-        await vm.edit(content=f"{v.tin_ket_qua(job, [])}\n⏭ Bỏ — đã có build mới hơn `{moi}` chờ verify.")
-        return
+        await vm.edit(content=f"{v.tin_ket_qua(job, [])}\n⏭ Bỏ — đã có build mới hơn `{moi}` chờ verify.", view=None)
+        return False
     dau = f"{v.tin_ket_qua(job, [])} · máy **{ten}**"
     nguon = "từ link Drive" if job.get("drive") else "từ App Tester"
-    await vm.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…")
+    await vm.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…", view=None)   # go nut Huy
     cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
                                   job.get("drive", ""))
     if "loi" in cai:
         hoi = bot_cong_viec.hoi_link_drive(job)
         await vm.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}" + (f"\n{hoi}" if hoi else ""),
                       view=nut(vm.id, ("check", "Thử lại")))
-        return
+        return False
     await vm.reply(bot_cong_viec.tin_da_cai(job, ten, "verify bug"))
     cases = sorted({u["case"] for u in job["verify"]})
     ck = v.loai_case(cases[0]) == "checklist"        # phan_loai chi cho qua mot nhom moi luot
     het_gio = bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY
     await vm.edit(content=f"{dau}\nĐang chạy lại {len(cases)} {'dòng checklist' if ck else 'case'}…")
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, het_gio, out, cases)
-    dong = await _doi_trang_thai(bot, job, kq, ten)
-    dong += [("bo", u, u.get("ly_do", "")) for u in job.get("bo_qua", [])]
+    bot.q.cap_nhat(job, kq=kq, ten_may=ten)
+    return True
+
+
+async def _bao_ket_qua(bot, job: dict, vm, out: Path) -> None:
+    """Doi trang thai Jira roi bao. Goi lai duoc nhieu lan (mat mang giua chung): buoc nao xong roi thi bo."""
+    kq, ten = job["kq"], job.get("ten_may") or "?"
+    if job.get("dong") is None:              # Jira chi doi mot lan, ket qua luu cung job
+        dong = await _doi_trang_thai(bot, job, kq, ten)
+        dong += [("bo", u, u.get("ly_do", "")) for u in job.get("bo_qua", [])]
+        bot.q.cap_nhat(job, dong=[list(d) for d in dong])
+    dong = [tuple(d) for d in job["dong"]]
     await vm.edit(content=f"{v.tin_ket_qua(job, dong)}\nMáy: {ten}", view=nut(vm.id, ("verify", "Verify bug Jira")))
     f = bot_cong_viec.file_report(kq, out)
-    link = f"\nReport: {kq['link']}" if kq.get("link") and not f else ""
-    await vm.reply(f"{v.tin_tom_tat_verify(job, kq)}{link}", file=discord.File(f) if f else discord.utils.MISSING)
+    if not job.get("da_bao"):
+        link = f"\nReport: {kq['link']}" if kq.get("link") and not f else ""
+        await vm.reply(f"{v.tin_tom_tat_verify(job, kq)}{link}", file=discord.File(f) if f else discord.utils.MISSING)
+        bot.q.cap_nhat(job, da_bao=True)
     tin_dev = v.tin_bao_dev_fail(job, dong)
-    if tin_dev:                              # bug van FAIL -> bao dev o kenh project
+    if tin_dev and not job.get("da_bao_dev"):   # bug van FAIL -> bao dev o kenh project
         await bot_kenh_project.bao(bot, job, tin_dev, vm, [u["key"] for loai, u, _ in dong if loai == "todo"])
+        bot.q.cap_nhat(job, da_bao_dev=True)
