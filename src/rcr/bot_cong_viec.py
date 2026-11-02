@@ -61,16 +61,6 @@ def cai(package: str, version: str, loai: str, serial: str, drive: str = "") -> 
                 TIMEOUT_CAI, serial)
 
 
-def hoi_link_drive(c: dict) -> str | None:
-    """Cai tu App Tester hong (thuong la chua co ban debug tren App Tester) -> hoi QA gui link Drive cua APK
-    (user chot 29/10/2026). Da cai tu link Drive ma van hong -> None (hoi lai cung vo ich)."""
-    if c.get("drive"):
-        return None
-    return (f"📦 **{c['ma']}** `{c['version']}`: App Tester chưa có bản {c.get('loai_ban') or 'debug'}? "
-            "Trả lời tin này kèm **link Google Drive của APK** (chia sẻ \"Ai có link đều xem được\") "
-            "— bot nhận link xong thì bấm chạy lại, bot sẽ tải APK từ link đó thay cho App Tester.")
-
-
 def tin_da_cai(c: dict, ten: str, viec: str) -> str:
     """Tin MOI (tra loi duoi tin hoi) khi tai + cai duoc build: chi sua tin cu thi kenh khong bao, QA khong
     biet bot da tim duoc build (user chot 30/10/2026)."""

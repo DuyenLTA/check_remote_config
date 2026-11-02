@@ -35,6 +35,15 @@ class LoiCai(Exception):
     """Dung luot cai, kem ly do cho nguoi doc."""
 
 
+async def danh_thuc(client, serial) -> None:
+    """Bat man + bo man khoa vuot truoc khi lai UI. May tat man sau 30 phut khong dung -> anh chup den va
+    uiautomator bao "null root node", cai hong (Pixel 4, AIP936 1.9.0, 02/11/2026). WAKEUP khong bat/tat
+    nhu POWER nen man dang sang thi vo hai; may dat PIN thi dismiss-keyguard khong mo duoc, lan dump sau bao loi."""
+    await client.shell(serial, "input", "keyevent", "KEYCODE_WAKEUP")
+    await client.shell(serial, "wm", "dismiss-keyguard")
+    await asyncio.sleep(1)
+
+
 async def _nodes(client, serial):
     # Vong xoay "Downloading…" chay lien tuc -> uiautomator bao "could not get idle
     # state" (do 27/10/2026, AIP882 4.3.0). Cho nhip roi chup lai, khong dung luot.
@@ -110,6 +119,7 @@ async def _ve_dau_ds(client, serial, nodes) -> None:
 
 async def mo_chi_tiet(client, serial, package, out_dir: Path):
     """Mo App Tester toi man chi tiet cua `package`. Tra node man chi tiet."""
+    await danh_thuc(client, serial)
     await device_app.launch(client, serial, s.APP_TESTER)
     await asyncio.sleep(3)
     nodes = await _nodes(client, serial)

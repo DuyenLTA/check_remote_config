@@ -303,3 +303,27 @@ def test_ban_moi_hien_download_ma_may_co_ban_cu_cung_version_thi_doi_cai_xong_th
     kq, st = _cai_cung_version(monkeypatch, "2026-10-28 18:38:11", nut_dau="tai")
     assert len(st["bam"]) == 1 and not any(a[:2] == ("pm", "uninstall") for a in st["lenh"])
     assert st["cai_luc_cu"] == datetime(2026, 10, 28, 18, 38, 11)       # cho_cai_xong phai doi ban moi
+
+
+def test_mo_app_tester_thi_bat_man_truoc(monkeypatch):
+    """02/11/2026: may tat man (Pixel 4, AIP936) -> dump "null root node", cai hong. Bat man + bo khoa truoc khi mo."""
+    lenh = []
+
+    class Client(_Client):
+        async def shell(self, serial, *a, **k):
+            lenh.append(a)
+
+    class DaMo(Exception):
+        pass
+
+    async def launch(client, serial, pkg):
+        lenh.append(("launch", pkg))
+        raise DaMo                                          # chi kiem thu tu truoc khi mo App Tester
+
+    async def khong(*a, **k):
+        return None
+    monkeypatch.setattr(ui.device_app, "launch", launch)
+    monkeypatch.setattr(ui.asyncio, "sleep", khong)
+    with pytest.raises(DaMo):
+        asyncio.run(ui.mo_chi_tiet(Client(), "S1", "pkg.a", Path(".")))
+    assert lenh == [("input", "keyevent", "KEYCODE_WAKEUP"), ("wm", "dismiss-keyguard"), ("launch", ui.s.APP_TESTER)]

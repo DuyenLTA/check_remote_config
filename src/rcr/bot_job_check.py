@@ -35,9 +35,8 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
                                   job.get("drive", ""))
     if "loi" in cai:
-        # Thuong la App Tester chua co ban (dev chua day) -> hoi link Drive, de nguoi bam thu lai sau.
-        hoi = bot_cong_viec.hoi_link_drive(job)
-        await qa.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}" + (f"\n{hoi}" if hoi else ""),
+        # Moi build deu cai ban release tu App Tester -> khong hoi link Drive nua (user chot 02/11/2026).
+        await qa.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}",
                       view=nut(("check", "Thử lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
         return False
     ghi = " (đã gỡ bản cũ khác loại — mất data app)" if cai.get("go_ban_cu") else ""

@@ -442,7 +442,8 @@ qua kênh điều phối.
 trả máy test, 60 giây gửi lại một lần (tối đa 12 giờ, máy phụ 10 phút); bot khởi động lại thì chỉ gửi lại kết quả,
 không chạy lại. Bước đã gửi (tin kết quả, menu bug, đổi Jira, báo dev) không gửi trùng.
 
-**Bản debug từ Google Drive:** QA **trả lời (Reply) vào tin hỏi của bot** kèm link Drive của file `.apk` (file để
+**Cài từ link Google Drive (tuỳ chọn):** mọi build cài bản release từ App Tester; cài hỏng thì bot chỉ báo lỗi,
+**không hỏi link Drive**. Khi cần, QA **trả lời (Reply) vào tin hỏi của bot** kèm link Drive của file `.apk` (file để
 "Ai có link đều xem được"). Bot gắn link vào build đó, tin hỏi đổi thành "📦 tải APK từ link Drive" → bấm **Check** /
 **Verify** thì bot tải APK từ link rồi `adb install` thay cho App Tester. APK khác chữ ký bản đang cài → gỡ rồi cài
 (mất data app). Cài xong bot đối chiếu: sai package hoặc version khác tin build → dừng, không chạy test. Chạy tay:
