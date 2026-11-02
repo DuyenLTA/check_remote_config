@@ -55,8 +55,35 @@ def test_cli_loi_lay_dong_LOI(monkeypatch):
         stderr = "May: x\nLOI: 4.3.0 (40) chưa có bản debug (mới có: release)\n"
     goi = {}
     monkeypatch.setattr(v.bot_tien_trinh, "chay", lambda cmd, khoa, timeout, **k: goi.setdefault("cmd", cmd) and P)
+    monkeypatch.setattr(v.time, "sleep", lambda s: None)
     assert v.cai("pkg.a", "4.3.0 (40)", "debug", "SER1") == {"loi": "4.3.0 (40) chưa có bản debug (mới có: release)"}
     assert goi["cmd"][-2:] == ["--serial", "SER1"]                   # dung may bot da chon
+
+
+def test_cai_hong_tu_thu_lai_toi_khi_duoc(monkeypatch):
+    """Ngay sau khi may tinh khoi dong lai, App Tester chua len -> hong lan dau, lan sau cai duoc."""
+    class Hong:
+        returncode, stdout, stderr = 1, "", "LOI: mở App Tester không ra danh sách app\n"
+
+    class Duoc:
+        returncode, stderr = 0, ""
+        stdout = '{"da_cai": true}\n'
+    lan = iter([Hong, Duoc])
+    ngu = []
+    monkeypatch.setattr(v.bot_tien_trinh, "chay", lambda cmd, khoa, timeout, **k: next(lan))
+    monkeypatch.setattr(v.time, "sleep", ngu.append)
+    assert v.cai("pkg.a", "1.9.0 (11)", "release", "SER1") == {"da_cai": True}
+    assert ngu == [v.CHO_THU_LAI_CAI]
+
+
+def test_cai_hong_het_so_lan_thi_tra_loi(monkeypatch):
+    class Hong:
+        returncode, stdout, stderr = 1, "", "LOI: uiautomator dump that bai\n"
+    goi = []
+    monkeypatch.setattr(v.bot_tien_trinh, "chay", lambda cmd, khoa, timeout, **k: goi.append(cmd) or Hong)
+    monkeypatch.setattr(v.time, "sleep", lambda s: None)
+    assert v.cai("pkg.a", "1.9.0 (11)", "release", "SER1") == {"loi": "uiautomator dump that bai"}
+    assert len(goi) == v.SO_LAN_CAI
 
 
 def test_duong_dan_tuong_doi_tinh_tu_repo(tmp_path, monkeypatch):

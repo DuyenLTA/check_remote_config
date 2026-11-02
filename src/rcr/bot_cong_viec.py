@@ -10,6 +10,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from . import ad_units_sheet, bot_tien_trinh, build_ma_app, tc_source
@@ -19,6 +20,8 @@ from .models import RcError
 log = logging.getLogger("rcr-bot")
 
 TIMEOUT_CAI = 1500   # > app_tester_ui.TIMEOUT_CAI + mo App Tester
+SO_LAN_CAI = 3       # cai hong (mang / App Tester chua len) -> tu thu lai truoc khi doi QA bam
+CHO_THU_LAI_CAI = 60
 # Gioi han file dinh kem cua bot o server khong boost.
 MAX_DINH_KEM = 10 * 1024 * 1024
 TRANG_THAI = {"XONG": ("✅", "Xong"), "DUNG": ("⚠️", "Dừng — cần người xem"),
@@ -54,11 +57,22 @@ def _cli(args: list[str], timeout: int, khoa: str) -> dict:
     return {"loi": loi}
 
 
-def cai(package: str, version: str, loai: str, serial: str, drive: str = "") -> dict:
-    """Co `drive` (link Drive QA tra loi vao tin hoi) -> tai APK tu link, khong qua App Tester."""
+def cai(package: str, version: str, loai: str, serial: str, drive: str = "",
+        so_lan: int = SO_LAN_CAI, cho: float = CHO_THU_LAI_CAI) -> dict:
+    """Co `drive` (link Drive QA tra loi vao tin hoi) -> tai APK tu link, khong qua App Tester.
+    Cai hong thi tu thu lai (`so_lan` lan, cach `cho` giay) roi moi tra loi ve cho QA: ngay sau khi may tinh
+    khoi dong lai mang / App Tester chua san sang -> hong mot lan roi job nam cho nut "Thu lai", may dung im
+    (AIP936 1.9.0 (11), 02/11/2026: Pixel 4 bo trong 30 phut toi tat man)."""
     them = ["--apk-url", drive] if drive else []
-    return _cli(["--package", package, "--version", version, "--loai", loai, "--serial", serial, *them],
-                TIMEOUT_CAI, serial)
+    args = ["--package", package, "--version", version, "--loai", loai, "--serial", serial, *them]
+    kq: dict = {}
+    for lan in range(1, so_lan + 1):
+        kq = _cli(args, TIMEOUT_CAI, serial)
+        if "loi" not in kq or lan == so_lan:
+            return kq
+        log.info("cai %s %s lan %d hong, thu lai sau %ds", package, version, lan, cho)
+        time.sleep(cho)
+    return kq
 
 
 def tin_da_cai(c: dict, ten: str, viec: str) -> str:
