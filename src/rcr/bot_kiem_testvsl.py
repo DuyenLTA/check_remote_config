@@ -39,6 +39,10 @@ def tin_nhac(job: dict, loi: str, duyet) -> str:
     """Tag nguoi bam Check (luot verify tu xep thi tag cac QA duoc duyet)."""
     ai = [job["nguoi_duyet"]] if job.get("nguoi_duyet") else sorted(duyet or [])
     tag = " ".join(f"<@{i}>" for i in ai)
+    if rc_firebase.HET_HAN in loi:       # loi dang nhap tren may bot, khong phai thieu testvsl -> khong nho tao condition
+        return (f"⛔ {tag} **{job.get('ma', '')}** `{job.get('version', '')}` — chưa chạy được bản release: {loi}\n"
+                f"Người quản máy bot chạy `firebase login --reauth` trên máy bot, xong bấm **Chạy lại** "
+                f"(lượt verify: **Verify lại**) ở tin của lượt.")
     return (f"⛔ {tag} **{job.get('ma', '')}** `{job.get('version', '')}` — chưa chạy được bản release: {loi}\n"
             f"Nhờ tạo / sửa điều kiện `{rc_firebase.DIEU_KIEN}` trên Firebase (app.id + version đang test), kéo lên "
             f"**thứ 1**. Bot không tự tạo hay sửa condition, default hay tham số của người khác. Xong thì bấm "

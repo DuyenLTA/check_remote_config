@@ -68,6 +68,9 @@ def _mang(goi):
             time.sleep(CHO_MANG)
 
 
+HET_HAN = "đăng nhập Firebase hết hạn"
+
+
 def token() -> str:
     try:
         rt = json.loads(_configstore().read_text(encoding="utf-8"))["tokens"]["refresh_token"]
@@ -81,7 +84,9 @@ def token() -> str:
                 return json.load(r)["access_token"]
         return _mang(goi)
     except urllib.error.HTTPError as e:
-        raise RcError(f"đăng nhập Firebase hết hạn (HTTP {e.code}): chạy lại `firebase login --reauth`") from None
+        # invalid_rapt: Workspace bat "Google Cloud session control" -> buoc dang nhap lai dinh ky, refresh token
+        # con nhung khong doi duoc access token (do 02/11/2026). Chi nguoi dang nhap tren may bot sua duoc.
+        raise RcError(f"{HET_HAN} (HTTP {e.code}): chạy lại `firebase login --reauth`") from None
 
 
 def _goi(project: str, tok: str, method: str = "GET", template: dict | None = None, etag: str = ""):

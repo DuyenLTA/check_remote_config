@@ -85,3 +85,10 @@ def test_thieu_testvsl_thi_khong_chay_claude_va_nhac_qa(tmp_path, monkeypatch):
     assert asyncio.run(bot._cai_va_chay(job, msg, "S1", "Pixel")) is False
     assert "<@42>" in msg.replies[-1] and "kq" not in job
     assert [b.custom_id for b in msg.edits[-1]["view"].children] == ["rcr:check:5", "rcr:bo:5"]
+
+
+def test_dang_nhap_het_han_thi_khong_nho_tao_testvsl():
+    """02/11/2026: invalid_rapt -> tin cu bao QA tao / sua testvsl, sai: chi can dang nhap lai tren may bot."""
+    loi = f"{k.rc_firebase.HET_HAN} (HTTP 400): chạy lại `firebase login --reauth`"
+    t = k.tin_nhac({"ma": "AIP936", "version": "1.9.0 (11)", "nguoi_duyet": 42}, loi, set())
+    assert "firebase login --reauth" in t and "Chạy lại" in t and "testvsl" not in t and "<@42>" in t
