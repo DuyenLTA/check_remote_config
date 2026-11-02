@@ -30,7 +30,7 @@ from pathlib import Path
 
 import discord
 
-from . import (audit_tom_tat, bot_bat_tin_lo, bot_gui_lai, bot_may_phu, bot_verify_jira, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
+from . import (audit_tom_tat, bot_bat_tin_lo, bot_dung_luot, bot_gui_lai, bot_tien_trinh, bot_may_phu, bot_verify_jira, bot_chay_claude, bot_cong_viec, bot_hang_doi, bot_job_verify, bot_hoi_dap, bot_kenh_project,
                bot_jira_rest, bot_keo_sprint, bot_log_jira, build_ma_app, cai_apk_tu_drive)
 from .adb_client import AdbClient
 from .cau_hinh_bot import FILE_CAU_HINH, env  # noqa: F401 - dung chung voi rcr-notify
@@ -340,6 +340,9 @@ class BuildBot(discord.Client):
         if hanh_dong == "huy":
             await self._huy(it, c)
             return
+        if hanh_dong == "dung":
+            await bot_dung_luot.bam_dung(self, it, c)
+            return
         if hanh_dong == "verify":
             await it.response.defer(ephemeral=True, thinking=True)
             try:
@@ -363,7 +366,7 @@ class BuildBot(discord.Client):
         kq = self.q.huy(c["msg_id"])
         if kq != "da_huy":
             await it.response.send_message(
-                "Lượt này đang chạy trên máy — chưa huỷ giữa lượt được, chờ xong." if kq == "dang_chay"
+                "Lượt này đang chạy trên máy — bấm **Dừng** ở tin của lượt nếu cần." if kq == "dang_chay"
                 else "Build này không còn trong hàng đợi.", ephemeral=True)
             return
         ghi = f"🚫 Đã huỷ khỏi hàng đợi — {it.user.mention}"
@@ -486,10 +489,18 @@ class BuildBot(discord.Client):
                 await bot_job_verify.chay(self, job, serial, ten, REPO, OUT)
             else:
                 await self._chay(job, serial, ten)
+        if serial:
+            bot_tien_trinh.bat_dau(serial, job["msg_id"])   # bo dau Dung cua luot truoc tren may nay
         try:
             # May phu chi gui lai ngan (bot_gui_lai.HAN_GUI_LAI_MAY_PHU): qua HAN_MAY_PHU bot chinh thu hoi job.
             await bot_gui_lai.chay_toi_khi_gui_duoc(
                 mot_luot, job, tra_may, han=bot_gui_lai.HAN_GUI_LAI_MAY_PHU if self.la_phu else None)
+        except bot_tien_trinh.BiDung as exc:   # QA bam Dung: da giet ca cay tien trinh
+            log.info("luot %s %s bi dung: %s", job.get("ma"), job.get("version"), exc)
+            try:
+                await bot_dung_luot.sau_khi_dung(self, job, serial, ten, str(exc))
+            except Exception:                # noqa: BLE001
+                log.exception("bao / don sau khi dung loi")
         except Exception as exc:             # noqa: BLE001 - mot job hong khong duoc giet bot
             log.exception("job loi")
             try:                             # mat mang thi bao loi cung hong -> chi ghi log
@@ -511,7 +522,8 @@ class BuildBot(discord.Client):
         """Cai build roi chay /rc-check; ket qua ghi vao job (luu file) truoc khi gui. False khi cai hong."""
         dau = f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**"
         nguon = "từ link Drive" if job.get("drive") else "từ App Tester"
-        await qa.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…", view=None)   # go nut Huy
+        await qa.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…",
+                      view=bot_dung_luot.view_dung(qa.id))   # thay nut Huy bang nut Dung
         cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
                                       job.get("drive", ""))
         if "loi" in cai:
@@ -526,6 +538,7 @@ class BuildBot(discord.Client):
         next_gen = build_ma_app.la_next_gen(job)
         timeout = bot_chay_claude.TIMEOUT_NEXT_GEN if next_gen else bot_chay_claude.TIMEOUT_BO_TC
         bat_dau = time.time()
+        bot_dung_luot.danh_dau_pha_rc(job, next_gen)       # Dung tu day -> phai don RC testvsl
         # Tin build ghi next-gen -> ep rc-check nhanh checklist; con lai bo TC (ban release doi RC qua Firebase).
         kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, REPO, timeout, OUT,
                                      None, next_gen, job.get("tutorial") or "")
@@ -536,7 +549,7 @@ class BuildBot(discord.Client):
         """Gui ket qua luot da chay. Goi lai duoc nhieu lan (mat mang giua chung): buoc nao da gui thi bo qua."""
         kq, ten = job["kq"], job.get("ten_may") or "?"
         chu = bot_cong_viec.TRANG_THAI.get(kq["trang_thai"], ("", kq["trang_thai"]))[1]
-        await qa.edit(content=f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**\n{chu}")
+        await qa.edit(content=f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**\n{chu}", view=None)   # go nut Dung
         f = bot_cong_viec.file_report(kq, OUT)
         if not job.get("da_bao"):
             # Tom tat ID ads doc bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.

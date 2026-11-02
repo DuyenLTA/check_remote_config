@@ -66,21 +66,22 @@ def test_luot_bot_tat_webhook(tmp_path, monkeypatch):
     class P:
         returncode, stdout, stderr = 0, "{}", ""
 
-    def run(cmd, **k):
-        goi.update(k)
+    def run(cmd, khoa, timeout, **k):
+        goi.update(k, khoa=khoa)
         return P
-    monkeypatch.setattr(c.subprocess, "run", run)
+    monkeypatch.setattr(c.bot_tien_trinh, "chay", run)
     monkeypatch.setenv("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/x/y")
     c.chay("pkg.a", "S1", tmp_path, 60, tmp_path / "out")
     assert goi["env"]["DISCORD_NOTIFY"] == "0"
     assert goi["env"]["CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"] == "0"   # khong giet workflow audit sau 10 phut
     assert goi["env"]["DISCORD_WEBHOOK_URL"]          # van giu env khac (PATH, ...)
+    assert goi["khoa"] == "S1"                         # QA bam Dung theo serial may
 
 
 def test_qua_gio_thi_bao_het_gio(tmp_path, monkeypatch):
-    def treo(*a, **k):
-        raise subprocess.TimeoutExpired(a[0], k["timeout"])
-    monkeypatch.setattr(c.subprocess, "run", treo)
+    def treo(cmd, khoa, timeout, **k):
+        raise subprocess.TimeoutExpired(cmd, timeout)
+    monkeypatch.setattr(c.bot_tien_trinh, "chay", treo)
     out = c.chay("pkg.a", "S1", tmp_path, 60, tmp_path / "out")
     assert out["trang_thai"] == "HET_GIO" and "1 phút" in out["tom_tat"]
     assert list((tmp_path / "out").glob("bot-luot-*-S1.log"))

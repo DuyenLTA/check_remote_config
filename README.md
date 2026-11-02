@@ -424,7 +424,12 @@ từ bot chính qua một kênh điều phối riêng, tự cài + chạy `/rc-c
    ở qa-auto. Tin `xong` đến muộn của job đã thu hồi bị bỏ qua.
 
 **Hàng đợi:** job đã duyệt đang chờ có nút **Huỷ** (bấm nhầm Check, dev báo đẩy nhầm bản) → bỏ khỏi hàng, tin trả
-lại nút Check / Verify lại. Lượt **đang chạy** không huỷ giữa chừng (có thể còn giá trị RC `testvsl` đang gắn).
+lại nút Check / Verify lại. Lượt **đang chạy** có nút **Dừng**: bot giết cả cây tiến trình của lượt (Claude,
+`rc-check`, adb — Windows `taskkill /T`, Ubuntu theo process group + lệnh mang `--serial <máy>`), khoá máy được nhả.
+Dừng lúc đang chạy bộ TC trên bản release → bot gỡ giá trị điều kiện `testvsl` (chỉ điều kiện đó) trên Firebase
+project của app; đang có lượt khác cùng app chạy trên máy khác thì không gỡ, báo QA. Checklist Next-Gen / bản debug
+từ Drive / dừng lúc đang cài: không đụng Firebase. Lượt verify bị dừng không đổi Jira. Lượt ở máy phụ: lệnh dừng đi
+qua kênh điều phối.
 **Mất mạng lúc báo kết quả:** chạy xong là kết quả ghi vào `out/bot-hang-doi.json` trước khi gửi; gửi lỗi mạng thì
 trả máy test, 60 giây gửi lại một lần (tối đa 12 giờ, máy phụ 10 phút); bot khởi động lại thì chỉ gửi lại kết quả,
 không chạy lại. Bước đã gửi (tin kết quả, menu bug, đổi Jira, báo dev) không gửi trùng.

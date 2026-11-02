@@ -71,7 +71,7 @@ def may_ban(path: Path) -> bool:
 
 # Trang thai cua MOT luot chay (ket qua, buoc da gui, may phu dang giu). Job moi xep tu tin build cu
 # (bam Check / Thu lai) khong duoc mang theo: mang `kq` thi bot chi gui lai ket qua cu ma khong chay.
-TRUONG_LUOT = ("kq", "dong", "da_bao", "da_bao_bug", "da_bao_dev", "ten_may", "bat_dau", "dang_o", "giao_luc")
+TRUONG_LUOT = ("kq", "dong", "da_bao", "da_bao_bug", "da_bao_dev", "ten_may", "bat_dau", "dang_o", "giao_luc", "pha")
 
 
 def _khoa_job(job: dict) -> tuple[str, str, str]:

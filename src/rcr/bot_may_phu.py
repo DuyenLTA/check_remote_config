@@ -11,6 +11,7 @@ kenh dieu phoi rieng (`DISCORD_DIEU_PHOI_CHANNEL_ID`) bang tin `RCR <loai> <may>
   chinh -> phu  `giao`       job + tin cua build + anh hang doi (verify can biet build moi hon)
   phu -> chinh  `tra`        nhan job nhung may test vua ban / rut cap -> tra lai hang
   phu -> chinh  `xong`       chay xong; kem tin build sau luot (danh sach bug de QA tick o bot chinh)
+  chinh -> phu  `dung`       QA bam Dung luot dang chay o may phu -> may phu giet ca cay tien trinh + don RC
 
 May phu chay job bang dung code cua bot chinh (`_chay_tren`): cung token nen sua / tra loi duoc tin cua bot o kenh
 QA, nut bam no gui van ve bot chinh xu ly. Job dang o may phu ghi `dang_o` trong hang doi (luu file) -> bot chinh
@@ -28,7 +29,7 @@ from datetime import datetime, timezone
 
 import discord
 
-from . import bot_chay_claude, bot_cong_viec, bot_gui_lai, bot_hang_doi
+from . import bot_chay_claude, bot_cong_viec, bot_gui_lai, bot_hang_doi, bot_tien_trinh
 
 log = logging.getLogger("rcr-bot")
 TIEN_TO = "RCR"
@@ -159,6 +160,11 @@ async def chia_viec(bot, kenh) -> None:
 async def nhan_o_may_phu(bot, loai: str, d: dict, kenh) -> None:
     if loai == "chinh_khoi_dong":
         bot.da_xin.clear()
+        return
+    if loai == "dung" and d.get("may") == bot.ten_may:   # QA bam Dung o bot chinh, luot dang chay o may nay
+        serial = str(d.get("serial") or "")
+        if bot.ban.get(serial) == d.get("msg_id"):
+            await asyncio.to_thread(bot_tien_trinh.dung, serial, str(d.get("ly_do") or ""), d.get("msg_id"))
         return
     if loai != "giao" or d.get("may") != bot.ten_may:
         return

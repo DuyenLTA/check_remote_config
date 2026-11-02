@@ -22,6 +22,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from . import bot_tien_trinh
+
 SERIAL_RE = re.compile(r"[A-Za-z0-9.:_-]+")
 SDK_RE = re.compile(r"\d+\.\d+\.\d+(?:-[\w.]+)?")   # so tutorial tu tin build (3.6.1, 3.7.1-alpha01)
 PACKAGE_RE = re.compile(r"^[a-zA-Z][\w]*(\.[a-zA-Z_][\w]*)+$")
@@ -201,8 +203,12 @@ def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
         cmd, prompt = lenh(package, serial, cases, next_gen, sdk)
-        p = subprocess.run(cmd, input=prompt, cwd=repo, capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=timeout, env=moi_truong())
+        # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
+        p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo,
+                                encoding="utf-8", errors="replace", env=moi_truong())
+    except bot_tien_trinh.BiDung as exc:
+        log.write_text(f"DA DUNG: {exc}", encoding="utf-8")
+        raise
     except subprocess.TimeoutExpired as exc:
         log.write_text(f"HET GIO sau {timeout}s\n{exc.stdout or ''}\n{exc.stderr or ''}", encoding="utf-8")
         return {"trang_thai": "HET_GIO", "link": "", "tom_tat": f"quá {timeout // 60} phút", "log": str(log)}

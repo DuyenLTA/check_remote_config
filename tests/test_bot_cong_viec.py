@@ -54,7 +54,7 @@ def test_cli_loi_lay_dong_LOI(monkeypatch):
         returncode, stdout = 1, ""
         stderr = "May: x\nLOI: 4.3.0 (40) chưa có bản debug (mới có: release)\n"
     goi = {}
-    monkeypatch.setattr(v.subprocess, "run", lambda cmd, **k: goi.setdefault("cmd", cmd) and P)
+    monkeypatch.setattr(v.bot_tien_trinh, "chay", lambda cmd, khoa, timeout, **k: goi.setdefault("cmd", cmd) and P)
     assert v.cai("pkg.a", "4.3.0 (40)", "debug", "SER1") == {"loi": "4.3.0 (40) chưa có bản debug (mới có: release)"}
     assert goi["cmd"][-2:] == ["--serial", "SER1"]                   # dung may bot da chon
 

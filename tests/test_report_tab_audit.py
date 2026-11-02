@@ -104,6 +104,7 @@ def test_bot_chi_dinh_kem_mot_file_report(out, tmp_path, monkeypatch):
     sent = {}
 
     class Qa:
+        id = 1
         async def edit(self, **kw): pass
         async def reply(self, text, files=None, view=None, **kw): sent.update(text=text, files=files)
 

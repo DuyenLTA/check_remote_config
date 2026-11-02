@@ -308,7 +308,7 @@ def test_tra_loi_tin_hoi_kem_link_drive_thi_gan_vao_build(monkeypatch):
 
 def test_cai_co_drive_thi_truyen_apk_url(monkeypatch):
     goi = []
-    monkeypatch.setattr(d.bot_cong_viec, "_cli", lambda args, timeout: goi.append(args) or {})
+    monkeypatch.setattr(d.bot_cong_viec, "_cli", lambda args, timeout, khoa: goi.append(args) or {})
     d.bot_cong_viec.cai("p", "1.0 (1)", "debug", "S1", "https://drive.google.com/file/d/X/view")
     d.bot_cong_viec.cai("p", "1.0 (1)", "debug", "S1")
     assert goi[0][-2:] == ["--apk-url", "https://drive.google.com/file/d/X/view"] and "--apk-url" not in goi[1]

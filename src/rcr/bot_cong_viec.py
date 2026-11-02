@@ -12,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import ad_units_sheet, build_ma_app, tc_source
+from . import ad_units_sheet, bot_tien_trinh, build_ma_app, tc_source
 from . import bot_jira_rest as jira_rest
 from .models import RcError
 
@@ -37,12 +37,12 @@ def package_cua(ma: str, out_dir: Path) -> str:
     return build_ma_app.package_cua(path, ma)
 
 
-def _cli(args: list[str], timeout: int) -> dict:
-    """Chay `rcr-cai-build` -> JSON, hoac {"loi": "..."} (dong LOI cua stderr)."""
+def _cli(args: list[str], timeout: int, khoa: str) -> dict:
+    """Chay `rcr-cai-build` -> JSON, hoac {"loi": "..."} (dong LOI cua stderr). QA bam Dung (theo `khoa` =
+    serial) -> giet ca cay, nem `bot_tien_trinh.BiDung`."""
     cmd = [sys.executable, "-m", "rcr.cli_cai_build", *args]
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
-                           errors="replace", timeout=timeout)
+        p = bot_tien_trinh.chay(cmd, khoa, timeout, encoding="utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         return {"loi": f"rcr-cai-build quá {timeout // 60} phút"}
     if p.returncode == 0:
@@ -58,7 +58,7 @@ def cai(package: str, version: str, loai: str, serial: str, drive: str = "") -> 
     """Co `drive` (link Drive QA tra loi vao tin hoi) -> tai APK tu link, khong qua App Tester."""
     them = ["--apk-url", drive] if drive else []
     return _cli(["--package", package, "--version", version, "--loai", loai, "--serial", serial, *them],
-                TIMEOUT_CAI)
+                TIMEOUT_CAI, serial)
 
 
 def hoi_link_drive(c: dict) -> str | None:

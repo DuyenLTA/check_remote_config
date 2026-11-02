@@ -15,7 +15,7 @@ from pathlib import Path
 
 import discord
 
-from . import bot_chay_claude, bot_cong_viec, bot_jira_marker, bot_kenh_project
+from . import bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_jira_marker, bot_kenh_project
 from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
 
@@ -142,7 +142,8 @@ async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, ou
         return False
     dau = f"{v.tin_ket_qua(job, [])} · máy **{ten}**"
     nguon = "từ link Drive" if job.get("drive") else "từ App Tester"
-    await vm.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…", view=None)   # go nut Huy
+    await vm.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…",
+                  view=bot_dung_luot.view_dung(vm.id))   # thay nut Huy bang nut Dung
     cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
                                   job.get("drive", ""))
     if "loi" in cai:
@@ -154,6 +155,7 @@ async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, ou
     cases = sorted({u["case"] for u in job["verify"]})
     ck = v.loai_case(cases[0]) == "checklist"        # phan_loai chi cho qua mot nhom moi luot
     het_gio = bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY
+    bot_dung_luot.danh_dau_pha_rc(job, ck)            # Dung tu day -> phai don RC testvsl
     await vm.edit(content=f"{dau}\nĐang chạy lại {len(cases)} {'dòng checklist' if ck else 'case'}…")
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, het_gio, out, cases)
     bot.q.cap_nhat(job, kq=kq, ten_may=ten)

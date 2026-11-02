@@ -97,8 +97,8 @@ def kiem_dieu_kien_test(info: dict) -> str:
     return bt
 
 
-async def doc_baseline(client, serial: str, package: str) -> RcBaseline:
-    """Baseline ban release: keo APK tu may -> Firebase project + version -> gia tri RC that."""
+async def thong_tin_tren_may(client, serial: str, package: str) -> dict:
+    """Keo APK dang cai tren may -> `thong_tin_apk` (Firebase project, app id, version)."""
     from .dex_check import PUSH_TIMEOUT, apk_paths
 
     duong = await apk_paths(client, serial, package)
@@ -111,9 +111,22 @@ async def doc_baseline(client, serial: str, package: str) -> RcBaseline:
         out, err, code = await client._run("-s", serial, "pull", duong[0], str(local), timeout=PUSH_TIMEOUT * 4)
         if code != 0:
             raise AdbError(f"Khong keo duoc {duong[0]}: {(err or out).strip()}")
-        info = thong_tin_apk(local)
+        return thong_tin_apk(local)
     finally:
         local.unlink(missing_ok=True)
+
+
+async def don_testvsl(client, serial: str, package: str) -> str:
+    """Go moi gia tri dieu kien `testvsl` cua Firebase project cua app (luot bi dung giua chung). Tra project."""
+    from . import rc_firebase
+    info = await thong_tin_tren_may(client, serial, package)
+    await asyncio.to_thread(rc_firebase.tra_het, info["project"])
+    return info["project"]
+
+
+async def doc_baseline(client, serial: str, package: str) -> RcBaseline:
+    """Baseline ban release: keo APK tu may -> Firebase project + version -> gia tri RC that."""
+    info = await thong_tin_tren_may(client, serial, package)
     # Luot truoc chet giua chung (mat mang luc go) co the de lai gia tri tren testvsl -> don truoc khi doc baseline.
     from . import rc_firebase
     await asyncio.to_thread(rc_firebase.tra_het, info["project"])
