@@ -33,7 +33,9 @@ from . import bot_canh_may, bot_chay_claude, bot_cong_viec, bot_gui_lai, bot_han
 
 log = logging.getLogger("rcr-bot")
 TIEN_TO = "RCR"
-XIN_LAI = 15 * 60       # xin roi ma chua duoc giao (bot chinh khoi dong lai, mat yeu cau) -> xin lai
+# Xin roi ma chua duoc giao: bot chinh van nho yeu cau (hang trong thi cho), ca hai lan lo tin da co
+# `chinh_khoi_dong` moi lan bot chinh ket noi phien moi. Xin lai dinh ky chi la luoi an toan -> thua, tranh spam.
+XIN_LAI = 2 * 3600
 NHIP = 10
 SO_LAN_GUI_XONG = 10
 # May phu tat han giua luot thi khong bao gi gui `khoi_dong` / `xong` -> job dung "dang chay" mai. Qua han nay

@@ -445,3 +445,25 @@ def test_may_phu_bo_qua_tin_build_va_nut_chi_nghe_kenh_dieu_phoi(monkeypatch):
     asyncio.run(bot.on_message(dieu_phoi))
     assert nhan == [dieu_phoi]
     asyncio.run(bot.on_interaction(SimpleNamespace(data={"custom_id": "rcr:check:1"})))   # khong tra loi nut
+
+
+def test_moi_phien_ket_noi_moi_deu_bao_may_phu_xin_lai(monkeypatch):
+    """02/11/2026: may phu khong xin lai moi 15 phut nua -> bot chinh phai bao `chinh_khoi_dong` moi lan
+    ket noi phien moi (tin `xin` gui luc mat ket noi co the da lo), khong chi lan khoi dong dau."""
+    gui = []
+
+    async def gui_(kenh, loai, d):
+        gui.append(loai)
+
+    async def kenh():
+        return object()
+
+    async def quet(bot):
+        return 0
+    monkeypatch.setattr(d.bot_may_phu, "gui", gui_)
+    monkeypatch.setattr(d.bot_bat_tin_lo, "quet", quet)
+    bot = _bot()
+    bot.vai_tro, bot.dieu_phoi, bot._kenh_dieu_phoi = "chinh", 123, kenh
+    asyncio.run(bot.on_ready())
+    asyncio.run(bot.on_ready())
+    assert gui == ["chinh_khoi_dong", "chinh_khoi_dong"]

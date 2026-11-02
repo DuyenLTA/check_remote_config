@@ -96,9 +96,9 @@ class BuildBot(discord.Client):
         phat lai tin build bi lo. Build da hoi roi thi tu bo, quet lai khong hoi trung."""
         if self.la_phu:
             return
-        lan_dau = not getattr(self, "_da_quet_tin_lo", False)
-        self._da_quet_tin_lo = True
-        if lan_dau and self.dieu_phoi:       # may phu xin lai viec ngay, khong doi XIN_LAI
+        # Moi phien moi (khoi dong / session bi huy): tin `xin` cua may phu gui luc mat ket noi co the da lo ->
+        # bao may phu xin lai ngay. Nho vay may phu khong phai xin lai dinh ky moi 15 phut (spam kenh dieu phoi).
+        if self.dieu_phoi:
             try:
                 await bot_may_phu.gui(await self._kenh_dieu_phoi(), "chinh_khoi_dong", {"may": "chinh"})
             except Exception as exc:         # noqa: BLE001
