@@ -356,7 +356,7 @@ def _xep_verify_voi(monkeypatch, loi: list) -> tuple[list, _KenhGhi]:
         return r
 
     monkeypatch.setattr(d.bot_job_verify, "xep", xep)
-    monkeypatch.setattr(d, "CHO_JIRA", 0)
+    monkeypatch.setattr(d.bot_nhan_build, "CHO_JIRA", 0)
     k = _KenhGhi()
     asyncio.run(object.__new__(d.BuildBot)._xep_verify({"ma": "AIP936", "version": "1.0.0 (2)"}, k))
     return goi, k
@@ -370,8 +370,8 @@ def test_jira_mat_ket_noi_thi_im_lang_thu_lai(monkeypatch):
 
 def test_jira_mat_ket_noi_het_luot_thi_bao_tieng_viet(monkeypatch):
     mat = d.bot_jira_rest.JiraMatKetNoi("khong ket noi duoc: [WinError 10060]")
-    goi, k = _xep_verify_voi(monkeypatch, [mat] * d.SO_LAN_JIRA)
-    assert len(goi) == d.SO_LAN_JIRA and len(k.sent) == 1
+    goi, k = _xep_verify_voi(monkeypatch, [mat] * d.bot_nhan_build.SO_LAN_JIRA)
+    assert len(goi) == d.bot_nhan_build.SO_LAN_JIRA and len(k.sent) == 1
     assert "Jira không kết nối được" in k.sent[0] and "WinError" not in k.sent[0]
 
 
