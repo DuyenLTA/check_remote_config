@@ -234,6 +234,21 @@ def language_targets(nodes: list[DeviceNode], language: str, bien_the: str = "")
     return [row, "expanded"]          # can bung roi doc lai o vong sau
 
 
+# Trang native full (OB3) khi ob3_show_button_skip=true: ca trang la ad_media clickable, vuot o do cao nao
+# cung khong qua (do 02/11/2026, AIP886 2.7.0 Pixel 6) - chi nut X `btnSkip` cua SDK (hien sau timer_button_x)
+# moi sang trang ke. Truoc khi hien, cho dem nguoc nam o `btnTimeoutSkip` (khong bam duoc).
+SKIP_NATIVE_FULL_ID = "btnSkip"
+
+
+def find_skip_native_full(nodes: list[DeviceNode]) -> DeviceNode | None:
+    """Nut X bo qua trang native full - CHI khi man khong co cham chi trang (trang OB thuong cung co the
+    co nut Skip trung id, bam vao la nhay coc het onboarding)."""
+    if onboarding_page(nodes):
+        return None
+    return next((n for n in nodes if n.resource_id == SKIP_NATIVE_FULL_ID and n.visible
+                 and n.clickable and not n.bounds.empty), None)
+
+
 def onboarding_page(nodes: list[DeviceNode]) -> int:
     """Dang o trang onboarding thu may (1-based). 0 neu khong doc duoc.
 

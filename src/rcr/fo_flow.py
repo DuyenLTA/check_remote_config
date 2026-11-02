@@ -149,6 +149,11 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
         await asyncio.sleep(step["wait"])
         return f"cho {step['wait']}s", True
     if "swipe" in step:
+        nut = fo_steps.find_skip_native_full(nodes)
+        if nut:
+            # Native full chan vuot: vuot mai thi lap toi het gio (25 phut, AIP886 02/11/2026).
+            await _tap(client, serial, nut)
+            return f"bam X bo qua trang native full ({nut.label})", True
         direction = step["swipe"] or "left"
         await device_app.swipe(client, serial, direction, screen)
         return f"vuot sang {direction}", True
