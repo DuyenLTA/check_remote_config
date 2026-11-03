@@ -33,6 +33,8 @@ function tally() {
   const el = document.getElementById("tally");
   el.innerHTML = Object.keys(TILE).map(s => {
     const n = DATA.filter(d => d.status === s).length;
+    // Thẻ BLOCKED / N/A bằng 0 thì bỏ: report đã chấm xong chỉ còn PASS và FAIL.
+    if (!n && s !== "PASS" && s !== "FAIL") return "";
     return `<button class="tile ${s}" data-f="${s}" aria-pressed="false">` +
       `<span class="num">${n}</span><span class="lab">${TILE[s]}</span></button>`;
   }).join("");
@@ -47,6 +49,14 @@ function todo() {
   put("todoFail", DATA.filter(d => d.status === "FAIL").map(d => li(d, d.title)));
   put("todoBlock", DATA.filter(d => d.status === "BLOCKED").map(d => li(d, d.actual)));
   put("todoPo", DATA.filter(d => d.po).map(d => li(d, d.title)));
+  // Lượt đã chấm hết ra PASS/FAIL thì giấu khối BLOCKED / PO rỗng và chip lọc không có case nào.
+  ["todoBlock", "todoPo"].forEach(id => {
+    const ul = document.getElementById(id);
+    if (ul.querySelector(".none")) ul.parentElement.hidden = true;
+  });
+  document.querySelectorAll(".chip[data-f]").forEach(b => {
+    if (b.dataset.f !== "ALL" && !DATA.some(d => d.status === b.dataset.f)) b.hidden = true;
+  });
   document.querySelectorAll(".jump").forEach(b => b.onclick = () => openCase(b.dataset.n));
 }
 function match(d) {
