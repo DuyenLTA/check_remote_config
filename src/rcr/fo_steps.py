@@ -203,6 +203,36 @@ def find_close_ad(nodes: list[DeviceNode], cho_dem_nguoc: bool = True) -> Device
     return chu[0] if chu else nut
 
 
+NATIVE_FULL_PHU = 0.7   # nativeAdView phu >= 70% man -> trang native full man ngay trong app
+
+
+def _native_full_va_nut(nodes: list[DeviceNode], screen: tuple[int, int]):
+    """(nativeAdView phu gan het man, nut X nam trong no - ke ca chua bat) hoac (None, None)."""
+    w, h = screen
+    pool = [n for n in nodes if n.visible and not n.bounds.empty]
+    nen = next((n for n in pool if n.resource_id == "nativeAdView" and _area(n.bounds) >= NATIVE_FULL_PHU * w * h), None)
+    if nen is None:
+        return None, None
+    return nen, next((n for wanted in CLOSE_IDS for n in pool if n.resource_id == wanted and _sat(n, nen, 0)), None)
+
+
+def la_native_full_co_nut(nodes: list[DeviceNode], screen: tuple[int, int]) -> bool:
+    return _native_full_va_nut(nodes, screen)[1] is not None
+
+
+def find_close_native_full(nodes: list[DeviceNode], screen: tuple[int, int],
+                           cho_dem_nguoc: bool = True) -> DeviceNode | None:
+    """Nut X cua trang native full man nam NGAY TRONG activity cua app (khong phai AdActivity), hoac None.
+
+    Native full chen giua cac trang onboarding (cung ViewPager) khong vuot qua duoc: phai bam X.
+    AIP936 1.9.0 (02/11/2026): lai "di het luong" vuot trai ~40 lan tren trang nay, khong toi Home.
+    Con dem nguoc / nut chua bat -> None (bam som = cham vao ad)."""
+    _nen, nut = _native_full_va_nut(nodes, screen)
+    if nut is None or not nut.enabled or (cho_dem_nguoc and dang_dem_nguoc(nodes, nut)):
+        return None
+    return nut
+
+
 def language_targets(nodes: list[DeviceNode], language: str, bien_the: str = "") -> list[DeviceNode]:
     """Cac node can bam de chon `language`, theo dung thu tu.
 

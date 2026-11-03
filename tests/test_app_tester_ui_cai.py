@@ -329,3 +329,52 @@ def test_khong_tim_thay_version_thi_luu_man_de_xem(monkeypatch, tmp_path):
         monkeypatch.setattr(ui, ten, f)
     with pytest.raises(ui.LoiCai, match=r"chưa có 2.7.0 \(20\) \(màn lưu\)"):
         asyncio.run(ui.cai(_Client(), "S1", "pkg.a", "2.7.0 (20)", "release", tmp_path))
+
+
+def test_danh_sach_dai_thi_cuon_ve_toi_dau_moi_thay_ban_moi_nhat(monkeypatch):
+    """AIP886: release can cai o dau, doc_cac_ban da cuon xa xuong duoi; 4 lan vuot nguoc khong du."""
+    dich = _ban("tai", "Nov 2, 2026 at 4:40 PM", "release moi")
+    trang = [[_ban("tai", f"Jul {i}, 2026 at 9:00 AM", f"r{i}")] for i in range(1, 11)] + [[dich]]
+    vi_tri = {"i": 0}                       # 0 = trang cuoi danh sach, 10 = dau danh sach
+    cuon = []
+
+    async def nodes(client, serial):
+        return []
+
+    async def cuon_(client, serial, huong, lan=1):
+        cuon.append((huong, lan))
+        vi_tri["i"] = min(10, vi_tri["i"] + lan) if huong == "down" else max(0, vi_tri["i"] - lan)
+
+    async def bam(client, serial, node, nghi=0):
+        pass
+    monkeypatch.setattr(ui, "_nodes", nodes)
+    monkeypatch.setattr(ui, "_cuon", cuon_)
+    monkeypatch.setattr(ui, "_bam", bam)
+    monkeypatch.setattr(ui.s, "cac_ban", lambda n: trang[vi_tri["i"]])
+    assert asyncio.run(ui._toi_ban(_Client(), "S1", dich)) is dich
+
+
+def test_mo_rong_release_o_day_man_thi_day_len_cho_note_hien(monkeypatch):
+    """AIP886: bam mo 2.7.0 (20) o day man -> note troi xuong duoi, dump mat release; day nua trang moi thay."""
+    dich = _ban("tai", "Oct 27, 2026 at 10:26 AM", "2.7.0 (20) Tutorial SDK 3.6.1")
+    gap = {**dich, "mo_rong": False, "node_nut": None, "nut": ""}
+    st = {"man": [gap], "day": 0}
+
+    async def nodes(client, serial):
+        return []
+
+    async def bam(client, serial, node, nghi=0):
+        st["man"] = []                      # mo rong xong: note duoi mep man
+
+    async def nua_trang(client, serial):
+        st["day"] += 1
+        st["man"] = [dich]
+
+    async def cuon_(client, serial, huong, lan=1):
+        pass
+    monkeypatch.setattr(ui, "_nodes", nodes)
+    monkeypatch.setattr(ui, "_bam", bam)
+    monkeypatch.setattr(ui, "_cuon_nua_trang", nua_trang)
+    monkeypatch.setattr(ui, "_cuon", cuon_)
+    monkeypatch.setattr(ui.s, "cac_ban", lambda n: st["man"])
+    assert asyncio.run(ui._toi_ban(_Client(), "S1", dich)) is dich and st["day"] == 1

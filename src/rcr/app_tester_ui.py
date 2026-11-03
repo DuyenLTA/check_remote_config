@@ -216,17 +216,34 @@ async def kiem(client, serial, package, version, out_dir: Path) -> dict:
 
 async def _toi_ban(client, serial, dich: dict):
     """Tim release `dich` (man hien tai truoc, khong thay moi cuon ve dau roi do xuong), mo rong no.
-    Tra release (co node_nut) tren man hien tai."""
+    Tra release (co node_nut) tren man hien tai.
+
+    Ve dau phai cuon toi khi man khong doi: app nhieu release (AIP886 2.7.0 (20) 03/11/2026) thi
+    `doc_cac_ban` da cuon xuong 8 lan, 4 lan vuot nguoc khong ve toi release moi nhat -> cai hong.
+    """
     ve_dau = False
-    for _ in range(MAX_CUON_BAN + 1):
-        b = next((x for x in s.cac_ban(await _nodes(client, serial)) if s.khoa_ban(x) == s.khoa_ban(dich)), None)
+    for _ in range(MAX_CUON_BAN * 2 + 1):
+        cac = s.cac_ban(await _nodes(client, serial))
+        b = next((x for x in cac if s.khoa_ban(x) == s.khoa_ban(dich)), None)
         if b and not b["mo_rong"]:
             await _bam(client, serial, b["node_mo"])
+            # Release o day man mo rong ra thi note troi xuong duoi mep -> dump khong ghep duoc release nua
+            # (AIP886 2.7.0 (20) 03/11/2026). Day len nua trang cho note hien.
+            await _cuon_nua_trang(client, serial)
             continue
         if b and b["node_nut"] is not None:
             return b
         if not ve_dau:
-            await _cuon(client, serial, "down", 4)
+            truoc = [s.khoa_ban(x) for x in cac]
+            for _ in range(MAX_CUON_BAN * 2):
+                await _cuon(client, serial, "down", 2)
+                cac = s.cac_ban(await _nodes(client, serial))
+                if any(s.khoa_ban(x) == s.khoa_ban(dich) for x in cac):
+                    break
+                hien = [s.khoa_ban(x) for x in cac]
+                if hien == truoc:
+                    break  # da o dau danh sach
+                truoc = hien
             ve_dau = True
         else:
             await _cuon(client, serial, "up")

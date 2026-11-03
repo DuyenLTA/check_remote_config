@@ -29,6 +29,10 @@ CHON_ITEM_RE = re.compile(r"^\s*(?:ch[ọo]n|b[ấa]m|tap)\s+(?:1|m[ộo]t)\s+(?
 DI_QUA_TOI_RE = re.compile(r"^\s*(?:đi|di)\s+qua\s+(?:OB|onb)\s*\d\s*(?:→|->|đến|den|tới|toi)\s*(?:OB|onb)\s*(\d)\b",
                            re.I)
 # Buoc chi ghi ten man: "LFO2.", "OB3.", "OB4."
+# "Di tiep den OB4." (AIP936 SG03-01) - truoc day khong dich duoc, case dung o OB1 va dong OB4 FAIL oan.
+DI_TOI_RE = re.compile(r"^\s*(?:đi|di)\s+(?:ti[ếe]p\s+)?(?:đến|den|tới|toi)\s+(?:OB|onb)\s*(\d)\b", re.I)
+# "Ra logcat." - buoc doc log, khong thao tac (AIP936 RG04-02 / RG05-02 dung lai vi khong dich duoc).
+RA_LOG_RE = re.compile(r"^\s*r[àa]\s+(?:l[ạa]i\s+)?log(?:cat)?\b", re.I)
 CHI_TEN_MAN_RE = re.compile(r"^\s*((?:LFO|OB|onb)\s*\d)\s*\.?\s*$", re.I)
 TICK_RE = re.compile(r"^\s*(?:b[ấa]m|nh[ấa]n|tap)\s+(?:n[úu]t\s+)?tick\b", re.I)
 CHUP_RE = re.compile(r"^\s*ch[ụu]p\s+(?:m[àa]n|[ảa]nh)\b", re.I)
@@ -52,6 +56,11 @@ def resolve(text: str, nodes):
     if m:
         so = int(m.group(1))
         return GoTo(f"OnboardingActivity#{so + 1}", f"{DI_QUA}OB{so} (chụp mọi trang đi qua)")
+    m = DI_TOI_RE.match(text)
+    if m:
+        return GoTo(f"OnboardingActivity#{m.group(1)}", f"{DI_QUA}tới OB{m.group(1)} (chụp mọi trang đi qua)")
+    if RA_LOG_RE.match(text):
+        return NoOp("bước rà logcat — không thao tác, chấm bằng log đã thu")
     m = CHI_TEN_MAN_RE.match(text)
     if m:
         dich = fo_screens.target_for(m.group(1))

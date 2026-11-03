@@ -100,3 +100,12 @@ def test_cham_tay_kem_anh_va_report_tach_ly_do(tmp_path):
 def test_anh_khong_ton_tai_thi_bao_loi(tmp_path):
     with pytest.raises(RcError, match="không thấy file ảnh"):
         cham_tay.doc_anh(str(tmp_path / "khong-co.png"))
+
+
+def test_blocked_khi_khong_tao_duoc_precondition_thi_case_blocked_kem_ly_do():
+    """Case doi may OPPO ma chi co Pixel: do thay tren Pixel roi cham PASS la lam gia."""
+    pass_gia = cham_tay.cham(REC, [1, 4], "PASS", "đo thay trên Pixel 4")
+    ra = cham_tay.cham(pass_gia, [1, 4], "BLOCKED", "Precondition 'Thiết bị OPPO': không có máy OPPO")
+    assert ra["verdict"] == "BLOCKED"
+    assert ra["precondition_thieu"] == ["Precondition 'Thiết bị OPPO': không có máy OPPO"]
+    assert ra["lines"][0]["v"] == "BLOCKED" and ra["lines"][1]["v"] == "PASS"

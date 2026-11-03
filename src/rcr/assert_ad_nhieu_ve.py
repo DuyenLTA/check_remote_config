@@ -37,7 +37,7 @@ MAN_HIEN_RE = re.compile(r"\b(?:OB\d|LFO\d|splash|question|home)\s*:\s*(?:native
 NEG_RE = re.compile(r"\bkh[oô]ng\b|\bko\b|requests?\s*=\s*0", re.I)
 # "Logcat preload tuan tu A -> B": dong thu tu, de luat thu tu preload cham.
 THU_TU_RE = re.compile(r"→|->|tu[ầa]n\s*t[ựu]|alternate|tr[ưu][ớo]c.{0,40}sau", re.I)
-TACH_RE = re.compile(r"[;,()]|\s\+\s")
+TACH_RE = re.compile(r"[;,()]|\s\+\s|\.\s+(?=\S)")
 RESUME_RE = re.compile(r"resume", re.I)
 # "(102-spl-n-inter-high da show)": ve dieu kien, khong phai ky vong - bo ra truoc khi cham.
 DIEU_KIEN_RE = re.compile(r"(?<!\w)(?:đ|d)[ãa]\s+(?:show|hi[ểe]n|load)", re.I)

@@ -13,9 +13,11 @@ from pathlib import Path
 
 from . import luot_file, run_batch
 from .models import RcError
-from .verdict_levels import FAIL, PASS, worst
+from .verdict_levels import CONFIG_BLOCKED, FAIL, PASS, worst
 
-KET_HOP_LE = (PASS, FAIL, "NEEDS_HUMAN", "NOT_VERIFIABLE")
+# BLOCKED: precondition khong tao duoc (case doi may OPPO ma khong co may, can throttle mang...).
+# Do thay tren may khac roi chấm PASS la lam gia (user 03/11/2026) - phai ghi BLOCKED kem ly do.
+KET_HOP_LE = (PASS, FAIL, "NEEDS_HUMAN", "NOT_VERIFIABLE", CONFIG_BLOCKED)
 
 
 def doc_anh(text: str) -> list[dict]:
@@ -48,6 +50,7 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
          dieu_kien: str = "", anh: list[dict] = ()) -> dict:
     """Tra record moi: cac dong `dong` mang verdict `ket` + ly do, verdict case tinh lai.
 
+    `ket=BLOCKED`: precondition khong tao duoc - ly do vao `precondition_thieu`, case ra BLOCKED.
     `dieu_kien`: cach luot do tay da TAO DUOC precondition ma luot tool khong tao
     duoc (vd chan domain ad bang Private DNS). Co no thi bo `precondition_thieu`
     cua luot tool va ghi cach tao vao `ep_ad_fail`. Khong go `ad_click`: click
@@ -68,6 +71,9 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
         raise RcError(f"Case {record.get('key')} chỉ có {len(lines)} dòng Expected, không có dòng "
                       + ", ".join(map(str, thua)))
     ngay = time.strftime("%d/%m/%Y %H:%M")
+    if ket == CONFIG_BLOCKED:
+        record = {**record, "precondition_thieu": [*(record.get("precondition_thieu") or []),
+                                                   " ".join(ly_do.split())]}
     for n in dong:
         lines[n - 1].update(v=ket, r=f"{ai} chấm tay: {' '.join(ly_do.split())}")
     ke = [l["v"] for l in lines if l.get("scope") != "po"]

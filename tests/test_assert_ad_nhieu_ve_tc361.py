@@ -155,3 +155,19 @@ def test_phan_tram_khong_phai_ma_vi_tri():
     from rcr import ad_positions
     assert ad_positions._position_token("inter sẵn sàng → fill 100% rồi show inter (logic 3.6.0).") == ""
     assert ad_positions._position_token("Không load 302 ở OB2") == "302"
+
+
+def test_hai_cau_phu_dinh_va_khang_dinh_tach_theo_dau_cham():
+    line = ("Không có loadAd cho: 302-onb2-n-native-high/native, 304-onb4-n-native-high/native. "
+            "305-onb5-n-native-high vẫn được preload (ghi lại màn preload).")
+    ads = _ads(_u("658", "id_301_onb1_n_native_high"), _u("669", "id_305_onb5_n_native_high"),
+               _u("407", "id_304_onb4_n_native_high", req=0), _u("418", "id_302_onb2_n_native", req=0),
+               _u("633", "id_302_onb2_n_native_high", req=0), _u("781", "id_304_onb4_n_native", req=0))
+    ket = _check(line, ads)
+    assert ket["verdict"] == a.PASS, ket
+
+
+def test_buoc_di_tiep_den_ob_va_ra_logcat():
+    from rcr import act_cau_fo
+    assert act_cau_fo.resolve("Đi tiếp đến OB4.", []).summary["kind"] == "goto"
+    assert act_cau_fo.resolve("Rà logcat.", []).summary["kind"] == "noop"

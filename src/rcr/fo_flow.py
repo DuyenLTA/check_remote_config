@@ -68,13 +68,14 @@ QUANG_CAO_MOI_SAU = 12.0              # khong doc AdActivity qua lau -> lan sau 
 _AD: dict[str, tuple[float, object, float]] = {}    # serial -> (luc thay, bounds nut lan truoc, lan doc cuoi)
 
 
-def nut_dong_ad(serial: str, nodes: list, bay_gio: float | None = None):
-    """Nut dong quang cao DA bam duoc an toan, hoac None (doc lai vong sau)."""
+def nut_dong_ad(serial: str, nodes: list, bay_gio: float | None = None, tim=None):
+    """Nut dong quang cao DA bam duoc an toan, hoac None (doc lai vong sau).
+    `tim(nodes, cho_dem_nguoc=...)`: cach tim nut (mac dinh nut dong cua AdActivity)."""
     now = time.monotonic() if bay_gio is None else bay_gio
     bat_dau, truoc, cuoi = _AD.get(serial, (now, None, now))
     if now - cuoi > QUANG_CAO_MOI_SAU:
         bat_dau, truoc = now, None
-    node = fo_steps.find_close_ad(nodes, cho_dem_nguoc=now - bat_dau < TRAN_DEM_NGUOC)
+    node = (tim or fo_steps.find_close_ad)(nodes, cho_dem_nguoc=now - bat_dau < TRAN_DEM_NGUOC)
     hien = node.bounds if node else None
     if node is None or hien != truoc:          # chua co nut / nut vua hien hoac doi cho -> doc lai cho chac
         _AD[serial] = (bat_dau, hien, now)
@@ -98,6 +99,19 @@ def nen_back_ad_test(serial: str, nodes: list, bay_gio: float | None = None) -> 
         return False
     _AD.pop(serial, None)
     return True
+
+
+async def _qua_native_full(client, serial: str, nodes: list, screen) -> tuple[str, bool]:
+    """Trang native full man trong app (chen giua cac trang OB): vuot khong qua -> cho het dem nguoc roi bam X.
+    ("", True) khi khong phai trang do; buoc cua luat khong tien (advance=False) de lam lai sau khi dong."""
+    if not fo_steps.la_native_full_co_nut(nodes, screen):
+        return "", True       # khong phai / native full khong co nut X (trang OB3 vuot duoc): theo luat thuong
+    node = nut_dong_ad(serial, nodes, tim=lambda ns, cho_dem_nguoc: fo_steps.find_close_native_full(
+        ns, screen, cho_dem_nguoc))
+    if node is None:
+        return "cho native full man het dem nguoc", False
+    await _tap(client, serial, node)
+    return f"dong native full man ({node.label})", False
 
 
 async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
@@ -393,7 +407,9 @@ async def walk_to(client, serial: str, package: str, target: str,
             if dung_khi and dung_khi(nodes):
                 # "Bam 'FR - Go'" ma app con o splash: lai toi khi nut / o lua chon hien thi dung lai, khong bam tiep.
                 return {"reached": True, "activity": activity, "trail": trail}
-            did, advance = await do_step(client, serial, steps[index], nodes, screen)
+            did, advance = await _qua_native_full(client, serial, nodes, screen)
+            if not did:
+                did, advance = await do_step(client, serial, steps[index], nodes, screen)
         except AdbError as exc:
             # Dump hong (uiautomator thinh thoang tra "null root node") - thu lai
             # chinh buoc do, dung nhay qua.
