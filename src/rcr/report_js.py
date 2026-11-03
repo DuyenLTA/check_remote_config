@@ -143,6 +143,7 @@ function row(d) {
         (d.thieu && d.thieu.length ? ' <span class="pill FIX">thiếu điều kiện</span>' : "") +
         (d.tay ? ' <span class="taytag">✍ đo tay</span>' : "") +
         (d.tg ? ` <span class="tg" title="thời gian tool chạy case">⏱ ${esc(d.tg)}</span>` : "") +
+        (d.chuoi ? ' <span class="tg" title="chạy tiếp trên app của case trước (--chuoi), PASS cả log riêng lẫn log dồn">⛓ nối chuỗi</span>' : "") +
         `</b><span>${esc(tomTat(d))}</span></span>
       <span class="chev" aria-hidden="true">›</span>
     </button>

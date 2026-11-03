@@ -341,6 +341,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "sheet TC + sheet ID ads, RAM may tinh) roi thoat")
     p.add_argument("--tiep", metavar="FILE_LUOT",
                    help="chay not case chua co ket qua trong file luot (luot truoc bi tat giua chung)")
+    p.add_argument("--chuoi", action="store_true",
+                   help="case 'Tiep noi' cung config chay tiep tren app dang mo (khong dat lai config / mo lai "
+                        "app); case khong PASS tron ven thi tu chay rieng tu dau")
     p.add_argument("--tai-lai-tc", action="store_true",
                    help="kem --gop/--tiep: tai lai sheet TC (mac dinh dung lai file da tai o dau luot)")
     p.add_argument("--gop", action="append", metavar="FILE_LUOT",

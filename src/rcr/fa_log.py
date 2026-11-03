@@ -15,6 +15,8 @@ Dong FA-SVC do Google Play Services in ra, PID khac PID app -> khong loc theo PI
 
 from __future__ import annotations
 
+from . import log_moc
+
 import re
 
 from .app_sandbox import guard
@@ -44,14 +46,14 @@ async def bat(client, serial: str) -> None:
 async def doc(client, serial: str) -> list[dict]:
     """Cac event da ban ra trong buffer hien tai."""
     guard(serial)
-    out, _, _ = await client.shell(serial, "logcat", "-d", "-v", "epoch", "-s", TAG, "FA:V")
+    out, _, _ = await client.shell(serial, "logcat", "-d", *log_moc.them(), "-v", "epoch", "-s", TAG, "FA:V")
     return parse(out)
 
 
 async def doc_input(client, serial: str) -> list[float] | None:
     """Gio may cua tung lenh `input` tool gui qua adb, None neu may khong in log adbd."""
     guard(serial)
-    out, _, _ = await client.shell(serial, "logcat", "-d", "-v", "epoch", "-s", "adbd")
+    out, _, _ = await client.shell(serial, "logcat", "-d", *log_moc.them(), "-v", "epoch", "-s", "adbd")
     return parse_input(out)
 
 

@@ -13,6 +13,8 @@ qua tho de phan biet 4s/5s/6s.
 
 from __future__ import annotations
 
+from . import log_moc
+
 import re
 
 from .app_sandbox import guard
@@ -30,7 +32,7 @@ async def doc(client, serial: str, pid: str) -> str:
     """Log co moc epoch cua RIENG tien trinh app, chi cac tag can cho OB3."""
     guard(serial)
     out, _, _ = await client._run(
-        "-s", serial, "logcat", "-d", "-v", "epoch", "--pid", pid,
+        "-s", serial, "logcat", "-d", *log_moc.them(), "-v", "epoch", "--pid", pid,
         "-s", *(f"{t}:V" for t in TAGS), timeout=LOGCAT_TIMEOUT)
     return out
 

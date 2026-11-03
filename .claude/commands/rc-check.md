@@ -373,6 +373,7 @@ Các flag còn lại, dùng khi cần:
 | Flag | Khi nào dùng |
 |---|---|
 | `--app-label "Piclux 2.8.0"` | tên + **version của APP** in trên tiêu đề report — **luôn truyền khi có `--report`**. Đừng nhét version SDK vào đây: "SDK First Open" là ô riêng, nhét nhầm thì ô đó ra `—` và tiêu đề cụt đuôi |
+| `--chuoi` | **luôn truyền khi chạy cả bộ TC** (03/11/2026). Case "Tiếp nối <case vừa chạy>" cùng config chạy tiếp trên app đang mở: bỏ đặt config / `pm clear` / splash / lái lại (đo RG01: 14 case 9 phút thay vì ~17). Chấm 2 lần (log riêng case + log dồn từ splash), chỉ nhận khi PASS cả hai hoặc chỉ còn dòng phải đo tay; FAIL / lệch log thì tự chạy riêng từ đầu → FAIL trên report luôn từ lần chạy riêng. Report gắn `⛓ nối chuỗi` + `⏱` thời gian từng case |
 | `--fresh` | ép app về trạng thái chưa từng mở (reset mềm, hoặc `pm clear`) — case Precondition đòi user mới |
 | `--sdk 3.2.0` | khai thẳng bản SDK FO. Dùng khi máy không ra log, **và khi workbook chỉ có một sheet** — bộ một sheet không cần bản SDK để chọn tab nên tool chỉ soi buffer log sẵn có, không thấy thì ô SDK trên report để trống |
 | `--full-walk` | đi hết luồng FO như TC ghi. **Mặc định tool dừng ở màn SÂU NHẤT case đụng tới**, suy từ cả key case đặt lẫn mã vị trí trong dòng Expected — case tắt 10 unit từ 102 (splash) tới 303 (OB3) thì dừng ở OB3, bỏ 4 màn sau. Chỉ bật khi thật sự cần đi tiếp |

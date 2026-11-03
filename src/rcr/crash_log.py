@@ -13,6 +13,8 @@ PID la bo sot dung cai minh dang tim. Loc theo ten package trong noi dung dong.
 
 from __future__ import annotations
 
+from . import log_moc
+
 from .adb_parsers import PACKAGE_RE, AdbError
 from .app_sandbox import guard
 
@@ -30,7 +32,7 @@ async def read(client, serial: str, package: str) -> dict:
     if not PACKAGE_RE.fullmatch(package):
         raise AdbError(f"Package khong hop le: {package!r}")
     out, _, _ = await client._run(
-        "-s", serial, "logcat", "-b", "crash", "-d", timeout=LOGCAT_TIMEOUT
+        "-s", serial, "logcat", "-b", "crash", "-d", *log_moc.them(), timeout=LOGCAT_TIMEOUT
     )
     lines = [l.strip() for l in (out or "").splitlines() if package in l]
     return {"crashed": bool(lines), "lines": lines[:20]}

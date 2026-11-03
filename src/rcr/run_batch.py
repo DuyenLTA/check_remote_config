@@ -18,6 +18,8 @@ from . import (
     fo_screens,
     assert_ads,
     case_run,
+    chay_chuoi,
+    log_moc,
     device_app,
     chay_lai,
     precond_guards,
@@ -93,8 +95,11 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             log_fn(f"    (chưa ghi được file lượt / report: {exc} — ghi lại ở case sau)")
         return tat_ca
 
+    chuoi = bool(getattr(args, "chuoi", False))
+    truoc_chuoi = None        # case vua chay (che do --chuoi): case sau "Tiep noi" no thi chay tiep tren app
     for wanted in [k.strip() for k in args.case.split(",") if k.strip()]:
         key = wanted
+        noi = False
         bat_dau = time.monotonic()   # thoi gian chay tung case -> report (user theo doi toc do luot)
         if wanted in bo_qua:
             # Kiem TRUOC pick: chay tiep ma bo TC / tab doi thi pick hong, record loi
@@ -163,6 +168,33 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             if ep and not them:
                 dns_cu = await net_ctl.chan_ad(client, baseline.serial)
                 log_fn(f"  ép ad không về: Private DNS {net_ctl.DNS_CHAN_AD} (RC không khai id_* của vị trí)")
+            if chuoi:
+                ly_do = chay_chuoi.ly_do_khong_noi(truoc_chuoi, chosen, runs, ep)
+                if ly_do:
+                    log_fn(f"  chuỗi: chạy riêng ({ly_do})")
+                else:
+                    log_fn("  chuỗi: chạy tiếp trên app của case trước (không đặt lại config / không mở lại app)")
+                    kq = None
+                    try:
+                        kq, baseline = await case_run.run_case(
+                            client, baseline, runs, chosen["precondition"],
+                            () if args.no_actions else chosen["actions"], chosen["expects"], goto,
+                            keep=False, out_dir=args.out_dir, dex=not args.no_dex_check,
+                            log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
+                            ngon_ngu=fo_ngon_ngu.tim_theo_chuoi(key, runnable),
+                            noi_tiep=await log_moc.bay_gio(client, baseline.serial), giu=True,
+                        )
+                    except (RcError, AdbError) as exc:
+                        if isinstance(exc, AdbTransportError):
+                            raise
+                        log_fn(f"    chuỗi: lỗi ({exc})")
+                    if kq is not None and chay_chuoi.nhan_duoc(kq):
+                        result, noi, toi_da = kq, True, 0
+                        lich_su.append(kq.get("verdict", ""))
+                    else:
+                        log_fn("    chuỗi: không nhận kết quả nối tiếp ("
+                               + ((kq or {}).get("chuoi_khong_chac") or f"verdict {(kq or {}).get('verdict')}")
+                               + ") -> chạy riêng case từ đầu")
             try:
                 for lan in range(1, toi_da + 1):
                     try:
@@ -172,7 +204,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                             keep=args.keep, out_dir=args.out_dir, dex=not args.no_dex_check,
                             log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
                             runtime=chosen.get("runtime", False),
-                            ngon_ngu=fo_ngon_ngu.tim_theo_chuoi(key, runnable),
+                            ngon_ngu=fo_ngon_ngu.tim_theo_chuoi(key, runnable), giu=chuoi and not args.keep,
                         )
                     except (RcError, AdbError) as exc:
                         if isinstance(exc, AdbTransportError):
@@ -244,6 +276,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # chet o case thu 14 la mat sach cong cua 13 case truoc.
             log_fn(f"    LOI: {exc}")
             await _try_restore(client, baseline, log_fn)
+            truoc_chuoi = None
             records.append({**report_data.error_record(key, by_key.get(key, {}), str(exc)),
                             "loi_chay": True, "thoi_gian_s": round(time.monotonic() - bat_dau)})
             luu()
@@ -285,14 +318,19 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             result["tc_lech"] = tc_lech
         log_fn(f"    verdict: {result['verdict']}")
         records.append(report_data.case_record(key, by_key.get(key, {}), result)
-                       | {"thoi_gian_s": round(time.monotonic() - bat_dau)})
+                       | {"thoi_gian_s": round(time.monotonic() - bat_dau), "noi_chuoi": noi})
         luu()
+        if chuoi:
+            con_giu = not (result.get("config_bi_de") or result.get("verdict") in ("KEY_NOT_USED",))
+            truoc_chuoi = chay_chuoi.moc_chuoi(key, runs, con_giu)
         if result.get("ad_click"):
             # May test AdMob: ad_click khong dung luot. Case giu BLOCKED kem so click
             # tren report, cac case sau van chay.
             log_fn(f"    case {key} van co {result['ad_click']} ad_click sau khi chay lai "
                    "-> BLOCKED, ghi vao report, chay tiep")
 
+    if chuoi:
+        await _try_restore(client, baseline, log_fn)     # che do chuoi giu config giua cac case -> tra mot lan cuoi
     return luu(xong=True)
 
 

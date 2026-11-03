@@ -12,6 +12,7 @@ import asyncio
 import re
 
 from . import device_app, ui_names
+from . import log_moc
 
 TESTER_TAG = "FOR_TESTER_CONFIG"
 TAG_RE = re.compile(r"\b([A-Za-z][A-Za-z0-9_]{5,})\b")
@@ -85,7 +86,7 @@ async def _cho_icon(client, serial: str, package: str, ids: tuple[str, ...]) -> 
 
 async def doc(client, serial: str, package: str, tags: list[str]) -> dict[str, list[str]]:
     """{tag: [noi dung dong]} cua PID app trong buffer logcat hien tai."""
-    out, _, _ = await client.shell(serial, "logcat", "-d", "-v", "epoch", *[f"{t}:*" for t in tags], "*:S")
+    out, _, _ = await client.shell(serial, "logcat", "-d", *log_moc.them(), "-v", "epoch", *[f"{t}:*" for t in tags], "*:S")
     pid_app, _, _ = await client.shell(serial, "pidof", package)
     pids = set(pid_app.split())
     ra: dict[str, list[str]] = {t: [] for t in tags}

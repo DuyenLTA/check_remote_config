@@ -23,6 +23,7 @@ from __future__ import annotations
 import re
 
 from . import ad_units
+from . import log_moc
 from .app_sandbox import guard
 
 LOGCAT_TIMEOUT = 30.0
@@ -60,7 +61,7 @@ async def read(client, serial: str, pid: str) -> str:
     guard(serial)
     spec = [f"{t}:V" for t in TAGS]
     out, _, _ = await client._run(
-        "-s", serial, "logcat", "-d", "--pid", pid, "-s", *spec, timeout=LOGCAT_TIMEOUT
+        "-s", serial, "logcat", "-d", *log_moc.them(), "--pid", pid, "-s", *spec, timeout=LOGCAT_TIMEOUT
     )
     return out
 

@@ -21,6 +21,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from . import (
+    log_moc,
     act_compound,
     apk_tai_nguyen,
     assert_ad_screen,
@@ -66,9 +67,14 @@ def _noop(_msg: str) -> None:
 async def apply_case(
     client, baseline: RcBaseline, overrides: dict[str, str], keep: bool, out_dir,
     steps=(), expects=(), goto: str = "", log_fn=_noop, man_can=None,
-    precondition: str = "", user_state: str = "",
+    precondition: str = "", user_state: str = "", noi_tiep: str | None = None, giu: bool = False,
 ) -> dict:
     """patch -> tat han app -> mo lai -> verify -> lai cac buoc -> restore.
+
+    `noi_tiep` (che do `--chuoi`): moc gio bat dau case tren may. Case "Tiep noi" chay tiep tren app dang mo
+    cua case truoc - KHONG patch / pm clear / mo lai, lai tiep tu man dang dung. Log cham HAI lan (rieng case,
+    don tu dau chuoi); mot trong hai khong PASS -> `chuoi_khong_chac`, run_batch chay rieng case nay.
+    `giu`: khong tra config cuoi case (case sau con noi tiep); run_batch tra mot lan cuoi chuoi.
 
     Ban release (`baseline.firebase`): patch = publish RC tren server, sau do moi reset (pm clear, old_user lai FO)
     - nguoc thu tu ban debug vi app chi nhan RC moi o lan mo dau sau pm clear.
@@ -76,7 +82,10 @@ async def apply_case(
     Lai buoc TRUOC khi restore: restore xong la config da ve cu, luc do bam gi
     tren app cung khong con dinh dang gi toi case nua.
     """
-    snapshot = rc_snapshot.save(baseline, out_dir) if keep and not baseline.firebase else None
+    snapshot = rc_snapshot.save(baseline, out_dir) if keep and not baseline.firebase and not noi_tiep else None
+    if noi_tiep:
+        return await _noi_tiep(client, baseline, overrides, out_dir, steps, expects, goto, log_fn, man_can,
+                               precondition, noi_tiep, giu)
     patched = await rc_patch.patch(client, baseline, overrides)
     reset = (await device_reset.prepare_firebase(client, baseline, user_state, log_fn)
              if baseline.firebase else None)
@@ -127,6 +136,74 @@ async def apply_case(
         out["net"] = net
     if reset:
         out["reset"] = reset
+    return await _lai_cham_tra(client, baseline, overrides, keep, out_dir, steps, expects, goto, log_fn, man_can,
+                               precondition, out, result, nen_splash, la_gif, chup_splash, mat_mang, snapshot, giu)
+
+
+async def _noi_tiep(client, baseline, overrides, out_dir, steps, expects, goto, log_fn, man_can, precondition,
+                    noi_tiep: str, giu: bool) -> dict:
+    """Case "Tiep noi" trong che do chuoi: config da dat va app dang mo tu case truoc - chi kiem config con
+    song roi lai tiep tu man dang dung."""
+    result = await rc_verify.verify(client, baseline, overrides)
+    out = {"overrides": overrides, "patched": [], "launch": {"waited_s": 0, "noi_tiep": True},
+           "verify": result.summary, "verdict": "CONFIG_OK" if result.ok else "BLOCKED", "restored": False,
+           "noi_tiep": True}
+    return await _lai_cham_tra(client, baseline, overrides, False, out_dir, steps, expects, goto, log_fn, man_can,
+                               precondition, out, result, {}, False, None, False, None, giu, noi_tiep)
+
+
+async def _cham_log(client, baseline, out: dict, overrides, expects, precondition, steps, result_ok: bool,
+                    log_fn=_noop) -> dict:
+    """Doc log (ads / crash / FA / input) roi cham dong Expected vao `out`. Che do chuoi goi hai lan
+    (log rieng case va log don ca chuoi) - doc log theo `log_moc.TU`."""
+    # Cham case ads bang LOG, khong bang mat: inter load nhanh hon banner nen no
+    # de len truoc khi kip nhin thay banner.
+    if out.get("drive"):
+        out["drive"]["timeline"] = await case_evidence._dong_thoi_gian(client, baseline, out["drive"])
+        # Dong "cach mep banner 12-16dp": bounds trong dump la px, can dpi de doi.
+        out["drive"]["density"] = await device_app.density(client, baseline.serial)
+    out["ads"] = await case_evidence._read_ads(client, baseline, overrides)
+    out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
+    out["events"] = await fa_log.doc(client, baseline.serial)
+    qua_nhanh = fo_screens.can_qua_lfo_nhanh(precondition, *steps)
+    da_show = (assert_ad_screen.ad_man_nha_da_show(
+        out["events"], list(((out.get("ads") or {}).get("units") or {}).values()), "lfo2")
+        if qua_nhanh else [])
+    if expects:
+        out["assert"] = assert_check.check_all(
+            expects, out["ads"], out.get("drive") or {}, out["crash"],
+            tuple(baseline.configs), overrides, out["events"],
+        )
+        # Config khong song thi chua test duoc gi - dung ket luan tu dong Expected.
+        out["verdict"] = out["verdict"] if not result_ok else out["assert"]["verdict"]
+    if da_show:
+        # Case doi ad LFO2 CHUA show luc roi LFO2 ma log cho thay da show ngay o
+        # LFO2 -> luot nay chay sai nhanh, khong duoc ra PASS/FAIL. run_batch chay
+        # lai (lan sau fo_flow da hoc toa do, qua LFO kip).
+        out["verdict"] = "BLOCKED"
+        out["precondition_thieu"] = [f"ad LFO2 ({', '.join(da_show)}) đã show ngay ở LFO2 — chưa tạo "
+                                     "được điều kiện 'chưa kịp show ở LFO2'"]
+        log_fn("    ad LFO2 da show o LFO2 -> chua tao duoc precondition, BLOCKED")
+    out["ad_click"], out["ad_click_tu_ban"] = fa_log.chia_click(
+        out["events"], await fa_log.doc_input(client, baseline.serial))
+    if out["ad_click_tu_ban"]:
+        log_fn(f"    {out['ad_click_tu_ban']} ad_click khong co thao tac nao cua tool truoc do "
+               "-> app/ad tu ban, ghi lai de bao dev, khong dung luot")
+    if out["ad_click"]:
+        # Click vao ad la app roi luong (mo browser/store): ket qua luot nay khong
+        # dung duoc. May QA deu la may test AdMob nen run_batch chay lai case, khong dung luot.
+        out["verdict"] = "BLOCKED"
+        out["precondition_thieu"] = (out.get("precondition_thieu") or []) + [
+            f"log có {out['ad_click']} lần ad_click trong lượt — tool chỉ được đóng ad, "
+            "không được bấm vào; kết quả lần này không dùng được (app rời luồng)"]
+        log_fn(f"    CO {out['ad_click']} ad_click trong luot -> BLOCKED lan nay")
+    return out
+
+
+async def _lai_cham_tra(client, baseline, overrides, keep, out_dir, steps, expects, goto, log_fn, man_can,
+                        precondition, out: dict, result, nen_splash, la_gif, chup_splash, mat_mang, snapshot,
+                        giu: bool = False, noi_tiep: str | None = None) -> dict:
+    """Phan chung cua case thuong va case noi tiep (`--chuoi`): lai toi man, lam buoc, cham, tra config."""
     # Case noi ve man khac splash -> lai toi do TRUOC khi cham, khong thi moi
     # dong ta UI cua man ay deu ra "chua lai toi noi".
     # Case co dong Expected ve nut X / so dem -> phai nhin NGAY khi toi trang:
@@ -230,47 +307,18 @@ async def apply_case(
         mp = case_cham_them.mau_primary(expects, out["drive"], primary, ban_dich)
         if mp:
             out["drive"]["mau_primary"] = mp
-    # Cham case ads bang LOG, khong bang mat: inter load nhanh hon banner nen no
-    # de len truoc khi kip nhin thay banner.
-    if out.get("drive"):
-        out["drive"]["timeline"] = await case_evidence._dong_thoi_gian(client, baseline, out["drive"])
-        # Dong "cach mep banner 12-16dp": bounds trong dump la px, can dpi de doi.
-        out["drive"]["density"] = await device_app.density(client, baseline.serial)
-    out["ads"] = await case_evidence._read_ads(client, baseline, overrides)
-    out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
-    out["events"] = await fa_log.doc(client, baseline.serial)
-    qua_nhanh = fo_screens.can_qua_lfo_nhanh(precondition, *steps)
-    da_show = (assert_ad_screen.ad_man_nha_da_show(
-        out["events"], list(((out.get("ads") or {}).get("units") or {}).values()), "lfo2")
-        if qua_nhanh else [])
-    if expects:
-        out["assert"] = assert_check.check_all(
-            expects, out["ads"], out.get("drive") or {}, out["crash"],
-            tuple(baseline.configs), overrides, out["events"],
-        )
-        # Config khong song thi chua test duoc gi - dung ket luan tu dong Expected.
-        out["verdict"] = out["verdict"] if not result.ok else out["assert"]["verdict"]
-    if da_show:
-        # Case doi ad LFO2 CHUA show luc roi LFO2 ma log cho thay da show ngay o
-        # LFO2 -> luot nay chay sai nhanh, khong duoc ra PASS/FAIL. run_batch chay
-        # lai (lan sau fo_flow da hoc toa do, qua LFO kip).
-        out["verdict"] = "BLOCKED"
-        out["precondition_thieu"] = [f"ad LFO2 ({', '.join(da_show)}) đã show ngay ở LFO2 — chưa tạo "
-                                     "được điều kiện 'chưa kịp show ở LFO2'"]
-        log_fn("    ad LFO2 da show o LFO2 -> chua tao duoc precondition, BLOCKED")
-    out["ad_click"], out["ad_click_tu_ban"] = fa_log.chia_click(
-        out["events"], await fa_log.doc_input(client, baseline.serial))
-    if out["ad_click_tu_ban"]:
-        log_fn(f"    {out['ad_click_tu_ban']} ad_click khong co thao tac nao cua tool truoc do "
-               "-> app/ad tu ban, ghi lai de bao dev, khong dung luot")
-    if out["ad_click"]:
-        # Click vao ad la app roi luong (mo browser/store): ket qua luot nay khong
-        # dung duoc. May QA deu la may test AdMob nen run_batch chay lai case, khong dung luot.
-        out["verdict"] = "BLOCKED"
-        out["precondition_thieu"] = (out.get("precondition_thieu") or []) + [
-            f"log có {out['ad_click']} lần ad_click trong lượt — tool chỉ được đóng ad, "
-            "không được bấm vào; kết quả lần này không dùng được (app rời luồng)"]
-        log_fn(f"    CO {out['ad_click']} ad_click trong luot -> BLOCKED lan nay")
+    if noi_tiep:
+        # Chuoi: dong chi PASS khi PASS ca tren log RIENG case (dieu "X hien" phai xay ra trong case nay) lan log
+        # DON tu dau chuoi (dieu "khong load X" khong duoc xay ra tu splash). Lech -> run_batch chay rieng case.
+        with log_moc.doc_tu(None):
+            don = await _cham_log(client, baseline, dict(out), overrides, expects, precondition, steps, result.ok)
+        with log_moc.doc_tu(noi_tiep):
+            out = await _cham_log(client, baseline, out, overrides, expects, precondition, steps, result.ok, log_fn)
+        out["chuoi_don"] = don.get("verdict", "")
+        if out.get("verdict") != "PASS" or don.get("verdict") != "PASS":
+            out["chuoi_khong_chac"] = f"log riêng case: {out.get('verdict')} · log dồn cả chuỗi: {don.get('verdict')}"
+    else:
+        out = await _cham_log(client, baseline, out, overrides, expects, precondition, steps, result.ok, log_fn)
     # Doc lai config SAU KHI cham: app fetch Firebase luc mo, lan fetch that
     # (khong phai doc cache) kich hoat lai gia tri server va de mat patch - verify
     # o tren doc qua som (foreground +0,8s, fetch xong sau do) nen van ra OK. Do
@@ -298,6 +346,8 @@ async def apply_case(
         log_fn(f"    tra mang ve: {'thong' if out['net_cuoi']['thong'] else 'VAN CHUA THONG'}")
     if keep:
         out["snapshot"] = str(snapshot)
+    elif giu:
+        out["giu_config"] = True     # che do chuoi: case sau noi tiep tren config nay
     else:
         await rc_patch.restore(client, baseline)
         out["restored"] = True
@@ -344,6 +394,7 @@ async def run_case(
     client, baseline: RcBaseline, runs, precondition: str = "", steps=(), expects=(),
     goto: str = "", *, keep=False, out_dir=".", dex=True, log_fn=_noop, man_can=None,
     user_state: str = "", runtime: bool = False, ngon_ngu: tuple[str, str] | None = None,
+    noi_tiep: str | None = None, giu: bool = False,
 ) -> tuple[dict, RcBaseline]:
     """Chay tron mot case. Tra (ket qua, baseline dang dung).
 
@@ -379,7 +430,9 @@ async def run_case(
         log_fn(f"  ngôn ngữ của case: {ngon_ngu[1]} (lái qua LFO sẽ chọn ngôn ngữ này)")
     token = fo_ngon_ngu.CHON.set(ngon_ngu)
     try:
-        if baseline.firebase:                    # reset lam trong tung luot, SAU khi publish RC (apply_case)
+        if noi_tiep:                             # che do chuoi: app dang mo tu case truoc, khong reset
+            reset = {"mode": "noi tiếp (chuỗi)", "matched": "", "baseline_stale": False}
+        elif baseline.firebase:                  # reset lam trong tung luot, SAU khi publish RC (apply_case)
             reset = {"mode": "firebase", "matched": user_state or "", "baseline_stale": False}
         else:
             reset = await device_reset.prepare(client, baseline, precondition, user_state, log_fn)
@@ -391,7 +444,7 @@ async def run_case(
                                dex_keys=baseline.dex_keys)
 
         out = await _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                                log_fn, man_can, precondition, runtime, user_state)
+                                log_fn, man_can, precondition, runtime, user_state, noi_tiep, giu)
     finally:
         fo_ngon_ngu.CHON.reset(token)
     if unused:
@@ -400,7 +453,8 @@ async def run_case(
 
 
 async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, goto,
-                      log_fn, man_can=None, precondition: str = "", runtime=False, user_state: str = "") -> dict:
+                      log_fn, man_can=None, precondition: str = "", runtime=False, user_state: str = "",
+                      noi_tiep: str | None = None, giu: bool = False) -> dict:
     """Case co gia tri lua chon -> nhieu luot. Verdict case = luot xau nhat.
 
     `runtime`: luot i chi lai buoc + cham dong Expected cua luot i (`runtime_steps`).
@@ -415,7 +469,7 @@ async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, got
         log_fn(head + ", ".join(f"{k}={v}" for k, v in overrides.items()))
         out = await apply_case(
             client, baseline, overrides, keep, out_dir, steps, expects, goto,
-            log_fn, man_can, precondition, user_state,
+            log_fn, man_can, precondition, user_state, noi_tiep=noi_tiep, giu=giu,
         )
         log_fn(f"    foreground sau {out['launch']['waited_s']}s · verify: "
                f"{'CONFIG_OK' if out['verify']['ok'] else 'BLOCKED'} · verdict: {out['verdict']}")
@@ -424,10 +478,14 @@ async def _apply_runs(client, baseline, runs, keep, out_dir, steps, expects, got
             break  # luot sau cung di qua ad do -> them click
     if keep:
         log_fn(f"  GIU patch tren may. Tra ve: rcr-check --package {baseline.package} --restore")
+    elif giu:
+        log_fn("  giu config cho case noi tiep (che do chuoi)")
     else:
         log_fn("  da tra config ve nguyen trang")
     # Verdict cua case = luot xau nhat (cung thang bac voi tung dong Expected).
     return {"runs": done, "verdict": assert_check.worst(r["verdict"] for r in done),
+            "chuoi_khong_chac": next((r["chuoi_khong_chac"] for r in done if r.get("chuoi_khong_chac")), ""),
+            "chuoi_don": next((r["chuoi_don"] for r in done if r.get("chuoi_don")), ""),
             "ad_click": sum(r.get("ad_click", 0) for r in done),
             "ad_click_tu_ban": sum(r.get("ad_click_tu_ban", 0) for r in done)}
 
