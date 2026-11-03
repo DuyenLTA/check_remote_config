@@ -115,6 +115,7 @@ def build(data: dict) -> str:
 </div>
 <script>
 const DATA = {payload};
+const TG = {json.dumps(data.get("thoi_gian"), ensure_ascii=False)};
 {JS}
 </script>
 """

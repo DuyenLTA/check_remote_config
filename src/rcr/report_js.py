@@ -37,7 +37,9 @@ function tally() {
     if (!n && s !== "PASS" && s !== "FAIL") return "";
     return `<button class="tile ${s}" data-f="${s}" aria-pressed="false">` +
       `<span class="num">${n}</span><span class="lab">${TILE[s]}</span></button>`;
-  }).join("");
+  }).join("") + (TG ? `<div class="tile TG"><span class="num">${esc(TG.tong)}</span>` +
+      `<span class="lab">thời gian chạy · TB ${esc(TG.tb)}/case` +
+      (TG.thieu ? ` · ${TG.thieu} case lượt cũ chưa đo` : "") + `</span></div>` : "");
   el.querySelectorAll(".tile").forEach(b =>
     b.onclick = () => setFilter(filter === b.dataset.f ? "ALL" : b.dataset.f));
 }
@@ -142,7 +144,6 @@ function row(d) {
       <span class="t"><b>${esc(d.title)}` +
         (d.thieu && d.thieu.length ? ' <span class="pill FIX">thiếu điều kiện</span>' : "") +
         (d.tay ? ' <span class="taytag">✍ đo tay</span>' : "") +
-        (d.tg ? ` <span class="tg" title="thời gian tool chạy case">⏱ ${esc(d.tg)}</span>` : "") +
         (d.chuoi ? ' <span class="tg" title="chạy tiếp trên app của case trước (--chuoi), PASS cả log riêng lẫn log dồn">⛓ nối chuỗi</span>' : "") +
         `</b><span>${esc(tomTat(d))}</span></span>
       <span class="chev" aria-hidden="true">›</span>

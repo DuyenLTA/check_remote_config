@@ -193,9 +193,9 @@ def page_data(baseline, tc: dict, records: list[dict], app_label: str = "") -> d
             "Key remote config": f"{len(baseline.configs)} · {len(baseline.mirrored_keys)} key bị mirror",
             "Bộ TC": f"{tc.get('total', 0)} case · {tc.get('runnable', 0)} chạy tự động được",
             "Đã chạy lượt này": f"{len(records)} case",
-            "Thời gian chạy": thoi_gian.tong_luot(records),
         },
         "cases": records,
+        "thoi_gian": thoi_gian.the_tong(records),
     }
 
 

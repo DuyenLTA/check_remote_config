@@ -46,7 +46,8 @@ code{background:var(--code);padding:1px 5px;border-radius:4px}
 .meta b{color:var(--ink);font-weight:500}
 .warn{background:var(--block-bg);color:var(--block);padding:8px 12px;border-radius:6px;font-size:13.5px}
 .card{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:16px}
-.tally{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.tile.TG{cursor:default} .tile.TG:hover{background:var(--paper)} .tile.TG .num{color:var(--ink)}
 .tile{border:1px solid var(--rule);border-radius:10px;background:var(--paper);padding:12px 14px;text-align:left;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;gap:2px}
 .tile:hover{background:var(--hover)}
 .tile[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:-2px}
