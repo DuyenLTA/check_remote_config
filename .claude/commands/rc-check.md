@@ -669,9 +669,8 @@ tự viết Python gộp record nữa. Publish đè **cùng link**.
 quay rơi đúng lượt config bị fetch đè). User chốt: *"fail thì phải tìm cách check lại
 xem có fail thật hay không trước khi xuất report"*. Mỗi case FAIL, trước khi publish:
 
-1. **FAIL phải lặp lại.** Tool tự chạy lại case FAIL; chỉ giữ FAIL khi lần sau cũng
-   FAIL (`lich_su_verdict`). FAIL rồi PASS → chạy thêm phân xử, report ghi "KHÔNG ỔN
-   ĐỊNH" kèm các lần — không được giấu
+1. **FAIL chạy một lần là đủ** (user chốt 24/10/2026). Tool không chạy lại để xác nhận FAIL; thay
+   vào đó soát kỹ bằng chứng của lượt đó theo các mục dưới (config đọc lại đúng, log + ảnh khớp)
 2. **Config còn sống tới cuối lượt.** App fetch Firebase lúc mở; lần fetch thật (log
    `Fetch firebase successfully in` > ~400ms, đọc cache ~280ms) kích hoạt lại giá trị
    server và đè patch. Tool đọc lại config sau khi chấm, lệch → BLOCKED + chạy lại.

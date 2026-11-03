@@ -214,17 +214,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                             break
                         log_fn(f"    lan {lan}: verdict {v} -> chay lai case")
                         continue
-                    # FAIL KHONG duoc len report khi chi thay mot lan (user chot
-                    # 2026-10-07): mot lan FAIL co the do config bi fetch de, ad
-                    # fill khac, tool nhin tre. Chay lai xac nhan; lech nhau thi
-                    # chay them mot lan phan xu va danh dau khong on dinh.
-                    if v == "FAIL" and lich_su.count("FAIL") < 2 and lan < toi_da:
-                        log_fn(f"    lan {lan}: FAIL -> chay lai de xac nhan truoc khi bao")
-                        continue
-                    if (v == "PASS" and "FAIL" in lich_su and lich_su.count("PASS") < 2
-                            and lan < toi_da):
-                        log_fn(f"    lan {lan}: PASS sau khi lan truoc FAIL -> chay them de phan xu")
-                        continue
+                    # FAIL chay MOT lan la du (user chot 24/10/2026, de luat "FAIL phai lap lai"
+                    # 07/10): chay lai xac nhan lan nao cung ra y het, chi nhan doi thoi gian luot.
+                    # Bang chung FAIL (config doc lai dung, log + anh) Claude soat o buoc 5d.
                     break
             finally:
                 if dns_cu is not None:
