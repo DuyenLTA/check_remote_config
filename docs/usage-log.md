@@ -16,6 +16,7 @@ Test tay (TB): **3 giờ** cho một bộ testcase Remote Config của một app
 | 31/10/2026 | AIP886 AI Photo Video Maker (release) | 2.7.0 (20) | 23 (8 nhóm) | 19 PASS · 0 FAIL · 4 chờ (3 cần máy OPPO, 1 chờ kho fill inter resume 503) | không | https://claude.ai/artifact/HboJXYApcM4FjxX3fzAphC | 31 phút | 3 giờ | 149 phút |
 | 31/10/2026 | AIP886 AI Photo Video Maker (release, tool tự chấm) | 2.7.0 (20) | 23 (8 nhóm) | 20 PASS · 0 FAIL · 3 BLOCKED (cần máy OPPO) | không | https://claude.ai/artifact/LCwN9MDx2uFf3zA5rgMEpi | ? | 3 giờ | ? |
 | 02/11/2026 | AIHomeDesign | 1.9.0 (11) | 61 (TC SDK 3.6.1) | 53 PASS · 4 FAIL · 4 BLOCKED (S03 cần máy OPPO, SG04-01 cần throttle mạng) | splash_inter_change=false vẫn dùng chuỗi 102_n (RG02-01/02); LFO1 enable_btn_lfo=true không focus ngôn ngữ đầu (RG02-03); 305 vẫn load khi tắt OB5+Question (RG04-02) | https://claude.ai/artifact/6W7Xturyuzr3g7VqBDrqTz | 270 phút | 3 giờ | -90 phút |
+| 02/11/2026 | AI Photo Video Maker | 2.7.0 | 61 (SDK 3.6.1) | 48 PASS · 13 FAIL | 13 FAIL (resume ad sai màn, 102_a trùng ID, LFO1 Next, 305 preload, 302 ở OB2, 301_o khi tắt OB Old; SG04 cần PO xác nhận) | https://claude.ai/artifact/BkdQWpEJQfCtGRZYTP9hf1 | 120 phút | 3 giờ | 60 phút |
 
 Lượt Sorapix có 20/23 case bị kẹt vì hộp thoại xin quyền thông báo che app sau `pm clear`, mỗi
 case hết giờ chờ rồi chạy lại. Đã sửa ở commit `66ca8ec`; lượt sau sẽ bớt thời gian chờ này, chưa đo lại.

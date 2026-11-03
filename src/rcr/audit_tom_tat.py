@@ -19,6 +19,9 @@ MAX_TRANG = 10 * 1024 * 1024
 _BIGFRAC = re.compile(r'<div class="bigfrac"><span class="n">(\d+)</span><span class="d">/(\d+)</span>')
 _LUC = re.compile(r"<span>audit <b>([^<]+)</b>")
 _CALLOUT = re.compile(r'<div class="callout">.*?<p>(.*?)</p>', re.S)
+# Mau trang moi (statchip, khong con the loc data-f): so lech o meter-key, so ngoai sheet o cau dan.
+_LECH_MOI = re.compile(r'<i class="swatch sw--miss"></i>(\d+) lệch</span>')
+_NGOAI_MOI = re.compile(r'Ngoài ra (\d+) ID xuất hiện trong build')
 CHUA_CHECK = "🔎 ID ads: chưa check ID ads cho build này"
 
 
@@ -30,6 +33,10 @@ def _the(html_text: str, loai: str) -> int | None:
 def doc(html_text: str) -> dict | None:
     """-> {khop, tong, lech, ngoai_sheet, luc, canh_bao} hoac None khi trang hong / thieu so."""
     big, lech, ngoai = _BIGFRAC.search(html_text), _the(html_text, "fail"), _the(html_text, "leftover")
+    if lech is None and (m := _LECH_MOI.search(html_text)):
+        lech = int(m.group(1))
+    if ngoai is None and (m := _NGOAI_MOI.search(html_text)):
+        ngoai = int(m.group(1))
     if not big or lech is None or ngoai is None:
         return None
     luc = _LUC.search(html_text)

@@ -1,0 +1,257 @@
+<title>Đối chiếu ads com.nxl.aiphotocreator.aivideogenerator.texttoimage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  :root {
+    --paper:#f1f5f9; --surface:#ffffff; --sunk:#e8eef4;
+    --ink:#0f172a; --ink-soft:#475569; --ink-faint:#7c8ca0;
+    --rule:#cfdae6; --rule-soft:#e3eaf2;
+    --accent:#4f46e5; --accent-ink:#4338ca; --accent-wash:#eef0fe;
+    --hit:#059669; --hit-bg:#e3f6ee;
+    --miss:#e11d48; --miss-bg:#fdeaef;
+    --warn:#c2740a; --warn-bg:#fcf1dd;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+    --serif:"IBM Plex Serif",Georgia,serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#0b1220; --surface:#131c2e; --sunk:#0f1728;
+      --ink:#e8eef7; --ink-soft:#a5b4c8; --ink-faint:#75879e;
+      --rule:#2c3a52; --rule-soft:#1d2840;
+      --accent:#818cf8; --accent-ink:#a5b4fc; --accent-wash:#1c2344;
+      --hit:#34d399; --hit-bg:#0e2b22;
+      --miss:#fb7185; --miss-bg:#341520;
+      --warn:#fbbf24; --warn-bg:#2e2411;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0b1220; --surface:#131c2e; --sunk:#0f1728;
+    --ink:#e8eef7; --ink-soft:#a5b4c8; --ink-faint:#75879e;
+    --rule:#2c3a52; --rule-soft:#1d2840;
+    --accent:#818cf8; --accent-ink:#a5b4fc; --accent-wash:#1c2344;
+    --hit:#34d399; --hit-bg:#0e2b22;
+    --miss:#fb7185; --miss-bg:#341520;
+    --warn:#fbbf24; --warn-bg:#2e2411;
+  }
+
+  body { background:var(--paper); color:var(--ink); font-family:var(--serif); font-size:16.5px; line-height:1.62; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:900px; margin-inline:auto; padding-inline:22px; padding-block:40px 84px; display:flex; flex-direction:column; gap:44px; }
+  h1,h2,h3,h4 { font-family:var(--sans); font-weight:600; text-wrap:balance; margin:0; line-height:1.2; }
+  p { margin:0; }
+  a { color:var(--accent-ink); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .eyebrow { font-family:var(--mono); font-size:11.5px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint); }
+  .mono { font-family:var(--mono); font-size:13.5px; overflow-wrap:anywhere; }
+
+  /* masthead */
+  .masthead { display:flex; flex-direction:column; gap:13px; }
+  .masthead h1 { font-size:clamp(29px,5.6vw,42px); letter-spacing:-.015em; }
+  .accent-rule { height:4px; background:linear-gradient(90deg,var(--accent),var(--hit)); }
+  .pkg { font-family:var(--mono); font-size:13px; color:var(--ink-soft); overflow-wrap:anywhere; }
+  .runmeta { display:flex; flex-wrap:wrap; gap:6px 20px; font-family:var(--mono); font-size:12px; color:var(--ink-faint); border-top:1px solid var(--rule); padding-top:12px; }
+  .runmeta b { color:var(--ink-soft); font-weight:500; }
+
+  /* scoreboard */
+  .score { display:flex; flex-direction:column; gap:16px; }
+  .score-top { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px 30px; }
+  .bigfrac { font-family:var(--mono); font-weight:600; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:.92; }
+  .bigfrac .n { font-size:clamp(54px,13vw,86px); color:var(--hit); }
+  .bigfrac .d { font-size:clamp(26px,6vw,40px); color:var(--ink-faint); }
+  .score-lede { font-size:16px; color:var(--ink-soft); max-width:40ch; flex:1 1 260px; }
+  .score-lede b { color:var(--miss); font-family:var(--sans); font-weight:700; }
+  .meter { display:flex; height:10px; background:var(--miss); border:1px solid var(--rule); overflow:hidden; }
+  .meter-hit { background:var(--hit); border-right:2px solid var(--surface); }
+  .meter-key { display:flex; flex-wrap:wrap; gap:6px 18px; font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); }
+  .meter-key span { display:flex; align-items:center; gap:6px; }
+  .swatch { width:9px; height:9px; flex:none; }
+  .sw--hit { background:var(--hit); }
+  .sw--miss { background:var(--miss); }
+  .statchips { display:flex; flex-wrap:wrap; gap:8px; }
+  .statchip { display:flex; align-items:baseline; gap:9px; padding:7px 12px; border:1px solid var(--rule); background:var(--surface); text-decoration:none; color:inherit; }
+  .statchip-name { font-family:var(--sans); font-size:14px; font-weight:600; }
+  .statchip-frac { font-family:var(--mono); font-size:13px; font-variant-numeric:tabular-nums; }
+  .chip--ok { border-color:var(--hit); background:var(--hit-bg); }
+  .chip--ok .statchip-frac { color:var(--hit); font-weight:600; }
+  .chip--miss { border-color:var(--miss); background:var(--miss-bg); }
+  .chip--miss .statchip-frac { color:var(--miss); font-weight:600; }
+
+  /* sections */
+  section { display:flex; flex-direction:column; gap:16px; }
+  section > h2 { font-size:13px; letter-spacing:.13em; text-transform:uppercase; color:var(--accent-ink); border-bottom:2px solid var(--accent); padding-bottom:8px; }
+  .prose { max-width:64ch; }
+  .ref-note { font-size:14px; color:var(--ink-faint); max-width:64ch; }
+
+  /* the investigation -- headings come from the fragment, so style them here */
+  .probe { display:flex; flex-direction:column; gap:15px; }
+  .probe > h2 { font-family:var(--sans); font-size:clamp(21px,3.4vw,27px); letter-spacing:-.01em; border-left:4px solid var(--miss); padding-left:13px; }
+  .probe > h3 { font-size:20px; }
+  .probe > h4 { font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); margin-top:7px; }
+  .probe p, .probe li { max-width:66ch; }
+  .probe ul { margin:0; padding-left:20px; display:flex; flex-direction:column; gap:7px; }
+  .probe code { font-family:var(--mono); font-size:13px; overflow-wrap:anywhere; }
+  .probe table { border-collapse:collapse; width:100%; font-size:14.5px; background:var(--surface); border:1px solid var(--rule); }
+  .probe th { font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:500; text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); }
+  .probe td { padding:10px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top; color:var(--ink-soft); }
+  .probe tbody tr:last-child td { border-bottom:none; }
+  .probe .note { font-size:14.5px; color:var(--ink-faint); border-left:2px solid var(--rule); padding-left:12px; }
+  .verdict-confirmed { border-left:4px solid var(--hit); background:var(--hit-bg); padding:13px 16px; font-size:15.5px; color:var(--ink-soft); }
+
+  /* checklist tables */
+  .sec { border:1px solid var(--rule); background:var(--surface); }
+  .sec + .sec { border-top:none; }
+  .sec > summary { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px 14px; padding:13px 16px; cursor:pointer; font-family:var(--sans); list-style:none; }
+  .sec > summary::-webkit-details-marker { display:none; }
+  .sec > summary::before { content:"▸"; color:var(--ink-faint); font-size:12px; margin-right:2px; }
+  .sec[open] > summary::before { content:"▾"; }
+  .sec-name { font-weight:600; font-size:17px; margin-right:auto; }
+  .sec-frac { font-family:var(--mono); font-size:12.5px; font-variant-numeric:tabular-nums; }
+  .frac--ok { color:var(--hit); }
+  .frac--miss { color:var(--miss); font-weight:600; }
+  .sec[open] > summary { border-bottom:1px solid var(--rule); }
+  .tbl-scroll { overflow-x:auto; }
+  .sec table { border-collapse:collapse; width:100%; font-size:14px; }
+  .sec th { font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); font-weight:500; text-align:left; padding:9px 16px; border-bottom:1px solid var(--rule-soft); white-space:nowrap; }
+  .sec td { padding:9px 16px; border-bottom:1px solid var(--rule-soft); vertical-align:top; }
+  .sec tbody tr:last-child td { border-bottom:none; }
+  .c-label { font-family:var(--sans); font-weight:600; max-width:24ch; }
+  .twin { font-family:var(--serif); font-weight:400; font-style:italic; color:var(--ink-faint); font-size:13px; }
+  .c-val .val { font-family:var(--mono); font-size:12.5px; overflow-wrap:anywhere; display:block; }
+  .altid { font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); display:block; margin-top:2px; overflow-wrap:anywhere; }
+  .c-st { white-space:nowrap; }
+  .st { font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; padding:2px 7px; border:1px solid currentColor; }
+  .st--ok { color:var(--hit); background:var(--hit-bg); }
+  .st--miss { color:var(--miss); background:var(--miss-bg); }
+  .tr--miss td { background:var(--miss-bg); }
+  .tr--miss .c-label { box-shadow:inset 3px 0 0 var(--miss); }
+  .rownote { font-family:var(--serif); font-size:13px; color:var(--ink-soft); white-space:normal; max-width:44ch; margin-top:6px; }
+
+  /* verdict strip */
+  .verdict { display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 16px; border-left:4px solid var(--miss); background:var(--miss-bg); padding:14px 18px; }
+  .verdict strong { font-family:var(--sans); font-size:19px; font-weight:700; color:var(--miss); }
+  .verdict span { font-size:15px; color:var(--ink-soft); }
+
+  /* two IDs */
+  .duel { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule); border:1px solid var(--rule); }
+  .side { background:var(--surface); padding:20px; display:flex; flex-direction:column; gap:12px; }
+  .side > .eyebrow { color:var(--ink-soft); }
+  .side p { font-size:14.5px; color:var(--ink-soft); }
+  .idblock { font-family:var(--mono); overflow-wrap:anywhere; }
+  .idblock .prefix { display:block; font-size:12px; color:var(--ink-faint); }
+  .idblock .tail { font-size:clamp(22px,5.2vw,30px); font-weight:600; letter-spacing:-.02em; }
+  .side--sheet { background:var(--miss-bg); }
+  .side--sheet .tail { color:var(--miss); text-decoration:line-through; text-decoration-thickness:2px; }
+  .side--build { background:var(--hit-bg); }
+  .side--build .tail { color:var(--hit); }
+  .counts { display:flex; flex-direction:column; gap:4px; font-family:var(--mono); font-size:12.5px; }
+  .counts div { display:flex; justify-content:space-between; gap:12px; border-top:1px dotted var(--rule); padding-top:4px; color:var(--ink-soft); }
+  .counts b { font-weight:600; font-variant-numeric:tabular-nums; color:var(--ink); }
+
+  /* dex table */
+  .dex { border:1px solid var(--rule); background:var(--surface); }
+  .dex-cap { font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); padding:10px 16px; border-bottom:1px solid var(--rule-soft); }
+  .dex-rows { font-family:var(--mono); font-size:13.5px; overflow-x:auto; }
+  .dex-rows > div { display:flex; align-items:center; gap:14px; padding:7px 16px; white-space:nowrap; }
+  .dex-rows > div + div { border-top:1px solid var(--rule-soft); }
+  .dex-rows .num { font-variant-numeric:tabular-nums; }
+  .dex-rows .mark { font-size:11px; letter-spacing:.06em; text-transform:uppercase; margin-left:auto; }
+  .row--found .mark { color:var(--hit); }
+  .row--gap { background:var(--miss-bg); border-block:1px dashed var(--miss); }
+  .row--gap .num, .row--gap .mark { color:var(--miss); }
+
+  /* log */
+  .log { border:1px solid var(--rule); background:var(--surface); overflow-x:auto; }
+  .log table { border-collapse:collapse; font-family:var(--mono); font-size:12.5px; width:100%; }
+  .log td { padding:8px 14px; vertical-align:top; white-space:pre; }
+  .log tr + tr td { border-top:1px solid var(--rule-soft); }
+  .log .ln { color:var(--ink-faint); text-align:right; font-variant-numeric:tabular-nums; user-select:none; border-right:1px solid var(--rule-soft); }
+  .log em { font-style:normal; color:var(--hit); font-weight:600; }
+  .log s { color:var(--miss); }
+  .log .why { display:block; white-space:normal; font-family:var(--serif); font-size:13.5px; color:var(--ink-soft); margin-top:5px; max-width:58ch; }
+
+  /* ruled list */
+  .ruled { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; }
+  .ruled > li { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; padding:14px 0; border-top:1px solid var(--rule-soft); }
+  .ruled > li:first-child { border-top:none; padding-top:2px; }
+  .ruled .claim { font-family:var(--sans); font-weight:600; font-size:17px; grid-column:2; }
+  .ruled .refute { grid-column:2; font-size:15px; color:var(--ink-soft); max-width:62ch; }
+  .ruled .refute code, .notes code { font-family:var(--mono); font-size:13px; color:var(--ink); overflow-wrap:anywhere; }
+  .chipx { grid-row:span 2; align-self:start; font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border:1px solid currentColor; white-space:nowrap; margin-top:3px; color:var(--miss); background:var(--miss-bg); }
+
+  .callout { border-left:4px solid var(--warn); background:var(--warn-bg); padding:16px 18px; display:flex; flex-direction:column; gap:8px; }
+  .callout .eyebrow { color:var(--warn); }
+  .callout p { max-width:62ch; font-size:15.5px; }
+  .callout q { font-style:italic; }
+
+  .notes { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
+  .notes li { padding:9px 12px; background:var(--surface); border-left:3px solid var(--accent); font-family:var(--mono); font-size:13px; color:var(--ink-soft); overflow-wrap:anywhere; }
+  .tag { font-family:var(--mono); font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--miss); border:1px solid currentColor; padding:1px 6px; margin-left:6px; white-space:nowrap; }
+  .tag--mute { color:var(--ink-faint); }
+
+  .closing { display:flex; flex-direction:column; gap:13px; }
+  .closing p { max-width:66ch; font-size:15.5px; color:var(--ink-soft); }
+
+  .colophon { border-top:1px solid var(--rule); padding-top:16px; font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); display:flex; flex-direction:column; gap:4px; overflow-wrap:anywhere; }
+
+  @media (max-width:600px) { .duel { grid-template-columns:1fr; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Ad checklist diff + audit fan-out · wf_29400a75-38e</div>
+    <h1>Đối chiếu ads — com.nxl.aiphotocreator.aivideogenerator.texttoimage</h1>
+    <div class="accent-rule"></div>
+    <div class="pkg">com.nxl.aiphotocreator.aivideogenerator.texttoimage · versionCode 20</div>
+    <div class="runmeta">
+      <span>audit <b>2026-11-02T09:31:15+00:00</b></span>
+      <span>mode: <b>capture — lái máy rồi audit</b></span>
+      <span>delta: <b>2 ID lạ mới</b></span>
+    </div>
+  </header>
+
+  <div class="callout"><div class="eyebrow">Cảnh báo về lượt capture</div><p>Filter <b>RemoteConfigRepository</b> không khớp dòng log nào — cả vùng đó chưa được capture.</p></div>
+
+  <div class="score">
+    <div class="score-top">
+      <div class="bigfrac"><span class="n">54</span><span class="d">/54</span></div>
+      <p class="score-lede">dòng checklist khớp build. <b>0 dòng lệch</b>, đã điều tra tới cùng ở dưới. Ngoài ra 10 ID xuất hiện trong build mà sheet không có.</p>
+    </div>
+    <div class="meter" role="img" aria-label="54 trên 54 dòng khớp, 0 dòng lệch">
+      <span class="meter-hit" style="width:100%"></span>
+    </div>
+    <div class="meter-key">
+      <span><i class="swatch sw--hit"></i>54 khớp</span>
+      <span><i class="swatch sw--miss"></i>0 lệch</span>
+    </div>
+    <div class="statchips"><a class="statchip chip--ok" href="#sec1"><span class="statchip-name">1. Thông số kỹ thuật</span><span class="statchip-frac">8/8</span></a><a class="statchip chip--ok" href="#sec2"><span class="statchip-name">2. ID ads FO</span><span class="statchip-frac">40/40</span></a><a class="statchip chip--ok" href="#sec3"><span class="statchip-name">4. ID ads resume</span><span class="statchip-frac">6/6</span></a></div>
+  </div>
+
+  <div class="probe"></div>
+
+  <section>
+    <h2>ID có trong build, không có trong sheet</h2>
+    <ul class="notes"><li><code>ca-app-pub-4973559944609228/1248152962</code></li><li><code>ca-app-pub-4973559944609228/1374129757</code></li><li><code>ca-app-pub-4973559944609228/2752806321</code></li><li><code>ca-app-pub-4973559944609228/2836738907</code></li><li><code>ca-app-pub-4973559944609228/6107009235</code></li><li><code>ca-app-pub-4973559944609228/6585375592</code></li><li><code>ca-app-pub-4973559944609228/7939538105</code> <span class="tag">có trong phần điều tra</span></li><li><code>ca-app-pub-4973559944609228/8175553853</code></li><li><code>ca-app-pub-4973559944609228/8434357894</code></li><li><code>ca-app-pub-4973559944609228/8869476395</code></li></ul>
+  </section>
+
+  <section>
+    <h2>Bảng đối chiếu đầy đủ</h2>
+    <p class="ref-note">Dữ liệu tra cứu. Mục nào còn dòng lệch thì mở sẵn; mục khớp hết thì gấp lại, bấm để xem.</p>
+    <div><details class="sec" id="sec1"><summary><span class="sec-name">1. Thông số kỹ thuật</span><span class="sec-frac frac--ok">8/8 khớp</span></summary><div class="tbl-scroll"><table><thead><tr><th>Label</th><th>Giá trị (sheet)</th><th>Kết quả</th></tr></thead><tbody><tr class=""><td class="c-label">Adjust config environment</td><td class="c-val"><span class="val">production</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">Adjust config token</td><td class="c-val"><span class="val">blenb1ve6ubk</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">Adjust config event name purchase</td><td class="c-val"><span class="val">e1w7hz</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">Adjust config event ad impression</td><td class="c-val"><span class="val">2ragnq</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">Facebook App ID</td><td class="c-val"><span class="val">1675893203858744</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">Facebook Client Token</td><td class="c-val"><span class="val">391d1587fbd1cc659c0b9efe0df1d2fe</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">Package name</td><td class="c-val"><span class="val">com.nxl.aiphotocreator.aivideogenerator.texttoimage</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">App ID</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228~1074130900</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr></tbody></table></div></details><details class="sec" id="sec2"><summary><span class="sec-name">2. ID ads FO</span><span class="sec-frac frac--ok">40/40 khớp</span></summary><div class="tbl-scroll"><table><thead><tr><th>Label</th><th>Giá trị (sheet)</th><th>Kết quả</th></tr></thead><tbody><tr class=""><td class="c-label">101-spl-a-banner-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5705534694</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">101-spl-a-banner</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5346442042</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">102-spl-n-inter-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/2720278708</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">102-spl-n-inter-high1</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/1407197037</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">102-spl-n-inter</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/3079371351</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">102-spl-o-inter-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/6292839933</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">102-spl-o-inter</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/1215625340</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">105-spl-n-native-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/7589462007</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">105-spl-n-native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5955756645</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">106_spl_o_native_high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/3022484859</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">106_spl_o_native_high1</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/3329593300</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">106_spl_o_native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5011969312</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">201-lfo1-n-native-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/2016511630</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">201-lfo1-n-native-high1</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/6362950755</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">201-lfo1-n-native-high2</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/9453208019</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">201-lfo1-n-native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/8793686282</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">202-lfo2-n-native-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/6167522941</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">202-lfo2-n-native-high1</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5457076500</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">202-lfo2-n-native-high2</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/7014746931</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">202-lfo2-n-native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/4388583592</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">301-onb1-n-native-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/9449338582</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">301-onb1-n-native-high1</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/8602114593</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">301-onb1-n-native-high2</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/6559219858</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">301-onb1-n-native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/3119809935</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">302-onb2-n-native-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/9493646594</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">302-onb2-n-native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/9280539933</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">303-onb3-n-native-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/8346732216</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">303-onb3-n-native-high1</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5720568876</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">303-onb3-n-native-high2</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/1168434016</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">303-onb3-n-native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/6734267644</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">304-onb4-n-native-high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5421185978</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">304-onb4-n-native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/7245615561</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">305_onb5_n_native_high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/3940318385</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">305_onb5_n_native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5257269480</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">306_onb5_n_inter_high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/8626467617</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">306_onb5_n_inter</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/7313385942</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">301_onb1_o_native_high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/6000304279</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">301_onb1_o_native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/4687222609</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">301_onb1_o_inter_high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/3374140936</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">301_onb1_o_inter</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/2061059265</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr></tbody></table></div></details><details class="sec" id="sec3"><summary><span class="sec-name">4. ID ads resume</span><span class="sec-frac frac--ok">6/6 khớp</span></summary><div class="tbl-scroll"><table><thead><tr><th>Label</th><th>Giá trị (sheet)</th><th>Kết quả</th></tr></thead><tbody><tr class=""><td class="c-label">501_aoa_high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/8809501688</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">501_aoa</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/5752093507</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">502_native_high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/8434895924</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">502_native</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/6569104316</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">503_inter_high</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/4495650911</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr><tr class=""><td class="c-label">503_inter</td><td class="c-val"><span class="val">ca-app-pub-4973559944609228/3182569244</span></td><td class="c-st"><span class="st st--ok">Khớp</span></td></tr></tbody></table></div></details></div>
+  </section>
+
+  <div class="closing"><section>
+  <h2>Cần ads-team xác nhận</h2>
+  <p>54/54 dòng checklist khớp build. Có 10 ID thật đang chạy trong build mà sheet không có dòng nào (danh sách ở trên); 2 ID mới so với lượt trước là <code>…/6107009235</code> (Banner màn Home) và <code>…/7939538105</code> (Native, preload thư viện).
+  Cần ads-team xác nhận: placement chưa ghi vào sheet, hay ID không nên xuất hiện?</p>
+  <p><em>Tool chỉ đối chiếu chiều sheet → build (lượt này không quét APK), nên khớp hết không có nghĩa là không còn ID ngoài checklist.</em></p>
+</section>
+</div>
+
+  <footer class="colophon">
+    <span>Nguồn: snapshots/com.nxl.aiphotocreator.aivideogenerator.texttoimage.json · out/…-triage.json · out/…-capture.log · .cache/ad-checklist-diff/…-20.apk</span>
+    <span>plans/reports/audit-fanout-261102-1912-aip886-aiphotocreator-vc20-report.md</span>
+  </footer>
+
+</div>
