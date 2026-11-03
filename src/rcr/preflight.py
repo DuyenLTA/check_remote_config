@@ -165,7 +165,8 @@ def muc_sdk_lech(sdk_khai: str, sdk_log: str) -> dict | None:
                 f" → chạy theo {sdk_khai}", "Báo dev xác nhận build đã tích hợp đúng bản SDK")
 
 
-def muc_plan(package: str, sdk_khai: str, sdk_log: str, out_dir, ngay: dt.date | None = None) -> dict:
+def muc_plan(package: str, sdk_khai: str, sdk_log: str, out_dir, ngay: dt.date | None = None,
+             ver_app: str = "", loai_app: str = "") -> dict:
     """Build khac yeu cau SDK trong plan tuan -> LOI, dung luot (user chot 30/10/2026: "khac plan thi dung lai
     bao toi vao qa-auto"). Khong doc duoc plan / plan khong ghi SDK cho app -> chi CHU Y, khong chan."""
     link = env(plan_tuan.ENV)
@@ -181,14 +182,23 @@ def muc_plan(package: str, sdk_khai: str, sdk_log: str, out_dir, ngay: dt.date |
         return _muc("Plan tuần", CANH_BAO, f"không đọc được plan tuần: {exc}")
     if yc is None:
         return _muc("Plan tuần", CANH_BAO, "plan chưa có tab tuần này")
-    if not yc["sdk"] and not yc["next_gen"]:
-        return _muc("Plan tuần", CANH_BAO, f"tab {yc['tab']}: {ma} không ghi bản SDK")
-    lech = plan_tuan.lech(yc, sdk_khai, sdk_log)
-    yeu = "; ".join(yc["dong"])
+    if not (yc["sdk"] or yc["next_gen"] or yc.get("version") or yc.get("loai")):
+        return _muc("Plan tuần", CANH_BAO, f"tab {yc['tab']}: {ma} không ghi bản SDK / version")
+    # So SDK + version + loai ban (user 03/11/2026: "dev build nham ver hoac apply nham sdk"). Scope (cac tinh
+    # nang trong o Detail) tool khong tu kiem duoc tung cai -> in ra de QA doi chieu.
+    lech = plan_tuan.lech(yc, sdk_khai, sdk_log) + plan_tuan.lech_ban(yc, ver_app, loai_app)
+    yeu = "; ".join(filter(None, [
+        "SDK " + " / ".join(yc["sdk"]) if yc["sdk"] else ("Next-Gen" if yc["next_gen"] else ""),
+        ("v" + " / v".join(yc["version"])) if yc.get("version") else "",
+        yc.get("loai", ""),
+    ]))
+    pham_vi = " | ".join(" ".join(x.split()) for x in yc.get("pham_vi") or [])
+    ct = f"tab {yc['tab']}, {ma}: {yeu}" + (f" · scope: {pham_vi}" if pham_vi else "")
     if lech:
-        return _muc("Plan tuần", LOI, f"build KHÁC plan (tab {yc['tab']}, {ma}: {yeu}) — " + "; ".join(lech),
-                    "Dừng, báo QA ở qa-auto: build không đúng yêu cầu plan, cần dev / QA xác nhận")
-    return _muc("Plan tuần", OK, f"khớp plan (tab {yc['tab']}, {ma}: {yeu})")
+        return _muc("Plan tuần", LOI, f"build KHÁC plan ({ct}) — " + "; ".join(lech),
+                    "Dừng, báo QA ở qa-auto: build không đúng yêu cầu plan (sai version / SDK / loại bản), "
+                    "cần dev / QA xác nhận")
+    return _muc("Plan tuần", OK, f"khớp plan ({ct})")
 
 
 def _sheets(package: str, tc: str, out_dir) -> list[dict]:
@@ -324,7 +334,10 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
         muc = noi_long_nextgen(muc) + [_sheet_id_ads(package, out_dir)]
     else:
         muc += _sheets(package, tc, out_dir)
-    muc.append(muc_plan(package, sdk_khai, sdk_log, out_dir))
+    ver_app = app[0]["chi_tiet"].split()[-1] if app and app[0]["trang_thai"] == OK else ""
+    vao = next((m["chi_tiet"] for m in app if m["ten"] == "Vào được dữ liệu app"), "")
+    loai_app = "release" if "bản release" in vao else ("debug" if vao else "")
+    muc.append(muc_plan(package, sdk_khai, sdk_log, out_dir, ver_app=ver_app, loai_app=loai_app))
     muc.append(_ram())
     return {"ok": all(m["trang_thai"] != LOI for m in muc), "muc": muc, "sdk": sdk, "nhanh": nhanh}
 

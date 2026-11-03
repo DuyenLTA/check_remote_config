@@ -41,6 +41,9 @@ AD_WORDS_RE = re.compile(
 # Gia tri bat/tat. CHI cap dang nay moi la mot cong tac: `source = ads_screen` co
 # chu "ads" nhung khong tat gi ca, con `OB2 = OFF` thi co.
 ONOFF_RE = re.compile(r"^(?:on|off|true|false|bật|bat|tắt|tat|enable|disable)$", re.I)
+# Test Data mo ta gia tri thay vi dan gia tri that: "onboard_config_content_new = JSON co khoi language_code=fr
+# (nhu R01)" (AIP936 RG10-01 03/11/2026) - dat nguyen chu "JSON co khoi" len RC la chay sai config.
+MO_TA_JSON_RE = re.compile(r"^\s*JSON\b|\(\s*nh(?:ư|u)\s+[A-Z]{1,3}\d", re.I)
 
 
 
@@ -108,9 +111,23 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
         return RcCaseData(overrides={}, needs_human=why)
 
     found = suy_ra | pre | td  # trung key -> Test Data thang, roi den ten viet ro
+    mo_ta = sorted(k for k, v in found.items() if MO_TA_JSON_RE.search(str(v)))
+    if mo_ta:
+        return RcCaseData(
+            overrides={},
+            needs_human=(
+                f"gia tri cua {', '.join(mo_ta)} la cau mo ta, khong phai gia tri that "
+                f"({str(found[mo_ta[0]])[:60]!r}) - dan JSON day du vao Test Data"
+            ),
+        )
     # Key cua app duoc NHAC ma khong co gia tri (`splash_ui_config hop le nhung
     # image_url rong`) -> chay voi config mac dinh la sai ma khong ai biet.
-    mentioned = rc_guards.mentioned(rc_pairs.precondition_lines(case.precondition) + "\n" + raw, whitelist)
+    # Bo GIA TRI cua cac key da boc duoc truoc khi do: ten key nam TRONG gia tri JSON (`"language_code":"fr"` trong
+    # onboard_config_content_new) khong phai key bi nhac thieu gia tri (03/11/2026: 22 case R01-S03 bi chan oan).
+    van_ban = rc_pairs.precondition_lines(case.precondition) + "\n" + raw
+    for v in sorted({str(v) for v in found.values() if len(str(v)) > 8}, key=len, reverse=True):
+        van_ban = van_ban.replace(v, " ")
+    mentioned = rc_guards.mentioned(van_ban, whitelist)
     vague = sorted(mentioned - set(found) - set(forced))
     if vague:
         return RcCaseData(

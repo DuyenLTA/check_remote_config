@@ -19,6 +19,13 @@ from . import build_ma_app, sdk_probe, tc_catalog, tc_source
 from .models import RcError
 
 ENV = "RC_PLAN_TUAN_SHEET"
+# Version QA ghi trong plan: dong cong viec "test v1.9.0 rls", Detail iOS "v7.9.3:" / "ver3.2.0:". Bat buoc co "v" /
+# "ver" truoc so - so trong "- SDK 3.6.1" la ban SDK, khong phai version app (bo phan SDK truoc khi do).
+PLAN_VER_RE = re.compile(r"(?<![A-Za-z0-9])v(?:er(?:sion)?)?\s*\.?\s*(\d+\.\d+\.\d+)", re.I)
+RELEASE_RE = re.compile(r"(?<![A-Za-z])(?:rls|release)(?![A-Za-z])", re.I)
+DEBUG_RE = re.compile(r"(?<![A-Za-z])debug(?![A-Za-z])", re.I)
+# O Detail (scope ban build): dong gach dau dong "- Apply photo picker" hoac co ghi SDK.
+SCOPE_RE = re.compile(r"(?:^|\n)\s*-\s*\S")
 TAB_RE = re.compile(r"^\s*(\d{1,2})(\d{2})\s*-\s*(\d{1,2})(\d{2})(\d{4})\s*$")
 
 
@@ -52,8 +59,10 @@ def ma_cua_package(path, package: str) -> str:
 
 
 def yeu_cau(path, ma: str, ngay: dt.date) -> dict | None:
-    """Yeu cau SDK cua app `ma` trong tab tuan chua `ngay`: {tab, sdk: [X.Y.Z], next_gen, dong: [noi dung]}.
-    Khong co tab tuan -> None; co tab nhung app khong co dong ghi SDK -> sdk rong, next_gen False."""
+    """Yeu cau cua app `ma` trong tab tuan chua `ngay`: {tab, sdk: [X.Y.Z], next_gen, dong: [noi dung SDK],
+    version: [X.Y.Z], loai: "release"|"debug"|"", pham_vi: [o Detail]}.
+    Khong co tab tuan -> None; app khong co dong nao ghi gi -> cac truong rong.
+    User 03/11/2026: plan ghi app + version + scope ban build de check dev build nham version / apply nham SDK."""
     import openpyxl
 
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
@@ -61,12 +70,29 @@ def yeu_cau(path, ma: str, ngay: dt.date) -> dict | None:
         ws = next((w for w in wb.worksheets if (t := tuan_cua_tab(w.title)) and t[0] <= ngay <= t[1]), None)
         if ws is None:
             return None
-        ra = {"tab": ws.title.strip(), "sdk": [], "next_gen": False, "dong": []}
+        ra = {"tab": ws.title.strip(), "sdk": [], "next_gen": False, "dong": [], "version": [], "loai": "",
+              "pham_vi": []}
+        cot: dict[str, int] = {}
         for r in ws.iter_rows(values_only=True):
+            tieu_de = cot_tieu_de(r)
+            if tieu_de:
+                cot = tieu_de        # bang moi (co cot "App version"): doc dung cot tu day tro xuong
+                continue
             o = [str(v).strip() for v in r if isinstance(v, str) and v.strip()]
             if not any((m := build_ma_app.MA_RE.match(c)) and m.group(1).upper() == ma for c in o):
                 continue
+            if cot:
+                _doc_theo_cot(r, cot, ra)
+                continue
             for c in o:
+                bo_sdk = build_ma_app.SDK_RE.sub(" ", c)
+                ra["version"] += [v for v in PLAN_VER_RE.findall(bo_sdk) if v not in ra["version"]]
+                if RELEASE_RE.search(c):
+                    ra["loai"] = "release"
+                elif DEBUG_RE.search(c) and not ra["loai"]:
+                    ra["loai"] = "debug"
+                if (SCOPE_RE.search(c) or build_ma_app.SDK_RE.search(c)) and c not in ra["pham_vi"]:
+                    ra["pham_vi"].append(c)
                 so = [s for s in build_ma_app.SDK_RE.findall(c) if s not in ra["sdk"]]
                 ng = bool(build_ma_app.NEXT_GEN_RE.search(c)) and not build_ma_app.REVERT_RE.search(c)
                 if so or ng:
@@ -76,6 +102,43 @@ def yeu_cau(path, ma: str, ngay: dt.date) -> dict | None:
         return ra
     finally:
         wb.close()
+
+
+def _chuan(o) -> str:
+    return " ".join(str(o).split()).casefold() if isinstance(o, str) else ""
+
+
+def cot_tieu_de(r) -> dict[str, int]:
+    """Dong tieu de bang plan moi (03/11/2026): "Loai du an | OS | Ten du an | App version | Detail | ..." ->
+    {"ten", "version", "detail"} -> chi so cot. Khong phai dong tieu de -> {}."""
+    ten = {_chuan(v): i for i, v in enumerate(r)}
+    if "app version" not in ten or "detail" not in ten:
+        return {}
+    return {"ten": ten.get("tên dự án", -1), "version": ten["app version"], "detail": ten["detail"]}
+
+
+def _doc_theo_cot(r, cot: dict[str, int], ra: dict) -> None:
+    """Mot dong app cua bang co cot: version tu cot "App version", SDK + scope tu cot "Detail"."""
+    def o(ten):
+        i = cot.get(ten, -1)
+        v = r[i] if 0 <= i < len(r) else None
+        return "" if v is None else str(v).strip()
+    ver, detail = o("version"), o("detail")
+    ra["version"] += [v for v in re.findall(r"\d+\.\d+\.\d+", ver) if v not in ra["version"]]
+    for c in (ver, detail):
+        if RELEASE_RE.search(c):
+            ra["loai"] = "release"
+        elif DEBUG_RE.search(c) and not ra["loai"]:
+            ra["loai"] = "debug"
+    if detail:
+        if detail not in ra["pham_vi"]:
+            ra["pham_vi"].append(detail)
+        so = [s for s in build_ma_app.SDK_RE.findall(detail) if s not in ra["sdk"]]
+        ng = bool(build_ma_app.NEXT_GEN_RE.search(detail)) and not build_ma_app.REVERT_RE.search(detail)
+        if so or ng:
+            ra["sdk"] += so
+            ra["next_gen"] = ra["next_gen"] or ng
+            ra["dong"].append(" ".join(detail.split()))
 
 
 def lech(yc: dict, sdk_khai: str, sdk_log: str) -> list[str]:
@@ -90,6 +153,18 @@ def lech(yc: dict, sdk_khai: str, sdk_log: str) -> list[str]:
             ra.append(f"{nguon} SDK {sdk}, plan ghi {' / '.join(yc['sdk'])}")
         elif not can and yc["next_gen"] and not sdk_probe.la_nextgen(sdk):
             ra.append(f"{nguon} SDK {sdk}, plan ghi Next-Gen")
+    return ra
+
+
+def lech_ban(yc: dict, ver_app: str, loai_app: str) -> list[str]:
+    """Version / loai ban dang cai khac plan (rong = khop hoac plan khong ghi). `ver_app` dang '1.9.0' hay
+    '1.9.0 (11)'; so theo X.Y.Z."""
+    ra = []
+    co = re.search(r"\d+\.\d+\.\d+", ver_app or "")
+    if yc.get("version") and co and co.group(0) not in yc["version"]:
+        ra.append(f"máy đang cài version {co.group(0)}, plan ghi v{' / v'.join(yc['version'])}")
+    if yc.get("loai") and loai_app and loai_app != yc["loai"]:
+        ra.append(f"máy đang cài bản {loai_app}, plan ghi bản {yc['loai']}")
     return ra
 
 

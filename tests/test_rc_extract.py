@@ -407,3 +407,18 @@ def test_param_analytics_trung_tu_ads_khong_bi_coi_la_cong_tac():
     """`source = ads_screen` co chu "ads" nhung khong bat/tat gi - van chay."""
     d = extract(case("enable_feature_aialbum = true, source = ads_screen"), WL)
     assert d.runnable and d.overrides == {"enable_feature_aialbum": "true"}
+
+
+def test_ten_key_nam_trong_gia_tri_json_khong_bi_coi_la_key_thieu_gia_tri():
+    """03/11/2026: `"language_code":"fr"` trong onboard_config_content_new lam 22 case R01-S03 bi chan oan."""
+    wl = {"onboard_config_content_new", "language_code", "enable_all_ads"}
+    d = ex('enable_all_ads=true\n onboard_config_content_new=[{"language_code":"fr","onb1":{"title":"FR"}}]', wl)
+    assert not d.needs_human
+    assert d.overrides["onboard_config_content_new"].startswith('[{"language_code":"fr"')
+
+
+def test_gia_tri_la_cau_mo_ta_thi_khong_chay():
+    """RG10-01: 'JSON co khoi ... (nhu R01)' - dat chu do len RC la chay sai config ma van ra ket qua."""
+    wl = {"onboard_config_content_new", "language_code", "enable_all_ads"}
+    d = ex("enable_all_ads=true\n onboard_config_content_new = JSON có khối language_code=fr (như R01)", wl)
+    assert not d.overrides and "cau mo ta" in d.needs_human
