@@ -90,7 +90,7 @@ function expects(d) {
   return d.expects.map((e, i) => {
     const l = d.lines[i];
     return `<li><div class="exp">${l ? pill(l.s) : ""}<span>${esc(e)}</span>` +
-      (l ? `<span class="why">${l.tay ? `<span class="taytag">✍ ${esc(l.tay)} đo tay</span> ` : ""}` +
+      (l ? `<span class="why">` +
            `${esc(l.r)}</span>` : "") + `</div></li>`;
   }).join("");
 }
@@ -122,19 +122,18 @@ function steps(d) {
 function tomTat(d) {
   if (!d.tay) return d.actual;
   const l = d.lines.find(x => x.tay);
-  return l ? `✍ Đo tay: ${l.r}` : d.actual;
+  return l ? l.r : d.actual;
 }
 function anhTay(d) {
   if (!d.anh_tay.length) return "";
-  return `<div class="full"><h4>Ảnh lượt đo tay</h4><div class="shots lon">` + d.anh_tay.map(a =>
+  return `<div class="full"><h4>Ảnh bằng chứng</h4><div class="shots lon">` + d.anh_tay.map(a =>
     `<figure><img loading="lazy" src="${a.src}" alt="${esc(a.ten)}"><figcaption>${esc(a.ten)}</figcaption>` +
     `</figure>`).join("") + `</div></div>`;
 }
 function luotTool(d) {
   const ben = steps(d) + adsTable(d) + shots(d);
   if (!d.tay) return ben;
-  return `<details class="full tool"><summary>Lượt tự động của tool (không dùng để kết luận — ` +
-    `xem vì sao phải đo tay)</summary><div class="toolbody"><div><h4>Thực tế</h4>` +
+  return `<details class="full tool"><summary>Lượt chạy tự động (log, ảnh, bảng ads gốc)</summary><div class="toolbody"><div><h4>Thực tế</h4>` +
     `<div class="box">${esc(d.actual)}</div></div>${ben}</div></details>`;
 }
 function row(d) {
@@ -143,7 +142,6 @@ function row(d) {
       <span class="n">#${d.n}</span>${pill(d.status)}
       <span class="t"><b>${esc(d.title)}` +
         (d.thieu && d.thieu.length ? ' <span class="pill FIX">thiếu điều kiện</span>' : "") +
-        (d.tay ? ' <span class="taytag">✍ đo tay</span>' : "") +
         (d.chuoi ? ' <span class="tg" title="chạy tiếp trên app của case trước (--chuoi), PASS cả log riêng lẫn log dồn">⛓ nối chuỗi</span>' : "") +
         `</b><span>${esc(tomTat(d))}</span></span>
       <span class="chev" aria-hidden="true">›</span>

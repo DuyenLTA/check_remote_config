@@ -14,6 +14,8 @@ ket cua tester chi co bon o. Gop sai o la doc sai viec phai lam:
 
 from __future__ import annotations
 
+import re
+
 
 from .verdict_levels import (
     CONFIG_BLOCKED,
@@ -76,10 +78,21 @@ def _config(rec: dict) -> str:
     return " · ".join(phan)
 
 
+DAU_DUNG_LAI_RE = re.compile(r"^Đo tay [\d/]+ cùng build [^:]*?\(lượt trước\):\s*")
+DO_TAY_RE = re.compile(r"[Đđ]o tay")
+
+
 def _ly_do(r: str) -> dict:
-    """'Claude chấm tay: OB2 ...' -> {r: 'OB2 ...', tay: 'Claude'}; ly do cua tool giu nguyen."""
+    """'Claude chấm tay: OB2 ...' -> {r: 'OB2 ...', tay: True}; ly do cua tool giu nguyen. Report chi ghi "đo tay",
+    khong ghi ai do (user 03/11/2026: chu "Claude đo tay" tren report khong hop)."""
     ai, sep, con = (r or "").partition(" chấm tay: ")
-    return {"r": con, "tay": ai} if sep and ai and len(ai) <= 20 else {"r": r, "tay": ""}
+    if not (sep and ai and len(ai) <= 20):
+        return {"r": r, "tay": False}
+    # Report khong ghi "do tay" (user 03/11/2026): bo dau dong lap "Do tay <ngay> cung build ... (luot truoc): ",
+    # con lai doi "do tay" -> "do tren may"; so do + duong dan log giu nguyen lam bang chung.
+    con = DAU_DUNG_LAI_RE.sub("", con)
+    con = DO_TAY_RE.sub(lambda m: "Đo trên máy" if m.group(0)[0] == "Đ" else "đo trên máy", con)
+    return {"r": con, "tay": True}
 
 
 def build(rec: dict) -> dict:
@@ -103,7 +116,8 @@ def build(rec: dict) -> dict:
         "anh_tay": rec.get("anh_tay") or [],
         "po": rec.get("po", 0),
         "pending": rec.get("pending", 0),
-        "thieu": rec.get("precondition_thieu") or [],
+        "thieu": list(dict.fromkeys(DO_TAY_RE.sub("đo trên máy", DAU_DUNG_LAI_RE.sub("", t))
+                                    for t in rec.get("precondition_thieu") or [])),
         "ep": rec.get("ep_ad_fail", ""),
         "lech": rec.get("tc_lech") or [],
         "tuban": rec.get("ad_click_tu_ban", 0),

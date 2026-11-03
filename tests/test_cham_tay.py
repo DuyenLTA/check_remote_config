@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from rcr import cham_tay
+from rcr import cham_tay, report_row
 from rcr.models import RcError
 
 REC = {"key": "3.4.0#UI-001", "verdict": "NEEDS_HUMAN", "pending": 2, "lines": [
@@ -93,8 +93,8 @@ def test_cham_tay_kem_anh_va_report_tach_ly_do(tmp_path):
     assert moi["verdict"] == "PASS" and len(moi["anh_tay"]) == 1
     d = report_row.build(moi)
     assert d["tay"] and d["anh_tay"][0]["ten"] == "A_ob2"
-    assert d["lines"][0] == {"s": d["lines"][0]["s"], "v": "PASS", "r": "lượt A lại", "tay": "Claude"}
-    assert report_row.build(rec)["lines"][0]["tay"] == "" and not report_row.build(rec)["tay"]
+    assert d["lines"][0] == {"s": d["lines"][0]["s"], "v": "PASS", "r": "lượt A lại", "tay": True}
+    assert report_row.build(rec)["lines"][0]["tay"] is False and not report_row.build(rec)["tay"]
 
 
 def test_anh_khong_ton_tai_thi_bao_loi(tmp_path):
@@ -109,3 +109,10 @@ def test_blocked_khi_khong_tao_duoc_precondition_thi_case_blocked_kem_ly_do():
     assert ra["verdict"] == "BLOCKED"
     assert ra["precondition_thieu"] == ["Precondition 'Thiết bị OPPO': không có máy OPPO"]
     assert ra["lines"][0]["v"] == "BLOCKED" and ra["lines"][1]["v"] == "PASS"
+
+
+def test_report_khong_ghi_do_tay():
+    """User 03/11/2026: bo nhan / chu "do tay" tren report, giu so do + duong dan log."""
+    d = report_row._ly_do("Claude chấm tay: Đo tay 03/11 cùng build 1.9.0 (11) + cùng config (lượt trước): "
+                          "Đo tay (out/manual/og0102.log): chọn 1 item")
+    assert d == {"r": "Đo trên máy (out/manual/og0102.log): chọn 1 item", "tay": True}
