@@ -185,9 +185,18 @@ async def _tren_may(args: argparse.Namespace, client, serial: str, started: floa
     if args.tc:
         tc_nguon = args.tc
         if tc_source.la_link(args.tc):
-            _log("Tai bo TC moi nhat tu Google Sheet...")
             out["tc_link"] = args.tc
-            args.tc = tc_source.tai_ve(args.tc, args.out_dir)
+            da_tai = tc_source.file_da_tai(args.tc, args.out_dir)
+            if da_tai and (args.gop or args.tiep) and not args.tai_lai_tc:
+                # Sheet TC chi tai MOT lan moi luot check (user chot 03/11/2026: khong sua sheet giua luot).
+                # Luot noi tiep (--gop/--tiep) dung lai file da tai; user bao da sua sheet -> --tai-lai-tc.
+                _log("Dung lai bo TC da tai luc "
+                     + time.strftime("%H:%M %d/%m", time.localtime(da_tai.stat().st_mtime))
+                     + " (luot noi tiep; --tai-lai-tc de tai ban moi)")
+                args.tc = str(da_tai)
+            else:
+                _log("Tai bo TC moi nhat tu Google Sheet...")
+                args.tc = tc_source.tai_ve(args.tc, args.out_dir)
         sdk, source = args.sdk, "tham so --sdk"
         # Bo TC mot sheet khong can ban SDK de CHON tab, nhung report van phai
         # noi duoc no do ban nao - do tu logcat roi chi dung de hien.
@@ -332,6 +341,8 @@ def build_parser() -> argparse.ArgumentParser:
                         "sheet TC + sheet ID ads, RAM may tinh) roi thoat")
     p.add_argument("--tiep", metavar="FILE_LUOT",
                    help="chay not case chua co ket qua trong file luot (luot truoc bi tat giua chung)")
+    p.add_argument("--tai-lai-tc", action="store_true",
+                   help="kem --gop/--tiep: tai lai sheet TC (mac dinh dung lai file da tai o dau luot)")
     p.add_argument("--gop", action="append", metavar="FILE_LUOT",
                    help="lay ket qua file luot lam nen (lap lai duoc); kem --case thi case chay "
                         "lai de len, khong kem --case thi chi dung lai report, khong can may")

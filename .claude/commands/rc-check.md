@@ -711,11 +711,11 @@ xoá khỏi sheet; **không cố ép fill** (đổi ID sang ID test, chạy lạ
   (vào LFO2 là đã chọn sẵn), đổi ngôn ngữ ở LFO2 thì không đếm lại. Đo bằng chụp liên tục (~0.4s/khung):
   `uiautomator dump` mất ~2.5s/lần, quá thô cho mốc 0–4s.
 
-**Sheet TC có thể bị sửa ngay trong lượt** (03/11 đổi 4 lần: 61 → 57 → 63 → 69 → 68 case, đánh lại số
-RG02, đảo kỳ vọng). Trước khi đo tay và **ngay trước khi publish**: tải lại sheet (`--tc <link> --tab X` không
-`--case`), so `lines[].e` với kỳ vọng mới; case đổi/mới thì chạy lại `--gop` + đo tay; case đã xoá thì bỏ khỏi
-file lượt (`luot_file.ghi` + `run_batch.ghi_report`, không sửa tay JSON). Case mới chưa có trong file lượt thì
-cho tool chạy trước để có record rồi mới `--cham-tay`. Sheet đang đổi liên tục → hỏi "sửa xong chưa" rồi mới đo.
+**Sheet TC tải đúng 1 lần mỗi lượt check** (user chốt 03/11/2026: *"tôi sẽ không sửa sheet nữa, tải đúng 1 lần
+trước khi chạy"*). Lượt mới tải sheet; các lệnh nối tiếp (`--gop`, `--tiep`) tự dùng lại file `out/tc-<id>.xlsx`
+đã tải. Chỉ khi user báo **đã sửa sheet** mới tải lại (`--tai-lai-tc`), rồi so `lines[].e` với kỳ vọng mới: case
+đổi/mới chạy lại `--gop` + đo tay, case đã xoá bỏ khỏi file lượt (`luot_file.ghi` + `run_batch.ghi_report`, không
+sửa tay JSON). Case mới chưa có trong file lượt thì cho tool chạy trước để có record rồi mới `--cham-tay`.
 
 ## 5e. Gặp lỗi của tool giữa lượt → Claude tự sửa, KHÔNG giao lại user
 

@@ -30,6 +30,13 @@ def la_link(tc: str) -> bool:
     return bool(SHEET_RE.search(tc or ""))
 
 
+def file_da_tai(tc: str, out_dir) -> Path | None:
+    """File .xlsx da tai cua link sheet `tc` (cung ten `tai_ve` ghi), chua tai -> None."""
+    m = SHEET_RE.search(tc or "")
+    f = Path(out_dir) / f"tc-{m.group(1)}.xlsx" if m else None
+    return f if f is not None and f.is_file() and f.stat().st_size else None
+
+
 def tai_ve(tc: str, out_dir) -> str:
     """Link sheet -> duong dan file .xlsx vua tai. Duong dan file -> giu nguyen."""
     m = SHEET_RE.search(tc or "")
