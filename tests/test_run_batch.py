@@ -180,3 +180,8 @@ def test_precondition_khong_tao_duoc_thi_blocked_va_khong_chay_lai(monkeypatch):
     assert recs[0]["verdict"] == "BLOCKED" and recs[0]["lich_su_verdict"] == ["NEEDS_HUMAN"]
     assert any("show muộn" in t for t in recs[0]["precondition_thieu"])
     assert [r["verdict"] for r in recs[1:]] == ["PASS", "PASS"]
+
+
+def test_moi_case_ghi_thoi_gian_chay_len_report(monkeypatch):
+    recs = run(monkeypatch, {"a": "PASS", "b": "FAIL", "c": "PASS"}, lan=3)
+    assert all(isinstance(r["thoi_gian_s"], int) and r["thoi_gian_s"] >= 0 for r in recs)

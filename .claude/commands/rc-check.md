@@ -689,6 +689,34 @@ xem có fail thật hay không trước khi xuất report"*. Mỗi case FAIL, tr
    không thành (vd 202 đã show ở LFO2) hoặc config bị đè thì ghi rõ "không dùng làm bằng
    chứng" — 07/10/2026 user đọc bảng ads của lượt sai điều kiện và bắt được FAIL mâu thuẫn
 
+## 5d2. Luật QA đã chốt — BLOCKED, cách hiểu TC 3.6.1, sheet sửa giữa lượt (03/11/2026)
+
+**Precondition không tạo được thì BLOCKED, cấm đo thay.** Cần máy OPPO mà chỉ có Pixel, cần mạng chậm
+để ad về muộn, cần "native full đang hiển thị" mà kho test không trả native → `--cham-tay ... --ket BLOCKED
+--ly-do "<vì sao không tạo được>"`. Đo trên máy khác hay điều kiện khác rồi chấm PASS/FAIL là làm giả. User
+03/11: *"có cắm máy oppo đâu mà test như thật vậy... đừng có làm giả"*. Rà **mọi** dòng `cham_tay` (cả của
+agent) trước khi báo. Case **phải có ad fill** mới làm được mà kho không fill → BLOCKED và báo tên case để user
+xoá khỏi sheet; **không cố ép fill** (đổi ID sang ID test, chạy lại nhiều lần) — user 03/11: *"nó no fill thì thôi
+đừng cố nữa"*.
+
+**Cách hiểu TC SDK 3.6.1 (template 4) QA đã sửa — chấm theo đây, không theo câu chữ TC:**
+- Ad resume ở màn tutorial (LFO1, OB1, Question…): AOA hiện khi mở lại là **đúng**, kể cả TC cũ ghi "không show ad resume".
+- **Home không có resume.** Kỳ vọng resume ở Home mà không có thì không FAIL.
+- Native request hỏng 3 lần (no fill) thì app **thôi không request nữa**, đúng thiết kế (log NativeAdHelper "Resume
+  repeat 3 times"). Dòng "đóng ad resume → reload native" mà không có request mới thì PASS.
+- **Tên ad không chỉ ra màn:** `301_onb1_o_native` là ad của màn Question. Trước khi chấm FAIL "vẫn load X" phải
+  biết màn nào dùng unit đó.
+- Splash GIF `video_loop=false` mà vẫn lặp là đúng.
+- Cursor hint LFO2 (bàn tay trỏ nút tick) hiện sau `lfo2_cursor_delay` giây **tính từ lúc bấm chọn ở LFO1**
+  (vào LFO2 là đã chọn sẵn), đổi ngôn ngữ ở LFO2 thì không đếm lại. Đo bằng chụp liên tục (~0.4s/khung):
+  `uiautomator dump` mất ~2.5s/lần, quá thô cho mốc 0–4s.
+
+**Sheet TC có thể bị sửa ngay trong lượt** (03/11 đổi 4 lần: 61 → 57 → 63 → 69 → 68 case, đánh lại số
+RG02, đảo kỳ vọng). Trước khi đo tay và **ngay trước khi publish**: tải lại sheet (`--tc <link> --tab X` không
+`--case`), so `lines[].e` với kỳ vọng mới; case đổi/mới thì chạy lại `--gop` + đo tay; case đã xoá thì bỏ khỏi
+file lượt (`luot_file.ghi` + `run_batch.ghi_report`, không sửa tay JSON). Case mới chưa có trong file lượt thì
+cho tool chạy trước để có record rồi mới `--cham-tay`. Sheet đang đổi liên tục → hỏi "sửa xong chưa" rồi mới đo.
+
 ## 5e. Gặp lỗi của tool giữa lượt → Claude tự sửa, KHÔNG giao lại user
 
 User chốt 24/10/2026: chạy app khác mà tool lỗi / chạy chập chờn / PASS giả / BLOCKED thì

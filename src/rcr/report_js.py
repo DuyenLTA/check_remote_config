@@ -142,6 +142,7 @@ function row(d) {
       <span class="t"><b>${esc(d.title)}` +
         (d.thieu && d.thieu.length ? ' <span class="pill FIX">thiếu điều kiện</span>' : "") +
         (d.tay ? ' <span class="taytag">✍ đo tay</span>' : "") +
+        (d.tg ? ` <span class="tg" title="thời gian tool chạy case">⏱ ${esc(d.tg)}</span>` : "") +
         `</b><span>${esc(tomTat(d))}</span></span>
       <span class="chev" aria-hidden="true">›</span>
     </button>

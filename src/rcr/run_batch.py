@@ -7,6 +7,7 @@ tro toi noi dung khong con nua - `run_case` tra ve baseline dang dung.
 
 from __future__ import annotations
 
+import time
 from datetime import date
 from pathlib import Path
 
@@ -94,6 +95,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
 
     for wanted in [k.strip() for k in args.case.split(",") if k.strip()]:
         key = wanted
+        bat_dau = time.monotonic()   # thoi gian chay tung case -> report (user theo doi toc do luot)
         if wanted in bo_qua:
             # Kiem TRUOC pick: chay tiep ma bo TC / tab doi thi pick hong, record loi
             # se de mat ket qua da xong.
@@ -243,7 +245,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             log_fn(f"    LOI: {exc}")
             await _try_restore(client, baseline, log_fn)
             records.append({**report_data.error_record(key, by_key.get(key, {}), str(exc)),
-                            "loi_chay": True})
+                            "loi_chay": True, "thoi_gian_s": round(time.monotonic() - bat_dau)})
             luu()
             continue
         # Precondition doi mot dieu kien may nay khong tao duoc (throttle bang
@@ -282,7 +284,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         if tc_lech:
             result["tc_lech"] = tc_lech
         log_fn(f"    verdict: {result['verdict']}")
-        records.append(report_data.case_record(key, by_key.get(key, {}), result))
+        records.append(report_data.case_record(key, by_key.get(key, {}), result)
+                       | {"thoi_gian_s": round(time.monotonic() - bat_dau)})
         luu()
         if result.get("ad_click"):
             # May test AdMob: ad_click khong dung luot. Case giu BLOCKED kem so click

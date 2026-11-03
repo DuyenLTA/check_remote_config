@@ -9,6 +9,8 @@ Dump chi dung luc cham (`assert_check`), cham xong thi bo.
 
 from __future__ import annotations
 
+from . import thoi_gian
+
 from . import report_runs
 
 
@@ -191,6 +193,7 @@ def page_data(baseline, tc: dict, records: list[dict], app_label: str = "") -> d
             "Key remote config": f"{len(baseline.configs)} · {len(baseline.mirrored_keys)} key bị mirror",
             "Bộ TC": f"{tc.get('total', 0)} case · {tc.get('runnable', 0)} chạy tự động được",
             "Đã chạy lượt này": f"{len(records)} case",
+            "Thời gian chạy": thoi_gian.tong_luot(records),
         },
         "cases": records,
     }

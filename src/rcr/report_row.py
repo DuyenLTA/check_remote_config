@@ -14,6 +14,8 @@ ket cua tester chi co bon o. Gop sai o la doc sai viec phai lam:
 
 from __future__ import annotations
 
+from . import thoi_gian
+
 from .verdict_levels import (
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -108,4 +110,5 @@ def build(rec: dict) -> dict:
         "tuban": rec.get("ad_click_tu_ban", 0),
         "ads": rec.get("ads") or [],
         "steps": rec.get("steps") or [],
+        "tg": thoi_gian.ngan(rec.get("thoi_gian_s")),
     }
