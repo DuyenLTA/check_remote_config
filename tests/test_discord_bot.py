@@ -400,30 +400,36 @@ def test_chi_nhan_build_o_kenh_project_va_qa_auto_bo_kenh_chung(monkeypatch):
     assert len(gui) == 1 and "không đọc được" in gui[0]
 
 
-def test_tin_build_cua_dev_duoc_tha_tim_tin_qa_gui_lai_thi_khong(monkeypatch):
+def test_chi_tin_build_cua_bot_assistant_duoc_tha_tim(monkeypatch):
     monkeypatch.setattr(d.bot_hoi_dap, "la_cau_hoi", lambda bot, m: False)
+    monkeypatch.setattr(d.bot_nhan_build.bot_kenh_project, "la_bot_dev", lambda i: i == 6)
     bot = object.__new__(d.BuildBot)
     bot.kenh_qa, bot.kenh_build, bot.duyet, bot.role = 1, {1}, set(), 0
     bot.q = SimpleNamespace(tin={1: {"ma": "AIP882", "version": "4.4.0 (41)", "loai_job": "verify"}})
     bot.get_channel = lambda cid: SimpleNamespace(send=None)
 
-    def tin(kenh_id, ten):
+    def tin(kenh_id, ten, nguoi_gui=SimpleNamespace(bot=True, id=6),
+            chu="Bản build **AIP882---AI-Video** v4.4.0 (41) đã được hoàn thiện. apply tutorial 3.6.1"):
         tha = []
 
         async def add_reaction(e):
             tha.append(e)
-        m = SimpleNamespace(author=SimpleNamespace(bot=False, id=5), webhook_id=None, guild=SimpleNamespace(id=9),
+        m = SimpleNamespace(author=nguoi_gui, webhook_id=None, guild=SimpleNamespace(id=9),
                             channel=SimpleNamespace(id=kenh_id, name=ten), jump_url="u", add_reaction=add_reaction,
-                            content="Bản build **AIP882---AI-Video** v4.4.0 (41) đã được hoàn thiện. apply tutorial 3.6.1")
+                            content=chu)
         return m, tha
-    m, tha = tin(8, "aip882-artspire-official-group")
+    m, tha = tin(8, "aip882-artspire-official-group")             # bot Assistant cua dev gui build: tha
     asyncio.run(bot.on_message(m))
     assert tha == ["❤️"]
+    m, tha = tin(8, "aip882-artspire-official-group", SimpleNamespace(bot=False, id=5),
+                 "con này đẩy version như nào thế chị, vâng AIP882 4.4.0 (41) ạ ?")   # nguoi hoi lai: khong tha
+    asyncio.run(bot.on_message(m))
+    assert tha == []
     m, tha = tin(1, "qa-auto")                                    # QA gui lai o qa-auto: khong tha
     asyncio.run(bot.on_message(m))
     assert tha == []
     bot.duyet, bot.role = {5}, 0                                  # QA nhan o kenh project (bao rls): bo qua
-    m, tha = tin(8, "aip882-artspire-official-group")
+    m, tha = tin(8, "aip882-artspire-official-group", SimpleNamespace(bot=False, id=5))
     asyncio.run(bot.on_message(m))
     assert tha == []
 

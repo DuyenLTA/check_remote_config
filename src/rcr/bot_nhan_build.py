@@ -51,7 +51,10 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
             await kenh.send(f"Bot không đọc được mã app + version (dạng `AIP922 v3.7.0 (30)`) "
                             f"trong tin báo build — QA xem giúp: {m.jump_url}")
         return
-    if m.channel.id != bot.kenh_qa:     # tin build cua dev: tha tim bao da nhan (user chot 30/10/2026)
+    # Chi tha tim vao tin bot Assistant cua dev gui build (user chot 03/11/2026): nguoi trong kenh project
+    # hoi lai version ("day version nhu nao the chi, vang 3.7.0 (30) a?") van doc ra ma + version nhung
+    # khong phai tin bao build -> khong tha.
+    if m.channel.id != bot.kenh_qa and bot_kenh_project.la_bot_dev(m.author.id):
         await tha_tim(m)
     cu = [t for t in bot.q.tin.values() if t.get("ma") == tin["ma"] and t.get("version") == tin["version"]]
     if cu:
