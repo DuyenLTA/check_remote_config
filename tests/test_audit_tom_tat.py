@@ -30,6 +30,12 @@ def test_doc_trang_that():
     assert "RemoteConfigRepository" in tt["canh_bao"] and "<" not in tt["canh_bao"]
 
 
+def test_doc_trang_mau_statchip():
+    tt = at.doc((Path(__file__).parent / "fixtures" / "audit-artifact-aip886-statchip.html").read_text("utf-8"))
+    assert (tt["khop"], tt["tong"], tt["lech"], tt["ngoai_sheet"]) == (54, 54, 0, 10)
+    assert tt["luc"] == "2026-11-02T09:31:15+00:00"
+
+
 @pytest.mark.parametrize("txt", ["", "<html>khong co gi</html>", '<div class="bigfrac"><span class="n">x</span>'])
 def test_doc_hong_tra_none(txt):
     assert at.doc(txt) is None
