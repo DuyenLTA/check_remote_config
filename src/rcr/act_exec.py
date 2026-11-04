@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-from . import act_resolver, device_app, device_motion, net_ctl, quan_sat
+from . import act_compound, act_resolver, device_app, device_motion, log_moc, net_ctl, quan_sat
 
 # Cho SDK co co hoi retry sau khi mang len lai, truoc khi doc log.
 CHO_SAU_KHI_CO_MANG = 6.0
@@ -97,16 +97,79 @@ async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop
     elif isinstance(action, act_resolver.TapId):
         await _bam_khi_hien(client, serial, action, record, ctx)
     elif isinstance(action, act_resolver.Background):
+        moc = await log_moc.bay_gio(client, serial)
         await device_motion.home(client, serial)
         ctx["o_nen"] = True
-        await asyncio.sleep(action.seconds)
+        if action.seconds == act_compound.CHO_NEN_MAC_DINH and moc:
+            record["cho_nen_giay"] = await _cho_ad_resume_load(client, serial, moc, action.seconds)
+        else:
+            await asyncio.sleep(action.seconds)
     elif isinstance(action, act_resolver.MoLai):
         await device_app.launch(client, serial, ctx["package"])
         await device_app.wait_foreground(client, serial, ctx["package"])
         ctx["o_nen"] = False
         await asyncio.sleep(CHO_SAU_THAO_TAC)
+    elif isinstance(action, act_resolver.ChonMotNgonNgu):
+        record["ngon_ngu"] = await _chon_mot_ngon_ngu(client, serial, action.thu_tu, ctx)
+    elif isinstance(action, act_resolver.ThongBao):
+        await client.shell(serial, "cmd", "statusbar", "expand-notifications")
+        await asyncio.sleep(action.seconds)
+        await client.shell(serial, "cmd", "statusbar", "collapse")
+        await asyncio.sleep(CHO_SAU_THAO_TAC)
+    elif isinstance(action, act_resolver.KillMoLai):
+        await client.shell(serial, "am", "force-stop", ctx["package"])
+        await asyncio.sleep(1.0)
+        if action.mo_lai:
+            await device_app.launch(client, serial, ctx["package"])
+            await device_app.wait_foreground(client, serial, ctx["package"])
+            ctx["o_nen"] = False
+        await asyncio.sleep(CHO_SAU_THAO_TAC)
     elif isinstance(action, act_resolver.Rotate):
         record["xoay"] = await device_motion.xoay(client, serial, action.orientations)
+
+
+# TC khong ghi so giay o nen: cho toi khi ad resume (AOA / inter / native full) load xong - thanh cong hay khong fill
+# deu duoc - roi mo lai. Do 03/11/2026 AIP936: AOA load xong sau 4-6s, cho cung 10s phi ~5s moi lan resume.
+CHO_NEN_TOI_THIEU = 3.0
+# CHI ket qua load cua AOA (app_open): dung o bat ky ad nao load xong (native man Question) thi mo lai truoc khi
+# AOA kip request -> resume khong hien -> FAIL gia (thu 03/11/2026 Pixel 6 RG01-12). Inter / native full resume
+# khong nhan ra duoc o day -> cho du `toi_da`.
+LOAD_XONG_RE = r"trackAdLoad(?:Success|Failed)[^\n]*adType:\s*app_open"
+
+
+async def _cho_ad_resume_load(client, serial: str, moc: str, toi_da: float) -> float:
+    import re
+    bat_dau = time.monotonic()
+    await asyncio.sleep(CHO_NEN_TOI_THIEU)
+    while time.monotonic() - bat_dau < toi_da:
+        out, _, _ = await client.shell(serial, "logcat", "-d", "-T", moc, "-s", "AdEventLogger:V")
+        if re.search(LOAD_XONG_RE, out or ""):
+            await asyncio.sleep(1.0)          # de SDK ghi xong trang thai truoc khi mo lai
+            break
+        await asyncio.sleep(1.0)
+    return round(time.monotonic() - bat_dau, 1)
+
+
+async def _chon_mot_ngon_ngu(client, serial: str, thu_tu: int, ctx: dict) -> str:
+    """Bam dong ngon ngu thu `thu_tu` trong cac dong chon duoc ngay (anh em co checkboxLanguageItem). Tra ten."""
+    from . import ui_dump
+    nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+    nhom = {}
+    for n in nodes:
+        nhom.setdefault(n.parent_id, []).append(n)
+    dong = [n for n in nodes if n.resource_id == "titleLanguageItem" and n.visible and not n.bounds.empty
+            and any(a.resource_id == "checkboxLanguageItem" for a in nhom.get(n.parent_id, []))]
+    if not dong:
+        raise act_resolver_loi("không thấy dòng ngôn ngữ nào chọn được ngay trên màn")
+    n = dong[min(thu_tu, len(dong) - 1)]
+    await device_app.tap(client, serial, *n.bounds.center)
+    await asyncio.sleep(CHO_SAU_THAO_TAC)
+    return n.text
+
+
+def act_resolver_loi(msg: str):
+    from .models import RcError
+    return RcError(msg)
 
 
 async def _vuot(client, serial: str, action, record: dict, ctx: dict) -> None:

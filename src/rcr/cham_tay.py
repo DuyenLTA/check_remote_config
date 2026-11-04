@@ -89,10 +89,55 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
             "cham_tay": cu + [{"dong": n, "v": ket, "ly_do": ly_do.strip(), "ai": ai, "luc": ngay} for n in dong]}
 
 
+def _chuan(s) -> str:
+    return " ".join(str(s or "").split())
+
+
+def dung_lai(records: list[dict], cu: list[dict]) -> tuple[list[dict], int]:
+    """Dong chua PASS/FAIL cua luot moi ma luot cu (CUNG build + config) da cham tren may, cung cau ky vong -> dung
+    lai ket qua + anh. Luot 03/11/2026 AIP936: 44 dong phai chep tay bang script. Tra (records moi, so dong)."""
+    theo_key = {r.get("key"): r for r in cu}
+    ra, dem = [], 0
+    for r in records:
+        c = theo_key.get(r.get("key"))
+        if not c:
+            ra.append(r)
+            continue
+        cl = c.get("lines") or []
+        for i, l in enumerate(list(r.get("lines") or [])):
+            if l.get("v") in (PASS, FAIL) or i >= len(cl) or _chuan(cl[i].get("e")) != _chuan(l.get("e")):
+                continue
+            ai, sep, ly = (cl[i].get("r") or "").partition(" chấm tay: ")
+            if not sep:
+                continue
+            r = cham(r, [i + 1], cl[i]["v"], f"lượt trước cùng build + config: {ly}", ai=ai or "Claude")
+            dem += 1
+        if r is not c and c.get("anh_tay") and r.get("cham_tay"):
+            co = {a["ten"] for a in r.get("anh_tay") or []}
+            r = {**r, "anh_tay": (r.get("anh_tay") or []) + [a for a in c["anh_tay"] if a["ten"] not in co]}
+        ra.append(r)
+    return ra, dem
+
+
 def chay(args, log_fn) -> dict:
-    """`--cham-tay FILE --case KEY --dong N --ket PASS --ly-do "..."`: sua file luot, dung lai report."""
+    """`--cham-tay FILE --case KEY --dong N --ket PASS --ly-do "..."`: sua file luot, dung lai report.
+    `--cham-tay FILE --dung-lai FILE_CU`: dung lai moi dong luot cu da cham tren may (cung build + config)."""
     data = luot_file.doc(args.cham_tay, args.package)
     records = data["records"]
+    if getattr(args, "dung_lai", ""):
+        if getattr(args, "case", ""):
+            raise RcError("--dung-lai áp cho cả lượt, không kèm --case")
+        cu = luot_file.doc(args.dung_lai, args.package)["records"]
+        records, dem = dung_lai(records, cu)
+        log_fn(f"Dùng lại {dem} dòng đã chấm trên máy ở {args.dung_lai}")
+        meta = {k: v for k, v in data.items() if k not in ("records", "phien_ban", "xong")}
+        report = args.report or data.get("report") or ""
+        if report:
+            run_batch.ghi_report(luot_file.baseline_tu(data), data.get("tc") or {}, records,
+                                 args.app_label or data.get("app_label", ""), report, log_fn)
+            meta["report"] = report
+        luot_file.ghi(Path(args.cham_tay), meta, records, bool(data.get("xong")))
+        return {"package": args.package, "dung_lai": dem, "report": report, "luot": args.cham_tay}
     vi_tri = [i for i, r in enumerate(records) if r.get("key") == args.case]
     if len(vi_tri) != 1:
         co = ", ".join(r.get("key", "?") for r in records[:8])

@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import re
 
-from .act_types import (Action, Background, ChonNgonNgu, GoTo, MoLai, Net, NeedsHuman, NoOp, Rotate, Seq,
+from .act_types import (Action, Background, ChonMotNgonNgu, ChonNgonNgu, KillMoLai, ThongBao, GoTo, MoLai, Net, NeedsHuman, NoOp, Rotate, Seq,
                         Swipe, Tap, TapId, Wait, Watch, XemTag)
 from . import act_compound, act_cau_fo, net_ctl
 from .act_cau_fo import DI_QUA, MO_LAI_TU_RE, RA_KHOI_OB  # noqa: F401 - case_drive / act_exec dung qua day
@@ -98,6 +98,11 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     # "Tu OB1 vuot sang OB2": ve "Tu <man>" chi noi app dang dung o dau (buoc
     # truoc da lai toi) - bo di de cau con lai dich nhu cau vuot thuong.
     text = TU_MAN_RE.sub("", text, count=1) or text
+    # Thao tac he thong (keo thanh thong bao, kill app) xet TRUOC: cau co "vuot len dong" / "vuot khoi Recent" ma
+    # roi vao luat vuot la vuot man hinh app - thao tac sai ma van ra ket qua (AIP936 RG08-03/05 03/11/2026).
+    he_thong = act_compound.thao_tac_he_thong(text)
+    if he_thong is not None:
+        return he_thong
     ghep = act_compound.resolve(text, nodes, resolve)
     if ghep is not None:
         return ghep

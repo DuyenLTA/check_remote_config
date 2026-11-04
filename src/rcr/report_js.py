@@ -15,7 +15,7 @@ const LABEL = {PASS: "PASS", FAIL: "FAIL", BLOCKED: "BLOCKED", NA: "N/A"};
 const THAOTAC = {
   tap: "bấm", swipe: "vuốt", wait: "chờ", goto: "lái qua luồng FO",
   net: "đổi trạng thái mạng", noop: "không cần thao tác",
-  needs_human: "tool không tự làm được", background: "đưa app xuống nền",
+  needs_human: "tool không tự làm được", background: "đưa app xuống nền", thong_bao: "kéo thanh thông báo", chon_mot_ngon_ngu: "chọn một ngôn ngữ", kill: "tắt hẳn app",
   resume: "đưa app lên lại", rotate: "xoay màn hình", seq: "chuỗi thao tác",
   watch: "theo dõi màn (đo thời gian)", chon_ngon_ngu: "chọn ngôn ngữ ở LFO",
   chup_man: "chụp màn đi qua khi lái luồng", xem_tag: "đọc log tag (bật tester mode nếu cần)",

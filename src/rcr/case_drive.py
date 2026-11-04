@@ -110,6 +110,7 @@ def blocking_screen(package: str, pkg: str, activity: str) -> str:
 # Nhin tiep bay nhieu giay sau cu bam X tool tu lam: du thay trang roi di + man ke.
 SAU_TU_BAM_X = 6.0
 # Cho nut dong cua inter con che sau buoc cuoi (nut bam duoc sau ~5s, nhu luat AdActivity).
+CHO_SAU_DONG_AD = 2.0
 CHO_NUT_DONG_AD = 25.0   # doi quang cao chay het dem nguoc (fo_flow.TRAN_DEM_NGUOC 20s) roi moi dong
 
 
@@ -333,6 +334,14 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
     if dong:
         ra["dong_ad"] = dong
         log_fn(f"    {dong}")
+        if "AdActivity" in (cuoi.get("activity") or ""):
+            # Dong "dong ad resume -> ve dung man X": man cuoi chup luc ad con che (AdActivity). Chup lai SAU khi
+            # dong de cham man app quay ve (thu 03/11/2026 Pixel 6 RG01-04/06: FAIL gia "dang o AdActivity").
+            await asyncio.sleep(CHO_SAU_DONG_AD)
+            sau = await drive_probes._chup_ket(client, serial, package, len(done) + 1,
+                                               ctx["trang_cu"], ctx["vuot_sau"], dump_cu)
+            done.append(sau)
+            ra["final_sau_dong"] = sau
     if thu_vuot:
         ra["thu_vuot"] = await drive_probes._thu_vuot(client, serial, package, cuoi, len(done) + 1)
         done.append(ra["thu_vuot"]["anh"])

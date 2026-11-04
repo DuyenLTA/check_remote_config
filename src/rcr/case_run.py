@@ -16,6 +16,7 @@ gia tri that nua.
 from __future__ import annotations
 
 import asyncio
+import re
 import logging
 from dataclasses import replace
 from pathlib import Path
@@ -307,6 +308,8 @@ async def _lai_cham_tra(client, baseline, overrides, keep, out_dir, steps, expec
         mp = case_cham_them.mau_primary(expects, out["drive"], primary, ban_dich)
         if mp:
             out["drive"]["mau_primary"] = mp
+    if result.ok and any(SPLASH_ADS_RE.search(e or "") for e in expects):
+        await _cho_qua_splash(client, baseline, log_fn)
     if noi_tiep:
         # Chuoi: dong chi PASS khi PASS ca tren log RIENG case (dieu "X hien" phai xay ra trong case nay) lan log
         # DON tu dau chuoi (dieu "khong load X" khong duoc xay ra tu splash). Lech -> run_batch chay rieng case.
@@ -352,6 +355,30 @@ async def _lai_cham_tra(client, baseline, overrides, keep, out_dir, steps, expec
         await rc_patch.restore(client, baseline)
         out["restored"] = True
     return out
+
+
+# Dong Expected ve ad o Splash (inter splash 102, "load tai Splash", 105, 202 high1 vao LFO): cham khi app con o
+# Splash thi inter chua kip request -> NEEDS_HUMAN "tool chua lai toi man sau" (AIP936 RG01-02/03, OG01-01 03/11).
+SPLASH_ADS_RE = re.compile(r"inter\s*splash|tại\s*splash|tai\s*splash|\b10[25]\b|10[25][-_]spl|ch[ờo]\s+inter"
+                           r"|show\s+inter", re.I)
+CHO_SPLASH_S = 25.0
+
+
+async def _cho_qua_splash(client, baseline, log_fn=_noop) -> None:
+    """App con o SplashActivity -> cho toi khi sang man khac (inter splash AdActivity / LFO), toi da 25s."""
+    import time
+    het = time.monotonic() + CHO_SPLASH_S
+    dau = True
+    while time.monotonic() < het:
+        _, act = await device_app.focus(client, baseline.serial)
+        if "Splash" not in (act or ""):
+            if not dau:
+                log_fn(f"    da qua Splash ({(act or '?').split('.')[-1]}) -> doc log")
+            return
+        if dau:
+            log_fn("    app con o Splash -> cho inter splash / man sau roi moi doc log (toi da 25s)")
+            dau = False
+        await asyncio.sleep(1.0)
 
 
 async def _hien_cta_neu_can(client, baseline, drive: dict, expects, mau_can, log_fn) -> None:

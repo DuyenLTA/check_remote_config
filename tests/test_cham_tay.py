@@ -116,3 +116,13 @@ def test_report_khong_ghi_do_tay():
     d = report_row._ly_do("Claude chấm tay: Đo tay 03/11 cùng build 1.9.0 (11) + cùng config (lượt trước): "
                           "Đo tay (out/manual/og0102.log): chọn 1 item")
     assert d == {"r": "Đo trên máy (out/manual/og0102.log): chọn 1 item", "tay": True}
+
+
+def test_dung_lai_dong_luot_cu_da_cham_tren_may_cung_cau_ky_vong():
+    cu = [cham_tay.cham(REC, [1], "PASS", "screencap: ảnh phủ kín 1080x2400")]
+    moi_ky_vong_doi = {**REC, "key": "3.4.0#UI-001", "lines": [dict(REC["lines"][0], e="Ảnh KHÁC")] + REC["lines"][1:]}
+    ra, dem = cham_tay.dung_lai([REC], cu)
+    assert dem == 1 and ra[0]["lines"][0]["v"] == "PASS"
+    assert "lượt trước cùng build + config: screencap" in ra[0]["lines"][0]["r"]
+    ra2, dem2 = cham_tay.dung_lai([moi_ky_vong_doi], cu)          # cau ky vong doi -> khong dung lai
+    assert dem2 == 0 and ra2[0]["lines"][0]["v"] == "NEEDS_HUMAN"

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 
-from .act_types import Background, MoLai, NeedsHuman, NoOp, Rotate, Seq, Swipe, Tap, TapId, Wait, Watch
+from .act_types import Background, ChonMotNgonNgu, KillMoLai, MoLai, NeedsHuman, ThongBao, NoOp, Rotate, Seq, Swipe, Tap, TapId, Wait, Watch
 
 # "Tai t0+2s: vuot trai" - moc tinh tu luc vua toi man. `case_drive` cho toi
 # moc roi moi lam ve sau dau hai cham.
@@ -33,6 +33,12 @@ KHONG_THAO_TAC_RE = re.compile(r"^\s*kh[ôo]ng\s+thao\s+t[áa]c\b", re.I)
 NOI_TIEP_RE = re.compile(r"^\s*(?:sau\s+[đd][óo]|r[ồo]i|ti[ếe]p\s+(?:theo|[đd][óo]))\s*,?\s+", re.I)
 # "O OB3, cho 3s", "O man ke cho them 5s" - ve dau chi noi dang o dau.
 O_MAN_CHO_RE = re.compile(r"^\s*[ởo]\s+[^,]{1,30}?,?\s*(?=(?:chờ|cho|đợi|doi)\b)", re.I)
+# "Keo thanh notification xuong roi vuot len dong (khong tap notification)" - thao tac he thong, khong phai vuot app.
+THONG_BAO_RE = re.compile(r"(?:kéo|keo|vuốt|vuot|mở|mo)\b.{0,25}(?:notification|thanh\s+th[oô]ng\s+b[aá]o|status\s*bar)", re.I)
+# "Vuot app khoi Recent (kill), mo lai tu launcher", "Kill app", "Tat han app".
+KILL_RE = re.compile(r"\bkill\b|khỏi\s+recent|khoi\s+recent|force[\s-]*stop|tắt\s+hẳn\s+app|tat\s+han\s+app", re.I)
+MO_LAI_KILL_RE = re.compile(r"m[ởo]\s+l[ạa]i|launcher|relaunch|reopen", re.I)
+CHO_THONG_BAO = 3.0
 HOME_RE = re.compile(r"\bnh[ấa]n\s+home\b|\bb[ấa]m\s+home\b|\bbackground\b", re.I)
 MO_LAI_RE = re.compile(r"m[ởo]\s*l[ạa]i|\breopen\b|quay\s*l[ạa]i\s*app", re.I)
 MO_LAI_LY_DO = "mở lại app bằng icon (TC ghi Recent — nhiều máy không coi Recent là ẩn app)"
@@ -150,3 +156,22 @@ def _chuoi(text: str, nodes, base):
 def _bam_x(nodes):
     """Nut X: cho no hien roi tap (xem TapId)."""
     return TapId(VAI_NUT_X, "bấm nút X — chờ nút hiện rồi mới bấm")
+
+
+# "Chon ngon ngu.", "Click 1 ngon ngu khac.", "Tap chon 1 ngon ngu" - KHONG neu ten ngon ngu (co ten -> ChonNgonNgu).
+CHON_MOT_NN_RE = re.compile(r"^\s*(?:tap\s+)?(?:chọn|chon|click|bấm|bam|tap)\s+(?:1\s+|một\s+|mot\s+)?ngôn\s+ngữ(?P<khac>\s+khác)?\s*\.?\s*$", re.I)
+
+
+def thao_tac_he_thong(text: str):
+    """Keo thanh thong bao / kill app / chon mot ngon ngu bat ky -> thao tac; cau khac -> None."""
+    m = CHON_MOT_NN_RE.match(text)
+    if m:
+        khac = bool(m.group("khac"))
+        return ChonMotNgonNgu(1 if khac else 0, "bấm một dòng ngôn ngữ chọn được ngay"
+                              + (" (khác dòng đầu)" if khac else ""))
+    if THONG_BAO_RE.search(text):
+        return ThongBao(CHO_THONG_BAO, "kéo thanh thông báo xuống, giữ 3s rồi đóng (không tap thông báo)")
+    if KILL_RE.search(text):
+        mo = bool(MO_LAI_KILL_RE.search(text))
+        return KillMoLai(mo, "tắt hẳn app (force-stop, như vuốt khỏi Recent)" + (" rồi mở lại từ launcher" if mo else ""))
+    return None

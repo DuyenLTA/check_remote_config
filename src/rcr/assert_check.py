@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 
 from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_bo_cuc, assert_chu, assert_indicator,
-               assert_khong_co_ad,
+               assert_khong_co_ad, assert_nut_lfo, assert_resume,
                assert_man_khong,
                assert_anh_content, assert_mau, assert_ads, assert_splash_media, assert_tag,
                assert_timing, assert_trong_luc, assert_ui, ui_names)
@@ -106,6 +106,14 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
 
     # "Trong luc X dang hien thi: ..." - X khong show thi ve sau dung mot cach vo nghia.
     ket = assert_trong_luc.cham(text, list((ads.get("units") or {}).values()))
+    if ket:
+        return ket
+    # Ad resume (501 AOA / 502 native full / 503 inter) khi mo lai app - truoc day roi xuong "phai nhin mat".
+    ket = assert_resume.cham(text, ads, drive or {})
+    if ket:
+        return ket
+    # Nut Next / tick man ngon ngu (buttonLanguageNext + ban tay lottieHandPoint) - khong phai nut Next cua OB.
+    ket = assert_nut_lfo.cham(text, drive or {})
     if ket:
         return ket
     # "Khong co native ad, hien thi icon SWIPE + text 'Swipe to next'": ve ad o vi tri case tat + ve chu.

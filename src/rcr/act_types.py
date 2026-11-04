@@ -182,6 +182,46 @@ class MoLai:
 
 
 @dataclass(frozen=True, slots=True)
+class ThongBao:
+    """Keo thanh thong bao xuong roi dong lai, KHONG tap thong bao nao (AIP936 RG08-03 03/11/2026: truoc day cau
+    "Keo thanh notification xuong" bi dich thanh vuot man hinh app)."""
+
+    seconds: float
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "thong_bao", "seconds": self.seconds, "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
+class ChonMotNgonNgu:
+    """"Chon ngon ngu.", "Click 1 ngon ngu khac", "Tap chon 1 ngon ngu": bam mot dong ngon ngu CHON DUOC NGAY (co
+    checkboxLanguageItem, khong co mui ten mo rong). `thu_tu` 0 = dong dau, 1 = dong khac dong dau (AIP936
+    RG01-04/05 03/11/2026: truoc day tool tim chu "ngon ngu" tren man -> khong thay -> NEEDS_HUMAN)."""
+
+    thu_tu: int
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "chon_mot_ngon_ngu", "thu_tu": self.thu_tu, "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
+class KillMoLai:
+    """Tat han app (force-stop - tuong duong vuot khoi Recent) roi mo lai tu launcher (AIP936 RG08-05 03/11/2026:
+    truoc day "Vuot app khoi Recent (kill)" bi dich thanh vuot man hinh app, app khong he bi kill)."""
+
+    mo_lai: bool
+    reason: str
+
+    @property
+    def summary(self) -> dict:
+        return {"kind": "kill", "mo_lai": self.mo_lai, "reason": self.reason}
+
+
+@dataclass(frozen=True, slots=True)
 class ChonNgonNgu:
     """"Chon Francais o LFO1": ngon ngu da duoc `fo_flow` chon khi lai qua LFO (xem `fo_ngon_ngu`); buoc nay chi
     lai qua LFO neu app con dung truoc do."""
