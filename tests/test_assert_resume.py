@@ -100,3 +100,32 @@ def test_dong_progress_cho_inter_cung_cho_qua_splash():
     from rcr import case_run
     assert case_run.SPLASH_ADS_RE.search("Progress chạy 0 → 95% trong ~10s, giữ 95% chờ inter; inter sẵn sàng → "
                                          "fill 100% rồi show inter.")
+
+
+def _ra_nen(san_sang):
+    return {"steps": [{"step": "Bấm Home hệ thống → mở lại từ Recent.", "aoa_san_sang": san_sang}]}
+
+
+def test_aoa_chua_load_xong_luc_mo_lai_la_blocked_khong_phai_fail():
+    """Pixel 6 04/11: AOA load sau khi da mo lai -> khong show la do kho / mang, khong ket luan loi app."""
+    ads = {"units": {"a": {"type": "app_open", "unit": "*****440", "requested": 0, "loaded": 1, "shown": 0,
+                           "rc_keys": ["id_501_aoa_high"]}}}
+    r = assert_resume.cham("Ad resume AOA 501_aoa_high hiển thị.", ads, _ra_nen(False))
+    assert r["verdict"] == "BLOCKED" and "chưa load xong" in r["reason"]
+    r = assert_resume.cham("Ad resume AOA 501_aoa_high hiển thị.", ads, _ra_nen(True))
+    assert r["verdict"] == "FAIL" and "load sẵn" in r["reason"]
+    # Khong co moc san sang (luot cu): co load ma khong show -> khong ro truoc/sau -> nguoi xem, khong FAIL bua.
+    assert assert_resume.cham("Ad resume AOA 501_aoa_high hiển thị.", ads, RA_NEN)["verdict"] == "NEEDS_HUMAN"
+
+
+def test_chuoi_native_da_fail_3_lan_o_case_truoc_thi_thoi_reload_la_dung():
+    d = {"steps": [{"step": "Bấm Home hệ thống → mở lại từ Recent."}],
+         "final": {"activity": "x.onboarding.question.VslTemplate4QuestionActivity"}}
+    dong = "Đóng ad resume → về đúng Question, reload 305-onb5-n-native-high (reload OK → ad mới, fail → giữ ad cũ)."
+    hong = {"n": {"unit": "*****669", "requested": 4, "loaded": 0, "load_failed": 4, "shown": 0,
+                  "rc_keys": ["id_305_onb5_n_native_high"]}}
+    r = assert_resume.cham(dong, {"units": {}, "units_don": hong}, d)
+    assert r["verdict"] == "PASS" and "thôi reload" in r["reason"]
+    # Truoc do da load duoc ad -> resume phai reload; khong co request la FAIL that.
+    da_load = {"n": dict(hong["n"], loaded=1)}
+    assert assert_resume.cham(dong, {"units": {}, "units_don": da_load}, d)["verdict"] == "FAIL"

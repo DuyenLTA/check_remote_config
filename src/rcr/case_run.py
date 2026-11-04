@@ -154,9 +154,10 @@ async def _noi_tiep(client, baseline, overrides, out_dir, steps, expects, goto, 
 
 
 async def _cham_log(client, baseline, out: dict, overrides, expects, precondition, steps, result_ok: bool,
-                    log_fn=_noop) -> dict:
+                    log_fn=_noop, units_don=None) -> dict:
     """Doc log (ads / crash / FA / input) roi cham dong Expected vao `out`. Che do chuoi goi hai lan
-    (log rieng case va log don ca chuoi) - doc log theo `log_moc.TU`."""
+    (log rieng case va log don ca chuoi) - doc log theo `log_moc.TU`. `units_don`: unit ads cua log DON (lich su
+    ca chuoi) cho luat can biet chuyen truoc case, vd native da fail 3 lan o case truoc nen thoi reload."""
     # Cham case ads bang LOG, khong bang mat: inter load nhanh hon banner nen no
     # de len truoc khi kip nhin thay banner.
     if out.get("drive"):
@@ -164,6 +165,8 @@ async def _cham_log(client, baseline, out: dict, overrides, expects, preconditio
         # Dong "cach mep banner 12-16dp": bounds trong dump la px, can dpi de doi.
         out["drive"]["density"] = await device_app.density(client, baseline.serial)
     out["ads"] = await case_evidence._read_ads(client, baseline, overrides)
+    if units_don is not None:
+        out["ads"]["units_don"] = units_don
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
     out["events"] = await fa_log.doc(client, baseline.serial)
     qua_nhanh = fo_screens.can_qua_lfo_nhanh(precondition, *steps)
@@ -316,10 +319,16 @@ async def _lai_cham_tra(client, baseline, overrides, keep, out_dir, steps, expec
         with log_moc.doc_tu(None):
             don = await _cham_log(client, baseline, dict(out), overrides, expects, precondition, steps, result.ok)
         with log_moc.doc_tu(noi_tiep):
-            out = await _cham_log(client, baseline, out, overrides, expects, precondition, steps, result.ok, log_fn)
+            out = await _cham_log(client, baseline, out, overrides, expects, precondition, steps, result.ok, log_fn,
+                                  units_don=(don.get("ads") or {}).get("units") or {})
         out["chuoi_don"] = don.get("verdict", "")
         if out.get("verdict") != "PASS" or don.get("verdict") != "PASS":
             out["chuoi_khong_chac"] = f"log riêng case: {out.get('verdict')} · log dồn cả chuỗi: {don.get('verdict')}"
+            # Ghi ro dong nao lech de nguoi doc log biet vi sao phai chay rieng (truoc day chi co verdict tong).
+            for ten, kq in (("riêng", out), ("dồn", don)):
+                for d in ((kq.get("assert") or {}).get("lines") or []):
+                    if d.get("verdict") != "PASS":
+                        log_fn(f"      log {ten} · dòng {d.get('n')} {d.get('verdict')}: {str(d.get('reason'))[:160]}")
     else:
         out = await _cham_log(client, baseline, out, overrides, expects, precondition, steps, result.ok, log_fn)
     # Doc lai config SAU KHI cham: app fetch Firebase luc mo, lan fetch that

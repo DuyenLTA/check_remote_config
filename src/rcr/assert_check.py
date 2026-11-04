@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 
 from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_bo_cuc, assert_chu, assert_indicator,
-               assert_khong_co_ad, assert_luong_ad, assert_nut_lfo, assert_resume,
+               assert_giu_nguyen, assert_khong_co_ad, assert_luong_ad, assert_nut_lfo, assert_resume,
                assert_man_khong,
                assert_anh_content, assert_mau, assert_ads, assert_splash_media, assert_tag,
                assert_timing, assert_trong_luc, assert_ui, ui_names)
@@ -118,6 +118,11 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         return ket
     # Luong man quanh quang cao: sang Inter Splash, dong inter -> sang man X, chay lai tu Splash, Inter Splash 2,
     # Question chua chon (an CTA + ban tay).
+    # "Item da chon giu nguyen", "native X giu nguyen, khong reload": chi ket luan khi bang chung chac.
+    # Chay chuoi: "khong reload" phai xet ca lich su chuoi (log rieng case khong co lan load dau tien).
+    ket = assert_giu_nguyen.cham(text, list((ads.get("units_don") or ads.get("units") or {}).values()), drive or {})
+    if ket:
+        return ket
     ket = assert_luong_ad.cham(text, list((ads.get("units") or {}).values()), drive or {}, events)
     if ket:
         return ket

@@ -114,7 +114,7 @@ def _noi_tiep(monkeypatch, rieng: str, don: str) -> tuple[dict, list]:
     """Chay apply_case che do noi tiep, _cham_log gia: ket qua theo moc log dang doc."""
     doc = []
 
-    async def cham(client, baseline, out, overrides, expects, precondition, steps, result_ok, log_fn=None):
+    async def cham(client, baseline, out, overrides, expects, precondition, steps, result_ok, log_fn=None, units_don=None):
         moc = log_moc.TU.get()
         doc.append(moc)
         return {**out, "verdict": rieng if moc else don}

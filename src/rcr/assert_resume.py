@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 
 from . import assert_ui
-from .verdict_levels import FAIL, NEEDS_HUMAN, PASS, out
+from .verdict_levels import CONFIG_BLOCKED, FAIL, NEEDS_HUMAN, PASS, out
 
 RESUME_RE = re.compile(r"(?:ad|aoa|inter|native\s+full)\s+resume|resume\s+(?:ad|aoa|inter|50[123])", re.I)
 MA_RESUME_RE = re.compile(r"(?<!\d)(50[123])(?!\d)")
@@ -78,6 +78,14 @@ def cham(text: str, ads: dict, drive: dict) -> dict | None:
         nv = [u for m in native for u in units if u.get("requested") and
               any(f"_{m}_" in k or k.startswith(f"id_{m}_") for k in u.get("rc_keys") or [])]
         if not nv:
+            # Chay chuoi: log rieng case khong thay request vi native da fail >= 3 lan o case truoc -> app thoi
+            # reload (dung thiet ke QA chot 03/11/2026). Chi tinh khi lich su ca chuoi KHONG co lan load duoc nao.
+            truoc = [u for m in native for u in (ads.get("units_don") or {}).values()
+                     if any(f"_{m}_" in k or k.startswith(f"id_{m}_") for k in u.get("rc_keys") or [])]
+            hong = sum(u.get("load_failed", 0) for u in truoc)
+            if hong >= 3 and not any(u.get("loaded") for u in truoc):
+                return out(man["verdict"], f"{man['reason']}; native {'/'.join(native)} đã load hỏng {hong} lần ở "
+                           "các bước trước trong chuỗi, chưa load được lần nào — app thôi reload (đúng thiết kế)", text)
             return out(FAIL if man["verdict"] == PASS else man["verdict"],
                        f"{man['reason']}; native {'/'.join(native)} không có request nào trong lượt", text)
         tom = ", ".join(f"…{str(u['unit'])[-3:]} request {u['requested']} lần" for u in nv)
@@ -97,4 +105,17 @@ def cham(text: str, ads: dict, drive: dict) -> dict | None:
                    text)
     if not _da_ra_nen(drive):
         return out(NEEDS_HUMAN, "lượt chưa có bước đưa app ra nền rồi mở lại nên chưa có resume để chấm", text)
+    san_sang = [st["aoa_san_sang"] for st in (drive or {}).get("steps") or [] if "aoa_san_sang" in st]
+    if "501" in ma and san_sang:
+        if not any(san_sang):
+            # AOA chi show khi da load xong luc mo lai; chua load xong la do kho / mang, khong phai loi app.
+            return out(CONFIG_BLOCKED, "AOA chưa load xong lúc mở lại app (đã chờ ở nền tới 20s) — kho/mạng chậm, "
+                       "chưa tạo được điều kiện để resume hiện", text)
+        loaded = [u for u in cua if u.get("loaded")]
+        return out(FAIL, f"AOA đã load sẵn trước khi mở lại ({_ten(loaded)}) nhưng không show ad resume {vi_tri}",
+                   text)
+    co_load = [u for u in cua if u.get("loaded")]
+    if co_load:
+        return out(NEEDS_HUMAN, f"ad resume {vi_tri} có load ({_ten(co_load)}) nhưng không show, không rõ load xong "
+                   "trước hay sau lúc mở lại", text)
     return out(FAIL, f"đã đưa app ra nền và mở lại nhưng không có request nào của ad resume {vi_tri}", text)

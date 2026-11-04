@@ -97,11 +97,13 @@ async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop
     elif isinstance(action, act_resolver.TapId):
         await _bam_khi_hien(client, serial, action, record, ctx)
     elif isinstance(action, act_resolver.Background):
+        from . import sdk_probe
         moc = await log_moc.bay_gio(client, serial)
+        pid = await sdk_probe.pid_of(client, serial, ctx["package"]) if ctx.get("package") else ""
         await device_motion.home(client, serial)
         ctx["o_nen"] = True
         if action.seconds == act_compound.CHO_NEN_MAC_DINH and moc:
-            record["cho_nen_giay"] = await _cho_ad_resume_load(client, serial, moc, action.seconds)
+            record["cho_nen_giay"] = await _cho_ad_resume_load(client, serial, moc, action.seconds, pid, record)
         else:
             await asyncio.sleep(action.seconds)
     elif isinstance(action, act_resolver.MoLai):
@@ -144,26 +146,41 @@ CHO_QUA_SPLASH_SAU_KILL = 40.0
 # AOA kip request -> resume khong hien -> FAIL gia (thu 03/11/2026 Pixel 6 RG01-12). Inter / native full resume
 # khong nhan ra duoc o day -> cho du `toi_da`.
 LOAD_XONG_RE = r"trackAdLoad(?:Success|Failed)[^\n]*adType:\s*app_open"
-# Dong request ghi adType HOA (APP_OPEN), dong load ghi thuong -> so khong phan biet hoa thuong.
-REQUEST_AOA_RE = r"(?i)trackAdRequest[^\n]*adType:\s*app_?open"
-# May cham (Pixel 6 Android 17, 03/11/2026): AOA request ~5s sau Home nhung ~14s moi load xong -> het 10s da mo lai
-# truoc khi co ad -> resume khong hien. Da thay request AOA ma chua co ket qua thi cho them, toi da moc nay.
+# AOA "san sang" = trong log CUA TIEN TRINH app, su kien AOA cuoi cung la load thanh cong (chua bi show dung mat).
+# App gan nhu KHONG ghi dong trackAdRequest cho AOA (29 lan load / 1 dong request trong log 03-04/11/2026) nen
+# khong dua vao request de biet "dang load".
+AOA_SU_KIEN_RE = r"track(AdLoadSuccess|AdShowSuccess)[^\n]*adType:\s*app_open"
+# May cham (Pixel 6 Android 17, 03/11/2026): AOA ~14s sau Home moi load xong -> het 10s da mo lai truoc khi co ad
+# -> resume khong hien. Chua thay AOA san sang thi cho them, toi da moc nay.
 CHO_NEN_KEO_DAI = 20.0
 
 
-async def _cho_ad_resume_load(client, serial: str, moc: str, toi_da: float) -> float:
+def aoa_san_sang(log: str) -> bool:
+    import re
+    su_kien = re.findall(AOA_SU_KIEN_RE, log or "")
+    return bool(su_kien) and su_kien[-1] == "AdLoadSuccess"
+
+
+async def _cho_ad_resume_load(client, serial: str, moc: str, toi_da: float, pid: str = "",
+                              record: dict | None = None) -> float:
+    """Cho o nen toi khi AOA san sang (toi da CHO_NEN_KEO_DAI). Ghi `aoa_san_sang` vao record: mo lai luc AOA
+    chua load xong thi "resume khong hien" la do kho / mang, khong phai loi app."""
     import re
     bat_dau = time.monotonic()
     await asyncio.sleep(CHO_NEN_TOI_THIEU)
+    san_sang = False
     while True:
-        out, _, _ = await client.shell(serial, "logcat", "-d", "-T", moc, "-s", "AdEventLogger:V")
-        if re.search(LOAD_XONG_RE, out or ""):
+        loc = ["--pid", pid] if pid else ["-T", moc]
+        out, _, _ = await client.shell(serial, "logcat", "-d", *loc, "-s", "AdEventLogger:V")
+        san_sang = aoa_san_sang(out) if pid else bool(re.search(LOAD_XONG_RE, out or ""))
+        if san_sang:
             await asyncio.sleep(1.0)          # de SDK ghi xong trang thai truoc khi mo lai
             break
-        dang_load = bool(re.search(REQUEST_AOA_RE, out or ""))
-        if time.monotonic() - bat_dau >= (max(toi_da, CHO_NEN_KEO_DAI) if dang_load else toi_da):
+        if time.monotonic() - bat_dau >= max(toi_da, CHO_NEN_KEO_DAI):
             break
         await asyncio.sleep(1.0)
+    if record is not None:
+        record["aoa_san_sang"] = san_sang
     return round(time.monotonic() - bat_dau, 1)
 
 
