@@ -22,6 +22,7 @@ Nhieu may cam cung luc -> moi may chay mot build, cac may song song (build khac 
 File nay giu class bot, vong worker va `_chay_tren`; phan viec tach module rieng:
   bot_giao_dien (nut, menu, doc tin) | bot_nhan_build (tin bao build, hoi QA, xep verify)
   bot_nut_bam (nut bam, log Jira)    | bot_job_check / bot_job_verify (mot luot Check / verify)
+  bot_lenh_slash (/hang-doi, /check, /check-bug - chi bot chinh)
 Method `_xxx` mong giu lai de test va module khac goi / thay tung buoc.
 """
 
@@ -33,11 +34,12 @@ import socket
 from pathlib import Path
 
 import discord
+from discord import app_commands
 
 from . import (audit_tom_tat, bot_bat_tin_lo, bot_canh_may, bot_chay_claude, bot_cong_viec,  # noqa: F401 - test thay
                bot_dung_luot, bot_gui_lai, bot_hang_doi, bot_hoi_dap, bot_jira_rest, bot_job_check, bot_job_verify,
-               bot_kenh_project, bot_keo_sprint, bot_log_jira, bot_may_phu, bot_nhan_build, bot_nut_bam,
-               bot_tien_trinh)
+               bot_kenh_project, bot_keo_sprint, bot_lenh_slash, bot_log_jira, bot_may_phu, bot_nhan_build,
+               bot_nut_bam, bot_tien_trinh)
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .bot_giao_dien import XAM, XANH, noi_dung  # noqa: F401 - ten cu, test / module khac van dung
@@ -83,6 +85,11 @@ class BuildBot(discord.Client):
         self.jira_url, self.jira_token = env("JIRA_URL"), env("JIRA_PERSONAL_TOKEN")
         self.dev_ids = env("DISCORD_DEV_IDS")   # dev tag khi bao bug o kenh project (phay ngan cach)
         self.hoi_lock = asyncio.Lock()          # hoi dap: moi lan mot cau
+        # Lenh slash chi o bot chinh: may phu cung token, co CommandTree o ca hai thi hai ben cung tra loi lenh.
+        self.tree = None if self.la_phu else app_commands.CommandTree(self)
+        self.da_dong_bo_lenh = False
+        if self.tree is not None:
+            bot_lenh_slash.dang_ky(self)
 
     async def setup_hook(self):
         if self.la_phu:
@@ -103,6 +110,12 @@ class BuildBot(discord.Client):
                 await bot_may_phu.gui(await self._kenh_dieu_phoi(), "chinh_khoi_dong", {"may": "chinh"})
             except Exception as exc:         # noqa: BLE001
                 log.warning("khong bao duoc may phu: %s", exc)
+        if getattr(self, "tree", None) is not None and not self.da_dong_bo_lenh:
+            self.da_dong_bo_lenh = True          # moi lan khoi dong mot lan, reconnect khong dong bo lai
+            try:
+                await bot_lenh_slash.dong_bo(self)
+            except Exception:                # noqa: BLE001 - lenh slash loi khong duoc chan nhan build
+                log.exception("dong bo lenh slash loi")
         try:
             log.info("quet tin build bi lo: %d tin", await bot_bat_tin_lo.quet(self))
         except Exception:                    # noqa: BLE001 - quet loi khong duoc lam chet bot
@@ -152,8 +165,6 @@ class BuildBot(discord.Client):
             return
         if self.la_phu:                      # may phu: tin build / hoi dap la viec cua bot chinh
             return
-        if not m.author.bot and await self._nhan_link_drive(m):
-            return
         if bot_hoi_dap.la_cau_hoi(self, m):      # nhan rieng / tag bot -> hoi dap, khong doc nhu tin build
             await bot_hoi_dap.tra_loi_tin(self, m, REPO, OUT)
             return
@@ -161,9 +172,6 @@ class BuildBot(discord.Client):
 
     async def _hoi_lai(self, m: discord.Message, tin: dict):
         await bot_nhan_build.hoi_lai(self, m, tin)
-
-    async def _nhan_link_drive(self, m: discord.Message) -> bool:
-        return await bot_nhan_build.nhan_link_drive(self, m)
 
     async def _xep_verify(self, c: dict, kenh) -> None:
         await bot_nhan_build.xep_verify(self, c, kenh)

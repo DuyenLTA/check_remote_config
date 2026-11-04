@@ -157,4 +157,3 @@ def test_tin_da_cai_bao_nguon_va_may():
     c = {"ma": "AIP882", "ten": "AI-Video", "version": "4.4.0 (41)", "package": "p", "loai_ban": "debug"}
     t = v.tin_da_cai(c, "Pixel_7 (06K7)", "/rc-check")
     assert "App Tester" in t and "Pixel_7 (06K7)" in t and "/rc-check" in t and "debug" in t
-    assert "link Drive" in v.tin_da_cai({**c, "drive": "https://drive"}, "x", "verify bug")

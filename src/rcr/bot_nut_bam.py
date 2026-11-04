@@ -40,6 +40,9 @@ async def xu_ly(bot, it: discord.Interaction) -> None:
     if hanh_dong == "huy":
         await bot._huy(it, c)
         return
+    if hanh_dong == "huyhd":             # nut Huy trong bang /hang-doi: tin bang khong phai tin cua luot
+        await huy_tu_hang_doi(bot, it, c)
+        return
     if hanh_dong == "dung":
         await bot_dung_luot.bam_dung(bot, it, c)
         return
@@ -52,8 +55,7 @@ async def xu_ly(bot, it: discord.Interaction) -> None:
             tom_tat = f"⛔ Lỗi: {exc}"
         await it.followup.send(tom_tat[:2000], ephemeral=True)
         return
-    if not c.get("drive"):               # tin hoi tu truoc 31/10/2026 con ghi "debug" -> ban release
-        c = {**c, "loai_ban": build_ma_app.loai_ban(c)}
+    c = {**c, "loai_ban": build_ma_app.loai_ban(c)}   # tin hoi tu truoc 31/10/2026 con ghi "debug" -> ban release
     vi_tri = bot.q.them({**c, "nguoi_duyet": it.user.id})   # check | thu lai
     if vi_tri is None:
         await it.response.send_message("Build này đã trong hàng đợi.", ephemeral=True)
@@ -70,13 +72,33 @@ async def huy(bot, it: discord.Interaction, c: dict) -> None:
             "Lượt này đang chạy trên máy — bấm **Dừng** ở tin của lượt nếu cần." if kq == "dang_chay"
             else "Build này không còn trong hàng đợi.", ephemeral=True)
         return
-    ghi = f"🚫 Đã huỷ khỏi hàng đợi — {it.user.mention}"
+    await it.response.edit_message(**tin_sau_huy(c, it.user.mention))
+
+
+async def huy_tu_hang_doi(bot, it: discord.Interaction, c: dict) -> None:
+    """Huy tu bang /hang-doi (tin rieng cua nguoi go lenh): bo khoi hang roi sua TIN CUA LUOT o kenh QA
+    giong bam Huy tai cho, tra loi rieng cho nguoi bam."""
+    kq = bot.q.huy(c["msg_id"])
+    if kq != "da_huy":
+        await it.response.send_message(
+            "Lượt này đang chạy trên máy — bấm **Dừng** nếu cần." if kq == "dang_chay"
+            else "Build này không còn trong hàng đợi.", ephemeral=True)
+        return
+    await it.response.send_message(f"🚫 Đã huỷ {bot_cong_viec.dau_tin(c)} khỏi hàng đợi.", ephemeral=True)
+    try:
+        await (await bot._tin_qa(c["msg_id"])).edit(**tin_sau_huy(c, it.user.mention))
+    except discord.HTTPException as exc:      # tin luot da xoa: job van da bo khoi hang
+        log.warning("khong sua duoc tin luot sau khi huy: %s", exc)
+
+
+def tin_sau_huy(c: dict, nguoi: str) -> dict:
+    """Noi dung + nut cua tin luot sau khi bi huy khoi hang (nut Huy o tin do hoac o /hang-doi)."""
+    ghi = f"🚫 Đã huỷ khỏi hàng đợi — {nguoi}"
     if c.get("loai_job") == "verify":   # bam Verify lai de xep lai
-        await it.response.edit_message(content=f"{bot_verify_jira.tin_ket_qua(c, [])}\n{ghi}",
-                                       view=nut(("verify", "Verify lại", XAM), msg_id=c["msg_id"]))
-    else:                                # tra lai nut Check de chay lai khi can
-        await it.response.edit_message(content=f"{bot_cong_viec.dau_tin(c)}\n{ghi}",
-                                       view=nut(*NUT_HOI, msg_id=c["msg_id"]))
+        return {"content": f"{bot_verify_jira.tin_ket_qua(c, [])}\n{ghi}",
+                "view": nut(("verify", "Verify lại", XAM), msg_id=c["msg_id"])}
+    # tra lai nut Check de chay lai khi can
+    return {"content": f"{bot_cong_viec.dau_tin(c)}\n{ghi}", "view": nut(*NUT_HOI, msg_id=c["msg_id"])}
 
 
 async def review_bug(bot, it: discord.Interaction, hanh_dong: str, c: dict, repo: Path, out: Path) -> None:

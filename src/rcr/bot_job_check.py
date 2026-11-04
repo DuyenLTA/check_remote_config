@@ -29,13 +29,11 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     """Cai build roi chay /rc-check; ket qua ghi vao job (luu file) truoc khi gui. False khi cai hong /
     chua co `testvsl`."""
     dau = f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**"
-    nguon = "từ link Drive" if job.get("drive") else "từ App Tester"
-    await qa.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…",
+    await qa.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} từ App Tester…",
                   view=bot_dung_luot.view_dung(qa.id))   # thay nut Huy bang nut Dung
-    cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
-                                  job.get("drive", ""))
+    cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial)
     if "loi" in cai:
-        # Moi build deu cai ban release tu App Tester -> khong hoi link Drive nua (user chot 02/11/2026).
+        # Moi build deu cai ban release tu App Tester -> cai hong chi bao loi + nut Thu lai (user chot 02/11/2026).
         await qa.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}",
                       view=nut(("check", "Thử lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
         return False

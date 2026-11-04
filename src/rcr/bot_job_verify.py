@@ -20,7 +20,7 @@ from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
 
 log = logging.getLogger("rcr-bot")
-TRUONG_BUILD = ("ma", "ten", "version", "package", "loai_ban", "link_tin", "drive")
+TRUONG_BUILD = ("ma", "ten", "version", "package", "loai_ban", "link_tin")
 # Build dang duoc xep (giua cac await cua `xep`): tin build den hai kenh / QA bam Verify lai cung luc
 # -> lan sau thay ngay, khong gui tin "Cho chay" thua.
 _DANG_XEP: set[tuple[str, str]] = set()
@@ -141,11 +141,9 @@ async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, ou
         await vm.edit(content=f"{v.tin_ket_qua(job, [])}\n⏭ Bỏ — đã có build mới hơn `{moi}` chờ verify.", view=None)
         return False
     dau = f"{v.tin_ket_qua(job, [])} · máy **{ten}**"
-    nguon = "từ link Drive" if job.get("drive") else "từ App Tester"
-    await vm.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} {nguon}…",
+    await vm.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} từ App Tester…",
                   view=bot_dung_luot.view_dung(vm.id))   # thay nut Huy bang nut Dung
-    cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial,
-                                  job.get("drive", ""))
+    cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial)
     if "loi" in cai:
         await vm.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}",
                       view=nut(vm.id, ("check", "Thử lại")))

@@ -18,8 +18,8 @@ from .models import RcError
 
 def doi_rc_firebase(job: dict, checklist: bool) -> bool:
     """Luot nay doi RC tren Firebase qua `testvsl`: ban release cai tu App Tester, nhanh bo TC (khong phai checklist
-    Next-Gen, khong phai ban debug tai tu Drive)."""
-    return job.get("loai_ban") == "release" and not job.get("drive") and not checklist
+    Next-Gen)."""
+    return job.get("loai_ban") == "release" and not checklist
 
 
 async def loi_testvsl(serial: str, package: str) -> str | None:

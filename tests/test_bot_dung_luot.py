@@ -79,8 +79,7 @@ def test_het_gio_giet_ca_cay(tmp_path):
 
 def test_chi_don_rc_khi_ban_release_nhanh_bo_tc():
     for job, checklist, can in (({"loai_ban": "release"}, False, True), ({"loai_ban": "release"}, True, False),
-                                ({"loai_ban": "debug"}, False, False),
-                                ({"loai_ban": "release", "drive": "https://drive"}, False, False)):
+                                ({"loai_ban": "debug"}, False, False)):
         bd.danh_dau_pha_rc(job, checklist)
         assert (job.get("pha") == bd.PHA_RC) == can, job
 

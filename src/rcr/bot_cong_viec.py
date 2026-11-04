@@ -57,14 +57,12 @@ def _cli(args: list[str], timeout: int, khoa: str) -> dict:
     return {"loi": loi}
 
 
-def cai(package: str, version: str, loai: str, serial: str, drive: str = "",
+def cai(package: str, version: str, loai: str, serial: str,
         so_lan: int = SO_LAN_CAI, cho: float = CHO_THU_LAI_CAI) -> dict:
-    """Co `drive` (link Drive QA tra loi vao tin hoi) -> tai APK tu link, khong qua App Tester.
-    Cai hong thi tu thu lai (`so_lan` lan, cach `cho` giay) roi moi tra loi ve cho QA: ngay sau khi may tinh
+    """Tai build tu App Tester roi cai. Cai hong thi tu thu lai (`so_lan` lan, cach `cho` giay) roi moi tra loi ve cho QA: ngay sau khi may tinh
     khoi dong lai mang / App Tester chua san sang -> hong mot lan roi job nam cho nut "Thu lai", may dung im
     (AIP936 1.9.0 (11), 02/11/2026: Pixel 4 bo trong 30 phut toi tat man)."""
-    them = ["--apk-url", drive] if drive else []
-    args = ["--package", package, "--version", version, "--loai", loai, "--serial", serial, *them]
+    args = ["--package", package, "--version", version, "--loai", loai, "--serial", serial]
     kq: dict = {}
     for lan in range(1, so_lan + 1):
         kq = _cli(args, TIMEOUT_CAI, serial)
@@ -78,8 +76,7 @@ def cai(package: str, version: str, loai: str, serial: str, drive: str = "",
 def tin_da_cai(c: dict, ten: str, viec: str) -> str:
     """Tin MOI (tra loi duoi tin hoi) khi tai + cai duoc build: chi sua tin cu thi kenh khong bao, QA khong
     biet bot da tim duoc build (user chot 30/10/2026)."""
-    nguon = "link Drive" if c.get("drive") else "App Tester"
-    return (f"📲 {dau_tin(c)}\nĐã tải được bản {c.get('loai_ban') or ''} từ {nguon} và cài lên máy **{ten}** "
+    return (f"📲 {dau_tin(c)}\nĐã tải được bản {c.get('loai_ban') or ''} từ App Tester và cài lên máy **{ten}** "
             f"— đang chạy {viec}.")
 
 
@@ -94,8 +91,6 @@ def dau_tin(c: dict) -> str:
 def tin_hoi(c: dict) -> str:
     """Tin o kenh QA khi thay build moi: hoi co chay khong."""
     goc = f"\n[Tin build]({c['link_tin']})" if c.get("link_tin") else ""
-    if c.get("drive"):                    # QA tra loi kem link Drive (ban debug) -> khong qua App Tester
-        return f"{dau_tin(c)}\n📦 tải APK từ link Drive QA gửi rồi chạy /rc-check. Chạy không?{goc}"
     if build_ma_app.la_next_gen(c):
         ghi = "next-gen → tải bản release, chấm checklist Next-Gen"
     else:

@@ -1,5 +1,5 @@
 """Bot chinh nhan tin bao build: tach ma app + version, tra package, hoi QA o kenh QA (nut Check), xep luot
-verify bug Reviewing; QA gui lai tin build / tra loi kem link Drive.
+verify bug Reviewing; QA gui lai tin build de chay lai.
 
 Goi tu `BuildBot.on_message` (sau khi da loai tin dieu phoi, may phu, hoi dap). Ham nhan `bot` (BuildBot) va goi
 lai cac method mong cua no (`bot._hoi_lai`, `bot._xep_verify`) de test thay duoc tung buoc.
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import discord
 
-from . import bot_cong_viec, bot_jira_rest, bot_job_verify, bot_kenh_project, build_ma_app, cai_apk_tu_drive
+from . import bot_cong_viec, bot_jira_rest, bot_job_verify, bot_kenh_project, build_ma_app
 from .bot_giao_dien import GIU_KHI_HOI_LAI, NUT_HOI, noi_dung, nut, tha_tim
 
 log = logging.getLogger("rcr-bot")
@@ -56,7 +56,7 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
     # khong phai tin bao build -> khong tha.
     if m.channel.id != bot.kenh_qa and bot_kenh_project.la_bot_dev(m.author.id):
         await tha_tim(m)
-    cu = [t for t in bot.q.tin.values() if t.get("ma") == tin["ma"] and t.get("version") == tin["version"]]
+    cu = tin_da_hoi(bot, tin)
     if cu:
         # Giai doan chuyen kenh dev co the bao mot build o ca kenh chung lan kenh project.
         log.info("build da hoi roi: %s %s (%s)", tin["ma"], tin["version"], m.jump_url)
@@ -64,23 +64,37 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
         if m.channel.id == bot.kenh_qa and any(t.get("loai_job") != "verify" for t in cu):
             await bot._hoi_lai(m, tin)
         return
+    await hoi_build_moi(bot, tin, m.jump_url, kenh, out)
+
+
+def tin_da_hoi(bot, tin: dict) -> list[dict]:
+    """Moi tin bot da luu (hoi Check / verify) cua cung ma app + version."""
+    return [t for t in bot.q.tin.values() if t.get("ma") == tin["ma"] and t.get("version") == tin["version"]]
+
+
+async def hoi_build_moi(bot, tin: dict, link_tin: str, kenh, out: Path) -> str:
+    """Build bot chua tung hoi: tra package, gui tin hoi (nut Check) o kenh QA + xep verify bug Reviewing.
+    Dung chung cho tin bao build va lenh /check. Tra cau tom tat cho nguoi go lenh."""
     pkg = await asyncio.to_thread(bot_cong_viec.package_cua, tin["ma"], out)
+    goc = f" — {link_tin}" if link_tin else ""
     if not tin["sdk"]:
         # Build chuc nang / fix bug, khong apply SDK: khong hoi Check (chua co workflow, user chot 28/10/2026)
         # nhung VAN verify bug dev da keo Reviewing - build fix bug thuong khong ghi SDK (user chot 28/10/2026).
         log.info("build khong apply SDK, chi verify bug Reviewing: %s %s", tin["ma"], tin["version"])
-        if pkg:
-            await bot._xep_verify({**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin),
-                                   "link_tin": m.jump_url}, kenh)
-        return
+        if not pkg:
+            return f"Sheet Check thông số KT không có package của **{tin['ma']}**."
+        await bot._xep_verify({**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin),
+                               "link_tin": link_tin}, kenh)
+        return f"Build không apply SDK → không hỏi Check, chỉ xếp verify bug Reviewing của **{tin['ma']}**."
     if not pkg:
-        await kenh.send(f"Sheet Check thông số KT không có package của **{tin['ma']}** — {m.jump_url}")
-        return
+        await kenh.send(f"Sheet Check thông số KT không có package của **{tin['ma']}**{goc}")
+        return f"Sheet Check thông số KT không có package của **{tin['ma']}**."
     qa = await kenh.send(f"**{tin['ma']}** `{tin['version']}`…")
-    c = {**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin), "link_tin": m.jump_url, "msg_id": qa.id}
+    c = {**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin), "link_tin": link_tin, "msg_id": qa.id}
     bot.q.nho_tin(c)
     await qa.edit(content=bot_cong_viec.tin_hoi(c), view=nut(*NUT_HOI, msg_id=qa.id))
     await bot._xep_verify(c, kenh)
+    return f"Đã gửi tin hỏi Check: {qa.jump_url}"
 
 
 async def hoi_lai(bot, m: discord.Message, tin: dict) -> None:
@@ -88,40 +102,27 @@ async def hoi_lai(bot, m: discord.Message, tin: dict) -> None:
     QA vua gui, bo phien cu. Truoc day bot bat lai nut o tin cu va gui link -> QA bi day len tin cu
     (user phan nan 29/10/2026). Tin cu giu nguyen (con menu log bug / ket qua). Dang cho/chay thi chi
     bao trang thai ngay duoi, khong tao luot trung. Dev bao trung o kenh khac thi van im (o noi goi)."""
-    cung = [t for t in bot.q.tin.values()
-            if t.get("ma") == tin["ma"] and t.get("version") == tin["version"] and t.get("loai_job") != "verify"]
+    kq = await hoi_lai_build(bot, tin, m.jump_url, lambda chu: m.reply(chu, mention_author=False))
+    if kq.startswith("Build"):                       # dang cho / dang chay: bao ngay duoi tin QA gui
+        await m.reply(kq, mention_author=False)
+
+
+async def hoi_lai_build(bot, tin: dict, link_tin: str, gui, doi: dict | None = None) -> str:
+    """Tao tin hoi MOI cho build da hoi (giu thong tin build cua lan hoi gan nhat). `gui(chu)` gui tin
+    (tra loi duoi tin QA, hoac gui vao kenh QA khi go /check). Dang cho / dang chay thi khong tao luot trung.
+    `doi`: truong build thay cho lan hoi cu (QA go /check kem SDK khac). Tra cau tom tat; cau bat dau bang
+    "Build" la bao trang thai (chua tao tin nao)."""
+    cung = [t for t in tin_da_hoi(bot, tin) if t.get("loai_job") != "verify"]
     if any(bot.q.vi_tri(t["msg_id"]) is not None for t in cung):
-        await m.reply(f"Build **{tin['ma']}** `{tin['version']}` đang chờ / đang chạy — xong bot báo kết quả.",
-                      mention_author=False)
-        return
+        return f"Build **{tin['ma']}** `{tin['version']}` đang chờ / đang chạy — xong bot báo kết quả."
     c_cu = max(cung, key=lambda t: int(t["msg_id"]))   # snowflake tang dan -> lan hoi gan nhat
-    qa = await m.reply(f"**{c_cu['ma']}** `{c_cu['version']}`…", mention_author=False)
-    c = {k: c_cu[k] for k in GIU_KHI_HOI_LAI if k in c_cu}
+    qa = await gui(f"**{c_cu['ma']}** `{c_cu['version']}`…")
+    c = {**{k: c_cu[k] for k in GIU_KHI_HOI_LAI if k in c_cu}, **(doi or {})}
     # Tin luu tu truoc 31/10/2026 con ghi "debug" -> tinh lai: gio moi build deu cai ban release.
-    c.update(link_tin=m.jump_url, msg_id=qa.id, loai_ban=build_ma_app.loai_ban(c))
+    c.update(link_tin=link_tin, msg_id=qa.id, loai_ban=build_ma_app.loai_ban(c))
     bot.q.nho_tin(c)
     await qa.edit(content=bot_cong_viec.tin_hoi(c), view=nut(*NUT_HOI, msg_id=qa.id))
-
-
-async def nhan_link_drive(bot, m: discord.Message) -> bool:
-    """QA tra loi tin hoi cua bot kem link Google Drive (ban debug) -> gan link vao build do: bam Check /
-    Verify thi tai APK tu link thay cho App Tester (user chot 29/10/2026). True khi da xu ly tin nay."""
-    ref = getattr(getattr(m, "reference", None), "message_id", None)
-    c = bot.q.tin_cua(ref) if ref and m.channel.id == bot.kenh_qa else None
-    link = cai_apk_tu_drive.tim_link(m.content or "") if c is not None else ""
-    if not link or not bot._duoc_duyet(m.author):
-        return False
-    c["drive"] = link
-    bot.q.nho_tin(c)
-    try:                                     # tin hoi cu ghi ro se tai tu Drive
-        cu = await bot._tin_qa(ref)
-        if c.get("loai_job") != "verify":
-            await cu.edit(content=bot_cong_viec.tin_hoi(c), view=nut(*NUT_HOI, msg_id=cu.id))
-    except discord.HTTPException:
-        pass
-    await m.reply(f"📦 Đã nhận link Drive cho **{c['ma']}** `{c['version']}` — bấm **Check** / **Verify** ở tin "
-                  "hỏi, bot sẽ tải APK từ link này thay cho App Tester.", mention_author=False)
-    return True
+    return f"Đã gửi tin hỏi Check mới: {qa.jump_url}"
 
 
 async def xep_verify(bot, c: dict, kenh) -> None:

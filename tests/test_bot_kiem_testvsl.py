@@ -54,7 +54,6 @@ def test_chua_firebase_login_thi_bao_dang_nhap_truoc_khi_chay(monkeypatch):
 def test_chi_kiem_ban_release_nhanh_bo_tc():
     assert k.doi_rc_firebase({"loai_ban": "release"}, False)
     assert not k.doi_rc_firebase({"loai_ban": "release"}, True)
-    assert not k.doi_rc_firebase({"loai_ban": "release", "drive": "https://d"}, False)
     assert not k.doi_rc_firebase({"loai_ban": "debug"}, False)
 
 

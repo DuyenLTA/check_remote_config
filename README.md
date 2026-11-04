@@ -442,12 +442,15 @@ qua kênh điều phối.
 trả máy test, 60 giây gửi lại một lần (tối đa 12 giờ, máy phụ 10 phút); bot khởi động lại thì chỉ gửi lại kết quả,
 không chạy lại. Bước đã gửi (tin kết quả, menu bug, đổi Jira, báo dev) không gửi trùng.
 
-**Cài từ link Google Drive (tuỳ chọn):** mọi build cài bản release từ App Tester; cài hỏng thì bot chỉ báo lỗi,
-**không hỏi link Drive**. Khi cần, QA **trả lời (Reply) vào tin hỏi của bot** kèm link Drive của file `.apk` (file để
-"Ai có link đều xem được"). Bot gắn link vào build đó, tin hỏi đổi thành "📦 tải APK từ link Drive" → bấm **Check** /
-**Verify** thì bot tải APK từ link rồi `adb install` thay cho App Tester. APK khác chữ ký bản đang cài → gỡ rồi cài
-(mất data app). Cài xong bot đối chiếu: sai package hoặc version khác tin build → dừng, không chạy test. Chạy tay:
-`rcr-cai-build --package <pkg> --version "<x.y.z (n)>" --apk-url <link Drive> --serial <S>`.
+**Nguồn cài:** mọi build cài bản release từ App Tester; cài hỏng thì bot báo lỗi kèm nút **Thử lại**. Bot không
+nhận link Google Drive nữa.
+
+**Lệnh slash** (chỉ bot chính, trả lời riêng cho người gõ):
+- `/hang-doi` — lượt đang chạy (máy nào, kể cả máy phụ), lượt đang chờ, tình trạng từng máy; nút **Dừng** / **Huỷ**.
+- `/check <mã app> <version> [sdk]` — chỉ QA được duyệt. Build bot đã thấy → tin hỏi Check mới (thay cho gửi lại tin
+  build); build bot chưa thấy → bắt buộc `sdk` (`3.6.1`, `3.7.0`, `next-gen`…) để chọn nhánh chấm như tin build.
+- `/check-bug <mã app>` — bug bot đã log + trạng thái Jira; có bug Reviewing thì nút **Verify** trên build gần nhất.
+Bot thiếu scope `applications.commands` ở server nào thì lệnh không hiện ở server đó (log bot ghi rõ), bot vẫn chạy.
 
 **Tự verify bug Reviewing** (có `JIRA_PERSONAL_TOKEN`): bug do tool log (từ bot Discord, `rc-check` trong terminal
 hay checklist Next-Gen) mang **label `auto-qa`** + một dòng marker cuối description

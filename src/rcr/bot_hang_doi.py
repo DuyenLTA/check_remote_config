@@ -120,6 +120,10 @@ class HangDoi:
     def _ranh(self, j: dict) -> bool:
         return j["msg_id"] not in self.dang_chay and not j.get("dang_o")
 
+    def dang_chay_tren_may(self, j: dict) -> bool:
+        """Luot da duoc giao may (chinh hoac phu), ke ca dang gui ket qua - khong con nam cho trong hang."""
+        return not self._ranh(j)
+
     def _dang_test(self, j: dict) -> bool:
         """Dang cai / chay test tren mot may (chinh hoac phu). Da co `kq` = chi con gui ket qua, khong dung RC."""
         return not self._ranh(j) and j.get("kq") is None

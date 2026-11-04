@@ -152,6 +152,31 @@ def tim_auto_qa(url: str, token: str, project: str) -> list[dict]:
     return ra
 
 
+def bug_cua_app(url: str, token: str, project: str, keys: list[str] = ()) -> list[dict]:
+    """Moi bug bot tao cho project (label `auto-qa`, moi trang thai) + cac key bot nho tu truoc khi co label:
+    [{key, link, summary, status}], moi cap nhat truoc, toi da MAX_AUTO_QA. Key sai mau bi loai."""
+    from .bot_jira_marker import LABEL
+
+    if not PROJECT_RE.fullmatch(project or ""):
+        raise JiraLoi(f"project key Jira sai mau: {project!r}")
+    jql = f'(project = {project} AND labels = "{LABEL}")'
+    sach = sorted({k for k in keys if KEY_RE.fullmatch(k)})
+    if sach:
+        jql += f" OR key in ({', '.join(sach)})"
+    q = urllib.parse.urlencode({"jql": f"{jql} ORDER BY updated DESC", "fields": "summary,status",
+                                "maxResults": MAX_AUTO_QA, "validateQuery": "warn"})
+    d = _goi(url, token, "GET", f"/rest/api/2/search?{q}")
+    ra = []
+    for i in (d or {}).get("issues", []):
+        key = str(i.get("key") or "")
+        if not KEY_RE.fullmatch(key):
+            continue
+        f = i.get("fields") or {}
+        ra.append({"key": key, "link": f"{url.rstrip('/')}/browse/{key}", "summary": str(f.get("summary") or ""),
+                   "status": str((f.get("status") or {}).get("name") or "")})
+    return ra
+
+
 def comment(url: str, token: str, key: str, text: str) -> None:
     if not KEY_RE.fullmatch(key):
         raise JiraLoi(f"key Jira sai mau: {key!r}")
