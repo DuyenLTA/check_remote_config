@@ -793,6 +793,22 @@ Mở đầu câu báo bằng kết quả check ID ads (mục 3c): khớp/tổng,
 **Đưa link artifact ngay trong câu trả lời**, đừng bắt người dùng đi tìm. Report
 local (`<repo>/out/…html`) vẫn mở được bằng nháy đôi nếu publish hỏng.
 
+## 7a. Check policy Ads + Sub (`/policy-check`) — bước cuối của lượt
+
+User chốt 04/11/2026: auto rc-check xong thì check luôn policy ads + sub theo sheet Apero Policy. Chạy **sau
+cùng**, khi mọi case đã xong và máy đã `--restore` (RC về mặc định = đúng cấu hình user thật thấy): lượt policy
+`pm clear` app và **mua sub test** — app thành Pro (không ad) ~30 phút, chạy trước thì mọi case ads sau đó hỏng.
+
+1. Tìm repo audit như 3c (`$AD_AUDIT_REPO`, rồi `~/android-ad-audit`) — cái có
+   `tools/ad-policy-check/evidence_collector.py`. Không thấy thì ghi "chưa check policy (không thấy repo)" vào
+   câu báo, không chặn.
+2. Đọc **toàn bộ** `<audit-repo>/.claude/commands/policy-check.md` và làm đúng nó với tham số
+   `<package> --serial <serial>` (cùng máy của lượt). Đừng chép quy trình vào đây.
+3. Policy không chặn gì của rc-check: FAIL policy chỉ báo. Trang policy là **artifact riêng** (link riêng theo
+   app); gửi một tin ngắn sau câu báo rc-check: link + số PASS/FAIL/Cần xem/BLOCKED + từng FAIL một dòng.
+4. Bỏ qua khi lượt không chạy case (như 3c), khi user nói `--no-policy`, hoặc khi máy đang có lượt khác giữ khóa
+   (policy tự thoát exit 3 — ghi vào câu báo).
+
 ## 7b. Có FAIL → user review, rồi log Jira
 
 User chốt 28/10/2026: *"auto test xong có bug thì để tôi review lại xem nó có phải bug không,
