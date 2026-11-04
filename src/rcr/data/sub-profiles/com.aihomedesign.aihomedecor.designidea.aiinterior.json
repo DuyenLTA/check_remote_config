@@ -22,9 +22,12 @@
   "Enjoy an Ad-Free Experience"
  ],
  "man_co_ad": [
-  "Home: native trong danh sach style",
-  "Splash: inter"
+  "Splash/FO: interstitial (AdActivity foreground lúc mở app)",
+  "Home (MainActivity): native trong carousel MINIMAL (nhãn 'Ad'), adUnit *****987",
+  "MainActivity: banner adUnit *****117 / *****652 (hay No fill)"
  ],
- "ghi_chu": "Paywall SDK VisionLab (VslBillingActivity); FO co man Billing",
- "package": "com.aihomedesign.aihomedecor.designidea.aiinterior"
+ "ghi_chu": "Paywall SDK VisionLab (VslBillingActivity), vào bằng nút vương miện (desc 'Premium') góc trên phải Home; mặc định Weekly, có 'Continue with ads'. Đã Premium: nút 'Premium' biến mất, Settings có thêm 'Cancel Subscription' (mở danh sách Subscriptions của Play Store) — xác nhận khi mua thật 04/11/2026. Mở lạnh qua FO ~70s, Home bật popup Add Widget / Rate us. Billing chỉ cập nhật trạng thái khi kill app mở lại.",
+ "package": "com.aihomedesign.aihomedecor.designidea.aiinterior",
+ "app": "Homova (AI Home Design) 1.9.0 (11)",
+ "home_activity": "MainActivity"
 }

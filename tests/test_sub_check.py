@@ -198,3 +198,12 @@ def test_luot_sub_cua_bot_khong_kiem_testvsl_va_goi_sub_check(tmp_path, monkeypa
     assert asyncio.run(bot._cai_va_chay(job, msg, "S1", "Pixel")) is True
     assert goi[0][3] == d.bot_chay_claude.TIMEOUT_SUB and goi[0][-1] == "1.9.0 (11)" and job["kq"]["trang_thai"] == "XONG"
     assert "/sub-check" in msg.edits[-1]["content"]
+
+
+def test_ghi_profile_gop_vao_ban_cu(tmp_path, monkeypatch):
+    from rcr import sub_thao_tac as t
+    monkeypatch.setattr(t, "PROFILE_DIR", tmp_path)
+    t.ghi_profile("p.x", {"duong_vao_paywall": [{"desc": "Premium"}], "quyen_loi": ["a"]})
+    t.ghi_profile("p.x", {"quan_ly_sub": [{"desc": "Settings"}]})          # ghi tung phan khong mat phan khac
+    assert t.doc_profile("p.x") == {"duong_vao_paywall": [{"desc": "Premium"}], "quyen_loi": ["a"],
+                                    "quan_ly_sub": [{"desc": "Settings"}], "package": "p.x"}

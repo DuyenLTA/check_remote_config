@@ -43,12 +43,17 @@ thường (chụp màn, dump UI, logcat, bấm) — Git Bash: `export MSYS_NO_PA
    ≥ 2 tài khoản → TC đổi tài khoản (`can: tai_khoan_2`) chạy được. Máy khác đang `device`, cùng tài khoản, đã cài app,
    **không bị khoá** (`out/.may-<serial2>.lock`) → TC `can: may_2` chạy được. Thiếu → verdict `CAN_TEST_TAY` kèm lý do.
 3. **Profile app** (`rcr-sub profile --package P`). Chưa có → dò một lần rồi ghi:
-   - Mở app tới Home (FO: `bash <repo>/sdk-check/scripts/drive-fo-to-home.sh <pkg> <marks> noclear` với `ANDROID_SERIAL`).
+   - Mở app tới Home: `rcr-sub ve-home --serial S --package P` (lái qua FO, tự đóng popup Home).
    - Tìm đường vào Paywall: nút vương miện / `Premium` / `PRO` / banner "Go Premium"… — thử, dump UI, xác nhận bằng
      `rcr-sub paywall` (đọc ra 3 gói + Continue). Paywall SDK VisionLab là `VslBillingActivity`.
-   - Dấu hiệu Premium trên UI (vd nút `Premium` biến mất sau khi mua), đường vào quản lý sub (Settings > …),
-     quyền lợi Premium (các dòng tính năng trên Paywall — dùng cho TC16), các màn có ad (cho TC74/75).
-   - Ghi: `rcr-sub profile --package P --ghi '{"duong_vao_paywall":[{"desc":"Premium"}],"dau_hieu_premium":{"an_desc":"Premium"},"quan_ly_sub":[{"desc":"Settings"},{"text":"Cancel Subscription"}],"quyen_loi":["..."],"man_co_ad":["..."],"ghi_chu":"..."}'`
+   - Quyền lợi Premium (các dòng tính năng trên Paywall — TC16); màn có ad, mỗi dòng
+     `"<màn / activity>: <loại ad> (<đuôi adUnit>)"` lấy từ màn + logcat (TC74/75/76).
+   - **Dấu hiệu Premium và đường quản lý sub chỉ thấy được sau khi mua** (vd AIP936: nút `Premium` biến mất, Settings
+     mới hiện `Cancel Subscription`). Lúc dò ghi phỏng đoán và liệt kê khoá đó trong `chua_xac_nhan`; ngay sau lần mua
+     đầu (TC1) xem lại màn rồi ghi đè + bỏ khoá khỏi `chua_xac_nhan`. App không có mục quản lý sub → `quan_ly_sub: []`,
+     quản lý qua `rcr-sub play`.
+   - Ghi (gộp vào profile đã có, chỉ thay khoá truyền vào): `rcr-sub profile --package P --ghi '{"duong_vao_paywall":[{"desc":"Premium"}],"dau_hieu_premium":{"an_desc":"Premium"},"quan_ly_sub":[{"desc":"Settings"},{"text":"Cancel Subscription"}],"quyen_loi":["..."],"man_co_ad":["Home: native (…987)"],"chua_xac_nhan":["dau_hieu_premium","quan_ly_sub"],"ghi_chu":"..."}'`
+   - Kiểm lại từ trạng thái lạnh: `am force-stop P` rồi `rcr-sub paywall` phải tự tới Paywall.
 4. Trạng thái đầu: `rcr-sub play --serial S --package P` (danh sách). Gói app đang Active → cancel + `cho-het-ky` trước
    (TC đầu lịch cần "chưa mua"). `rcr-sub mo-lanh` → `premium: false` mới bắt đầu.
 

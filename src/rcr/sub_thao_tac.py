@@ -56,11 +56,13 @@ def doc_profile(package: str) -> dict | None:
 
 
 def ghi_profile(package: str, profile: dict) -> Path:
-    """Profile app (Claude do lan dau): duong_vao_paywall, dau_hieu_premium, quan_ly_sub, quyen_loi, ghi_chu.
-    Moi buoc duong vao la {"text": ...} hoac {"desc": ...} - bam node co chu do."""
+    """Profile app (Claude do lan dau): duong_vao_paywall, dau_hieu_premium, quan_ly_sub, quyen_loi, man_co_ad,
+    chua_xac_nhan, ghi_chu. Moi buoc duong vao la {"text": ...} hoac {"desc": ...} - bam node co chu do.
+    GOP vao profile da co (chi thay cac khoa co trong `profile`): ghi thu tung phan khong lam mat phan con lai."""
     PROFILE_DIR.mkdir(parents=True, exist_ok=True)
     f = PROFILE_DIR / f"{package}.json"
-    f.write_text(json.dumps({**profile, "package": package}, ensure_ascii=False, indent=1), encoding="utf-8")
+    f.write_text(json.dumps({**(doc_profile(package) or {}), **profile, "package": package}, ensure_ascii=False,
+                            indent=1), encoding="utf-8")
     return f
 
 
@@ -104,6 +106,9 @@ async def mo_paywall(client, serial: str, package: str) -> dict:
         raise RcError(f"không về được Home (đang ở {home['activity']})")
     thieu = await di_theo(client, serial, prof["duong_vao_paywall"])
     pw = sub_doc_man.doc_paywall(await man(client, serial))
+    if pw and pw["dong"] is None:          # nut X cua Paywall VisionLab hien tre vai giay -> doc lai
+        await asyncio.sleep(3)
+        pw = sub_doc_man.doc_paywall(await man(client, serial)) or pw
     if not pw:
         raise RcError(f"đi theo profile không tới Paywall (không thấy: {thieu or 'màn Paywall'})")
     return pw
