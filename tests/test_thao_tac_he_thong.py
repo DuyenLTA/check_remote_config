@@ -37,6 +37,10 @@ def _chay(monkeypatch, action):
     monkeypatch.setattr(act_exec.asyncio, "sleep", ngu)
     monkeypatch.setattr(act_exec.device_app, "launch", lambda c, s, p: _ghi(lenh, "launch"))
     monkeypatch.setattr(act_exec.device_app, "wait_foreground", lambda c, s, p: _ghi(lenh, "foreground"))
+
+    async def focus(client, serial):
+        return "com.ai.app", "x.VslTemplate4Language14Activity"
+    monkeypatch.setattr(act_exec.device_app, "focus", focus)
     ctx = act_exec.ctx_moi("com.ai.app")
     asyncio.run(act_exec.lam(C(), "S", action, {}, ctx))
     return lenh

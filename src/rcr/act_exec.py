@@ -123,6 +123,14 @@ async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop
             await device_app.launch(client, serial, ctx["package"])
             await device_app.wait_foreground(client, serial, ctx["package"])
             ctx["o_nen"] = False
+            # Mo lai sau kill = chay lai tu Splash: cho qua Splash (inter splash / LFO) roi moi lam buoc sau / chup man
+            # cuoi - thu 04/11/2026 Pixel 6 RG08-05: chup luc con o Splash -> FAIL gia "khong phai LFO1".
+            het = time.monotonic() + CHO_QUA_SPLASH_SAU_KILL
+            while time.monotonic() < het:
+                _, act = await device_app.focus(client, serial)
+                if act and "Splash" not in act:
+                    break
+                await asyncio.sleep(1.0)
         await asyncio.sleep(CHO_SAU_THAO_TAC)
     elif isinstance(action, act_resolver.Rotate):
         record["xoay"] = await device_motion.xoay(client, serial, action.orientations)
@@ -131,20 +139,29 @@ async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop
 # TC khong ghi so giay o nen: cho toi khi ad resume (AOA / inter / native full) load xong - thanh cong hay khong fill
 # deu duoc - roi mo lai. Do 03/11/2026 AIP936: AOA load xong sau 4-6s, cho cung 10s phi ~5s moi lan resume.
 CHO_NEN_TOI_THIEU = 3.0
+CHO_QUA_SPLASH_SAU_KILL = 40.0
 # CHI ket qua load cua AOA (app_open): dung o bat ky ad nao load xong (native man Question) thi mo lai truoc khi
 # AOA kip request -> resume khong hien -> FAIL gia (thu 03/11/2026 Pixel 6 RG01-12). Inter / native full resume
 # khong nhan ra duoc o day -> cho du `toi_da`.
 LOAD_XONG_RE = r"trackAdLoad(?:Success|Failed)[^\n]*adType:\s*app_open"
+# Dong request ghi adType HOA (APP_OPEN), dong load ghi thuong -> so khong phan biet hoa thuong.
+REQUEST_AOA_RE = r"(?i)trackAdRequest[^\n]*adType:\s*app_?open"
+# May cham (Pixel 6 Android 17, 03/11/2026): AOA request ~5s sau Home nhung ~14s moi load xong -> het 10s da mo lai
+# truoc khi co ad -> resume khong hien. Da thay request AOA ma chua co ket qua thi cho them, toi da moc nay.
+CHO_NEN_KEO_DAI = 20.0
 
 
 async def _cho_ad_resume_load(client, serial: str, moc: str, toi_da: float) -> float:
     import re
     bat_dau = time.monotonic()
     await asyncio.sleep(CHO_NEN_TOI_THIEU)
-    while time.monotonic() - bat_dau < toi_da:
+    while True:
         out, _, _ = await client.shell(serial, "logcat", "-d", "-T", moc, "-s", "AdEventLogger:V")
         if re.search(LOAD_XONG_RE, out or ""):
             await asyncio.sleep(1.0)          # de SDK ghi xong trang thai truoc khi mo lai
+            break
+        dang_load = bool(re.search(REQUEST_AOA_RE, out or ""))
+        if time.monotonic() - bat_dau >= (max(toi_da, CHO_NEN_KEO_DAI) if dang_load else toi_da):
             break
         await asyncio.sleep(1.0)
     return round(time.monotonic() - bat_dau, 1)
