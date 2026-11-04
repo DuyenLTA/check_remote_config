@@ -18,6 +18,8 @@ CASE_TC_RE = re.compile(r"^[\w.]+(?: [\w.]+)*#[\w.-]+$|^SDK\d{3}-[\w-]+$")
 # Ma dong checklist Next-Gen (sdk-check/references): `EV-07`, `HT-03`, `KT-02`, `MED-02`, `HV-01`, `1.7`.
 # Khong giao voi CASE_TC_RE (TC luon co `#` hoac tien to SDKnnn-).
 CASE_CHECKLIST_RE = re.compile(r"^(?:[A-Z]{2,4}-\d{1,3}|\d{1,2}\.\d{1,2})$")
+# Case bo TC sub Android (`/sub-check`): `sub#<so TC>` - kiem TRUOC CASE_TC_RE (mau do cung khop `x#y`).
+CASE_SUB_RE = re.compile(r"^sub#\d{1,4}$")
 LY_DO_THIEU_MARKER = "thiếu marker auto-qa — cần verify tay"
 MAX_TRUONG = 300
 MAX_TIN = 1900
@@ -34,7 +36,10 @@ def _cat(s, n: int = MAX_TRUONG) -> str:
 
 
 def loai_case(case: str) -> str | None:
-    """"tc" (bo TC, chay bang --case) | "checklist" (dong checklist Next-Gen) | None (khong chay lai duoc)."""
+    """"tc" (bo TC, chay bang --case) | "checklist" (dong checklist Next-Gen) | "sub" (bo TC sub, `/sub-check`)
+    | None (khong chay lai duoc)."""
+    if CASE_SUB_RE.fullmatch(case or ""):
+        return "sub"
     if CASE_TC_RE.fullmatch(case or ""):
         return "tc"
     return "checklist" if CASE_CHECKLIST_RE.fullmatch(case or "") else None
@@ -59,8 +64,8 @@ def ung_vien(tin: dict, ma: str) -> list[dict]:
 
 
 def phan_loai(uv: list[dict], loai_ban_moi: str, package: str = "") -> tuple[list[dict], list[tuple[dict, str]]]:
-    """(chay duoc, [(bo qua, ly do)]). Mot luot chay MOT nhom case (TC hoac checklist): prompt hai nhom khac
-    nhau. Lan nhom (hiem) -> chay nhom dong hon (hoa thi TC), nhom kia bo, bam Verify lai khi nhom nay xong."""
+    """(chay duoc, [(bo qua, ly do)]). Mot luot chay MOT nhom case (TC, checklist hoac sub): moi nhom mot prompt.
+    Lan nhom (hiem) -> chay nhom dong nhat (hoa thi theo thu tu tc, checklist, sub), nhom kia bo, bam Verify lai sau."""
     chay, bo = [], []
     for u in uv:
         if not u["case"]:
@@ -75,12 +80,13 @@ def phan_loai(uv: list[dict], loai_ban_moi: str, package: str = "") -> tuple[lis
             bo.append((u, f"bug từ bản {u['loai_ban_goc']}, build mới là bản {loai_ban_moi} — cần verify tay"))
         else:
             chay.append(u)
-    nhom_tc = [u for u in chay if loai_case(u["case"]) == "tc"]
-    nhom_ck = [u for u in chay if loai_case(u["case"]) == "checklist"]
-    if nhom_tc and nhom_ck:
-        giu, bo_them = (nhom_ck, nhom_tc) if len(nhom_ck) > len(nhom_tc) else (nhom_tc, nhom_ck)
-        chay = giu
-        bo += [(u, "lượt này chạy nhóm case khác (TC / checklist) — bấm Verify bug Jira sau") for u in bo_them]
+    nhom = {lo: [u for u in chay if loai_case(u["case"]) == lo] for lo in ("tc", "checklist", "sub")}
+    co = [lo for lo in nhom if nhom[lo]]
+    if len(co) > 1:
+        giu = max(co, key=lambda lo: len(nhom[lo]))      # max giu nhom dau khi bang nhau -> tc truoc
+        chay = nhom[giu]
+        bo += [(u, "lượt này chạy nhóm case khác (TC / checklist / sub) — bấm Verify bug Jira sau")
+               for lo in co if lo != giu for u in nhom[lo]]
     return chay, bo
 
 

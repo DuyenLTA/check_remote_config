@@ -38,6 +38,14 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
                       view=nut(("check", "Thử lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
         return False
     ghi = " (đã gỡ bản cũ rồi tải lại — mất data app)" if cai.get("go_ban_cu") else ""
+    if job.get("loai_job") == "sub":     # /check-sub: khong doi Remote Config -> khong can testvsl
+        await qa.edit(content=f"{dau}\nĐã cài{ghi}. Đang chạy /sub-check…")
+        await qa.reply(bot_cong_viec.tin_da_cai(job, ten, "/sub-check (bộ TC sub)"))
+        bat_dau = time.time()
+        kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, bot_chay_claude.TIMEOUT_SUB,
+                                     out, None, False, "", job["version"])
+        bot.q.cap_nhat(job, kq=kq, ten_may=ten, bat_dau=bat_dau)
+        return True
     next_gen = build_ma_app.la_next_gen(job)
     if bot_kiem_testvsl.doi_rc_firebase(job, next_gen):
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
@@ -67,9 +75,11 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
     if not job.get("da_bao"):
         # Tom tat ID ads doc bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.
         # Trang audit day du nam trong tab cua chinh report -> chi dinh kem mot file report.
-        audit = audit_tom_tat.tim(job["package"], tu_luc=job.get("bat_dau") or 0)
+        # Luot sub khong check ID ads -> khong co dong audit.
+        audit = "" if job.get("loai_job") == "sub" else audit_tom_tat.dong_tin(
+            audit_tom_tat.tim(job["package"], tu_luc=job.get("bat_dau") or 0))
         files = [discord.File(f)] if f else []
-        await qa.reply((bot_cong_viec.tin_ket_qua(job, kq, f) + f"\nMáy: {ten}\n{audit_tom_tat.dong_tin(audit)}")[:2000],
+        await qa.reply((bot_cong_viec.tin_ket_qua(job, kq, f) + f"\nMáy: {ten}" + (f"\n{audit}" if audit else ""))[:2000],
                        files=files or discord.utils.MISSING,
                        view=nut(("verify", "Verify bug Jira", XAM), msg_id=job["msg_id"]))
         bot.q.cap_nhat(job, da_bao=True)

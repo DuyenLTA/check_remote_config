@@ -1,0 +1,30 @@
+{
+ "duong_vao_paywall": [
+  {
+   "desc": "Premium"
+  }
+ ],
+ "dau_hieu_premium": {
+  "an_desc": "Premium"
+ },
+ "quan_ly_sub": [
+  {
+   "desc": "Settings"
+  },
+  {
+   "text": "Cancel Subscription"
+  }
+ ],
+ "quyen_loi": [
+  "Generate Designs Faster",
+  "Create High-Quality Photos",
+  "Unlock Amazing Premium Styles",
+  "Enjoy an Ad-Free Experience"
+ ],
+ "man_co_ad": [
+  "Home: native trong danh sach style",
+  "Splash: inter"
+ ],
+ "ghi_chu": "Paywall SDK VisionLab (VslBillingActivity); FO co man Billing",
+ "package": "com.aihomedesign.aihomedecor.designidea.aiinterior"
+}

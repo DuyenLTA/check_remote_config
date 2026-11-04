@@ -1,4 +1,4 @@
-"""Lenh slash cua bot chinh: /hang-doi, /check, /check-bug.
+"""Lenh slash cua bot chinh: /hang-doi, /check, /check-bug, /check-sub.
 
 Chi bot chinh dang ky lenh (may phu dung chung token nhung khong co CommandTree). Lenh dong bo vao tung server
 bot dang o (hien ngay), khong dang ky global. Tra loi rieng cho nguoi go (ephemeral) de khong rac kenh; viec
@@ -8,6 +8,8 @@ that (tin hoi Check, luot verify) van di qua dung duong cua tin build -> chi co 
 - /check <ma app> <version> [sdk]: tin hoi Check moi o kenh QA (chi QA duoc duyet). Build bot da thay -> giu
   thong tin build cu; build chua thay -> can `sdk` de chon nhanh (Next-Gen / bo TC) nhu tin build.
 - /check-bug <ma app>: bug bot da log cho app + trang thai Jira; nut verify bug Reviewing tren build gan nhat.
+- /check-sub <ma app> <version>: xep luot chay bo TC sub Android (`/sub-check`) - job `loai_job: "sub"`, cai ban
+  release tu App Tester nhu Check (chi QA duoc duyet).
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ import discord
 from discord import app_commands
 
 from . import bot_cong_viec, bot_hang_doi, bot_nhan_build, build_ma_app
+from .bot_giao_dien import NUT_HUY, nut as nut_tin
 from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
 from .adb_client import AdbClient
@@ -58,6 +61,12 @@ def dang_ky(bot) -> None:
     async def check_bug(it: discord.Interaction, ma_app: str):
         await lenh_check_bug(bot, it, ma_app)
 
+    @tree.command(name="check-sub", description="Chạy bộ TC sub Android (mua gói test, gia hạn, cancel, ads × Premium)")
+    @app_commands.describe(ma_app="Mã app, vd AIP936", version="Version kèm code, vd 1.9.0 (11)")
+    @app_commands.autocomplete(ma_app=goi_y_ma)
+    async def check_sub(it: discord.Interaction, ma_app: str, version: str):
+        await lenh_check_sub(bot, it, ma_app, version)
+
 
 async def dong_bo(bot) -> None:
     """Dong bo lenh vao tung server (hien ngay, global mat toi 1 gio). Server moi ra lenh khi bot ket noi lai.
@@ -81,6 +90,8 @@ def goi_y_ma_app(bot, dang_go: str) -> list[str]:
 
 # --- /hang-doi ------------------------------------------------------------------------------
 def _ten_luot(job: dict) -> str:
+    if job.get("loai_job") == "sub":
+        return f"🧾 check sub — **{job.get('ma', '')}** `{job.get('version', '')}`"
     if job.get("loai_job") == "verify":
         return f"🔁 verify {len(job.get('verify') or [])} bug — **{job.get('ma', '')}** `{job.get('version', '')}`"
     return f"**{job.get('ma', '')}** `{job.get('version', '')}`"
@@ -200,6 +211,46 @@ async def _check(bot, tin: dict) -> str:
         return (f"Bot chưa thấy tin build **{tin['ma']}** `{tin['version']}` — gõ thêm `sdk` (vd `3.6.1`, `3.7.0`, "
                 "`next-gen`) để bot chọn đúng nhánh chấm. Build không apply SDK thì dùng /check-bug để verify bug.")
     return await bot_nhan_build.hoi_build_moi(bot, tin, "", kenh, bot.out)
+
+
+# --- /check-sub -----------------------------------------------------------------------------
+async def lenh_check_sub(bot, it: discord.Interaction, ma_app: str, version: str) -> None:
+    if not bot._duoc_duyet(it.user):
+        await it.response.send_message("Chỉ QA được duyệt mới dùng được /check-sub.", ephemeral=True)
+        return
+    tin, loi = doc_lenh_check(ma_app, version, None)
+    if tin is None:
+        await it.response.send_message(loi, ephemeral=True)
+        return
+    await it.response.defer(ephemeral=True, thinking=True)
+    try:
+        kq = await xep_check_sub(bot, tin, it.user)
+    except Exception as exc:              # noqa: BLE001 - loi sheet / Discord tra ve cho nguoi go
+        log.exception("/check-sub loi")
+        kq = f"⛔ Lỗi: {exc}"
+    await it.followup.send(kq[:2000], ephemeral=True)
+
+
+async def xep_check_sub(bot, tin: dict, nguoi) -> str:
+    """Tin luot sub o kenh QA (nut Huy) + xep vao hang. Package lay tu tin build bot da thay, khong co thi tra sheet."""
+    cu = max((t for t in bot_nhan_build.tin_da_hoi(bot, tin) if t.get("package")),
+             key=lambda t: int(t.get("msg_id") or 0), default=None)
+    pkg = cu["package"] if cu else await asyncio.to_thread(bot_cong_viec.package_cua, tin["ma"], bot.out)
+    if not pkg:
+        return f"Sheet Check thông số KT không có package của **{tin['ma']}**."
+    job = {"ma": tin["ma"], "ten": (cu or {}).get("ten", ""), "version": tin["version"], "package": pkg,
+           "loai_ban": "release", "loai_job": "sub", "link_tin": (cu or {}).get("link_tin", "")}
+    if bot.q.trung(job):
+        return f"Lượt check sub **{tin['ma']}** `{tin['version']}` đã trong hàng đợi."
+    kenh = await bot._kenh_qa()
+    qa = await kenh.send(f"🧾 Check sub — {bot_cong_viec.dau_tin(job)}…")
+    job["msg_id"] = qa.id
+    bot.q.nho_tin(job)
+    vi_tri = bot.q.them({**job, "nguoi_duyet": nguoi.id})
+    await qa.edit(content=f"🧾 **Check sub** — {bot_cong_viec.dau_tin(job)}\nBộ TC sub Android, bản release từ App Tester "
+                          f"— {nguoi.mention} gõ /check-sub, vị trí {vi_tri} trong hàng đợi.",
+                  view=nut_tin(*NUT_HUY, msg_id=qa.id))
+    return f"Đã xếp lượt check sub: {qa.jump_url}"
 
 
 # --- /check-bug -----------------------------------------------------------------------------

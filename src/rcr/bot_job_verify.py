@@ -149,8 +149,9 @@ async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, ou
                       view=nut(vm.id, ("check", "Thử lại")))
         return False
     cases = sorted({u["case"] for u in job["verify"]})
-    ck = v.loai_case(cases[0]) == "checklist"        # phan_loai chi cho qua mot nhom moi luot
-    if bot_kiem_testvsl.doi_rc_firebase(job, ck):
+    loai = v.loai_case(cases[0])                     # phan_loai chi cho qua mot nhom moi luot
+    ck, sub = loai == "checklist", loai == "sub"
+    if not sub and bot_kiem_testvsl.doi_rc_firebase(job, ck):    # sub khong doi Remote Config
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
         if loi:                              # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Jira / Firebase
             await vm.edit(content=f"{dau}\n⛔ Chưa chạy: điều kiện `testvsl` chưa sẵn sàng.",
@@ -158,8 +159,10 @@ async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, ou
             await vm.reply(bot_kiem_testvsl.tin_nhac(job, loi, getattr(bot, "duyet", ())))
             return False
     await vm.reply(bot_cong_viec.tin_da_cai(job, ten, "verify bug"))
-    het_gio = bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY
-    bot_dung_luot.danh_dau_pha_rc(job, ck)            # Dung tu day -> phai don RC testvsl
+    het_gio = (bot_chay_claude.TIMEOUT_VERIFY_SUB if sub else
+               bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY)
+    if not sub:
+        bot_dung_luot.danh_dau_pha_rc(job, ck)        # Dung tu day -> phai don RC testvsl
     await vm.edit(content=f"{dau}\nĐang chạy lại {len(cases)} {'dòng checklist' if ck else 'case'}…")
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, het_gio, out, cases)
     bot.q.cap_nhat(job, kq=kq, ten_may=ten)

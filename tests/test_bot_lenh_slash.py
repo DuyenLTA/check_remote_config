@@ -44,7 +44,7 @@ def test_dang_ky_du_ba_lenh():
         bot = SimpleNamespace(tree=app_commands.CommandTree(client))
         s.dang_ky(bot)
         return sorted(c.name for c in bot.tree.get_commands())
-    assert asyncio.run(chay()) == ["check", "check-bug", "hang-doi"]
+    assert asyncio.run(chay()) == ["check", "check-bug", "check-sub", "hang-doi"]
 
 
 def test_doc_lenh_check():
@@ -193,3 +193,25 @@ def test_bug_cua_app_gop_label_va_key_cu(monkeypatch):
 def test_goi_y_ma_app_tu_tin_da_thay(tmp_path):
     bot = _bot(tmp_path, {"1": {"ma": "AIP922"}, "2": {"ma": "AIP886"}, "3": {"ma": "AIP922"}})
     assert s.goi_y_ma_app(bot, "") == ["AIP886", "AIP922"] and s.goi_y_ma_app(bot, "92") == ["AIP922"]
+
+
+def test_check_sub_xep_job_sub_lay_package_tu_build_da_thay(tmp_path):
+    cu = {"ma": "AIP936", "ten": "Homova", "version": "1.9.0 (11)", "package": "p.home", "msg_id": 5, "link_tin": "l"}
+    bot = _bot(tmp_path, {"5": cu})
+    kenh = _Kenh()
+    bot._kenh_qa = lambda: asyncio.sleep(0, kenh)
+    nguoi = SimpleNamespace(id=1, mention="@qa")
+    tin, _ = s.doc_lenh_check("AIP936", "1.9.0 (11)", None)
+    kq = asyncio.run(s.xep_check_sub(bot, tin, nguoi))
+    assert "Đã xếp lượt check sub" in kq
+    job = bot.q.jobs[0]
+    assert job["loai_job"] == "sub" and job["package"] == "p.home" and job["loai_ban"] == "release"
+    assert job["msg_id"] == 900 and bot.q.tin["900"]["loai_job"] == "sub" and "vị trí 1" in kenh.sent[-1]
+    assert "đã trong hàng đợi" in asyncio.run(s.xep_check_sub(bot, tin, nguoi))     # go lai: khong xep trung
+
+
+def test_check_sub_khong_co_package(tmp_path, monkeypatch):
+    bot = _bot(tmp_path)
+    monkeypatch.setattr(s.bot_cong_viec, "package_cua", lambda ma, out: "")
+    kq = asyncio.run(s.xep_check_sub(bot, {"ma": "AIP999", "version": "1.0.0 (1)"}, SimpleNamespace(id=1)))
+    assert "không có package" in kq and bot.q.jobs == []

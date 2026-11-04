@@ -328,6 +328,30 @@ curl -s -X POST "http://127.0.0.1:8000/api/restore?serial=$S&package=$P"
 (thường do build dev đặt `minimumFetchInterval = 0` nên throttle vô hiệu). Không phân biệt là
 đẩy tester đi tìm bug không tồn tại.
 
+## Check sub Android (`/sub-check`, `rcr-sub`)
+
+Bộ TC chung cho mọi app (sheet `SUB_Android`, tab `TC Sub Android`, 45 TC: Purchase, Lifecycle, Đồng bộ, Management,
+Ads × Premium, E2E). Chạy bằng `/check-sub` trên Discord, hoặc trong terminal: `/sub-check <package> --serial <S>`.
+
+- Mọi máy QA đăng nhập tài khoản **License Tester** → mua là giao dịch test. `rcr-sub mua` không bấm Subscribe khi popup
+  Google Play không có thẻ test.
+- **Chu kỳ gia hạn test đọc từ popup**: Weekly / Monthly 5 phút, Yearly 30 phút trên tài khoản test hiện tại.
+- App chỉ cập nhật trạng thái billing khi **kill rồi mở lại** — resume mà vẫn giữ trạng thái cũ là đúng thiết kế.
+- Trạng thái Premium đọc từ log thư viện billing chung (`PurchaseEG`: `verifyPurchased SUBS … size:N`,
+  `onPurchasesUpdated code: 0`), đối chiếu UI và trang Subscriptions của Play Store.
+- Thông tin riêng từng app (đường vào Paywall, dấu hiệu Premium, quyền lợi) nằm ở `src/rcr/data/sub-profiles/<package>.json`
+  — lần đầu Claude dò rồi ghi, QA sửa nếu sai.
+- Case cần máy thứ 2 cùng tài khoản / tài khoản Google thứ 2: tự chạy nếu đủ, thiếu thì `CAN_TEST_TAY`.
+
+```
+rcr-sub tc                                           # bộ TC theo lịch chạy (JSON)
+rcr-sub ve-home|paywall --serial S --package P
+rcr-sub mua --serial S --package P --goi weekly [--the declines|slow] [--khong-xac-nhan]
+rcr-sub play|cancel|resubscribe|cho-het-ky --serial S --package P --sku <sku>
+rcr-sub mo-lanh --serial S --package P               # kill + mở, đọc premium true/false từ log
+rcr-sub report --luot out/sub-<pkg>-<S>.luot.json --out out/sub.html
+```
+
 ## Cơ chế
 
 Firebase RC SDK ghi cùng một chỗ, cùng một tên, ở **mọi app**:
@@ -450,6 +474,8 @@ nhận link Google Drive nữa.
 - `/check <mã app> <version> [sdk]` — chỉ QA được duyệt. Build bot đã thấy → tin hỏi Check mới (thay cho gửi lại tin
   build); build bot chưa thấy → bắt buộc `sdk` (`3.6.1`, `3.7.0`, `next-gen`…) để chọn nhánh chấm như tin build.
 - `/check-bug <mã app>` — bug bot đã log + trạng thái Jira; có bug Reviewing thì nút **Verify** trên build gần nhất.
+- `/check-sub <mã app> <version>` — chỉ QA được duyệt. Xếp lượt chạy **bộ TC sub Android** (xem mục dưới) trên bản
+  release từ App Tester; kết quả + menu log bug như Check, mã case trong Jira là `sub#<số TC>`.
 Bot thiếu scope `applications.commands` ở server nào thì lệnh không hiện ở server đó (log bot ghi rõ), bot vẫn chạy.
 
 **Tự verify bug Reviewing** (có `JIRA_PERSONAL_TOKEN`): bug do tool log (từ bot Discord, `rc-check` trong terminal

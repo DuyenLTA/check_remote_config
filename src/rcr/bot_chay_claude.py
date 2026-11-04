@@ -26,6 +26,7 @@ from . import bot_tien_trinh
 
 SERIAL_RE = re.compile(r"[A-Za-z0-9.:_-]+")
 SDK_RE = re.compile(r"\d+\.\d+\.\d+(?:-[\w.]+)?")   # so tutorial tu tin build (3.6.1, 3.7.1-alpha01)
+VERSION_RE = re.compile(r"\d+(?:\.\d+)+ \(\d+\)")   # version build "3.7.0 (30)" (/check-sub)
 PACKAGE_RE = re.compile(r"^[a-zA-Z][\w]*(\.[a-zA-Z_][\w]*)+$")
 # Workflow: buoc check ID ads (rc-check.md muc 3c) chay workflow audit-fanout.
 TOOLS = ["Bash", "Read", "Edit", "Write", "Artifact", "Skill", "Workflow"]
@@ -107,10 +108,40 @@ PROMPT_VERIFY_CHECKLIST = (
     "loi tool -> NEEDS_HUMAN."
 )
 TIMEOUT_VERIFY_CHECKLIST = 70 * 60
+# Check sub Android (/check-sub): ca bo 45 TC, moi lan quay lai "chua mua" phai cho het mot chu ky test (~5 phut).
+DUOI_KET_QUA = (
+    "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
+    'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
+    '"tom_tat": "<tieng Viet co dau, toi da 300 ky tu: so PASS/FAIL/CAN_TEST_TAY hoac ly do dung>", '
+    '"bugs": [{{"case": "sub#<so TC>", "tieu_de": "<tom tat bug>", "precondition": "<trang thai tai khoan / app>", '
+    '"buoc": "<buoc tai hien>", "expected": "<dong Expected>", "thuc_te": "<so do that>", '
+    '"muc_do": "Highest|High|Medium|Low"}}], '
+    '"cases": [{{"case": "sub#<so TC>", "verdict": "PASS|FAIL|BLOCKED|NEEDS_HUMAN|CAN_TEST_TAY", '
+    '"thuc_te": "<tieng Viet co dau>"}}]}}\n'
+    "`bugs` chi gom FAIL da chay lai xac nhan (luat muc 4 sub-check.md); khong co thi []. KHONG hoi user, KHONG log Jira."
+)
+PROMPT_SUB = (
+    "/sub-check {package} --serial {serial} --version \"{version}\"\n\n"
+    "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi (lenh /check-sub), khong co nguoi ngoi truoc may. "
+    "Chay HET bo TC sub theo lich, may la tai khoan License Tester (khong hoi). Case thieu may / tai khoan -> CAN_TEST_TAY. "
+    "Gap diem can nguoi quyet (popup khong phai giao dich test, khong tim duoc Paywall sau khi da thu het) thi dung. "
+    "Truoc khi chay: co out/sub-{package}-{serial}.luot.json \"xong\": false, cap nhat trong 12 gio -> CHAY TIEP. "
+    "Het luot phai cancel goi con Active. Khong commit/push. Co bug thi BAT BUOC publish report artifact truoc khi tra loi.\n"
+    + DUOI_KET_QUA
+)
+PROMPT_VERIFY_SUB = (
+    "/sub-check {package} --serial {serial} --case {cases}\n\n"
+    "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi de VERIFY bug dev bao da fix: chi chay dung cac TC sub "
+    "tren, FAIL phai chay lai xac nhan. Khong co nguoi ngoi truoc may: gap diem can nguoi quyet thi dung. Het luot cancel goi "
+    "con Active. Khong commit/push. KHONG doc/sua/log Jira - bot tu lam theo verdict.\n"
+    + DUOI_KET_QUA
+)
+TIMEOUT_SUB = 240 * 60
+TIMEOUT_VERIFY_SUB = 60 * 60
 
 
 def lenh(package: str, serial: str, cases: list[str] | None = None,
-         next_gen: bool = False, sdk: str = "") -> tuple[list[str], str]:
+         next_gen: bool = False, sdk: str = "", sub_version: str = "") -> tuple[list[str], str]:
     """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
     Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt.
     `next_gen`: bot da cai ban release vi tin build ghi next-gen -> `--next-gen` de rc-check chay checklist
@@ -127,6 +158,10 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
         raise ValueError(f"bản SDK không hợp lệ: {sdk!r}")
     exe = shutil.which("claude") or "claude"
     cmd = [exe, "-p", "--output-format", "json", "--allowedTools", *TOOLS]
+    if sub_version and not cases:                    # /check-sub: ca bo TC sub
+        if not VERSION_RE.fullmatch(sub_version):
+            raise ValueError(f"version không hợp lệ: {sub_version!r}")
+        return cmd, PROMPT_SUB.format(package=package, serial=serial, version=sub_version)
     if not cases:
         return cmd, PROMPT.format(package=package, serial=serial, next_gen=" --next-gen" if next_gen else "",
                                   sdk=f" --sdk {sdk}" if sdk else "",
@@ -137,6 +172,9 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
         raise ValueError(f"case không hợp lệ: {sai!r}")
     if len(set(loai.values())) > 1:                  # TC va checklist can hai luot khac nhau
         raise ValueError(f"không chạy lẫn case TC và checklist trong một lượt: {cases!r}")
+    if set(loai.values()) == {"sub"}:
+        return cmd, PROMPT_VERIFY_SUB.format(package=package, serial=serial,
+                                             cases=",".join(c.split("#", 1)[1] for c in cases))
     if set(loai.values()) == {"checklist"}:
         return cmd, PROMPT_VERIFY_CHECKLIST.format(package=package, serial=serial, cases=", ".join(cases))
     return cmd, PROMPT_VERIFY.format(package=package, serial=serial, cases=",".join(cases))
@@ -200,12 +238,12 @@ def moi_truong() -> dict[str, str]:
 
 
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
-         cases: list[str] | None = None, next_gen: bool = False, sdk: str = "") -> dict:
+         cases: list[str] | None = None, next_gen: bool = False, sdk: str = "", sub_version: str = "") -> dict:
     """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
-        cmd, prompt = lenh(package, serial, cases, next_gen, sdk)
+        cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version)
         # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
         p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo,
                                 encoding="utf-8", errors="replace", env=moi_truong())
