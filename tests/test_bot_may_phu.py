@@ -97,7 +97,8 @@ def test_may_phu_xin_job_cho_may_ranh_mot_lan(tmp_path, monkeypatch):
     bot.ban = {"S8": 5}
     monkeypatch.setattr(mp, "NHIP", 0)
     asyncio.run(mp.vong_may_phu(bot, k, may))
-    assert [x[0] for x in k.gui] == ["khoi_dong", "xin"] and k.gui[1][1]["serial"] == "S9"
+    # S8 dang chay job 5 -> bao song (mot lan, chua toi SONG giay); S9 ranh -> xin mot lan
+    assert [x[0] for x in k.gui] == ["khoi_dong", "song", "xin"] and k.gui[2][1]["serial"] == "S9"
 
 
 def test_bot_chinh_khoi_dong_lai_thi_may_phu_xin_lai_ngay(tmp_path):
@@ -157,3 +158,31 @@ def test_tin_xong_bi_lo_luc_bot_chinh_khoi_dong_thi_khong_chay_lai(tmp_path):
                         _TinDp("xong", {"may": "ubuntu", "msg_id": 1, "tin": {**_job(1), "bugs": [1]}})])
     assert asyncio.run(mp.thu_hoi_job_treo(bot, kenh, 1000.0 + mp.HAN_MAY_PHU + 1)) == []
     assert bot.q.jobs == [] and bot.q.tin_cua(1)["bugs"] == [1]
+
+
+def test_may_phu_con_bao_song_thi_luot_dai_may_cung_khong_bi_thu_hoi(tmp_path):
+    """AIP893 04/11/2026: luot check khong gioi han thoi gian -> han thu hoi tinh tu tin `song` cuoi."""
+    bot, k = _bot(tmp_path), _Kenh()
+    bot.q.them(_job(1))
+    mp.nhan_o_may_chinh(bot, "xin", {"may": "ubuntu", "serial": "S9"})
+    asyncio.run(mp.chia_viec(bot, k))
+    t0, kenh = bot.q.jobs[0]["giao_luc"], _KenhLichSu([])
+    mp.nhan_o_may_chinh(bot, "song", {"may": "khac", "msg_ids": [1]})        # may khac bao: khong tinh
+    assert "song_luc" not in bot.q.jobs[0]
+    mp.nhan_o_may_chinh(bot, "song", {"may": "ubuntu", "msg_ids": [1]})
+    bot.q.jobs[0]["song_luc"] = t0 + 5 * 3600                                 # van bao song sau 5 gio
+    assert asyncio.run(mp.thu_hoi_job_treo(bot, kenh, t0 + 5 * 3600 + mp.HAN_MAY_PHU)) == []
+    thu = asyncio.run(mp.thu_hoi_job_treo(bot, kenh, t0 + 5 * 3600 + mp.HAN_MAY_PHU + 1))
+    assert [j["msg_id"] for j in thu] == [1] and "song_luc" not in bot.q.jobs[0]
+
+
+def test_may_phu_dang_chay_job_thi_gui_tin_song(tmp_path):
+    bot, k = _bot(tmp_path), _Kenh()
+    bot.ban = {"S9": 7}
+
+    async def danh_sach_may():
+        bot.is_closed = lambda: True                                         # mot vong roi thoi
+        return []
+    bot.is_closed = lambda: False
+    asyncio.run(mp.vong_may_phu(bot, k, danh_sach_may))
+    assert [x[0] for x in k.gui] == ["khoi_dong", "song"] and k.gui[1][1]["msg_ids"] == [7]

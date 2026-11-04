@@ -123,7 +123,7 @@ def test_next_gen_dan_do_tay_het_va_khong_dung_vi_ad_click_tren_may_test():
     # AIP805 29/10/2026: nhanh bo TC cung khong duoc dung vi ad_click (moi may la may test)
     assert "ad_click KHONG phai ly do dung" in c.lenh("pkg.a", "S1")[1]
     assert "DO TAY HET" not in c.lenh("pkg.a", "S1")[1]                 # nhanh bo TC giu prompt cu
-    assert c.TIMEOUT_NEXT_GEN >= 120 * 60
+    assert c.TIMEOUT_NEXT_GEN == c.TIMEOUT_BO_TC == float("inf")   # luot check chay het case moi thoi
 
 
 def test_so_sdk_tin_build_truyen_sdk_cho_rc_check():

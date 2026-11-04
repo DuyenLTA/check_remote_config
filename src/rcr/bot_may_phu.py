@@ -10,6 +10,7 @@ kenh dieu phoi rieng (`DISCORD_DIEU_PHOI_CHANNEL_ID`) bang tin `RCR <loai> <may>
   phu -> chinh  `xin`        may test <serial> cua may phu dang ranh, xin mot job
   chinh -> phu  `giao`       job + tin cua build + anh hang doi (verify can biet build moi hon)
   phu -> chinh  `tra`        nhan job nhung may test vua ban / rut cap -> tra lai hang
+  phu -> chinh  `song`       moi SONG giay khi dang chay: msg_id cac job con chay -> bot chinh khong thu hoi
   phu -> chinh  `xong`       chay xong; kem tin build sau luot (danh sach bug de QA tick o bot chinh)
   chinh -> phu  `dung`       QA bam Dung luot dang chay o may phu -> may phu giet ca cay tien trinh + don RC
 
@@ -38,11 +39,12 @@ TIEN_TO = "RCR"
 XIN_LAI = 2 * 3600
 NHIP = 10
 SO_LAN_GUI_XONG = 10
-# May phu tat han giua luot thi khong bao gi gui `khoi_dong` / `xong` -> job dung "dang chay" mai. Qua han nay
-# (luot dai nhat + cai + du phong; may phu chi gui lai ket qua toi da bot_gui_lai.HAN_GUI_LAI_MAY_PHU, nam trong
-# phan du phong) thi may phu chac chan da thoi chay lan gui -> thu hoi, khong chay trung.
-HAN_MAY_PHU = (max(bot_chay_claude.TIMEOUT_BO_TC, bot_chay_claude.TIMEOUT_NEXT_GEN,
-                   bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST) + bot_cong_viec.TIMEOUT_CAI + 15 * 60)
+# May phu tat han giua luot thi khong bao gi gui `khoi_dong` / `xong` -> job dung "dang chay" mai. Luot check
+# khong con gioi han thoi gian nen han tinh tu tin `song` gan nhat, khong tu luc giao: may phu con song thi moi
+# SONG giay bao mot lan. Im qua HAN_MAY_PHU (gom ca lan gui `xong` sau luot ~SO_LAN_GUI_XONG phut, luc do da
+# thoi bao song) thi may phu chac chan da chet -> thu hoi, khong chay trung.
+SONG = 5 * 60
+HAN_MAY_PHU = 30 * 60
 
 
 async def gui(kenh, loai: str, du_lieu: dict) -> None:
@@ -94,7 +96,7 @@ async def thu_hoi_job_treo(bot, kenh, bay_gio: float | None = None) -> list[dict
             continue
         if "giao_luc" not in j:
             j["giao_luc"], doi = bay_gio, True
-        elif bay_gio - j["giao_luc"] > HAN_MAY_PHU:
+        elif bay_gio - max(j["giao_luc"], j.get("song_luc") or 0) > HAN_MAY_PHU:
             xong = await _tin_xong_bi_lo(kenh, j)
             if xong is not None:             # may phu da xong, chi la tin bi lo
                 log.info("tin xong bi lo cua %s %s: danh dau xong", j.get("ma"), j.get("version"))
@@ -104,6 +106,7 @@ async def thu_hoi_job_treo(bot, kenh, bay_gio: float | None = None) -> list[dict
             thu.append({**j})
             j.pop("dang_o")
             j.pop("giao_luc")
+            j.pop("song_luc", None)
             bot.q.dang_chay.discard(j["msg_id"])
             doi = True
     if doi:
@@ -118,6 +121,13 @@ def nhan_o_may_chinh(bot, loai: str, d: dict) -> None:
     if loai == "khoi_dong":
         bot.xin_cho = {k: v for k, v in bot.xin_cho.items() if k[0] != may}
         log.info("may phu %s khoi dong: tra %d job ve hang", may, tra_ve_hang(bot, may))
+    elif loai == "song":
+        # Chi gia han job con giao cho dung may nay (job da thu hoi roi thi tin song muon khong lay lai duoc).
+        ids = set(d.get("msg_ids") or [])
+        for j in bot.q.jobs:
+            if j["msg_id"] in ids and str(j.get("dang_o", "")).startswith(f"{may}:"):
+                j["song_luc"] = time.time()
+        bot.q.luu()
     elif loai == "xin":
         bot.xin_cho[(may, str(d["serial"]))] = str(d.get("ten") or d["serial"])
     elif loai in ("xong", "tra"):
@@ -204,8 +214,12 @@ async def _chay_job(bot, job: dict, serial: str, ten: str, kenh) -> None:
 async def vong_may_phu(bot, kenh, danh_sach_may) -> None:
     """May test cam vao may phu, ranh, chua co yeu cau dang cho -> xin job. `danh_sach_may()`: may ready."""
     await gui(kenh, "khoi_dong", {"may": bot.ten_may})
+    bao_song = 0.0
     while not bot.is_closed():
         try:
+            if bot.ban and time.time() - bao_song >= SONG:   # luot dai bao nhieu cung duoc, mien con song
+                await gui(kenh, "song", {"may": bot.ten_may, "msg_ids": sorted(set(bot.ban.values()))})
+                bao_song = time.time()
             may = await danh_sach_may()
             bot.may_san = {d.serial for d in may}
             await bot_canh_may.kiem(bot, bot.may_san)   # may dang chay luot mat ket noi qua han -> tu dung

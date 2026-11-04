@@ -22,8 +22,8 @@ log = logging.getLogger("rcr-bot")
 LOI_MANG = (aiohttp.ClientError, asyncio.TimeoutError, discord.DiscordServerError)
 CHO_GUI_LAI = 60            # giay giua hai lan gui lai
 HAN_GUI_LAI = 12 * 3600     # mat mang qua 12 gio thi thoi, bo job, ghi log
-# May phu: luot dai nhat + cai + muc nay phai < bot_may_phu.HAN_MAY_PHU (du phong 15 phut) -> luc bot chinh
-# thu hoi job thi may phu chac chan da thoi gui, khong co hai ban ket qua.
+# May phu: van bao `song` trong luc gui lai (may con giu job) -> muc nay chi can ngan hon bot_may_phu.HAN_MAY_PHU
+# tinh tu lan bao song cuoi -> luc bot chinh thu hoi job thi may phu chac chan da thoi gui, khong co hai ban.
 HAN_GUI_LAI_MAY_PHU = 10 * 60
 
 

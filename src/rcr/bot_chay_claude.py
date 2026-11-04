@@ -31,11 +31,11 @@ PACKAGE_RE = re.compile(r"^[a-zA-Z][\w]*(\.[a-zA-Z_][\w]*)+$")
 # Workflow: buoc check ID ads (rc-check.md muc 3c) chay workflow audit-fanout.
 TOOLS = ["Bash", "Read", "Edit", "Write", "Artifact", "Skill", "Workflow"]
 KET_QUA_RE = re.compile(r"^KET_QUA:\s*(\{.*\})\s*$", re.M)
-# Nhanh bo TC chay lau hon nhieu nhanh checklist Next-Gen. Ca hai cong ~15 phut cho
-# buoc check ID ads (capture + agent phan), build chua doi thi audit bo qua nhanh.
-TIMEOUT_BO_TC = 135 * 60
-# Next-Gen phai do tay het cac dong DO_TAY (~20 dong), khong dung o "con N dong do tay" (29/10/2026).
-TIMEOUT_NEXT_GEN = 120 * 60
+# Luot check (bo TC / checklist Next-Gen) KHONG gioi han thoi gian: chay het case moi thoi (user chot 04/11/2026
+# sau khi AIP893 52 case bi cat o 135 phut giua vong chay lai case chua PASS). Luot treo thi QA bam Dung.
+KHONG_GIOI_HAN = float("inf")
+TIMEOUT_BO_TC = KHONG_GIOI_HAN
+TIMEOUT_NEXT_GEN = KHONG_GIOI_HAN
 DUOI_LOG = 300
 # Menu chon cua Discord toi da 25 lua chon; moi truong cat ngan de tin khong phinh.
 MAX_BUG = 25
@@ -254,7 +254,7 @@ def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
         raise
     except subprocess.TimeoutExpired as exc:
         log.write_text(f"HET GIO sau {timeout}s\n{exc.stdout or ''}\n{exc.stderr or ''}", encoding="utf-8")
-        return {"trang_thai": "HET_GIO", "link": "", "tom_tat": f"quá {timeout // 60} phút", "log": str(log)}
+        return {"trang_thai": "HET_GIO", "link": "", "tom_tat": f"quá {int(timeout // 60)} phút", "log": str(log)}
     log.write_text(f"exit={p.returncode}\n--- stdout\n{p.stdout}\n--- stderr\n{p.stderr}", encoding="utf-8")
     ra = doc_ket_qua(p.stdout)
     if p.returncode and ra["trang_thai"] == "XONG":
