@@ -26,8 +26,14 @@ CTA_IDS = ("btnNextQuestion", "btnNextOnboardingImage")
 HINT_IDS = ("lottieQuestion", "lottieHandPoint")
 
 
+# Inter splash 102: key `id_102_spl_*`, hoac app doc ID tu key rieng `splash_inter_high_n_id`, `splash_inter_n_id`...
+# (AIP872 1.9.0: log chi co …751 cua `splash_inter_high_n_id`, khong co ID `id_102_*` cua checklist -> truoc day
+# FAIL gia "khong co request nao cua inter splash 102").
+INTER_SPLASH_KEY_RE = re.compile(r"102_spl|^splash_inter\w*_id$")
+
+
 def _102(units: list[dict]) -> list[dict]:
-    return [u for u in units if any("102_spl" in k for k in u.get("rc_keys") or [])]
+    return [u for u in units if any(INTER_SPLASH_KEY_RE.search(k) for k in u.get("rc_keys") or [])]
 
 
 def _final(drive: dict) -> dict:
