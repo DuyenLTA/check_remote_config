@@ -712,6 +712,14 @@ xoá khỏi sheet; **không cố ép fill** (đổi ID sang ID test, chạy lạ
   (vào LFO2 là đã chọn sẵn), đổi ngôn ngữ ở LFO2 thì không đếm lại. Đo bằng chụp liên tục (~0.4s/khung):
   `uiautomator dump` mất ~2.5s/lần, quá thô cho mốc 0–4s.
 
+**Luật QA chốt 05/11/2026 (AIP893, TC 3.5.4) — chấm theo đây, không theo câu chữ TC** (tool: `assert_qa_man_tat_hung_202`):
+- **Hứng 202:** ad 202 đã load mà chưa show (vd request mới sau khi bấm đổi ngôn ngữ ở LFO2) thì màn OB **đầu tiên**
+  show ad 202 đó thay ad của màn (OB1; tắt OB1 thì OB2). "Native 301 hiển thị, không show 202" mà OB1 show 202 → PASS.
+- **Màn tắt giữ logic load:** tắt màn (enable_onbN_screen / enable_ob1_old_screen = false) thì ad của màn đó vẫn
+  preload/load ở vị trí cũ như luồng đủ, chỉ không show. Câu TC "không có loadAd <ad màn tắt>" bỏ; có request là đúng,
+  thiếu request ở điểm preload của luồng đủ là FAIL (so với lượt luồng đủ cùng máy). Màn khác giữ logic thường (305 vẫn
+  preload như khi có OB4).
+
 **Sheet TC tải đúng 1 lần mỗi lượt check** (user chốt 03/11/2026: *"tôi sẽ không sửa sheet nữa, tải đúng 1 lần
 trước khi chạy"*). Lượt mới tải sheet; các lệnh nối tiếp (`--gop`, `--tiep`) tự dùng lại file `out/tc-<id>.xlsx`
 đã tải. Chỉ khi user báo **đã sửa sheet** mới tải lại (`--tai-lai-tc`), rồi so `lines[].e` với kỳ vọng mới: case

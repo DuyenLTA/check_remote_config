@@ -45,6 +45,27 @@ rules:
     do_that:
       - "Piclux 2.8.0: splash_inter_high_n_id = ca-app-pub-3940256099942544/1033173712 -> crash 10/10 luot"
 
+  - id: hung-202-sang-man-ob-dau
+    kind: note  # tool cham: assert_qa_man_tat_hung_202
+    luat: >-
+      Ad 202 (LFO2) da load ma CHUA show (vd request moi sau khi bam doi ngon ngu) thi man OB
+      DAU TIEN show ad 202 do thay cho ad cua chinh man (301 o OB1; tat OB1 thi OB2). Dong TC
+      "Native 301 hien thi, khong show 202" ma OB1 show 202 la DUNG. Reload sau resume o man do
+      cung la 202.
+    nguon: user (QA) 2026-11-05
+    do_that:
+      - "AIP893 FO 3.5.4 (2026-11-05): LFO2 doi ngon ngu -> show 202 + request 202 moi -> tick -> ob1_view, ad_show 202 tai OB1; tat OB1 -> OB2 show 202"
+  - id: man-tat-giu-logic-load
+    kind: note  # tool cham: assert_qa_man_tat_hung_202 (dong 'khong loadAd' cua man tat)
+    luat: >-
+      Man bi tat (enable_onbN_screen / enable_ob1_old_screen = false): ad cua man do VAN giu logic
+      preload/load o vi tri cu nhu luong thuong, chi khong show o man tat; man khac giu logic
+      binh thuong (305 van preload nhu luong du). Dong TC "Khong co loadAd <ad man tat>" khong
+      ap dung. Co request = dung; thieu request o diem preload cua luong du = FAIL.
+    nguon: user (QA) 2026-11-05
+    do_that:
+      - "AIP893 FO 3.5.4 (2026-11-05): tat OB Old -> 301-onb1-o-native-high van load o Splash (dung); tat OB1 -> 301 khong preload o LFO1, tat OB2 -> 302 khong load luc vao OB1, tat OB4 -> 305 load muon o Question (FAIL)"
+
   # ---- Rut tu spec Confluence (python -m rcr.spec_sync; ban text o data/specs/, khong commit) ----
   # Link: https://confluence.apero.vn/pages/viewpage.action?pageId=<id>
   - id: splash-timeout-la-truong-trong-splash-ui-config
