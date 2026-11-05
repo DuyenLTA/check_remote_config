@@ -712,6 +712,16 @@ xoá khỏi sheet; **không cố ép fill** (đổi ID sang ID test, chạy lạ
   (vào LFO2 là đã chọn sẵn), đổi ngôn ngữ ở LFO2 thì không đếm lại. Đo bằng chụp liên tục (~0.4s/khung):
   `uiautomator dump` mất ~2.5s/lần, quá thô cho mốc 0–4s.
 
+**Cách hiểu TC SDK 3.5.4 QA đã chốt (05/11/2026, AIP872) — áp cho cả các bản FO khác, không theo câu chữ TC:**
+- App SDK 3.5.4 chấm theo tab **"Bản sao của TC SDK 3.5.4"** (bản QA đã sửa), không theo tab "TC SDK 3.5.4".
+- **Logic hứng ad:** ad 202 (LFO2) chưa show ở LFO2 thì OB1 hứng → OB1 hiện native 202 là **đúng**; OB sau hiện
+  ad của màn trước (vd OB2 hiện …034 khi tắt OB1/OB3) cũng là hứng, **không FAIL**.
+- **Ad resume** (AOA 501 / inter 503 / native full 502) hiện khi ẩn app rồi mở lại là **đúng**, kể cả trong luồng
+  tutorial và kể cả tab bản sao ghi "không show ad resume".
+- **Tắt một màn chỉ bỏ ad có logic preload/load TẠI màn đó.** Ad load ở Splash vẫn load là đúng (tắt OB3 mà 303
+  load ở Splash, tắt OB Old mà 301_o request ở Splash — đều PASS).
+- **Bỏ hẳn dòng "focus ngôn ngữ đầu tiên"** (R02-02): không chấm, không đưa vào bug.
+
 **Sheet TC tải đúng 1 lần mỗi lượt check** (user chốt 03/11/2026: *"tôi sẽ không sửa sheet nữa, tải đúng 1 lần
 trước khi chạy"*). Lượt mới tải sheet; các lệnh nối tiếp (`--gop`, `--tiep`) tự dùng lại file `out/tc-<id>.xlsx`
 đã tải. Chỉ khi user báo **đã sửa sheet** mới tải lại (`--tai-lai-tc`), rồi so `lines[].e` với kỳ vọng mới: case

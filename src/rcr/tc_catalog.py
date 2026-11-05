@@ -67,6 +67,31 @@ def read_tabs(path: str | Path) -> list[Tab]:
     return tabs
 
 
+BAN_SAO_RE = re.compile(r"TC SDK\s+(.+?)\s*$", re.I)
+
+
+def read_tab_ten(path: str | Path, title: str) -> Tab | None:
+    """Tab nguoi dung chi dich danh theo TEN THAT, ten khong bat dau bang `TC SDK` (vd QA nhan ban
+    `Ban sao cua TC SDK 3.5.4` roi chot ban sao la ban dung). Tab tra ve mang ten chuan `TC SDK 3.5.4`
+    de khoa case (`3.5.4#...`) trung khoa luot cu -> `--gop` de dung record. Khong co tab do -> None."""
+    import openpyxl
+
+    want = " ".join(title.split()).lower()
+    if not want or TAB_RE.match(title):
+        return None  # tab `TC SDK x` thuong: pick_tab lo
+    p = Path(path)
+    wb = openpyxl.load_workbook(p, read_only=True, data_only=True)
+    try:
+        ws = next((w for w in wb.worksheets if " ".join(w.title.split()).lower() == want), None)
+        m = BAN_SAO_RE.search(ws.title) if ws else None
+        if not m:
+            return None
+        rows = [tuple(r) for r in ws.iter_rows(values_only=True)]
+        return _tab(f"TC SDK {m.group(1)}", m.group(1), tc_loader.parse_rows(rows, f"{p.name} / {ws.title}"))
+    finally:
+        wb.close()
+
+
 def select(tabs: list[Tab], app_version: str, whitelist) -> tuple[list[Tab], list[str]]:
     """-> (tab can chay theo thu tu base, delta tang dan, tinh nang; ghi chu)."""
     v = parse_version(app_version)

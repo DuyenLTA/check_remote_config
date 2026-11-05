@@ -78,6 +78,23 @@ def test_ban_sdk_khong_doc_duoc_thi_bao_loi(tabs):
         tc_catalog.select(tabs, "", WL)
 
 
+def test_tab_ban_sao_chon_theo_ten_that_giu_khoa_case(tmp_path):
+    from rcr import tc_select
+
+    p = workbook(tmp_path, [
+        ("TC SDK 3.5.4", sheet("k_goc")),
+        ("Bản sao của TC SDK 3.5.4", sheet("k_sao")),
+    ])
+    pairs, notes = tc_select.read_cases(p, frozenset({"k_goc", "k_sao"}), "", "Bản sao của TC SDK 3.5.4")
+    assert [t for t, _ in pairs] == ["TC SDK 3.5.4"]  # khoa `3.5.4#...` trung luot cu
+    assert "k_sao" in pairs[0][1].precondition
+    assert any("Bản sao" in n for n in notes)
+    goc, _ = tc_select.read_cases(p, frozenset(), "", "3.5.4")
+    assert "k_goc" in goc[0][1].precondition
+    assert tc_catalog.read_tab_ten(p, "TC SDK 3.5.4") is None
+    assert tc_catalog.read_tab_ten(p, "Bản sao của TC SDK 9.9.9") is None
+
+
 def test_workbook_khong_co_tab_tc(tmp_path):
     p = workbook(tmp_path, [("Tổng hợp SDK 3.5.0", [("x",)])])
     with pytest.raises(RcError, match="TC SDK"):

@@ -77,6 +77,10 @@ def read_cases(path: Path, whitelist, sdk: str, tab: str = "") -> tuple[list[tup
     except RcError:
         return [("", c) for c in tc_loader.load(path)], []
     if tab:
+        ban_sao = tc_catalog.read_tab_ten(path, tab)
+        if ban_sao:
+            return ([(ban_sao.name, c) for c in ban_sao.cases],
+                    [f"Chỉ chạy tab {tab.strip()} (khóa case theo {ban_sao.name})"])
         chosen = pick_tab(tabs, tab)
         return [(t.name, c) for t in chosen for c in t.cases], [f"Chỉ chạy tab {chosen[0].name}"]
     if sdk:
