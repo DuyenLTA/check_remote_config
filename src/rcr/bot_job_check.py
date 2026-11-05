@@ -13,8 +13,9 @@ from pathlib import Path
 
 import discord
 
-from . import audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_kiem_testvsl, build_ma_app
-from .bot_giao_dien import XAM, XANH, nut, view_bug
+from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_hop_thu_bug, bot_kiem_testvsl,
+               build_ma_app)
+from .bot_giao_dien import XAM, XANH, nut
 
 
 async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> None:
@@ -85,13 +86,10 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
         bot.q.cap_nhat(job, da_bao=True)
     if kq.get("bugs") and not job.get("da_bao_bug"):
         # Luu vao tin cua build: bot khoi dong lai van tick / log tiep duoc.
-        c = {**(bot.q.tin_cua(job["msg_id"]) or job), "bugs": kq["bugs"], "bug_chon": [],
-             # link_report la duong dan file chi khi file do thuc su duoc dinh kem (tin_bug ghi "đính kèm")
-             "link_report": kq.get("link", "") if kq.get("link", "").startswith("https://") else str(f or ""),
-             "jira": None}
-        bot.q.nho_tin(c)
+        # link_report la duong dan file chi khi file do thuc su duoc dinh kem (tin_bug ghi "đính kèm")
+        c = bot_hop_thu_bug.gan_bug(bot.q.tin_cua(job["msg_id"]) or job, kq["bugs"],
+                                    kq.get("link", "") if kq.get("link", "").startswith("https://") else str(f or ""))
         # Chua publish duoc artifact -> dinh kem luon file report vao tin bug: QA phai mo duoc report
         # ngay tai tin can review, khong phai keo len tim tin ket qua.
-        await qa.reply(bot_cong_viec.tin_bug(kq["bugs"], None, c), files=[discord.File(f)] if f else discord.utils.MISSING,
-                       view=view_bug(kq["bugs"], [], job["msg_id"]))
+        await bot_hop_thu_bug.dang_menu(bot, qa, c, files=[discord.File(f)] if f else None)
         bot.q.cap_nhat(job, da_bao_bug=True)

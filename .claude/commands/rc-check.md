@@ -816,7 +816,15 @@ sau đó dùng skill log bug để tự log bug lên jira"*.
 
 1. Chỉ đưa vào danh sách những FAIL **đã rà xong theo 5d**. Mỗi bug ghi: mã case, dòng Expected,
    thực tế đo được (số đo, unit, log), bước tái hiện, ảnh/video của lượt hợp lệ, link report.
-2. **Lượt chạy trong terminal (có người):** hỏi bằng `AskUserQuestion` (multiSelect, mỗi bug một
+2. **Lượt chạy trong terminal (có người):** **không hỏi ở terminal** (user chốt 05/11/2026: *"hỏi trong
+   qa-auto thôi chứ kh phải hỏi ở terminal này"*). Ghi danh sách bug ra file JSON (mỗi bug: `case`, `tieu_de`,
+   `precondition`, `buoc`, `expected`, `thuc_te`, `muc_do` — cùng mẫu `bugs` của `KET_QUA`) rồi đưa lên kênh QA
+   qua bot đang chạy, **không tắt bot**:
+   `<bin>/rcr-bao-bug --bugs <file.json> --link <link artifact> --package <pkg> --version "<x.y.z (n)>"`
+   (hoặc `--msg-id <tin của bot ở kênh QA>`). Bot quét hộp thư `out/bot-hop-thu-bug/` mỗi 20 giây, trả lời dưới tin
+   build bằng menu tick bug y như lượt bot tự chạy; QA bấm **Log Jira** thì bot log (mục 3). File không gắn được
+   tin build → đổi tên `.loi` kèm lý do (xem `out/bot-hop-thu-bug/*.loi`). Xong thì dừng, không tự log Jira.
+   Chỉ khi user **bảo log ngay trong terminal**: hỏi bằng `AskUserQuestion` (multiSelect, mỗi bug một
    lựa chọn). **Chưa có câu trả lời thì không log**: Jira là chỗ cả team nhìn, log nhầm thì dev mất công.
    Bug được chọn → gọi skill `anthropic-skills:jira-log-bug` mode TEXT (`bug_ad`), mỗi bug một lần,
    đủ thông tin ở bước 1 + app, version, SDK FO, máy. Báo lại link từng issue.

@@ -23,6 +23,7 @@ rcr-sdk-check = "rcr.cli_sdk_check:main"
 rcr-cai-build = "rcr.cli_cai_build:main"
 rcr-bot = "rcr.discord_bot:main"
 rcr-sub = "rcr.cli_sub:main"
+rcr-bao-bug = "rcr.bot_hop_thu_bug:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.27"]
