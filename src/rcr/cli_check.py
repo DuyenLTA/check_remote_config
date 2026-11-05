@@ -186,17 +186,15 @@ async def _tren_may(args: argparse.Namespace, client, serial: str, started: floa
         tc_nguon = args.tc
         if tc_source.la_link(args.tc):
             out["tc_link"] = args.tc
+            # Moi lenh chay (ca --gop/--tiep) deu tai lai sheet: QA hay sua tab TC giua chung (user chot
+            # 05/11/2026). Ban moi khac ban dang dung -> bao de doi chieu ky vong cac case da cham.
             da_tai = tc_source.file_da_tai(args.tc, args.out_dir)
-            if da_tai and (args.gop or args.tiep) and not args.tai_lai_tc:
-                # Sheet TC chi tai MOT lan moi luot check (user chot 03/11/2026: khong sua sheet giua luot).
-                # Luot noi tiep (--gop/--tiep) dung lai file da tai; user bao da sua sheet -> --tai-lai-tc.
-                _log("Dung lai bo TC da tai luc "
-                     + time.strftime("%H:%M %d/%m", time.localtime(da_tai.stat().st_mtime))
-                     + " (luot noi tiep; --tai-lai-tc de tai ban moi)")
-                args.tc = str(da_tai)
-            else:
-                _log("Tai bo TC moi nhat tu Google Sheet...")
-                args.tc = tc_source.tai_ve(args.tc, args.out_dir)
+            cu = da_tai.read_bytes() if da_tai else None
+            _log("Tai bo TC moi nhat tu Google Sheet...")
+            args.tc = tc_source.tai_ve(args.tc, args.out_dir)
+            if cu is not None and (args.gop or args.tiep) and Path(args.tc).read_bytes() != cu:
+                _log("CANH BAO: sheet TC da doi so voi ban da tai truoc do -> doi chieu lines[].e cua cac case "
+                     "da cham voi ky vong moi")
         sdk, source = args.sdk, "tham so --sdk"
         # Bo TC mot sheet khong can ban SDK de CHON tab, nhung report van phai
         # noi duoc no do ban nao - do tu logcat roi chi dung de hien.
@@ -348,7 +346,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="case 'Tiep noi' cung config chay tiep tren app dang mo (khong dat lai config / mo lai "
                         "app); case khong PASS tron ven thi tu chay rieng tu dau")
     p.add_argument("--tai-lai-tc", action="store_true",
-                   help="kem --gop/--tiep: tai lai sheet TC (mac dinh dung lai file da tai o dau luot)")
+                   help="(giu cho tuong thich) moi lenh chay deu tai lai sheet TC")
     p.add_argument("--gop", action="append", metavar="FILE_LUOT",
                    help="lay ket qua file luot lam nen (lap lai duoc); kem --case thi case chay "
                         "lai de len, khong kem --case thi chi dung lai report, khong can may")

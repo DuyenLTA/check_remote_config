@@ -722,11 +722,12 @@ xoá khỏi sheet; **không cố ép fill** (đổi ID sang ID test, chạy lạ
   load ở Splash, tắt OB Old mà 301_o request ở Splash — đều PASS).
 - **Bỏ hẳn dòng "focus ngôn ngữ đầu tiên"** (R02-02): không chấm, không đưa vào bug.
 
-**Sheet TC tải đúng 1 lần mỗi lượt check** (user chốt 03/11/2026: *"tôi sẽ không sửa sheet nữa, tải đúng 1 lần
-trước khi chạy"*). Lượt mới tải sheet; các lệnh nối tiếp (`--gop`, `--tiep`) tự dùng lại file `out/tc-<id>.xlsx`
-đã tải. Chỉ khi user báo **đã sửa sheet** mới tải lại (`--tai-lai-tc`), rồi so `lines[].e` với kỳ vọng mới: case
-đổi/mới chạy lại `--gop` + đo tay, case đã xoá bỏ khỏi file lượt (`luot_file.ghi` + `run_batch.ghi_report`, không
-sửa tay JSON). Case mới chưa có trong file lượt thì cho tool chạy trước để có record rồi mới `--cham-tay`.
+**Mỗi lệnh chạy đều tải lại sheet TC** (user chốt 05/11/2026: *"trước khi chạy thì phải update lại file bản sao
+sdk đi nhá tại nhiều lúc tôi sửa á"*), kể cả `--gop`/`--tiep`. Tool in `CANH BAO: sheet TC da doi` khi bản mới khác
+bản đang dùng → so `lines[].e` với kỳ vọng mới (`tc_catalog.read_tab_ten`): case đổi/mới chạy lại `--gop` + đo tay,
+case đã xoá bỏ khỏi file lượt (`luot_file.ghi` + `run_batch.ghi_report`, không sửa tay JSON). Case mới chưa có trong
+file lượt thì cho tool chạy trước để có record rồi mới `--cham-tay`. Trước khi `--cham-tay` / publish cũng tải lại
+tab bản sao để chấm theo câu chữ mới nhất.
 
 ## 5e. Gặp lỗi của tool giữa lượt → Claude tự sửa, KHÔNG giao lại user
 
