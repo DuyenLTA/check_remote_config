@@ -248,7 +248,8 @@ def test_log_jira_xong_bao_duoc_dev_thi_khong_dang_them_o_kenh_qa(monkeypatch):
 
 
 def test_build_khong_ghi_sdk_van_verify_bug_reviewing_nhung_khong_hoi_check(monkeypatch):
-    """Build fix bug thuong khong ghi SDK: khong dang tin hoi Check, nhung van xep verify bug Reviewing."""
+    """Build fix bug thuong khong ghi SDK: khong co nut Check, chi BAO QA (kem lenh /check de QA tu chay neu
+    build that ra co SDK - user chot 05/11/2026) va van xep verify bug Reviewing."""
     gui, xep = [], []
 
     async def send(chu, **k):
@@ -266,7 +267,8 @@ def test_build_khong_ghi_sdk_van_verify_bug_reviewing_nhung_khong_hoi_check(monk
     m = SimpleNamespace(author=SimpleNamespace(bot=False, id=7), webhook_id=None, channel=SimpleNamespace(id=2),
                         guild=None, content="AIP922---Nexus AI v3.7.1 (31) fix bug round 1", jump_url="u")
     asyncio.run(bot.on_message(m))
-    assert gui == []                                        # khong co tin hoi Check
+    assert len(gui) == 1 and "không ghi SDK" in gui[0]       # chi bao, khong co nut Check
+    assert "/check AIP922 3.7.1 (31)" in gui[0]
     assert len(xep) == 1 and xep[0]["version"] == "3.7.1 (31)" and xep[0]["package"] == "pkg.nexus"
 
     gui.clear(), xep.clear()

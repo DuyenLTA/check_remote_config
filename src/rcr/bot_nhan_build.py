@@ -81,6 +81,10 @@ async def hoi_build_moi(bot, tin: dict, link_tin: str, kenh, out: Path) -> str:
         # Build chuc nang / fix bug, khong apply SDK: khong hoi Check (chua co workflow, user chot 28/10/2026)
         # nhung VAN verify bug dev da keo Reviewing - build fix bug thuong khong ghi SDK (user chot 28/10/2026).
         log.info("build khong apply SDK, chi verify bug Reviewing: %s %s", tin["ma"], tin["version"])
+        # Van BAO QA moi build (user chot 05/11/2026): dev hay quen ghi SDK, QA tu kiem roi go /check kem SDK.
+        await kenh.send(f"🔔 **{tin['ma']}** `{tin['version']}` — tin build không ghi SDK nên bot chưa hỏi Check, "
+                        f"chỉ verify bug Reviewing.\nBuild có apply SDK thì gõ `/check {tin['ma']} {tin['version']} "
+                        f"<sdk>` (vd `3.6.1`, `3.7.0`, `next-gen`){goc}")
         if not pkg:
             return f"Sheet Check thông số KT không có package của **{tin['ma']}**."
         await bot._xep_verify({**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin),
