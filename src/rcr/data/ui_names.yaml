@@ -17,7 +17,7 @@ elements:
 
   - name: nút next onboarding
     aliases: ["nút Next", "button Next", "nút tiếp tục"]
-    ids: [btnNextOnboarding, btnNext, btnContinue]
+    ids: [btnNextOnboarding, btnNext, btnContinue, imageButtonLanguageNext]  # imageButtonLanguageNext: nut Next man ngon ngu VslTemplate4 (AIP999 2.5.0)
     texts: ["Next", "Get Started", "Get started"]
 
   - name: nhãn ads
