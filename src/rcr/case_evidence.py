@@ -27,15 +27,8 @@ async def _read_ads(client, baseline: RcBaseline, overrides=None) -> dict:
     if not pid:
         return {"pid": "", "note": "app không còn chạy — không đọc được log quảng cáo"}
     parsed = ad_log.parse(await ad_log.read(client, baseline.serial, pid))
-    # Checklist cua team truoc, ID doc tu may DE len tren: ID trong RC la cai
-    # app that su dung, checklist chi la so team khai va co the cu hon build.
-    # `overrides` DE LEN TREN baseline: case co the tu dat `id_*` (vd ep unit
-    # fail bang mot ID khong ton tai). Tra bang ID cu thi unit trong log khong
-    # khop vi tri nao, va dong Expected ve vi tri do thanh khong cham duoc.
-    dang_chay = dict(baseline.configs) | dict(overrides or {})
-    rc_ids = ad_units.cho_package(baseline.package) | {
-        k: v for k, v in dang_chay.items() if v.startswith("ca-app-pub")
-    }
+    rc_ids = ung_vien_id(ad_units.cho_package(baseline.package), dict(baseline.configs),
+                         dict(overrides or {}))
     units = ad_log.summary(parsed)
     for row in units.values():
         # Unit khong khop key nao: app hardcode ID, hoac lay tu key app khong doc.
@@ -44,6 +37,24 @@ async def _read_ads(client, baseline: RcBaseline, overrides=None) -> dict:
     # duoc request, ket luan duoc. Khong biet ID thi im lang khong noi len gi.
     return {"pid": pid, "units": units, "banner_states": parsed["banner_states"],
             "positions": sorted(k[3:] for k in rc_ids if k.startswith("id_"))}
+
+
+def ung_vien_id(checklist: dict[str, str], rc: dict[str, str],
+                overrides: dict[str, str] | None = None) -> dict[str, tuple[str, ...]]:
+    """{key: cac ID ung vien} = ID trong RC + ID checklist cua team.
+
+    Khong de ID RC DE MAT ID checklist: app SDK moi hardcode ID theo ten vi tri
+    va khong doc `id_*` trong RC (AIP872 3.5.4: moi `id_*` trong RC deu khac
+    checklist, log chi thay ID checklist). RC de len thi unit that thanh "khong
+    khop vi tri nao" va hai vi tri trung duoi ID chi con mot key.
+    Key case tu dat (`overrides`, vd ep unit fail bang ID gia) thi CHI lay ID do.
+    """
+    def _ids(d):
+        return {k: v for k, v in (d or {}).items() if str(v).startswith("ca-app-pub")}
+    rc, dat = _ids(rc), _ids(overrides)
+    ra = {k: tuple(dict.fromkeys(i for i in (rc.get(k), checklist.get(k)) if i))
+          for k in checklist.keys() | rc.keys()}
+    return ra | {k: (v,) for k, v in dat.items()}
 
 
 async def _dong_thoi_gian(client, baseline: RcBaseline, drive: dict) -> dict:

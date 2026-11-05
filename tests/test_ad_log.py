@@ -102,3 +102,34 @@ def test_checklist_doc_duoc_va_ten_vi_tri_noi_ra_loai_ad():
     assert ad_units.loai_cua("id_106_spl_o_native_high1") == "native"
     assert ad_units.loai_cua("id_102_spl_n_inter_high1") == "interstitial"
     assert ad_units.loai_cua("id_khong_noi_gi") == ""
+
+
+def test_id_rc_khong_de_mat_id_checklist_app_hardcode():
+    """App SDK moi khong doc `id_*` trong RC, log chi thay ID checklist.
+
+    AIP872 3.5.4: RC co `id_201_lfo1_n_native_high = …132` nhung app request
+    `*****284` (ID checklist) -> RC de len thi unit thanh khong co key, moi dong
+    "201 phai request" FAIL oan; `*****034` la ID checklist cua CA 202_high lan
+    303_high nhung RC de mat 202 -> request cua LFO2 bi quy het cho 303.
+    """
+    from rcr.case_evidence import ung_vien_id
+    checklist = {"id_201_lfo1_n_native_high": "ca-app-pub-1/6635724284",
+                 "id_202_lfo2_n_native_high": "ca-app-pub-1/2764762034",
+                 "id_303_onb3_n_native_high": "ca-app-pub-1/8588924034"}
+    rc = {"id_201_lfo1_n_native_high": "ca-app-pub-1/7779601132",
+          "id_202_lfo2_n_native_high": "ca-app-pub-1/6675091381", "enable_all_ads": "true"}
+    ids = ung_vien_id(checklist, rc)
+    assert ad_log.match_rc_id("*****284", ids, "native") == ["id_201_lfo1_n_native_high"]
+    assert ad_log.match_rc_id("*****132", ids, "native") == ["id_201_lfo1_n_native_high"]
+    assert ad_log.match_rc_id("*****034", ids, "native") == [
+        "id_202_lfo2_n_native_high", "id_303_onb3_n_native_high"]
+    assert "enable_all_ads" not in ids
+
+
+def test_id_case_tu_dat_thi_chi_lay_id_do():
+    """Case ep unit fail bang ID gia: ID checklist cu khong duoc tinh cho vi tri nua."""
+    from rcr.case_evidence import ung_vien_id
+    ids = ung_vien_id({"id_201_lfo1_n_native_high": "ca-app-pub-1/6635724284"}, {},
+                      {"id_201_lfo1_n_native_high": "ca-app-pub-1/0000000999"})
+    assert ad_log.match_rc_id("*****284", ids, "native") == []
+    assert ad_log.match_rc_id("*****999", ids, "native") == ["id_201_lfo1_n_native_high"]

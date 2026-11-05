@@ -125,7 +125,7 @@ def summary(parsed: dict) -> dict:
     return {k: v for k, v in out.items() if v["type"] != "?" or v["unit"] not in typed}
 
 
-def match_rc_id(masked: str, rc_ids: dict[str, str], kind: str = "") -> list[str]:
+def match_rc_id(masked: str, rc_ids: dict[str, str | tuple[str, ...]], kind: str = "") -> list[str]:
     """Unit bi che (`*****825`) -> cac key co ID cung duoi.
 
     Tra NHIEU key la mo ho, khong chon bua. Tra rong nghia la unit nay khong
@@ -139,7 +139,9 @@ def match_rc_id(masked: str, rc_ids: dict[str, str], kind: str = "") -> list[str
     if not m:
         return []
     tail = m.group("tail")
-    hit = sorted(k for k, v in rc_ids.items() if v.rsplit("/", 1)[-1].endswith(tail))
+    # Mot key co the co NHIEU ID ung vien (ID RC + ID checklist): khop cai nao cung tinh.
+    hit = sorted(k for k, v in rc_ids.items()
+                 if any(i.rsplit("/", 1)[-1].endswith(tail) for i in ((v,) if isinstance(v, str) else v)))
     if kind and len(hit) > 1:
         cung_loai = [k for k in hit if ad_units.loai_cua(k) in ("", kind)]
         if cung_loai:
