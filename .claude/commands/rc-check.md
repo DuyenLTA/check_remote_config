@@ -712,6 +712,16 @@ xoá khỏi sheet; **không cố ép fill** (đổi ID sang ID test, chạy lạ
   (vào LFO2 là đã chọn sẵn), đổi ngôn ngữ ở LFO2 thì không đếm lại. Đo bằng chụp liên tục (~0.4s/khung):
   `uiautomator dump` mất ~2.5s/lần, quá thô cho mốc 0–4s.
 
+**Kiến thức nền SDK (QA chốt 06/11/2026 — đọc TRƯỚC khi chấm/báo bug)** → `sdk-check/references/logic-preload-load-ads-fo-co-ban.md`,
+gộp từ các tab **"Tổng hợp SDK x"** của sheet TC (6.4.0 nền → 3.2.0 → 3.3.0 → 3.4.0 → 3.5.0; app SDK X dùng mọi mục ≤ X).
+Gồm: ad load TẠI màn nào, **bảng ad resume theo màn** (Y ở LFO1/LFO2/OB1/OB2/OB4/Question/OB old khi Home/Recent/khoá
+màn/notification; N ở Splash/inter/OB3/OB5/consent; kill app/kéo thanh thông báo/mất mạng → N), OB5, tắt high1/high2 ⇒
+0 request, SWIPE OB2, OB3 auto swipe + nút X, progress splash, list_language, reload 202 khi chọn ngôn ngữ. Dòng nào
+kiến thức nền nói là đúng thì KHÔNG đưa vào bug. TC của bản đang chấm ghi khác thì TC thắng.
+User thêm/sửa tab "Tổng hợp SDK x" bất cứ lúc nào: mỗi lượt tool so với bản thô `sdk-check/references/tong-hop-sdk/`
+và in `CANH BAO: tab Tong hop SDK moi/doi` → Claude đọc tab đó (`rcr-tong-hop --tc <link>`), cập nhật file kiến thức,
+rồi `rcr-tong-hop --tc <link> --ghi` chốt bản thô, commit.
+
 **Cách hiểu TC SDK 3.5.4 QA đã chốt (05/11/2026, AIP872) — áp cho cả các bản FO khác, không theo câu chữ TC:**
 - App SDK 3.5.4 chấm thẳng theo **tab gốc "TC SDK 3.5.4"** (user tạo và sửa theo các luật dưới). KHÔNG dùng tab
   "Bản sao của TC SDK 3.5.4" — bản cũ, ghi ngược luật resume/hứng ad.

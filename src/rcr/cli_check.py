@@ -28,6 +28,7 @@ from . import (
     discord_notify,
     discord_run_message, tc_select, tc_source,
 )
+from . import tong_hop_sdk
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .models import RcError
@@ -195,6 +196,13 @@ async def _tren_may(args: argparse.Namespace, client, serial: str, started: floa
             if cu is not None and (args.gop or args.tiep) and Path(args.tc).read_bytes() != cu:
                 _log("CANH BAO: sheet TC da doi so voi ban da tai truoc do -> doi chieu lines[].e cua cac case "
                      "da cham voi ky vong moi")
+            try:                 # tab "Tong hop SDK x" = kien thuc nen; doi/moi -> doc lai truoc khi cham
+                doi_th = tong_hop_sdk.so_sanh(args.tc)
+                if doi_th:
+                    _log("CANH BAO: tab Tong hop SDK moi/doi (" + ", ".join(doi_th) + ") -> doc lai, cap nhat "
+                         "sdk-check/references/logic-preload-load-ads-fo-co-ban.md roi `rcr-tong-hop --ghi`")
+            except Exception as exc:  # noqa: BLE001 - kiem kien thuc khong duoc lam hong luot chay
+                _log(f"Khong so duoc tab Tong hop SDK: {exc}")
         sdk, source = args.sdk, "tham so --sdk"
         # Bo TC mot sheet khong can ban SDK de CHON tab, nhung report van phai
         # noi duoc no do ban nao - do tu logcat roi chi dung de hien.

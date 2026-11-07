@@ -1,0 +1,137 @@
+# Tổng hợp SDK 3.2.0
+- Base trên SDK visionlab:tutorial:3.0.1 6.4.0 cũ )
+- Thêm tích hợp: Màn Question) + Onboarding old ( lần 2 vào app )
+ |  |  |  | I. Logic preload ads
+ |  |  |  | II. Logic config UI FO
+ |  |  |  | III. Remote layout
+ |  |  |  | IV. Logic ads resume
+I. Logic preload ads
+splash | inter splash | LFO1 | LFO2 | OB1 | OB2 | OB3 | OB4 | OB5 | Question
+new user
+native
+ |  |  |  |  |  |  | 305_onb5_n_native_high
+ |  |  |  |  |  |  | 305_onb5_n_native
+inter
+ |  |  |  |  |  |  |  |  | 306_onb5_n_inter_high
+ |  |  |  |  |  |  |  |  | 306_onb5_n_inter
+Tắt all màn
+Old user
+native
+301_onb1_o_native_high
+301_onb1_o_native
+inter
+ |  |  |  |  |  |  |  |  | 301_onb1_o_inter_high
+ |  |  |  |  |  |  |  |  | 301_onb1_o_inter
+II. Logic config UI FO
+Remote config | Screen | Params | Value | Key | Description | Remote config value | Note
+question_screen_config | question | header_text | string | header_text | Bắt buộc, nếu để trống => sử dụng mặc định | {
+  "header_text": "Which style fits your vision?",
+  "styles": [
+    {
+      "style_id": 1,
+      "style_name": "Change Hairstyle",
+      "style_url": "https://static.apero.vn/content/uploads/OB_1_Question_screen_01_64df128e6f.webp"
+    },
+    {
+      "style_id": 2,
+      "style_name": "Couple Wallpaper",
+      "style_url": "https://static.apero.vn/content/uploads/OB_1_Question_screen_02_75caae3f8a.webp"
+    },
+    {
+      "style_id": 3,
+      "style_name": "AI Photoshoot",
+      "style_url": "https://static.apero.vn/content/uploads/OB_1_Question_screen_03_90299d3d0a.webp"
+    },
+    {
+      "style_id": 4,
+      "style_name": "Dance Mode",
+      "style_url": "https://static.apero.vn/content/uploads/OB_1_Question_screen_04_2388d49be5.webp"
+    }
+  ],
+  "cta_text": "Next"
+}
+ |  | styles | Array | styles | Array các style option. Hiển thị theo style_id tăng dần (1-> 2-> 3...) từ trên xuống, trái qua phải
+ |  | style_id | number | style_id | Bắt buộc, quy định thứ tự hiển thị trong app
+1-2-3-4-5-6....
+=> Hiển thị lần lượt từ trên xuống dưới, trái qua phải
+ |  | style_name | string | style_name | Quy định tên hiển thị của style, nếu trống => hiển thị giá trị mặc định
+ |  | style_url | string (URL) | style_url | URL thumbnail. Chỉ hỗ trợ image/animation (webp)
+Trong thời gian image đang load từ URL, hiển thị skeleton (loading placeholder) thay vì để trống UI
+ |  | cta_text | string | cta_text | quy định nội dung button cta
+giá trị mặc định là Go to Home
+onboarding_old_config | question | header_text | string | header_text | Bắt buộc, nếu để trống => sử dụng mặc định | {
+  "header_text": "Which style fits your vision?",
+  "styles": [
+    {
+      "style_id": 1,
+      "style_name": "Change Hairstyle",
+      "style_url": "https://static.apero.vn/content/uploads/OB_1_Question_screen_01_64df128e6f.webp"
+    },
+    {
+      "style_id": 2,
+      "style_name": "Couple Wallpaper",
+      "style_url": "https://static.apero.vn/content/uploads/OB_1_Question_screen_02_75caae3f8a.webp"
+    },
+    {
+      "style_id": 3,
+      "style_name": "AI Photoshoot",
+      "style_url": "https://static.apero.vn/content/uploads/OB_1_Question_screen_03_90299d3d0a.webp"
+    },
+    {
+      "style_id": 4,
+      "style_name": "Dance Mode",
+      "style_url": "https://static.apero.vn/content/uploads/OB_1_Question_screen_04_2388d49be5.webp"
+    }
+  ],
+  "cta_text": "Next"
+}
+ |  | styles | Array | styles | Array các style option. Hiển thị theo style_id tăng dần (1-> 2-> 3...) từ trên xuống, trái qua phải
+ |  | style_id | number | style_id | Bắt buộc, quy định thứ tự hiển thị trong app
+1-2-3-4-5-6....
+=> Hiển thị lần lượt từ trên xuống dưới, trái qua phải
+ |  | style_name | string | style_name | Quy định tên hiển thị của style, nếu trống => hiển thị giá trị mặc định
+ |  | style_url | string (URL) | style_url | URL thumbnail. Chỉ hỗ trợ image/animation (webp)
+Trong thời gian image đang load từ URL, hiển thị skeleton (loading placeholder) thay vì để trống UI
+ |  | cta_text | string | cta_text | quy định nội dung button cta
+giá trị mặc định là Go to Home
+III. Remote layout
+Key Remote | Action | Value Remote | UI
+layout_question_screen | UI | layout1
+ |  | layout2
+ |  | layout3
+IV. Logic ads resume tutorial
+Các trường hợp Load/Reload resume
+Trigger/Vị Trí | consent dialog (UMP) | Splash | ads inter | lfo1 | lfo2 | ob1 | ob2 | ob3 | ob4 | ob5 | question | onb old
+Click Home navi hệ thống-> hind app | N | N | N | Y | Y | Y | Y | N | Y | N | Y | Y
+Đẩy app về rencent | N | N | N | Y | Y | Y | Y | N | Y | N | Y | Y
+Lock screen (press power) ->  unlock vẫn cùng app | N | N | N | Y | Y | Y | Y | N | Y | N | Y | Y
+Tap notification ->  mở app khác ->  quay lại | N | N | N | Y | Y | Y | Y | N | Y | N | Y | Y
+Notification kéo xuống ->  vuốt lên đóng | N | N | N | N | N | N | N | N | N | N | N | N
+App bị kill, mở lại từ launcher | N | N | N | N | N | N | N | N | N | N | N | N
+Mất mạng khi app background ->  ad load fail toàn bộ ->  quay app | N | N | N | N | N | N | N | N | N | N | N | N
+Nghiệm thu SDK
+remote | value | Description
+new user
+show_305_onb5_n_native_high | False | on/off ad native high
+ | True
+show_305_onb5_n_native | False | on/off ad native thường
+ | True
+show_306_onb5_n_inter_high | False | on/off ad inter high
+ | True
+show_306_onb5_n_inter | False | on/off ad inter thường
+ | True
+enable_question_screen | False | on/off màn question (new user)
+ | True
+enable_all_ads | False | on/off all ad màn FO
+ | True
+old user
+enable_ob1_old_screen | False | on/off màn question (old user)
+ | True
+show_301_onb1_o_native_high | False | on/off ad native high
+ | True
+show_301_onb1_o_native | False | on/off ad native thường
+ | True
+show_301_onb1_o_inter_high | False | on/off ad inter high
+ | True
+show_301_onb1_o_inter | False | on/off ad inter thường
+ | True

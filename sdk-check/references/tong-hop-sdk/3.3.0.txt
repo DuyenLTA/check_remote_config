@@ -1,0 +1,108 @@
+# Tổng hợp SDK 3.3.0
+- Base trên SDK visionlab:tutorial:3.2.0  6.4.0 cũ )
+- Thay đổi UI màn Language + logic reload ads màn language
+ |  |  |  | I. Logic preload ads
+ |  |  |  | II. Logic config UI FO
+ |  |  |  | III. Remote layout
+ |  |  |  | II. Logic config UI FO
+I. Logic preload ads
+splash | inter splash | LFO1 | LFO2 | OB1 | OB2 | OB3 | OB4 | OB5 | Question
+new user
+splash
+splash_banner_change = false
+load 101_high và 101_all price
+splash_banner_change = true
+load 105_high và 105_allprice
+inter splash
+splash_inter_change = true
+102_n_high, 102_n_high1 và 102_n_allprice
+splash_inter_change = false
+102_a_high và 102_a_allprice
+LFO1
+chưa có event complete_lfo or remote pass_lfo_criteria = false
+201_high và 201_high1 | 201_high2 và 201_all price
+LFO2
+chưa có event complete_lfo or remote pass_lfo_criteria = false
+ | 202_high và 202_high1 | 202_high2 và 202_all price | 202_high và 202_all price
+ads 102 = false/no fill
+ |  | 202_high và 202_all price
+OB1
+lần đầu vào app or lần tiếp theo vào app (pass_lfo = false)
+ |  | 301_high và 301_high1 | 301-high2 và 301-allprice
+lần tiếp theo vào app(pass_lfo = true)
+301_high và 301_high1 | 301_high2 và 301_ allprice
+II. Logic config UI FO
+Remote config | Description | Remote config value | Note
+list_language | Ngôn ngữ và thứ tự hiển thị ngôn ngữ sẽ được hiển thị thông qua giá trị truyền vào từ json format.
+{   "en-US",
+    "en-GB",
+    "en-CA",
+    "en-PH",
+    "en-ZA",
+    "en-IN",
+    "hi",
+    "pt-PT",
+    "pt-BR",
+    "fr-CA",
+    "es",
+    "es-US",
+    "zh",
+    "ru",
+    "in",
+    "bn",
+    "af-ZA",
+    "de",
+    "ko",
+    "nl"
+} | {
+   "fr",
+    "en-US",
+    "en-GB",
+    "en-CA",
+    "en-PH",
+    "en-ZA",
+    "en-IN",
+    "hi",
+    "pt-PT",
+    "pt-BR",
+    "fr-CA",
+    "es",
+    "es-US",
+    "zh",
+    "ru",
+    "in",
+    "bn",
+    "af-ZA",
+    "de",
+    "ko",
+    "nl"
+} | Default value khi truyền sai format hoặc không nhận remote config.
+3 vị trí ngôn ngữ đầu tiên luôn phải là Pháp, Anh, India, nếu truyền sai sẽ chuyển về default value
+Thêm  bất kì ngôn ngữ khác ngoài list thì fallback về default cũ
+III. Remote layout
+Key Remote | Action | Value Remote | UI
+layout_native_ads_language_2 | UI | layout1
+ |  | layout2
+ |  | layout3
+IV. Logic load và show ads
+1. Logic show ads tại LFO2
+- Display priority: 202-high ->  high1 ->  high2 ->  normal
+2. Logic reload ads khi user click button chọn ngôn ngữ
+- Trigger: user click 1 ngôn ngữ ->  reload 202-high/normal
+- Display khi user chọn ngôn ngữ khác: 202-high ->  202-normal
+- Reload fail ->  vẫn show ads cũ
+3. Logic show inter_splash_2 sau LFO
+- Điều kiện: enable_inter_splash_2_screen=true  AND 102-spl-n-inter-high is fill AND not shown
+- Priority: high ->  high1
+Nghiệm thu SDK
+remote | value | Description
+new user
+202-lfo2-n-native-high | False | on/off ad native high
+ | True
+202-lfo2-n-native | False | on/off ad native thường
+ | True
+enable_all_ads | False | on/off all ads luồng FO
+ | True
+layout_native_ads_language_2 | layout1
+ | layout2
+ | layout3
