@@ -1,4 +1,4 @@
-"""Phan giao dien Discord dung chung cua bot build-watch: nut bam, menu tick bug, doc chu tin, tha tim.
+"""Phan giao dien Discord dung chung cua bot build-watch: nut bam, menu tick bug, doc chu tin.
 
 custom_id cua moi nut / menu: `rcr:<hanh_dong>:<msg_id>` - `msg_id` la tin cua bot o kenh QA (khoa cua build
 trong `HangDoi.tin`). View `timeout=None`: bot khoi dong lai nut van bam duoc (BuildBot.on_interaction doc
@@ -35,15 +35,6 @@ def nut(*cac: tuple[str, str, discord.ButtonStyle], msg_id: int) -> discord.ui.V
     for hanh_dong, nhan, kieu in cac:
         v.add_item(discord.ui.Button(label=nhan, style=kieu, custom_id=f"rcr:{hanh_dong}:{msg_id}"))
     return v
-
-
-async def tha_tim(m) -> None:
-    """Tha ❤️ vao tin bao build de dev biet bot da nhan. Thieu quyen Add Reactions / tin da xoa -> bo qua,
-    khong duoc chan viec hoi QA."""
-    try:
-        await m.add_reaction("❤️")
-    except Exception as exc:                 # noqa: BLE001
-        log.warning("khong tha tim duoc vao tin build %s: %s", getattr(m, "jump_url", ""), exc)
 
 
 def view_bug(bugs: list[dict], chon: list[int], msg_id: int) -> discord.ui.View:
