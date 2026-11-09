@@ -119,6 +119,15 @@ def test_tab_rong_khong_lam_hong_ca_workbook(tmp_path):
     assert {ten for ten, _ in chon} == {"TC SDK 3.5.4"}
 
 
+def test_tab_chua_co_header_khong_lam_hong_ca_workbook(tmp_path):
+    """09/11/2026: QA vua tao tab "TC SDK 3.6.2" chua dien header -> luot 3.5.4 dung han."""
+    p = workbook(tmp_path, [
+        ("TC SDK 3.6.2", [("Spec: dang soan",), ("ghi chu",)]),
+        ("TC SDK 3.5.4", sheet("k354")),
+    ])
+    assert [t.name for t in tc_catalog.read_tabs(p)] == ["TC SDK 3.5.4"]
+
+
 def test_workbook_tc_loi_thi_noi_ra_khong_lui_ve_sheet_dau(tmp_path):
     """Moi tab TC SDK deu rong: dung kem ly do, khong doc sheet dau tien nhu file mot sheet."""
     from rcr import tc_select

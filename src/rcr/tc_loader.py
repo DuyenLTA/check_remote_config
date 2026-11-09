@@ -27,6 +27,10 @@ from .models import Case, RcError
 class TabRongError(RcError):
     """Tab co header TC nhung chua co dong case nao (QA dang soan / vua xoa het case)."""
 
+
+class KhongHeaderError(RcError):
+    """Khong tim thay dong header TC (tab moi QA dang soan do, vd "TC SDK 3.6.2" 09/11/2026)."""
+
 SHEET_NAME = "Test Cases"
 
 # Ten cot can, sau khi chuan hoa (lower + gop khoang trang). Moi muc la cac
@@ -176,7 +180,7 @@ def _find_header(rows: list[tuple], source: str) -> tuple[dict[str, int], int]:
         if idx and (best is None or len(idx) > len(best[0])):
             best = (idx, i)
     found = ", ".join(sorted(best[0])) if best else "(khong nhan ra cot nao)"
-    raise RcError(
+    raise KhongHeaderError(
         f"{source or 'File'}: khong tim thay dong header trong {HEADER_SCAN_ROWS} dong dau.\n"
         f"Can du cac cot: {', '.join(REQUIRED)} + mot trong {' / '.join(KEY_COLUMNS)}. "
         f"Nhan ra duoc: {found}.\n"

@@ -67,10 +67,11 @@ def read_tabs(path: str | Path) -> list[Tab]:
             rows = [tuple(r) for r in ws.iter_rows(values_only=True)]
             try:
                 cases = tc_loader.parse_rows(rows, f"{p.name} / {ws.title}")
-            except tc_loader.TabRongError:
+            except (tc_loader.TabRongError, tc_loader.KhongHeaderError):
                 # Mot tab rong (QA dang soan / xoa het case) khong duoc lam hong ca workbook: truoc day
                 # loi nay lam tc_select tuong file mot sheet va doc sheet DAU TIEN ("TC SDK Next Gen")
                 # cho app 3.5.4 - 46 case SDKNG, 0 chay duoc (tab "TC SDK rating" rong, 09/11/2026).
+                # Tab chua co header (QA vua tao "TC SDK 3.6.2", chua dien) cung vay: dung ca luot 3.5.4.
                 continue
             tabs.append(_tab(ws.title, m.group(1), cases))
     finally:
