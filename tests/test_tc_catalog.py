@@ -99,3 +99,39 @@ def test_workbook_khong_co_tab_tc(tmp_path):
     p = workbook(tmp_path, [("Tổng hợp SDK 3.5.0", [("x",)])])
     with pytest.raises(RcError, match="TC SDK"):
         tc_catalog.read_tabs(p)
+
+
+def test_tab_rong_khong_lam_hong_ca_workbook(tmp_path):
+    """09/11/2026: QA xoa het case tab "TC SDK rating" -> read_tabs nem loi cho CA workbook, tc_select
+    tuong file mot sheet va doc sheet dau tien ("TC SDK Next Gen") cho app 3.5.4: 0 case chay duoc."""
+    from rcr import tc_select
+
+    p = workbook(tmp_path, [
+        ("TC SDK Next Gen", sheet("k_ng")),
+        ("TC SDK 3.5.4", sheet("k354")),
+        ("TC SDK rating", [("Spec: demo",), HEADER]),     # header co, khong dong case nao
+        ("TC SDK 6.4.0", sheet("k_base")),
+    ])
+    tabs = tc_catalog.read_tabs(p)
+    assert [t.name for t in tabs] == ["TC SDK Next Gen", "TC SDK 3.5.4", "TC SDK 6.4.0"]
+    assert tc_select.needs_sdk(p)
+    chon, ghi_chu = tc_select.read_cases(p, frozenset({"k_ng", "k354", "k_base"}), "3.5.4")
+    assert {ten for ten, _ in chon} == {"TC SDK 3.5.4"}
+
+
+def test_workbook_tc_loi_thi_noi_ra_khong_lui_ve_sheet_dau(tmp_path):
+    """Moi tab TC SDK deu rong: dung kem ly do, khong doc sheet dau tien nhu file mot sheet."""
+    from rcr import tc_select
+
+    p = workbook(tmp_path, [("TC SDK 3.5.4", [("Spec: demo",), HEADER])])
+    with pytest.raises(RcError, match="chua co dong case"):
+        tc_select.read_cases(p, frozenset(), "3.5.4")
+
+
+def test_file_mot_sheet_van_doc_thang(tmp_path):
+    from rcr import tc_select
+
+    p = workbook(tmp_path, [("Sheet1", sheet("k1"))])
+    assert not tc_select.needs_sdk(p)
+    chon, _ = tc_select.read_cases(p, frozenset({"k1"}), "")
+    assert len(chon) == 1 and chon[0][0] == ""

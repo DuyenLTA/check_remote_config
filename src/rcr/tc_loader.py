@@ -23,6 +23,10 @@ from pathlib import Path
 
 from .models import Case, RcError
 
+
+class TabRongError(RcError):
+    """Tab co header TC nhung chua co dong case nao (QA dang soan / vua xoa het case)."""
+
 SHEET_NAME = "Test Cases"
 
 # Ten cot can, sau khi chuan hoa (lower + gop khoang trang). Moi muc la cac
@@ -115,7 +119,7 @@ def parse_rows(rows: list[tuple], source: str = "") -> list[Case]:
             )
         )
     if not out:
-        raise RcError(
+        raise TabRongError(
             f"{source or 'File'}: tim thay header nhung khong co dong case nao "
             f"(cot {_label(idx, 'n')!r} phai la so)."
         )

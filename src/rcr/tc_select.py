@@ -20,9 +20,11 @@ from .models import RcError
 
 def needs_sdk(path: Path) -> bool:
     """File co phai workbook bo chung nhieu tab `TC SDK <version>` khong."""
+    # Chi khi file THAT SU khong co tab `TC SDK ...`. Loi khac cua workbook bo chung phai noi ra,
+    # khong duoc lui ve doc sheet dau tien nhu file mot sheet (cham nham tab ma khong ai biet).
     try:
         tc_catalog.read_tabs(path)
-    except RcError:
+    except tc_catalog.KhongPhaiWorkbookTC:
         return False
     return True
 
@@ -74,7 +76,7 @@ def read_cases(path: Path, whitelist, sdk: str, tab: str = "") -> tuple[list[tup
     """
     try:
         tabs = tc_catalog.read_tabs(path)
-    except RcError:
+    except tc_catalog.KhongPhaiWorkbookTC:
         return [("", c) for c in tc_loader.load(path)], []
     if tab:
         ban_sao = tc_catalog.read_tab_ten(path, tab)
