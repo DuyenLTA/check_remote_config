@@ -225,7 +225,7 @@ class DnsClient(FakeClient):
 
     async def shell(self, serial, *args, timeout=None):
         if args[:3] == ("settings", "get", "global"):
-            return self.dns[args[3]] + "\n", "", 0
+            return self.dns.get(args[3], "null") + "\n", "", 0
         return await super().shell(serial, *args, timeout=timeout)
 
 

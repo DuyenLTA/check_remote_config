@@ -25,7 +25,16 @@ Nhiều case đòi **điều kiện môi trường** (simulate no-fill, chặn a
   có ad. Chỉ với vị trí RC có khai `id_*` (Piclux chỉ 12/92 vị trí; 302 không có).
 - **ID nằm cứng trong app** → tool bật Private DNS `dns.adguard-dns.com` cho cả case (chặn domain quảng cáo, Firebase vẫn
   chạy), đổi wifi để bỏ cache DNS, xong trả DNS cũ. Khi đó **mọi** vị trí đều không về ad — dòng cần ad vị trí khác thì đo tay.
-- **Không ép được** (throttle, mediation test mode, cần root) → case không được PASS, hạ `BLOCKED` kèm `precondition_thieu`.
+- **Ad về muộn / throttle** ("Đi qua LFO2 ngay để 202 chưa kịp show", "Rời OB3 trước khi 303 về", "throttle mạng",
+  "mạng vừa phải để native show sau ~2–3s") → tool chạy `sdk-check/scripts/slow_ads_proxy.py` trên máy tính, trỏ máy
+  vào bằng `adb reverse` + `http_proxy` (**không cần root**): chỉ domain quảng cáo bị trễ kết nối 6s + 20 KB/s, Firebase
+  đi thẳng (`src/rcr/mang_cham.py`). Trễ phải < 10s, không thì GMA timeout và ad FAIL thay vì về muộn. Case chạy riêng
+  (không nối chuỗi), xong luôn gỡ proxy. **Chỉ nhận kết quả khi log xác nhận**: ad của màn đó có về nhưng KHÔNG show
+  ngay tại màn đó (`mang_cham` trên report). Vẫn show ngay tại màn, hoặc không về lần nào (fail / no-fill) → `BLOCKED`.
+  Precondition không nêu màn (chỉ "throttle") → PASS hạ `NEEDS_HUMAN`, đối chiếu log tay rồi `--cham-tay`.
+  Proxy chỉ làm ad đến chậm, không làm kho có ad: case cần fill mà kho không fill vẫn BLOCKED.
+  Preflight bắt `http_proxy` còn sót của lượt chết giữa chừng (`LOI`, máy mất mạng).
+- **Không ép được** (mediation test mode, cần root, sai hãng máy) → case không được PASS, hạ `BLOCKED` kèm `precondition_thieu`.
 - Dù ép hay không, vẫn kiểm bằng log (`ep_ad_fail`). Ép rồi mà ad vẫn fill → `BLOCKED`, ép hỏng.
 - **Ngắt mạng KHÔNG phải no-fill.** Mất mạng thì log không có unit nào; no-fill thật là "có request, kho không trả ad".
 - Cách tay của tester: lắc máy → Ad Inspector → chọn Meta. Lưu ở `shared_prefs/admob.xml` key `inspector_info`, trường
