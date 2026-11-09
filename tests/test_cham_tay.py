@@ -126,3 +126,18 @@ def test_dung_lai_dong_luot_cu_da_cham_tren_may_cung_cau_ky_vong():
     assert "lượt trước cùng build + config: screencap" in ra[0]["lines"][0]["r"]
     ra2, dem2 = cham_tay.dung_lai([moi_ky_vong_doi], cu)          # cau ky vong doi -> khong dung lai
     assert dem2 == 0 and ra2[0]["lines"][0]["v"] == "NEEDS_HUMAN"
+
+
+def test_dong_blocked_la_he_qua_cua_dong_fail_thi_case_van_fail():
+    """S04-01 09/11/2026: dong 1 FAIL (OB5 khong hien), dong 2 "Bam X" BLOCKED vi khong co X -> case FAIL,
+    khong duoc thanh BLOCKED che mat bug."""
+    rec = {"key": "3.5.4#S04", "verdict": "PASS", "lines": [
+        {"v": "PASS", "e": "OB5 hiển thị 303 kèm X", "r": "x"}, {"v": "PASS", "e": "Bấm X → sang màn sau", "r": "x"}]}
+    ra = cham_tay.cham(cham_tay.cham(rec, [1], "FAIL", "OB5 không hiện"), [2], "BLOCKED", "không có X để bấm")
+    assert ra["verdict"] == "FAIL" and not ra.get("precondition_thieu")
+    assert ra["lines"][1]["v"] == "BLOCKED"
+
+
+def test_dong_blocked_khong_kem_fail_van_la_dieu_kien_case():
+    ra = cham_tay.cham(REC, [1, 4], "BLOCKED", "thiếu máy OPPO")
+    assert ra["verdict"] == "BLOCKED" and ra["precondition_thieu"] == ["thiếu máy OPPO"]

@@ -48,11 +48,11 @@ def _man_cua_key(key: str) -> tuple[str, str] | None:
 
 def show_theo_man(events, units) -> list[dict]:
     """[{man, unit, vi_tri}] cho moi `ad_show`, theo thu tu trong log."""
-    theo_duoi = {}
+    theo_duoi: dict[str, list] = {}
     for u in units:
         duoi = (u.get("unit") or "").lstrip("*")[-3:]
         if duoi:
-            theo_duoi[duoi] = u
+            theo_duoi.setdefault(duoi, []).append(u)
     man, ra = "", []
     ds = list(events or ())
     for i, e in enumerate(ds):
@@ -68,7 +68,9 @@ def show_theo_man(events, units) -> list[dict]:
         # Event ke tiep la mot `_view` -> ad nay thuoc man do.
         ke = VIEW_RE.match(ds[i + 1].get("name", "")) if i + 1 < len(ds) else None
         uid = (e.get("params") or {}).get("ad_unit_id", "")
-        u = theo_duoi.get(uid[-3:]) or {}
+        cung_duoi = theo_duoi.get(uid[-3:]) or [{}]
+        # Unit da tach theo ID day du (ad_tach_id): chon dung unit co ID nay.
+        u = next((x for x in cung_duoi if any(uid in v for v in (x.get("ids") or {}).values())), cung_duoi[0])
         keys = list(u.get("rc_keys") or ())
         # Unit gop nhieu vi tri trung 3 so cuoi: event co ID day du -> chi giu key co dung ID do.
         # Khong loc thi ad 303 show o OB3 bi tinh la "202 show o OB3" va nguoc lai (AIP872 09/11/2026).

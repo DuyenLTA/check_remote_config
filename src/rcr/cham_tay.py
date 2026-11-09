@@ -71,7 +71,11 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
         raise RcError(f"Case {record.get('key')} chỉ có {len(lines)} dòng Expected, không có dòng "
                       + ", ".join(map(str, thua)))
     ngay = time.strftime("%d/%m/%Y %H:%M")
-    if ket == CONFIG_BLOCKED:
+    khac_fail = any(l["v"] == FAIL for i, l in enumerate(lines, 1) if i not in dong and l.get("scope") != "po")
+    if ket == CONFIG_BLOCKED and not khac_fail:
+        # Dong BLOCKED vi dong FAIL truoc no (S04-01 09/11/2026: OB5 khong hien -> khong co X de bam) la HE QUA
+        # cua bug, khong phai dieu kien case khong dat: ghi vao precondition_thieu thi ca case thanh BLOCKED,
+        # che mat FAIL that.
         record = {**record, "precondition_thieu": [*(record.get("precondition_thieu") or []),
                                                    " ".join(ly_do.split())]}
     for n in dong:

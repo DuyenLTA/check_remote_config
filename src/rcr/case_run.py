@@ -23,6 +23,7 @@ from pathlib import Path
 
 from . import (
     log_moc,
+    ad_tach_id,
     act_compound,
     apk_tai_nguyen,
     assert_ad_screen,
@@ -169,6 +170,8 @@ async def _cham_log(client, baseline, out: dict, overrides, expects, preconditio
         out["ads"]["units_don"] = units_don
     out["crash"] = await crash_log.read(client, baseline.serial, baseline.package)
     out["events"] = await fa_log.doc(client, baseline.serial)
+    if (out.get("ads") or {}).get("units"):
+        out["ads"]["units"] = ad_tach_id.tach(out["ads"]["units"], out["events"])
     qua_nhanh = fo_screens.can_qua_lfo_nhanh(precondition, *steps)
     da_show = (assert_ad_screen.ad_man_nha_da_show(
         out["events"], list(((out.get("ads") or {}).get("units") or {}).values()), "lfo2")

@@ -42,6 +42,8 @@ MOT_LAN_RE = re.compile(r"đúng\s*1\s*l[ầa]n|dung\s*1\s*lan|double\s*navigate
 X_RE = re.compile(r"(?:button|n[úu]t)\s*X\b|\bX\s+(?:xu[ấa]t\s+hi[ệe]n|hi[ểe]n|hi[ệe]n)", re.I)
 OB3_RE = re.compile(r"\bOB\s*3\b|\bonb3\b|\b303\b|native\s+full|\btimer\b|chuy[ểe]n\s+m[àa]n|\bswipe\b", re.I)
 DEM_RE = re.compile(r"đ[ếe]m\s*ng[ượu][ợo]c|countdown", re.I)
+# Cau co CHU NGU la mot trang OB khac OB3: "OB5 hiển thị native full 303 kèm button X".
+MAN_OB_RE = re.compile(r"^\s*(?:\d+[.)]\s*)?OB\s*(\d)\s+(?:hi[ểe]n|hiện|show|c[óo]\b)", re.I)
 KHONG_HIEN_RE = re.compile(r"kh[ôo]ng\s+(?:hi[ểe]n\s*th[ịi]|hi[ệe]n|c[óo]|xu[ấa]t\s+hi[ệe]n)", re.I)
 # "Button X hien thi NGAY tu dau (khong co so dem nguoc)": khang dinh X HIEN, ve
 # "khong co so dem" chi la ve phu - khong duoc doc ca cau thanh cau phu dinh.
@@ -95,13 +97,18 @@ def _giay_mong(text: str, cfg: dict, key: str) -> float | None:
     return _so(cfg, key)
 
 
-def cham(text: str, tl: dict | None, cfg: dict, req_303=()) -> dict | None:
+def cham(text: str, tl: dict | None, cfg: dict, req_303=(), co_ve_303: bool = False) -> dict | None:
     """Dong nay la dong thoi gian OB3 thi cham, khong phai thi None.
 
     `req_303`: cac unit native 303 da duoc request trong luot (tu log ads).
     """
     luot = (tl or {}).get("luot") or []
     if not luot:
+        return None
+    chu_ngu = MAN_OB_RE.match(text)
+    if chu_ngu and chu_ngu.group(1) != "3":
+        # "OB5 hiển thị native full 303 kèm button X" (S04-01, 303 hung sang OB5) noi ve OB5, khong phai dong
+        # thoi gian OB3 - truoc day cham bang lan ghe OB3 va ra PASS "kho khong fill" (Pixel 6 09/11/2026).
         return None
     dau = luot[0]
     if AD_MOI_RE.search(text):
@@ -132,7 +139,7 @@ def cham(text: str, tl: dict | None, cfg: dict, req_303=()) -> dict | None:
     if BAM_X_RE.search(text):
         # Tool chi bam X khi X hien; ad khong fill thi X khong bao gio hien.
         if not dau["co_ad"]:
-            return _khong_fill(text, dau, (tl or {}).get("khung") or [], req_303)
+            return _khong_fill(text, dau, (tl or {}).get("khung") or [], req_303, co_ve_303)
         tren = [k for k in (tl or {}).get("khung") or []
                 if k["t"] >= dau["vao"] and (dau["roi"] is None or k["t"] <= dau["roi"])]
         mu = "" if thao_tac else _quang_mu(tren, dau)
@@ -146,9 +153,9 @@ def cham(text: str, tl: dict | None, cfg: dict, req_303=()) -> dict | None:
         khung = (tl or {}).get("khung") or []
         if MAN_KE_RE.search(text) and KHONG_HIEN_RE.search(text) and dau["roi"]:
             return _x_man_ke(text, dau, khung)
-        return _nut_x(text, dau, khung, cfg, req_303)
+        return _nut_x(text, dau, khung, cfg, req_303, co_ve_303)
     if (DOC_LAP_RE.search(text) or HUY_RE.search(text)) and not dau["co_ad"] and not tat_303:
-        return _khong_fill(text, dau, (tl or {}).get("khung") or [], req_303)
+        return _khong_fill(text, dau, (tl or {}).get("khung") or [], req_303, co_ve_303)
     if MOT_LAN_RE.search(text) or DOC_LAP_RE.search(text):
         roi = [v["roi"] for v in luot if v["roi"]]
         if len(roi) <= 1 and not any(v["vao"] > dau["vao"] and v["vao"] - (dau["roi"] or 0) < 1.5
@@ -218,11 +225,11 @@ def _quang_mu(tren: list, v: dict) -> str:
             "không đủ để kết luận, cần chạy lại")
 
 
-def _nut_x(text: str, v: dict, khung: list, cfg: dict, req_303=()) -> dict:
+def _nut_x(text: str, v: dict, khung: list, cfg: dict, req_303=(), co_ve_303: bool = False) -> dict:
     tren = [k for k in khung if k["t"] >= v["vao"] and (v["roi"] is None or k["t"] <= v["roi"])]
     if not v["co_ad"] and not _phu_dinh_x(text):
         # Log noi ro ad khong show -> X khong the hien; khong can khung moi ket luan.
-        return _khong_fill(text, v, khung, req_303)
+        return _khong_fill(text, v, khung, req_303, co_ve_303)
     if not tren:
         return out(NEEDS_HUMAN, "không có khung nào chụp trên trang OB3 để soi nút X", text)
     x = [k for k in tren if k["x"]]
@@ -236,7 +243,7 @@ def _nut_x(text: str, v: dict, khung: list, cfg: dict, req_303=()) -> dict:
                    f"thấy {thay} trên trang OB3" if thay else
                    f"{len(tren)} khung trên OB3: không có nút X, không có số đếm ngược", text)
     if not v["co_ad"]:
-        return _khong_fill(text, v, khung, req_303)
+        return _khong_fill(text, v, khung, req_303, co_ve_303)
     if DEM_RE.search(text) and not X_RE.search(text):
         if not dem and mu:
             return out(NEEDS_HUMAN, mu, text)
@@ -267,8 +274,13 @@ def _nut_x(text: str, v: dict, khung: list, cfg: dict, req_303=()) -> dict:
                f"{mong:g}s (khung chụp cách nhau ~1–2,5s)", text)
 
 
-def _khong_fill(text: str, v: dict, khung: list, req_303=()) -> dict:
+def _khong_fill(text: str, v: dict, khung: list, req_303=(), co_ve_303: bool = False) -> dict:
     """Ad khong fill: dat khi native 303 duoc request dung VA X / so dem khong hien."""
+    if co_ve_303:
+        # 303 CO load (ve muon, hung sang man sau) - khong phai "kho khong fill"; dong nay noi ve man khac
+        # OB3 (S04-01 "Bam X" o OB5, 09/11/2026 tung ra PASS "kho khong fill").
+        return out(NEEDS_HUMAN, "native 303 có load nhưng không show ở OB3 (về muộn) — không phải trường "
+                                "hợp không fill, dòng này không chấm bằng lượt ghé OB3", text)
     tren = [k for k in khung if k["t"] >= v["vao"] and (v["roi"] is None or k["t"] <= v["roi"])]
     thay = [k for k in tren if k["x"] or k["dem"]]
     if thay:

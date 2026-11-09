@@ -269,3 +269,20 @@ def test_tat_303_thi_khong_cham_huy_timer_nhu_ad_khong_fill():
 def test_chuyen_OB4_ngay_khi_vuot():
     r = at.cham("Chuyển OB4 ngay khi vuốt.", tl(roi=2.3, fail=0.01, thao_tac=[2.1]), TAT_303)
     assert v(r) == "PASS"
+
+
+def test_dong_noi_ve_ob5_khong_cham_bang_dong_thoi_gian_ob3():
+    """S04-01 "OB5 hiển thị native full 303 kèm button X": 303 hung sang OB5, khong phai OB3. Truoc day
+    cham bang lan ghe OB3 (ad khong show o OB3) va ra PASS "kho khong fill" (Pixel 6 09/11/2026)."""
+    assert at.cham("OB5 hiển thị native full 303-onb3-n-native-high kèm button X.", tl(roi=6.0), {},
+                   req_303=("*****034",)) is None
+    assert at.cham("OB3 hiển thị native full kèm button X.", tl(roi=6.0, show=1.0), {}) is not None
+
+
+def test_303_co_load_thi_khong_cham_bam_x_la_kho_khong_fill():
+    """S04-01 "Bấm X → sang màn tiếp theo." (X o OB5): 303 ve muon, load nhung khong show o OB3. Truoc day ra
+    PASS "kho khong fill" (Pixel 6 09/11/2026)."""
+    r = at.cham("Bấm X → sang màn tiếp theo.", tl(roi=6.0), {}, req_303=("*****034",), co_ve_303=True)
+    assert v(r) == "NEEDS_HUMAN" and "về muộn" in r["reason"]
+    r = at.cham("Bấm X → sang màn tiếp theo.", tl(roi=6.0), {}, req_303=("*****034",))
+    assert v(r) == "PASS"

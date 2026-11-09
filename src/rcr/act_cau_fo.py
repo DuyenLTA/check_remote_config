@@ -22,7 +22,8 @@ DI_QUA = "đi tiếp qua "
 RA_KHOI_OB = "!OnboardingActivity"
 DI_QUA_RE = re.compile(r"^\s*(?:đi|di)\s+(?:ti[ếe]p\s+)?qua\s+(?:OB|onb)\s*(\d)\b", re.I)
 HOAN_THANH_OB_RE = re.compile(r"^\s*ho[àa]n\s*th[àa]nh\s+(?:OB|onb(?:oarding)?)\s*\d\s*\.?\s*$", re.I)
-HET_LUONG_RE = re.compile(r"^\s*(?:đi|di)\s+h[ếe]t\s+lu[ồo]ng\b", re.I)
+HOAN_THANH_TRONG_CAU_RE = re.compile(r"ho[àa]n\s*th[àa]nh\s+(?:OB|onb(?:oarding)?)\s*(\d)", re.I)
+HET_LUONG_RE =re.compile(r"^\s*(?:đi|di)\s+h[ếe]t\s+lu[ồo]ng\b", re.I)
 CHON_ITEM_RE = re.compile(r"^\s*(?:ch[ọo]n|b[ấa]m|tap)\s+(?:1|m[ộo]t)\s+(?:item|style|[ôo]|l[ựu]a\s*ch[ọo]n|"
                           r"đ[áa]p\s*[áa]n)\b", re.I)
 # "Di qua OB1 → OB4": lai toi OB4, chup moi trang.
@@ -58,6 +59,12 @@ def resolve(text: str, nodes):
         return GoTo(f"OnboardingActivity#{so + 1}", f"{DI_QUA}OB{so} (chụp mọi trang đi qua)")
     m = DI_TOI_RE.match(text)
     if m:
+        # "Di den OB4, hoan thanh OB4." (TC 3.5.4 S04-01): phai ROI OB4 sang trang sau (OB5 hung 303), khong
+        # dung o OB4 - truoc day tool dung o OB4 toi het case, OB5 khong bao gio hien (Pixel 6 09/11/2026).
+        xong = HOAN_THANH_TRONG_CAU_RE.search(text)
+        if xong and xong.group(1) == m.group(1):
+            sau = int(m.group(1)) + 1
+            return GoTo(f"OnboardingActivity#{sau}", f"{DI_QUA}hoàn thành OB{m.group(1)}, tới trang sau (OB{sau})")
         return GoTo(f"OnboardingActivity#{m.group(1)}", f"{DI_QUA}tới OB{m.group(1)} (chụp mọi trang đi qua)")
     if RA_LOG_RE.match(text):
         return NoOp("bước rà logcat — không thao tác, chấm bằng log đã thu")

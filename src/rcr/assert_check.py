@@ -88,7 +88,11 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     # gian do duoc (log co moc ms + khung nhin lien tuc), khong day cho nguoi.
     req_303 = [u["unit"] for u in (ads.get("units") or {}).values()
                if u.get("requested") and ad_positions._khop_vi_tri(u, "303")]
-    ket = assert_timing.cham(text, (drive or {}).get("timeline"), dict(cfg or {}), req_303)
+    # Unit CHI cua 303 (da tach khoi unit gop duoi ID - ad_tach_id) co load: 303 co ve, khong phai khong fill.
+    co_ve_303 = any(u.get("loaded") and {m[0] for k in (u.get("rc_keys") or ())
+                                         if (m := assert_ad_screen._man_cua_key(k))} == {"303"}
+                    for u in (ads.get("units") or {}).values())
+    ket = assert_timing.cham(text, (drive or {}).get("timeline"), dict(cfg or {}), req_303, co_ve_303)
     if ket:
         return ket
 
