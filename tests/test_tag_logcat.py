@@ -35,6 +35,14 @@ def test_sdk_tutorial_so_voi_using_version():
     assert _check("SDK = visionlab:tutorial 3.7.0.")["verdict"] == a.FAIL
 
 
+
+def test_sdk_tran_la_ban_fo_khong_phai_target_sdk():
+    log = {"VslTemplate4FirstOpenSDK": ["Using version 3.5.4"], "FOR_TESTER_CONFIG": ["Target SDK: 36"]}
+    sai = _check("SDK = 3.5.4-alpha02.", log)
+    assert sai["verdict"] == a.FAIL and "Using version 3.5.4" in sai["reason"]
+    assert _check("SDK = 3.5.4.", log)["verdict"] == a.PASS
+
+
 def test_khong_thay_nhan_thi_khong_doan():
     ket = _check("Version Lib Ads = 1.2.10", {"FOR_TESTER_CONFIG": [], "VslTemplate4FirstOpenSDK": []})
     assert ket["verdict"] == a.NEEDS_HUMAN and "tester mode" in ket["reason"]

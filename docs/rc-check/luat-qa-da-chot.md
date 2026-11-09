@@ -35,3 +35,12 @@ User thêm/sửa tab "Tổng hợp SDK x" bất cứ lúc nào: mỗi lượt to
 - **Tắt một màn chỉ bỏ ad có logic preload/load TẠI màn đó.** Ad load ở Splash vẫn load là đúng (tắt OB3 mà 303 load ở
   Splash, tắt OB Old mà 301_o request ở Splash — đều PASS).
 - **Bỏ hẳn dòng "focus ngôn ngữ đầu tiên"** (R02-02): không chấm, không đưa vào bug.
+
+## TC SDK 3.5.4 (05/11/2026, AIP893) — tool: `assert_qa_man_tat_hung_202`
+
+- **Hứng 202:** ad 202 đã load mà chưa show (vd request mới sau khi bấm đổi ngôn ngữ ở LFO2) thì màn OB **đầu tiên**
+  show ad 202 đó thay ad của màn (OB1; tắt OB1 thì OB2). "Native 301 hiển thị, không show 202" mà OB1 show 202 → PASS.
+- **Màn tắt giữ logic load:** tắt màn (enable_onbN_screen / enable_ob1_old_screen = false) thì ad của màn đó vẫn
+  preload/load ở vị trí cũ như luồng đủ, chỉ không show. Câu TC "không có loadAd <ad màn tắt>" bỏ; có request là đúng,
+  thiếu request ở điểm preload của luồng đủ là FAIL (so với lượt luồng đủ cùng máy). Màn khác giữ logic thường (305 vẫn
+  preload như khi có OB4).

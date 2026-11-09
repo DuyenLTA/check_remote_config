@@ -14,6 +14,9 @@ DONG_RE = re.compile(r"^\s*(?P<nhan>[^=:]{2,50}?)\s*[=:]\s*(?P<gt>.+?)\s*\.?\s*$
 # "SDK = visionlab:tutorial 3.6.1" -> so voi "Using version 3.6.1" cua tag FirstOpenSDK.
 SDK_RE = re.compile(r"tutorial\s*v?(\d+(?:\.\d+)+(?:-\w+)?)", re.I)
 USING_RE = re.compile(r"Using version\s+(\S+)", re.I)
+# "SDK = 3.5.4-alpha02" (TC 3.5.4 R01-01): nhan tran "SDK" + so phien ban = ban SDK FO, KHONG phai dong
+# "Target SDK: 36" (API Android) cua FOR_TESTER_CONFIG - so theo nhan thi khop nham dong do (AIP999 04/11/2026).
+BAN_RE = re.compile(r"^v?(\d+(?:\.\d+)+(?:-\w+)?)$", re.I)
 TAG_SDK = "VslTemplate4FirstOpenSDK"
 
 
@@ -34,7 +37,7 @@ def cham(text: str, drive: dict) -> dict | None:
     if not m:
         return None
     nhan, mong = m.group("nhan").strip(), m.group("gt").strip()
-    sdk = SDK_RE.search(mong)
+    sdk = SDK_RE.search(mong) or (BAN_RE.match(mong) if nhan.casefold() == "sdk" else None)
     if sdk:
         thay = next((USING_RE.search(d).group(1) for d in tag_log.get(TAG_SDK, []) if USING_RE.search(d)), None)
         if thay is None:

@@ -111,6 +111,42 @@ def gop(*dot: list[dict]) -> list[dict]:
     return list(theo_key.values())
 
 
+# Truong cua case ma doi la thanh case khac: record cu cham theo noi dung cu.
+_TRUONG_NOI_DUNG = ("label", "precondition")
+
+
+def _overrides_doi(r: dict, c: dict) -> bool:
+    """Gia tri TC dat cho mot key app CO doc khac voi luc cham -> case da doi noi dung.
+
+    Record khong bao gio bang nguyen van TC: tool tu them key nen (`enable_all_ads_tutorial`
+    sau pm clear) va bo key app khong doc (`keys_not_used`, soi DEX). So nguyen dict thi moi
+    case deu "doi" va --gop bo sach ket qua (05/11/2026, AIP893 52/52 case bi bo).
+    """
+    if "overrides" not in r or "overrides" not in c:
+        return False
+    ro, bo = r.get("overrides") or {}, set(r.get("keys_not_used") or [])
+    return any(k not in bo and ro.get(k) != v for k, v in (c.get("overrides") or {}).items())
+
+
+def loc_theo_tc(records: list[dict], rows: list[dict]) -> tuple[list[dict], list[str], list[str]]:
+    """Bo record --gop khong con khop bo TC vua tai -> (giu, key da xoa khoi sheet, key doi noi dung).
+
+    03/11/2026 sheet TC 3.6.1 sua qua dem (61 -> 57 case, RG02 viet lai): gop theo key giu
+    nguyen PASS/FAIL cua noi dung cu duoi ma case moi, report noi sai ve case dang co tren sheet.
+    """
+    theo_key = {c["key"]: c for c in rows}
+    giu, da_xoa, doi = [], [], []
+    for r in records:
+        c = theo_key.get(r["key"])
+        if c is None:
+            da_xoa.append(r["key"])
+        elif any(f in r and f in c and r[f] != c[f] for f in _TRUONG_NOI_DUNG) or _overrides_doi(r, c):
+            doi.append(r["key"])
+        else:
+            giu.append(r)
+    return giu, da_xoa, doi
+
+
 def doc_nhieu(paths: list[str], package: str) -> tuple[dict, list[dict]]:
     """-> (meta cua file CUOI, record da gop). File sau thang file truoc."""
     datas = [doc(p, package) for p in paths]

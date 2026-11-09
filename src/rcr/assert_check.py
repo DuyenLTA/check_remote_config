@@ -17,7 +17,7 @@ import re
 
 from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_bo_cuc, assert_chu, assert_indicator,
                assert_giu_nguyen, assert_khong_co_ad, assert_luong_ad, assert_nut_lfo, assert_resume,
-               assert_man_khong,
+               assert_man_khong, assert_qa_man_tat_hung_202,
                assert_anh_content, assert_mau, assert_ads, assert_splash_media, assert_tag,
                assert_timing, assert_trong_luc, assert_ui, ui_names)
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
@@ -144,6 +144,10 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
 
     # "Vi tri X co / KHONG show tai man Y" (Y khong phai man cua X): cham bang
     # event ad_show gan man, khong bang request - request o man nha la dung cho.
+    # Luat QA 05/11/2026 nguoc cau chu TC: "hung 202" sang man OB dau, man tat van load ad.
+    ket = assert_qa_man_tat_hung_202.cham(text, events, list((ads.get("units") or {}).values()), cfg)
+    if ket:
+        return ket
     ket = assert_ad_screen.cham(text, events, list((ads.get("units") or {}).values()))
     if ket:
         return ket

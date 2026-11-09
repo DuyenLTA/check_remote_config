@@ -190,3 +190,28 @@ def test_ghi_hong_giua_luot_khong_giet_luot(monkeypatch, tmp_path):
     monkeypatch.setattr(luot_file, "ghi", hong)
     with pytest.raises(PermissionError):           # chi lan ghi cuoi moi bao loi
         _chay(monkeypatch, tmp_path, {"a": "PASS", "b": "PASS", "c": "PASS"})
+
+
+def test_gop_bo_case_da_xoa_va_case_doi_noi_dung_tren_sheet():
+    """Sheet TC sua giua hai luot: ket qua cu khong duoc dung ten case moi."""
+    rows = [{"key": "a", "label": "#a LFO1", "precondition": "p", "overrides": {"k": "1"}},
+            {"key": "b", "label": "#b OB2", "precondition": "p", "overrides": {"k": "2"}}]
+    cu = [{"key": "a", "label": "#a LFO1", "precondition": "p", "overrides": {"k": "1"}, "verdict": "PASS"},
+          {"key": "b", "label": "#b Inter Splash", "precondition": "p", "overrides": {"k": "2"}, "verdict": "FAIL"},
+          {"key": "c", "label": "#c Home", "precondition": "p", "overrides": {}, "verdict": "FAIL"}]
+    giu, da_xoa, doi = luot_file.loc_theo_tc(cu, rows)
+    assert [r["key"] for r in giu] == ["a"]
+    assert da_xoa == ["c"] and doi == ["b"]
+
+
+def test_gop_giu_case_khi_overrides_chi_lech_key_nen_va_key_app_khong_doc():
+    """Record co them key nen tool tu dat va thieu key app khong doc (DEX) van la case cu."""
+    rows = [{"key": "a", "label": "#a", "precondition": "p",
+             "overrides": {"k": "1", "khong_doc": "true"}},
+            {"key": "b", "label": "#b", "precondition": "p", "overrides": {"k": "2"}}]
+    cu = [{"key": "a", "label": "#a", "precondition": "p", "keys_not_used": ["khong_doc"],
+           "overrides": {"k": "1", "enable_all_ads_tutorial": "true"}, "verdict": "PASS"},
+          {"key": "b", "label": "#b", "precondition": "p", "overrides": {"k": "3"}, "verdict": "FAIL"}]
+    giu, da_xoa, doi = luot_file.loc_theo_tc(cu, rows)
+    assert [r["key"] for r in giu] == ["a"]
+    assert da_xoa == [] and doi == ["b"]

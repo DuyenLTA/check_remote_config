@@ -92,6 +92,12 @@ def dung_lai_report(args: argparse.Namespace) -> dict:
     report = args.report or str(
         Path(args.out_dir) / f"rc-{args.package}-gop-{time.strftime('%y%m%d-%H%M%S')}.html")
     tc = meta.get("tc") or {}
+    if tc.get("cases"):
+        # Bo TC cua file CUOI la ban moi nhat: case da xoa / doi noi dung khong mang ket qua cu.
+        records, da_xoa, doi = luot_file.loc_theo_tc(records, tc["cases"])
+        for ten, keys in (("khong con tren sheet TC", da_xoa), ("da doi noi dung tren sheet", doi)):
+            if keys:
+                _log(f"--gop: bo {len(keys)} case {ten}: {', '.join(keys)}")
     run_batch.ghi_report(luot_file.baseline_tu(meta), tc, records,
                          args.app_label or meta.get("app_label", ""), report, _log)
     path = luot_file.duong_dan(report, args.out_dir, args.package)
@@ -259,7 +265,14 @@ async def _tren_may(args: argparse.Namespace, client, serial: str, started: floa
                 raise RcError("--case all: bo TC khong co case nao tool chay duoc.")
         if args.case:
             # File dang chay tiep la moi nhat -> dung SAU de thang cac file --gop.
-            goc = (luot_file.doc_nhieu(args.gop, args.package)[1] if args.gop else []) + goc_tiep
+            goc_gop = luot_file.doc_nhieu(args.gop, args.package)[1] if args.gop else []
+            goc_gop, da_xoa, doi = luot_file.loc_theo_tc(goc_gop, rows)
+            if da_xoa:
+                _log(f"--gop: bo {len(da_xoa)} case khong con tren sheet TC: {', '.join(da_xoa)}")
+            if doi:
+                _log(f"--gop: bo ket qua cu cua {len(doi)} case da doi noi dung tren sheet "
+                     f"(can chay lai): {', '.join(doi)}")
+            goc = goc_gop + goc_tiep
             # Luot tiep ghi vao CHINH file cu: chay tiep may lan van mot file.
             path = Path(args.tiep) if args.tiep else luot_file.duong_dan(
                 args.report, args.out_dir, args.package)
