@@ -17,6 +17,7 @@ import discord
 
 from . import bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_jira_marker, bot_kenh_project, bot_kiem_testvsl
 from . import bot_jira_rest as jira
+from . import bot_tin_goc as tin_goc
 from . import bot_verify_jira as v
 
 log = logging.getLogger("rcr-bot")
@@ -154,16 +155,15 @@ async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, ou
     if not sub and bot_kiem_testvsl.doi_rc_firebase(job, ck):    # sub khong doi Remote Config
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
         if loi:                              # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Jira / Firebase
-            await vm.edit(content=f"{dau}\n⛔ Chưa chạy: điều kiện `testvsl` chưa sẵn sàng.",
+            await vm.edit(content=tin_goc.noi(f"{dau}\n📲 Đã cài.",
+                                              bot_kiem_testvsl.tin_nhac(job, loi, getattr(bot, "duyet", ()))),
                           view=nut(vm.id, ("verify", "Verify lại")))
-            await vm.reply(bot_kiem_testvsl.tin_nhac(job, loi, getattr(bot, "duyet", ())))
             return False
-    await vm.reply(bot_cong_viec.tin_da_cai(job, ten, "verify bug"))
     het_gio = (bot_chay_claude.TIMEOUT_VERIFY_SUB if sub else
                bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY)
     if not sub:
         bot_dung_luot.danh_dau_pha_rc(job, ck)        # Dung tu day -> phai don RC testvsl
-    await vm.edit(content=f"{dau}\nĐang chạy lại {len(cases)} {'dòng checklist' if ck else 'case'}…")
+    await vm.edit(content=f"{dau}\n📲 Đã cài. Đang chạy lại {len(cases)} {'dòng checklist' if ck else 'case'}…")
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, het_gio, out, cases)
     bot.q.cap_nhat(job, kq=kq, ten_may=ten)
     return True
@@ -177,12 +177,16 @@ async def _bao_ket_qua(bot, job: dict, vm, out: Path) -> None:
         dong += [("bo", u, u.get("ly_do", "")) for u in job.get("bo_qua", [])]
         bot.q.cap_nhat(job, dong=[list(d) for d in dong])
     dong = [tuple(d) for d in job["dong"]]
-    await vm.edit(content=f"{v.tin_ket_qua(job, dong)}\nMáy: {ten}", view=nut(vm.id, ("verify", "Verify bug Jira")))
     f = bot_cong_viec.file_report(kq, out)
+    noi_dung = {"content": tin_goc.noi(v.tin_ket_qua(job, dong), f"Máy: {ten}"),
+                "view": nut(vm.id, ("verify", "Verify bug Jira"))}
     if not job.get("da_bao"):
+        # Tom tat + file report nam ngay tren tin goc cua luot verify (khong tra loi tin moi - bot_tin_goc).
         link = f"\nReport: {kq['link']}" if kq.get("link") and not f else ""
-        await vm.reply(f"{v.tin_tom_tat_verify(job, kq)}{link}", file=discord.File(f) if f else discord.utils.MISSING)
-        bot.q.cap_nhat(job, da_bao=True)
+        noi_dung |= {"embeds": [tin_goc.embed(tin_goc.KET_QUA, f"{v.tin_tom_tat_verify(job, kq)}{link}")],
+                     "attachments": [discord.File(f)] if f else []}
+    await vm.edit(**noi_dung)
+    bot.q.cap_nhat(job, da_bao=True)
     tin_dev = v.tin_bao_dev_fail(job, dong)
     if tin_dev and not job.get("da_bao_dev"):   # bug van FAIL -> bao dev o kenh project
         await bot_kenh_project.bao(bot, job, tin_dev, vm, [u["key"] for loai, u, _ in dong if loai == "todo"])

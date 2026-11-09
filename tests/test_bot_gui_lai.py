@@ -63,24 +63,32 @@ def test_hang_doi_job_co_kq_chi_gui_lai_khong_can_may(tmp_path):
 
 # --- luot verify: lan dau gui loi mang, lan sau chi gui lai -------------------------------------
 class _Msg:
+    """Tin goc: ket qua / menu bug la lan SUA tin co embed (khong tra loi tin moi - bot_tin_goc).
+    `loi_o`: lan sua co embed thu n mat mang."""
+
     def __init__(self, loi_o=()):
-        self.id, self.edits, self.replies, self.loi_o, self.lan = 501, [], [], set(loi_o), 0
+        self.id, self.edits, self.embeds, self.loi_o, self.lan = 501, [], [], set(loi_o), 0
 
     async def edit(self, **k):
+        if "embeds" in k:
+            self.lan += 1
+            if self.lan in self.loi_o:
+                raise LOI_DNS
+            self.embeds = k["embeds"]
         self.edits.append(k)
 
     async def reply(self, chu, **k):
-        self.lan += 1
-        if self.lan in self.loi_o:           # reply thu n mat mang
-            raise LOI_DNS
-        self.replies.append(chu)
+        pytest.fail(f"không được trả lời tin mới: {chu}")
+
+    def embed_da_gui(self):
+        return [e for k in self.edits for e in k.get("embeds") or ()]
 
 
 def test_verify_gui_loi_thi_lan_sau_khong_chay_lai_khong_doi_jira_lai(tmp_path, monkeypatch):
     class B:
         jira_url, jira_token, dev_ids = "https://jira.x", "pat", ""
         q = h.HangDoi(tmp_path / "q.json")
-        msg = _Msg(loi_o={2})        # reply 1: tin da cai; reply 2: tom tat verify -> mat mang
+        msg = _Msg(loi_o={1})        # lan sua dau dat ket qua verify len tin goc -> mat mang
 
         def get_guild(self, gid):
             return None
@@ -111,7 +119,7 @@ def test_verify_gui_loi_thi_lan_sau_khong_chay_lai_khong_doi_jira_lai(tmp_path, 
         await bj.chay(bot, job, "S1", "Pixel", Path("."), tmp_path)
     asyncio.run(g.chay_toi_khi_gui_duoc(mot_luot, job, lambda: None, ngu=ngu))
     assert chay == [1] and chuyen == ["AIP920-13"]          # chay mot lan, Jira doi mot lan
-    assert len(bot.msg.replies) == 2                         # tin da cai + tom tat verify (gui lai lan 2)
+    assert [e.title for e in bot.msg.embed_da_gui()] == ["Kết quả"]   # ket qua dat len tin goc (lan gui lai)
     assert job["da_bao"] and h.HangDoi(tmp_path / "q.json").jobs[0]["kq"]["trang_thai"] == "XONG"
 
 
@@ -119,7 +127,7 @@ def test_check_co_kq_thi_chi_gui_ket_qua_khong_cai_lai(tmp_path, monkeypatch):
     from rcr import discord_bot as d
     bot = object.__new__(d.BuildBot)
     bot.q, bot.ban = h.HangDoi(tmp_path / "q.json"), {}
-    msg = _Msg(loi_o={1})                                     # reply ket qua lan dau mat mang
+    msg = _Msg(loi_o={1})                                     # dat ket qua len tin goc lan dau mat mang
 
     async def tin_qa(msg_id):
         return msg
@@ -136,7 +144,9 @@ def test_check_co_kq_thi_chi_gui_ket_qua_khong_cai_lai(tmp_path, monkeypatch):
     job = bot.q.lay_cho_gui()[0]
     bot.ban["S1"] = 99                                        # may S1 dang chay job khac -> khong duoc tra nham
     asyncio.run(bot._chay_tren(job, "", "Pixel"))
-    assert len(msg.replies) == 2 and "Lingix" in msg.replies[0] and "bug" in msg.replies[1]
+    da = msg.embed_da_gui()
+    assert [e.title for e in da] == ["Kết quả", "Kết quả", "Bug cần review"]   # menu bug them vao, giu ket qua
+    assert "Lingix" in da[0].description and "bug" in da[-1].description.lower()
     assert bot.q.jobs == [] and bot.ban == {"S1": 99}
 
 

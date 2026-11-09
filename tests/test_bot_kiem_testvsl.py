@@ -85,7 +85,8 @@ def test_thieu_testvsl_thi_khong_chay_claude_va_nhac_qa(tmp_path, monkeypatch):
     job = {"msg_id": 5, "ma": "AIP920", "ten": "", "version": "1.6.0 (7)", "package": "pkg.a",
            "loai_ban": "release", "nguoi_duyet": 42}
     assert asyncio.run(bot._cai_va_chay(job, msg, "S1", "Pixel")) is False
-    assert "<@42>" in msg.replies[-1] and "kq" not in job
+    assert msg.replies == []                                  # nhac QA ghi tren tin goc, khong tra loi tin moi
+    assert "<@42>" in msg.edits[-1]["content"] and "testvsl" in msg.edits[-1]["content"] and "kq" not in job
     assert [b.custom_id for b in msg.edits[-1]["view"].children] == ["rcr:check:5", "rcr:bo:5"]
 
 

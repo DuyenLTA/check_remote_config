@@ -15,6 +15,7 @@ import discord
 
 from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_hop_thu_bug, bot_kiem_testvsl,
                build_ma_app)
+from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import XAM, XANH, nut
 
 
@@ -40,8 +41,7 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
         return False
     ghi = " (đã gỡ bản cũ rồi tải lại — mất data app)" if cai.get("go_ban_cu") else ""
     if job.get("loai_job") == "sub":     # /check-sub: khong doi Remote Config -> khong can testvsl
-        await qa.edit(content=f"{dau}\nĐã cài{ghi}. Đang chạy /sub-check…")
-        await qa.reply(bot_cong_viec.tin_da_cai(job, ten, "/sub-check (bộ TC sub)"))
+        await qa.edit(content=f"{dau}\n📲 Đã cài{ghi}. Đang chạy /sub-check…")
         bat_dau = time.time()
         kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, bot_chay_claude.TIMEOUT_SUB,
                                      out, None, False, "", job["version"])
@@ -51,12 +51,10 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     if bot_kiem_testvsl.doi_rc_firebase(job, next_gen):
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
         if loi:                          # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Firebase
-            await qa.edit(content=f"{dau}\nĐã cài{ghi}. ⛔ Chưa chạy: điều kiện `testvsl` chưa sẵn sàng.",
+            await qa.edit(content=tin_goc.noi(f"{dau}\n📲 Đã cài{ghi}.", bot_kiem_testvsl.tin_nhac(job, loi, bot.duyet)),
                           view=nut(("check", "Chạy lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
-            await qa.reply(bot_kiem_testvsl.tin_nhac(job, loi, bot.duyet))
             return False
-    await qa.edit(content=f"{dau}\nĐã cài{ghi}. Đang chạy /rc-check…")
-    await qa.reply(bot_cong_viec.tin_da_cai(job, ten, "/rc-check"))
+    await qa.edit(content=f"{dau}\n📲 Đã cài{ghi}. Đang chạy /rc-check…")
     timeout = bot_chay_claude.TIMEOUT_NEXT_GEN if next_gen else bot_chay_claude.TIMEOUT_BO_TC
     bat_dau = time.time()
     bot_dung_luot.danh_dau_pha_rc(job, next_gen)       # Dung tu day -> phai don RC testvsl
@@ -71,7 +69,7 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
     """Gui ket qua luot da chay. Goi lai duoc nhieu lan (mat mang giua chung): buoc nao da gui thi bo qua."""
     kq, ten = job["kq"], job.get("ten_may") or "?"
     chu = bot_cong_viec.TRANG_THAI.get(kq["trang_thai"], ("", kq["trang_thai"]))[1]
-    await qa.edit(content=f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**\n{chu}", view=None)   # go nut Dung
+    dong_dau = f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**\n{chu}"
     f = bot_cong_viec.file_report(kq, out)
     if not job.get("da_bao"):
         # Tom tat ID ads doc bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.
@@ -79,11 +77,15 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
         # Luot sub khong check ID ads -> khong co dong audit.
         audit = "" if job.get("loai_job") == "sub" else audit_tom_tat.dong_tin(
             audit_tom_tat.tim(job["package"], tu_luc=job.get("bat_dau") or 0))
-        files = [discord.File(f)] if f else []
-        await qa.reply((bot_cong_viec.tin_ket_qua(job, kq, f) + f"\nMáy: {ten}" + (f"\n{audit}" if audit else ""))[:2000],
-                       files=files or discord.utils.MISSING,
-                       view=nut(("verify", "Verify bug Jira", XAM), msg_id=job["msg_id"]))
+        # Ket qua + file report + nut Verify nam ngay tren tin goc (khong tra loi tin moi).
+        await qa.edit(content=dong_dau,
+                      embeds=[tin_goc.embed(tin_goc.KET_QUA, bot_cong_viec.tin_ket_qua(job, kq, f)
+                                            + (f"\n{audit}" if audit else ""))],
+                      attachments=[discord.File(f)] if f else [],
+                      view=nut(("verify", "Verify bug Jira", XAM), msg_id=job["msg_id"]))
         bot.q.cap_nhat(job, da_bao=True)
+    else:
+        await qa.edit(content=dong_dau)
     if kq.get("bugs") and not job.get("da_bao_bug"):
         # Luu vao tin cua build: bot khoi dong lai van tick / log tiep duoc.
         # link_report la duong dan file chi khi file do thuc su duoc dinh kem (tin_bug ghi "đính kèm")
@@ -91,5 +93,5 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
                                     kq.get("link", "") if kq.get("link", "").startswith("https://") else str(f or ""))
         # Chua publish duoc artifact -> dinh kem luon file report vao tin bug: QA phai mo duoc report
         # ngay tai tin can review, khong phai keo len tim tin ket qua.
-        await bot_hop_thu_bug.dang_menu(bot, qa, c, files=[discord.File(f)] if f else None)
+        await bot_hop_thu_bug.dang_menu(bot, qa, c)
         bot.q.cap_nhat(job, da_bao_bug=True)

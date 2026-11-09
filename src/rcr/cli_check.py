@@ -81,7 +81,7 @@ def _notify_run(args: argparse.Namespace, out: dict, started: float) -> None:
         kind, title, lines, action = discord_run_message.build_run_message(summary)
         # Khong co Claude publish artifact: dinh kem chinh file report.
         dinh_kem = Path(args.report) if args.khong_claude and args.report else None
-        discord_notify.send(kind, title, lines, action, file=dinh_kem)
+        discord_notify.send(kind, title, lines, action, file=dinh_kem, package=args.package)
     except Exception as exc:  # noqa: BLE001 - thong bao la tien nghi
         _log(f"discord: không dựng được thông báo ({type(exc).__name__})")
 

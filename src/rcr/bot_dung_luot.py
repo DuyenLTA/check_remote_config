@@ -36,25 +36,30 @@ def danh_dau_pha_rc(job: dict, next_gen_hay_checklist: bool) -> None:
 
 async def bam_dung(bot, it: discord.Interaction, c: dict) -> None:
     job = next((j for j in bot.q.jobs if j["msg_id"] == c["msg_id"]), None)
-    if job is None or job.get("kq") is not None:
-        await it.response.send_message("Lượt này không còn chạy (đã xong / đang gửi kết quả).", ephemeral=True)
+    if job is None or job.get("kq") is not None:   # da xong / dang gui ket qua: tin goc sap ghi ket qua
+        await it.response.defer()
         return
     ly_do = f"{it.user.mention} bấm Dừng"
-    await it.response.defer(ephemeral=True, thinking=True)
+    # Moi buoc cua nut Dung ghi thanh dong trang thai cua CHINH tin goc (khong tin ephemeral rieng - bot_tin_goc).
+    await it.response.defer()
     if job.get("dang_o"):
         may, serial = str(job["dang_o"]).split(":", 1)
         await bot_may_phu.gui(await bot._kenh_dieu_phoi(), "dung",
                               {"may": may, "serial": serial, "msg_id": job["msg_id"], "ly_do": ly_do})
-        await it.followup.send(f"🛑 Đã gửi lệnh dừng tới máy phụ `{may}`.", ephemeral=True)
+        await _trang_thai(it, f"🛑 Đang dừng trên máy phụ `{may}` — {ly_do}…")
         return
     serial = next((s for s, m in bot.ban.items() if m == job["msg_id"]), None)
     if serial is None:
-        await it.followup.send("Lượt chưa bắt đầu chạy — bấm **Huỷ** để bỏ khỏi hàng đợi.", ephemeral=True)
+        await _trang_thai(it, "Lượt chưa bắt đầu chạy — bấm **Huỷ** để bỏ khỏi hàng đợi.")
         return
     if await asyncio.to_thread(bot_tien_trinh.dung, serial, ly_do, job["msg_id"]):
-        await it.followup.send("🛑 Đang dừng lượt…", ephemeral=True)
-    else:
-        await it.followup.send("Lượt này vừa xong trên máy, không còn gì để dừng.", ephemeral=True)
+        await _trang_thai(it, f"🛑 Đang dừng lượt — {ly_do}…")
+
+
+async def _trang_thai(it: discord.Interaction, dong: str) -> None:
+    """Thay dong trang thai cuoi cua tin goc (giu dong dau build)."""
+    dau = (it.message.content or "").split("\n", 1)[0]
+    await it.message.edit(content=f"{dau}\n{dong}")
 
 
 def _luot_khac_cung_app(bot, job: dict) -> bool:

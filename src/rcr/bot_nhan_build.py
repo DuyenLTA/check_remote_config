@@ -14,6 +14,7 @@ from pathlib import Path
 import discord
 
 from . import bot_cong_viec, bot_jira_rest, bot_job_verify, bot_kenh_project, build_ma_app
+from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import GIU_KHI_HOI_LAI, NUT_HOI, noi_dung, nut
 
 log = logging.getLogger("rcr-bot")
@@ -139,8 +140,20 @@ async def xep_verify(bot, c: dict, kenh) -> None:
                 await asyncio.sleep(CHO_JIRA)
         except Exception as exc:         # noqa: BLE001
             log.exception("xep verify loi")
-            await kenh.send(f"⚠️ Không kiểm được bug Reviewing của **{c['ma']}**: {exc}"[:2000])
+            await _canh_bao(bot, c, kenh, f"⚠️ Không kiểm được bug Reviewing của **{c['ma']}**: {exc}")
             return
-    await kenh.send(f"⚠️ Chưa kiểm được bug Reviewing của **{c['ma']}** `{c['version']}`: Jira không kết nối "
-                    f"được suốt {SO_LAN_JIRA * CHO_JIRA // 60} phút (VPN?). Kết nối lại thì bấm **Verify bug Jira** "
-                    f"ở tin Check, build không có tin Check thì gửi lại tin build để bot kiểm lại.")
+    await _canh_bao(bot, c, kenh, f"⚠️ Chưa kiểm được bug Reviewing của **{c['ma']}** `{c['version']}`: Jira không "
+                    f"kết nối được suốt {SO_LAN_JIRA * CHO_JIRA // 60} phút (VPN?). Kết nối lại thì bấm **Verify bug "
+                    f"Jira** ở tin Check, build không có tin Check thì gửi lại tin build để bot kiểm lại.")
+
+
+async def _canh_bao(bot, c: dict, kenh, dong: str) -> None:
+    """Build da co tin goc (tin hoi Check) -> them dong canh bao vao tin do; chua co tin goc moi gui tin moi."""
+    if c.get("msg_id"):
+        try:
+            qa = await bot._tin_qa(int(c["msg_id"]))
+            await qa.edit(content=tin_goc.noi(qa.content, dong))
+            return
+        except discord.HTTPException as exc:
+            log.warning("khong sua duoc tin goc de canh bao: %s", exc)
+    await kenh.send(dong[:2000])

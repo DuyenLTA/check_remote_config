@@ -134,17 +134,25 @@ def test_don_testvsl_loi_thi_bao_qa_kiem_tay(tmp_path, monkeypatch):
 
 
 class _It:
+    """Nut Dung nam tren tin goc: moi trang thai SUA tin goc (it.message), khong tin ephemeral (bot_tin_goc)."""
+
     def __init__(self):
         self.user = SimpleNamespace(mention="@qa")
         self.tra = []
+        self.gui_moi = []
 
         async def defer(**k):
             pass
 
         async def send(chu, **k):
-            self.tra.append(chu)
+            self.gui_moi.append(chu)
+
+        async def edit(content=None, **k):
+            self.message.content = content
+            self.tra.append(content)
         self.response = SimpleNamespace(defer=defer, send_message=send)
         self.followup = SimpleNamespace(send=send)
+        self.message = SimpleNamespace(content="**AIP1** `1.0` · máy **P6**\nĐang chạy /rc-check…", edit=edit)
 
 
 def test_bam_dung_luot_tren_may_cua_bot_chinh(tmp_path, monkeypatch):
@@ -158,6 +166,7 @@ def test_bam_dung_luot_tren_may_cua_bot_chinh(tmp_path, monkeypatch):
     bot.ban["S1"] = 9
     asyncio.run(bd.bam_dung(bot, it, {"msg_id": 9}))
     assert goi == [("S1", "@qa bấm Dừng", 9)] and "Đang dừng" in it.tra[-1]
+    assert it.tra[-1].startswith("**AIP1** `1.0`") and not it.gui_moi     # giu dong dau, khong tin moi
 
 
 def test_bam_dung_luot_o_may_phu_chuyen_lenh_qua_kenh_dieu_phoi(tmp_path, monkeypatch):

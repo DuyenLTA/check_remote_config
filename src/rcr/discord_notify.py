@@ -22,7 +22,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from . import cau_hinh_bot
+from . import cau_hinh_bot, discord_tin_goc
 
 ENV_URL = "DISCORD_WEBHOOK_URL"
 ENV_SWITCH = "DISCORD_NOTIFY"
@@ -97,10 +97,11 @@ def _multipart(payload: dict, file_name: str, data: bytes) -> tuple[bytes, str]:
 
 
 def send(kind: str, title: str, lines: list[str], action: str | None = None,
-         link: str | None = None, file: Path | None = None) -> bool:
+         link: str | None = None, file: Path | None = None, package: str = "") -> bool:
     """Gui mot tin. True khi Discord nhan (2xx); moi truong hop khac -> False, khong raise.
 
     `file`: dinh kem file (report HTML) - dung khi khong co Claude publish artifact.
+    `package`: bot da co tin goc cua package -> them dong vao tin goc thay vi gui tin moi (discord_tin_goc).
     """
     try:
         if os.environ.get(ENV_SWITCH, "").strip() == "0":
@@ -120,6 +121,9 @@ def send(kind: str, title: str, lines: list[str], action: str | None = None,
                 # Chan file:// va scheme la cua urllib; khong in URL ra.
                 _warn(f"{ENV_URL} không phải URL http(s), bỏ qua thông báo")
                 return False
+        if package and file is None and dich is not None and discord_tin_goc.them_dong(
+                package, build_text(kind, title, lines, action, link)):
+            return True
         data, ghi_chu = _doc_dinh_kem(file)
         if ghi_chu:
             lines = [*lines, ghi_chu]

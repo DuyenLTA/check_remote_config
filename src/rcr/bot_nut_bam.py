@@ -12,9 +12,11 @@ from pathlib import Path
 
 import discord
 
-from . import bot_cong_viec, bot_dung_luot, bot_job_verify, bot_kenh_project, bot_log_jira, bot_verify_jira
+from . import bot_cong_viec, bot_dung_luot, bot_hop_thu_bug, bot_job_verify, bot_kenh_project, bot_log_jira
+from . import bot_tin_goc as tin_goc
+from . import bot_verify_jira
 from . import build_ma_app
-from .bot_giao_dien import NUT_HOI, NUT_HUY, XAM, nut, view_bug
+from .bot_giao_dien import NUT_HOI, NUT_HUY, XAM, nut
 
 log = logging.getLogger("rcr-bot")
 
@@ -47,18 +49,19 @@ async def xu_ly(bot, it: discord.Interaction) -> None:
         await bot_dung_luot.bam_dung(bot, it, c)
         return
     if hanh_dong == "verify":
-        await it.response.defer(ephemeral=True, thinking=True)
+        await it.response.defer()
         try:
             tom_tat = await bot_job_verify.xep(bot, c, bot.get_channel(bot.kenh_qa))
-        except Exception as exc:         # noqa: BLE001 - loi Jira tra ve cho nguoi bam
+        except Exception as exc:         # noqa: BLE001 - loi Jira ghi len tin goc
             log.exception("verify lai loi")
             tom_tat = f"⛔ Lỗi: {exc}"
-        await it.followup.send(tom_tat[:2000], ephemeral=True)
+        await it.message.edit(content=tin_goc.noi(_bo_dong_verify(it.message.content),
+                                                  f"🔁 Verify bug Jira — {it.user.mention}: {tom_tat}"))
         return
     c = {**c, "loai_ban": build_ma_app.loai_ban(c)}   # tin hoi tu truoc 31/10/2026 con ghi "debug" -> ban release
     vi_tri = bot.q.them({**c, "nguoi_duyet": it.user.id})   # check | thu lai
-    if vi_tri is None:
-        await it.response.send_message("Build này đã trong hàng đợi.", ephemeral=True)
+    if vi_tri is None:                   # da trong hang: tin goc da ghi vi tri, khong tra loi them
+        await it.response.defer()
         return
     await it.response.edit_message(view=nut(*NUT_HUY, msg_id=c["msg_id"]), content=f"{bot_cong_viec.dau_tin(c)}\n"
                                    f"Đã duyệt bởi {it.user.mention} — bản {c['loai_ban']}, vị trí {vi_tri} trong hàng đợi.")
@@ -67,10 +70,8 @@ async def xu_ly(bot, it: discord.Interaction) -> None:
 async def huy(bot, it: discord.Interaction, c: dict) -> None:
     """Bo job DANG CHO khoi hang (bam nham Check, dev bao day nham ban). Job dang chay: nut Dung (bot_dung_luot)."""
     kq = bot.q.huy(c["msg_id"])
-    if kq != "da_huy":
-        await it.response.send_message(
-            "Lượt này đang chạy trên máy — bấm **Dừng** ở tin của lượt nếu cần." if kq == "dang_chay"
-            else "Build này không còn trong hàng đợi.", ephemeral=True)
+    if kq != "da_huy":                   # dang chay (tin goc dang co nut Dung) / da xong: khong tra loi them
+        await it.response.defer()
         return
     await it.response.edit_message(**tin_sau_huy(c, it.user.mention))
 
@@ -105,31 +106,35 @@ async def review_bug(bot, it: discord.Interaction, hanh_dong: str, c: dict, repo
     """QA tick bug that trong menu roi bam Log Jira / Khong co bug that."""
     bugs, msg_id = c.get("bugs") or [], c["msg_id"]
     if not bugs or c.get("jira") is not None or msg_id in bot.dang_log:
-        await it.response.send_message("Danh sách bug này đã xử lý xong hoặc đang log.", ephemeral=True)
+        await it.response.defer()          # da xu ly / dang log: embed bug tren tin goc da ghi trang thai
         return
     if hanh_dong == "chon":
         c["bug_chon"] = sorted(int(x) for x in (it.data or {}).get("values", [])
                                if x.isdigit() and int(x) < len(bugs))
         bot.q.nho_tin(c)
-        await it.response.edit_message(content=bot_cong_viec.tin_bug(bugs, c["bug_chon"], c),
-                                       view=view_bug(bugs, c["bug_chon"], msg_id))
+        await it.response.edit_message(embeds=_embeds_bug(it, bugs, c["bug_chon"], c),
+                                       view=bot_hop_thu_bug.view_menu_bug(c, c["bug_chon"]))
         return
     if hanh_dong == "khongbug":
         c["jira"] = {"issues": [], "loi": ""}
         bot.q.nho_tin(c)
-        await it.response.edit_message(content=f"{bot_cong_viec.tin_bug(bugs, None, c)}\n"
-                                       f"Không log — {it.user.mention} xác nhận không có bug thật.", view=None)
+        await it.response.edit_message(embeds=_embeds_bug(it, bugs, None, c,
+                                                          f"Không log — {it.user.mention} xác nhận không có bug thật."),
+                                       view=bot_hop_thu_bug.view_menu_bug(c, None))
         return
     chon = c.get("bug_chon") or []
     if not chon:
-        await it.response.send_message("Chưa tick bug nào trong menu.", ephemeral=True)
+        await it.response.edit_message(embeds=_embeds_bug(it, bugs, chon, c,
+                                                          "⚠️ Chưa tick bug nào — tick trong menu rồi bấm Log Jira."))
         return
     if not bot.reviewer:
-        await it.response.send_message("Bot thiếu DISCORD_JIRA_REVIEWER trong bot.env.", ephemeral=True)
+        await it.response.edit_message(embeds=_embeds_bug(it, bugs, chon, c,
+                                                          "⛔ Bot thiếu DISCORD_JIRA_REVIEWER trong bot.env."))
         return
     bot.dang_log.add(msg_id)
-    await it.response.edit_message(content=f"{bot_cong_viec.tin_bug(bugs, chon, c)}\n"
-                                   f"Đang log {len(chon)} bug lên Jira ({c['ma']}) — {it.user.mention}", view=None)
+    await it.response.edit_message(embeds=_embeds_bug(it, bugs, chon, c,
+                                                      f"Đang log {len(chon)} bug lên Jira ({c['ma']}) — {it.user.mention}"),
+                                   view=bot_hop_thu_bug.view_menu_bug(c, None))
     try:
         # Gan bug cho dev gui build, khong de Jira tu gan nguoi mac dinh cua project (user chot 30/10/2026)
         dev = await bot_kenh_project.login_jira_gui_build(bot, c)
@@ -137,16 +142,16 @@ async def review_bug(bot, it: discord.Interaction, hanh_dong: str, c: dict, repo
                                      c.get("link_report", ""), bot.reviewer, repo, out)
     except Exception as exc:             # noqa: BLE001 - loi luot log khong duoc giet bot
         log.exception("log jira loi")
-        await it.message.edit(view=view_bug(bugs, chon, msg_id))   # tra menu lai de bam thu lai
-        await it.message.reply(f"⛔ Log Jira lỗi: {exc}")
+        await it.message.edit(embeds=_embeds_bug(it, bugs, chon, c, f"⛔ Log Jira lỗi: {exc}"),
+                              view=bot_hop_thu_bug.view_menu_bug(c, chon))   # tra menu lai de bam thu lai
         return
     finally:
         bot.dang_log.discard(msg_id)
     so = len([i for i in kq.get("issues") or [] if i.get("key")])
     if not so:
         # Khong tao duoc issue nao (Jira / MCP loi) -> chua tinh la da log: tra menu de bam thu lai.
-        await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
-        await it.message.edit(view=view_bug(bugs, chon, msg_id))
+        await it.message.edit(embeds=_embeds_bug(it, bugs, chon, c, bot_cong_viec.tin_jira(kq, len(chon))),
+                              view=bot_hop_thu_bug.view_menu_bug(c, chon))
         return
     c["jira"] = kq
     bot.q.nho_tin(c)
@@ -156,7 +161,18 @@ async def review_bug(bot, it: discord.Interaction, hanh_dong: str, c: dict, repo
     # Log du + bao duoc dev o kenh project -> khong dang them tin o kenh QA (user chot 28/10/2026),
     # chi sua dong trang thai cua tin menu. Thieu issue / Jira bao loi / khong bao duoc dev -> bao o QA.
     if kenh_dev is not None and so == len(chon) and not kq.get("loi"):
-        await it.message.edit(content=f"{bot_cong_viec.tin_bug(bugs, chon, c)}\n"
-                                      f"✅ Đã log {so} bug, đã báo dev ở {kenh_dev.mention} — {it.user.mention}")
+        dong = f"✅ Đã log {so} bug, đã báo dev ở {kenh_dev.mention} — {it.user.mention}"
     else:
-        await it.message.reply(bot_cong_viec.tin_jira(kq, len(chon)))
+        dong = bot_cong_viec.tin_jira(kq, len(chon))
+    await it.message.edit(embeds=_embeds_bug(it, bugs, chon, c, dong))
+
+
+def _embeds_bug(it: discord.Interaction, bugs, chon, c: dict, dong: str = "") -> list:
+    """Embed cua tin goc voi phan "Bug can review" ve lai (kem dong trang thai Jira neu co)."""
+    chu = bot_cong_viec.tin_bug(bugs, chon, c) + (f"\n\n{dong}" if dong else "")
+    return tin_goc.thay(it.message, tin_goc.embed(tin_goc.BUG, chu))
+
+
+def _bo_dong_verify(content: str) -> str:
+    """Bam Verify nhieu lan: chi giu dong verify moi nhat tren tin goc."""
+    return "\n".join(d for d in (content or "").splitlines() if not d.startswith("🔁 Verify bug Jira"))

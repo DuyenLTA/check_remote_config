@@ -65,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.app:
         _log_usage(args, args.url)
     discord_notify.send("done", f"Report đã publish · {args.app or 'rc-check'}", [],
-                      link=args.url)
+                      link=args.url, package=args.package)
     print(json.dumps(ban, ensure_ascii=False))
     return 0
 

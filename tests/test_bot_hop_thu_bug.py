@@ -18,11 +18,14 @@ def tin(msg_id, package="pkg.a", version="1.0.0 (1)"):
 
 
 class _Qa:
-    def __init__(self):
-        self.tra_loi = []
+    """Tin goc: menu bug la embed + view dat len chinh tin (khong tra loi tin moi - bot_tin_goc)."""
 
-    async def reply(self, noi_dung, files=None, view=None):
-        self.tra_loi.append((noi_dung, view))
+    def __init__(self):
+        self.tra_loi, self.embeds = [], []
+
+    async def edit(self, embeds=None, view=None, **k):
+        self.embeds = embeds or self.embeds
+        self.tra_loi.append(("\n".join(e.description for e in self.embeds), view))
 
 
 def _bot(tmp_path, *cac_tin):

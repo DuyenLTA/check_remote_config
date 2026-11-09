@@ -11,14 +11,20 @@ from rcr import bot_jira_rest as jira
 
 
 class _Msg:
+    """Tin goc cua luot verify: moi buoc SUA tin (embed ket qua / tin cho dev), khong tra loi tin moi."""
+
     def __init__(self, id_=500):
-        self.id, self.edits, self.replies = id_, [], []
+        self.id, self.edits, self.embeds = id_, [], []
 
     async def edit(self, **k):
         self.edits.append(k)
+        self.embeds = k.get("embeds", self.embeds)
 
     async def reply(self, chu, **k):
-        self.replies.append(chu)
+        raise AssertionError(f"không được trả lời tin mới: {chu}")
+
+    def embed(self, ten):
+        return next((e.description for e in self.embeds if e.title == ten), "")
 
 
 class _Kenh:
@@ -121,9 +127,10 @@ def test_pass_thi_comment_roi_done_fail_thi_to_do(tmp_path, monkeypatch):
         ("comment", "AIP920-13"), ("chuyen", "AIP920-13", jira.DICH_PASS),
         ("comment", "AIP920-14"), ("chuyen", "AIP920-14", jira.DICH_FAIL)]
     assert "PASS trên build 1.6.1 (8)" in goi[0][2]
-    assert "Nhờ dev check bug" in msg.replies[-1] and "AIP920-14" in msg.replies[-1]   # bao dev ca bug van FAIL
-    assert "reopen" not in msg.replies[-1].lower()
-    cuoi = msg.edits[-1]["content"]
+    dev = msg.embed("Tin cho dev")                     # khong co kenh project -> tin cho dev nam tren tin goc
+    assert "Nhờ dev check bug" in dev and "AIP920-14" in dev   # bao dev ca bug van FAIL
+    assert "reopen" not in dev.lower()
+    cuoi = [k for k in msg.edits if "content" in k][-1]["content"]   # lan sua cuoi co content (sau do chi them embed dev)
     assert "✅ Done" in cuoi and "🔁 To Do" in cuoi and "⏭ Bỏ qua" in cuoi
 
 

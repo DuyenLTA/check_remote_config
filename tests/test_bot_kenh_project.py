@@ -20,11 +20,18 @@ class _Kenh:
 
 
 class _Tin:
+    """Tin goc o kenh QA: bao dev hong thi tin cho dev la embed tren tin goc (khong tra loi tin moi).
+    `replies` = noi dung cac embed "Tin cho dev" da dat len."""
+
     def __init__(self):
-        self.replies = []
+        self.replies, self.embeds = [], []
+
+    async def edit(self, embeds=None, **k):
+        self.embeds = embeds or []
+        self.replies += [e.description for e in self.embeds if e.title == "Tin cho dev"]
 
     async def reply(self, chu, **k):
-        self.replies.append(chu)
+        raise AssertionError(f"không được trả lời tin mới: {chu}")
 
 
 def _bot(kenh, dev="784763920862674944,1023384330803879977"):

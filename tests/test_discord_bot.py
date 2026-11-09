@@ -76,8 +76,9 @@ class _It:
         self.data = {"values": values or []}
         self.user = SimpleNamespace(mention="@qa")
         self.goi = []
-        self.response = SimpleNamespace(edit_message=self._ghi("edit"), send_message=self._ghi("send"))
-        self.message = SimpleNamespace(edit=self._ghi("msg_edit"), reply=self._ghi("reply"))
+        self.response = SimpleNamespace(edit_message=self._ghi("edit"), send_message=self._ghi("send"),
+                                        defer=self._ghi("defer"))
+        self.message = SimpleNamespace(edit=self._ghi("msg_edit"), reply=self._ghi("reply"), embeds=[], content="")
 
     def _ghi(self, ten):
         async def f(*a, **k):
@@ -96,6 +97,16 @@ def _c():
             "bugs": BUGS, "bug_chon": [], "link_report": "https://claude.ai/artifact/x", "jira": None}
 
 
+def _bug(g) -> str:
+    """Noi dung embed "Bug can review" cua mot lan sua tin goc (menu bug nam tren tin goc - bot_tin_goc)."""
+    return next(e.description for e in g[2]["embeds"] if e.title == "Bug cần review")
+
+
+def _con_menu(g) -> bool:
+    """View cua lan sua con menu tick bug (chua xu ly xong)."""
+    return any(x.custom_id.startswith("rcr:chon:") for x in g[2]["view"].children)
+
+
 def test_tick_roi_log_jira_chi_gui_bug_da_tick(monkeypatch):
     goi = {}
 
@@ -110,29 +121,30 @@ def test_tick_roi_log_jira_chi_gui_bug_da_tick(monkeypatch):
     asyncio.run(bot._review_bug(it, "jira", c))
     assert [b["case"] for b in goi["bugs"]] == ["6.4.0#44"] and goi["reviewer"] == "qa.lead"
     assert goi["link"] == "https://claude.ai/artifact/x"
-    assert it.goi[0][0] == "edit" and it.goi[0][2]["view"] is None       # go nut ngay -> khong bam hai lan
-    assert it.goi[-1][0] == "reply" and "AIP920-9" in it.goi[-1][1][0]
+    assert it.goi[0][0] == "edit" and not _con_menu(it.goi[0])            # go menu ngay -> khong bam hai lan
+    assert it.goi[-1][0] == "msg_edit" and "AIP920-9" in _bug(it.goi[-1])  # ket qua Jira ghi tren tin goc
+    assert not any(g[0] in ("reply", "send") for g in it.goi)
     assert c["jira"]["issues"] and not bot.dang_log
     it = _It()
-    asyncio.run(bot._review_bug(it, "jira", c))                          # da log roi -> khong log lai
-    assert it.goi[0][0] == "send" and it.goi[0][2]["ephemeral"]
+    asyncio.run(bot._review_bug(it, "jira", c))                          # da log roi -> khong log lai, im lang
+    assert [g[0] for g in it.goi] == ["defer"]
 
 
 def test_chua_tick_hoac_thieu_reviewer_thi_khong_log(monkeypatch):
     monkeypatch.setattr(d.bot_log_jira, "chay", lambda *a: pytest.fail("không được log"))
     it = _It()
     asyncio.run(_bot()._review_bug(it, "jira", _c()))
-    assert "Chưa tick" in it.goi[0][1][0]
+    assert it.goi[0][0] == "edit" and "Chưa tick" in _bug(it.goi[0])
     c, it = {**_c(), "bug_chon": [0]}, _It()
     asyncio.run(_bot(reviewer="")._review_bug(it, "jira", c))
-    assert "DISCORD_JIRA_REVIEWER" in it.goi[0][1][0]
+    assert "DISCORD_JIRA_REVIEWER" in _bug(it.goi[0])
 
 
 def test_khong_co_bug_that_thi_dong_danh_sach():
     bot, c, it = _bot(), _c(), _It()
     asyncio.run(bot._review_bug(it, "khongbug", c))
-    assert c["jira"] == {"issues": [], "loi": ""} and it.goi[0][2]["view"] is None
-    assert "không có bug thật" in it.goi[0][2]["content"]
+    assert c["jira"] == {"issues": [], "loi": ""} and not _con_menu(it.goi[0])
+    assert "không có bug thật" in _bug(it.goi[0])
 
 
 def test_log_loi_thi_tra_menu_lai_de_thu_lai(monkeypatch):
@@ -142,7 +154,8 @@ def test_log_loi_thi_tra_menu_lai_de_thu_lai(monkeypatch):
     bot, c, it = _bot(), {**_c(), "bug_chon": [0]}, _It()
     asyncio.run(bot._review_bug(it, "jira", c))
     assert c["jira"] is None and not bot.dang_log
-    assert [g[0] for g in it.goi] == ["edit", "msg_edit", "reply"] and "mcp chết" in it.goi[-1][1][0]
+    assert [g[0] for g in it.goi] == ["edit", "msg_edit"] and "mcp chết" in _bug(it.goi[-1])
+    assert _con_menu(it.goi[-1])                                          # tra menu lai de bam thu lai
 
 
 def test_log_ra_0_issue_thi_chua_tinh_da_log_va_tra_menu(monkeypatch):
@@ -153,7 +166,7 @@ def test_log_ra_0_issue_thi_chua_tinh_da_log_va_tra_menu(monkeypatch):
     bot, c, it = _bot(), {**_c(), "bug_chon": [0]}, _It()
     asyncio.run(bot._review_bug(it, "jira", c))
     assert c["jira"] is None and not bot.dang_log
-    assert [g[0] for g in it.goi] == ["edit", "reply", "msg_edit"] and it.goi[-1][2]["view"] is not None
+    assert [g[0] for g in it.goi] == ["edit", "msg_edit"] and _con_menu(it.goi[-1])
 
 
 def _tin_ghi(goi, ten, jump="https://discord.com/x/1"):
@@ -237,14 +250,15 @@ def test_log_jira_xong_bao_duoc_dev_thi_khong_dang_them_o_kenh_qa(monkeypatch):
     asyncio.run(bot._review_bug(it, "jira", c))
     assert gui and "AIP920-9" in gui[0] and da_keys == [["AIP920-9"]]      # tag theo assignee cua bug vua log
     assert not [g for g in it.goi if g[0] == "reply"]
-    assert it.goi[-1][0] == "msg_edit" and "đã báo dev ở #aip920-dev" in it.goi[-1][2]["content"]
+    assert it.goi[-1][0] == "msg_edit" and "đã báo dev ở #aip920-dev" in _bug(it.goi[-1])
 
     async def bao_hong(bot, c, tin, tin_qa, keys=()):
         return None                                   # khong bao duoc dev -> bao o kenh QA
     monkeypatch.setattr(d.bot_kenh_project, "bao", bao_hong)
     c2, it = {**_c(), "bug_chon": [1]}, _It()
     asyncio.run(_bot()._review_bug(it, "jira", c2))
-    assert it.goi[-1][0] == "reply" and "AIP920-9" in it.goi[-1][1][0]
+    assert it.goi[-1][0] == "msg_edit" and "AIP920-9" in _bug(it.goi[-1])   # ket qua Jira ghi tren tin goc
+    assert not [g for g in it.goi if g[0] == "reply"]
 
 
 def test_build_khong_ghi_sdk_van_verify_bug_reviewing_nhung_khong_hoi_check(monkeypatch):

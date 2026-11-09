@@ -105,8 +105,10 @@ def test_bot_chi_dinh_kem_mot_file_report(out, tmp_path, monkeypatch):
 
     class Qa:
         id = 1
-        async def edit(self, **kw): pass
-        async def reply(self, text, files=None, view=None, **kw): sent.update(text=text, files=files)
+        async def edit(self, **kw):                     # ket qua + file report dat len tin goc
+            if "embeds" in kw:
+                sent.update(text=kw["embeds"][0].description, files=kw.get("attachments"))
+        async def reply(self, text, **kw): raise AssertionError("không được trả lời tin mới")
 
     async def _tin_qa(_id): return Qa()
 

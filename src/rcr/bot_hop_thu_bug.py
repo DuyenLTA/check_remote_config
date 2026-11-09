@@ -3,7 +3,7 @@
 User chot 05/11/2026: luot chay tay xong co bug thi hoi QA ngay trong qa-auto, khong hoi o terminal.
 Bot giu hang doi trong RAM nen tien trinh khac khong ghi thang `bot-hang-doi.json` duoc (bot ghi de).
 Thay vao do `rcr-bao-bug` tha mot file JSON vao `out/bot-hop-thu-bug/`; bot chinh quet dinh ky, gan bug vao
-tin cua build (giong luot bot tu chay) roi tra loi duoi tin do bang tin + menu tick bug. Tu luc do nut
+tin cua build (giong luot bot tu chay) roi tra loi duoi tin do: menu tick bug dat len chinh tin goc. Tu luc do nut
 tick / Log Jira / Khong co bug that chay y het luot cua bot.
 
 File: {"msg_id": <tin cua bot o kenh QA> | null, "package": "...", "version": "1.9.0 (14)",
@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 
 from . import bot_chay_claude, bot_cong_viec
+from . import bot_tin_goc as tin_goc
 
 log = logging.getLogger("rcr-bot")
 THU_MUC = "bot-hop-thu-bug"
@@ -40,13 +41,21 @@ def gan_bug(c: dict, bugs: list[dict], link: str) -> dict:
     return {**c, "bugs": bugs, "bug_chon": [], "link_report": link, "jira": None}
 
 
-async def dang_menu(bot, qa, c: dict, files=None) -> None:
-    """Luu bug vao tin cua build (bot khoi dong lai van tick tiep duoc) roi tra loi duoi tin QA bang menu."""
-    import discord
-    from .bot_giao_dien import view_bug
+async def dang_menu(bot, qa, c: dict) -> None:
+    """Luu bug vao tin cua build (bot khoi dong lai van tick tiep duoc) roi dat menu bug len CHINH tin goc
+    (embed "Bug can review" + menu tick + nut Verify) - khong tra loi tin moi (bot_tin_goc)."""
     bot.q.nho_tin(c)
-    await qa.reply(bot_cong_viec.tin_bug(c["bugs"], None, c), files=files or discord.utils.MISSING,
-                   view=view_bug(c["bugs"], [], int(c["msg_id"])))
+    await qa.edit(embeds=tin_goc.thay(qa, tin_goc.embed(tin_goc.BUG, bot_cong_viec.tin_bug(c["bugs"], None, c))),
+                  view=view_menu_bug(c, []))
+
+
+def view_menu_bug(c: dict, chon: list[int] | None):
+    """Menu tick bug + nut Verify bug Jira tren tin goc. `chon` None = da xu ly xong (chi con nut Verify)."""
+    from .bot_giao_dien import XAM, nut, view_bug
+    verify = nut(("verify", "Verify bug Jira", XAM), msg_id=int(c["msg_id"]))
+    if chon is None:
+        return verify
+    return tin_goc.view_gop(view_bug(c["bugs"], chon, int(c["msg_id"])), verify)
 
 
 async def xu_ly_file(bot, f: Path) -> str:

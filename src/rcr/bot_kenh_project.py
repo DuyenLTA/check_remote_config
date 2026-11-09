@@ -20,6 +20,7 @@ import unicodedata
 import discord
 
 from . import bot_jira_rest as jira
+from . import bot_tin_goc as tin_goc
 from .cau_hinh_bot import env
 
 log = logging.getLogger("rcr-bot")
@@ -145,7 +146,7 @@ async def _kenh_project(bot, c: dict):
 
 async def bao(bot, c: dict, tin: str, tin_qa, keys: list[str] = ()):
     """Gui `tin` o kenh project cua `c['ma']`, tag dev theo assignee cua bug `keys`; that bai thi tra loi duoi
-    `tin_qa`. Tra kenh da gui (None khi phai bao o kenh QA)."""
+    `tin_qa` (embed tren tin goc). Tra kenh da gui (None khi phai bao o kenh QA)."""
     try:
         ids = await ids_can_tag(bot, list(keys), c)
         tag = " ".join(f"<@{i}>" for i in ids)
@@ -159,4 +160,6 @@ async def bao(bot, c: dict, tin: str, tin_qa, keys: list[str] = ()):
     except Exception as exc:             # noqa: BLE001 - bao dev hong khong duoc lam mat ket qua Jira
         log.warning("khong bao duoc dev o kenh project: %s", exc)
         ly_do = str(exc)
-    await tin_qa.reply(f"⚠️ Không báo được dev ({ly_do}) — gửi tin này cho dev:\n{tin}"[:2000])
+    # Dat len tin goc (embed "Tin cho dev"), khong tra loi tin moi (bot_tin_goc).
+    await tin_qa.edit(embeds=tin_goc.thay(tin_qa, tin_goc.embed(
+        tin_goc.TIN_DEV, f"⚠️ Không báo được dev ({ly_do}) — gửi tin này cho dev:\n{tin}", 0xED4245)))
