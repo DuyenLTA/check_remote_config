@@ -33,6 +33,10 @@ async def _read_ads(client, baseline: RcBaseline, overrides=None) -> dict:
     for row in units.values():
         # Unit khong khop key nao: app hardcode ID, hoac lay tu key app khong doc.
         row["rc_keys"] = ad_log.match_rc_id(row["unit"], rc_ids, row["type"])
+        # Log app chi in 3 so cuoi: hai vi tri trung duoi (AIP872: 202 high …2764762034 va 303 high
+        # …8588924034) gop thanh MOT unit. Giu ID day du ung vien cua tung key de event Firebase
+        # `ad_show` (co ID day du) tach lai dung vi tri (assert_ad_screen.show_theo_man).
+        row["ids"] = {k: list(rc_ids.get(k) or ()) for k in row["rc_keys"]}
     # Vi tri DA BIET ID: log khong co unit nao cua vi tri do = vi tri do khong
     # duoc request, ket luan duoc. Khong biet ID thi im lang khong noi len gi.
     return {"pid": pid, "units": units, "banner_states": parsed["banner_states"],

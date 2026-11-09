@@ -132,3 +132,32 @@ def test_preflight_bat_proxy_cham_con_sot():
     assert preflight.muc_http_proxy(":0")["trang_thai"] == preflight.OK
     sot = preflight.muc_http_proxy(f"127.0.0.1:{mang_cham.cong_cua('S')}")
     assert sot["trang_thai"] == preflight.LOI and "http_proxy :0" in sot["viec_can_lam"]
+
+
+def test_hai_vi_tri_trung_duoi_tach_bang_id_day_du_cua_ad_show():
+    """AIP872 09/11/2026: 202 high …2764762034 va 303 high …8588924034 trung duoi 034, log app gop
+    thanh MOT unit. 303 show o OB5 khong duoc tinh la "202 show" hay "ad OB3 show o OB3"."""
+    from rcr import assert_ad_screen
+
+    unit = {"type": "native", "unit": "*****034", "requested": 3, "loaded": 3, "shown": 2,
+            "rc_keys": ["id_202_lfo2_n_native_high", "id_303_onb3_n_native_high"],
+            "ids": {"id_202_lfo2_n_native_high": ["ca-app-pub-4973559944609228/2764762034"],
+                    "id_303_onb3_n_native_high": ["ca-app-pub-4973559944609228/8588924034"]}}
+    events = [{"name": "ad_show", "params": {"ad_unit_id": "ca-app-pub-4973559944609228/2764762034"}},
+              {"name": "lfo2_view"},
+              {"name": "ob3_view"},
+              {"name": "ad_show", "params": {"ad_unit_id": "ca-app-pub-4973559944609228/8588924034"}},
+              {"name": "ob5_view"}]
+    shows = assert_ad_screen.show_theo_man(events, [unit])
+    assert [(s["man"], s["vi_tri"]) for s in shows] == [("lfo2", {"202"}), ("ob5", {"303"})]
+    # 202 show ngay o LFO2 la that; 303 KHONG show o OB3 -> dieu kien "roi OB3 truoc khi 303 ve" dat
+    assert assert_ad_screen.ad_man_nha_da_show(events, [unit], "ob3") == []
+    assert assert_ad_screen.ad_man_nha_da_show(events, [unit], "lfo2") == ["…034"]
+
+
+def test_khong_co_id_day_du_thi_giu_cach_cu():
+    from rcr import assert_ad_screen
+
+    unit = {"unit": "*****034", "rc_keys": ["id_202_lfo2_n_native_high", "id_303_onb3_n_native_high"]}
+    events = [{"name": "ad_show", "params": {"ad_unit_id": "ca-app-pub-1/2764762034"}}, {"name": "ob3_view"}]
+    assert assert_ad_screen.show_theo_man(events, [unit])[0]["vi_tri"] == {"202", "303"}

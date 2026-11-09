@@ -69,7 +69,14 @@ def show_theo_man(events, units) -> list[dict]:
         ke = VIEW_RE.match(ds[i + 1].get("name", "")) if i + 1 < len(ds) else None
         uid = (e.get("params") or {}).get("ad_unit_id", "")
         u = theo_duoi.get(uid[-3:]) or {}
-        vi_tri = {v for k in (u.get("rc_keys") or ()) if (v := _man_cua_key(k))}
+        keys = list(u.get("rc_keys") or ())
+        # Unit gop nhieu vi tri trung 3 so cuoi: event co ID day du -> chi giu key co dung ID do.
+        # Khong loc thi ad 303 show o OB3 bi tinh la "202 show o OB3" va nguoc lai (AIP872 09/11/2026).
+        ids = u.get("ids") or {}
+        dung = [k for k in keys if uid and uid in (ids.get(k) or ())]
+        if dung:
+            keys = dung
+        vi_tri = {v for k in keys if (v := _man_cua_key(k))}
         ra.append({"man": ke.group(1) if ke else man, "unit": "…" + uid[-3:] if uid else "?",
                    "vi_tri": {v[0] for v in vi_tri}, "nha": {v[1] for v in vi_tri}})
     return ra
