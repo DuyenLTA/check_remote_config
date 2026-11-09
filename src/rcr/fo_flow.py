@@ -18,7 +18,7 @@ import logging
 import time
 from pathlib import Path
 
-from . import device_app, fo_ngon_ngu, fo_steps, ui_dump
+from . import device_app, fo_ngon_ngu, fo_steps, mang_cham_cua_so, ui_dump
 from .fo_screens import (  # noqa: F401 - tai xuat cho cho goi cu
     MAN_THEO_MA,
     SCREEN_WORDS,
@@ -159,6 +159,8 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
     Buoc tap vao node khong ton tai thi bo qua - man do khong co nut ay, di tiep
     buoc sau con hon dung lai.
     """
+    # Proxy vua mo mang ad (roi man dich): dung o man hung cho ad ve muon hien, khong bam qua truoc khi ad kip ve.
+    await mang_cham_cua_so.cho_ad_ve_muon()
     if "wait" in step:
         await asyncio.sleep(step["wait"])
         return f"cho {step['wait']}s", True

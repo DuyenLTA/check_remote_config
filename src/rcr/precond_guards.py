@@ -10,8 +10,8 @@ Chia lam hai nhom, vi cach xu ly khac han nhau:
   EP_DUOC      - ep ad fail bang cach doi `id_*` sang mot unit khong ton tai.
                  Day la cach team QA van dung, khong phai meo moi.
   KHONG_EP_DUOC- mediation test mode, can root: khong tao duoc. Case do KHONG duoc ra PASS.
-Precondition "ad ve muon" / throttle KHONG nam o day: `mang_cham` tao duoc bang proxy lam cham
-domain quang cao (khong can root), run_batch kiem bang log xem dieu kien co dat khong.
+Precondition "ad ve muon" / throttle KHONG nam o day: `mang_cham` giu mang app theo man bang tuong lua
+Android 13+ (khong can root; throttle bang thong khong tao duoc -> BLOCKED), run_batch kiem bang log.
 """
 
 from __future__ import annotations

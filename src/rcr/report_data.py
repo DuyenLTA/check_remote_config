@@ -134,7 +134,7 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         # Ep ad fail bang cach nao - loi mang va no-fill that cho cung mot
         # man hinh nhung khac ma loi, nguoi doc phai biet la cach nao.
         "ep_ad_fail": result.get("ep_ad_fail", ""),
-        # Precondition "ad ve muon" tao bang proxy lam cham domain quang cao (mang_cham) + log xac nhan.
+        # Precondition "ad ve muon" tao bang giu mang app theo man (mang_cham, Android 13+) + log xac nhan.
         "mang_cham": result.get("mang_cham", ""),
         "reset": (result.get("reset") or {}).get("mode", ""),
         "drive": (dau.get("drive") or {}).get("status", "—"),

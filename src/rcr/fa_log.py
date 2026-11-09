@@ -34,6 +34,7 @@ _ADB_INPUT = re.compile(r"adbd service requested '.*raw:input (tap|swipe|keyeven
 # ad_click nam trong bay nhieu giay sau mot thao tac cua tool thi tinh la do tool.
 # Do 2026-10-24: Piclux BACK tren inter -> click sau 2,2s.
 CUA_SO_CLICK = 5.0
+BUFFER_LOG = "16M"
 
 
 async def bat(client, serial: str) -> None:
@@ -41,6 +42,9 @@ async def bat(client, serial: str) -> None:
     guard(serial)
     for key in (f"log.tag.{TAG}", "log.tag.FA"):
         await client.shell(serial, "setprop", key, "VERBOSE")
+    # FA-SVC verbose in rat nhieu (dump ca lo upload): buffer mac dinh (~256K) troi sau khoang 1 phut, `logcat -d`
+    # cuoi case mat event dau case (Pixel 6 09/11/2026: mat sach request / view luc vao OB1).
+    await client.shell(serial, "logcat", "-G", BUFFER_LOG)
 
 
 async def doc(client, serial: str) -> list[dict]:

@@ -268,8 +268,9 @@ cd <repo> && <bin>/rcr-check --package <pkg> --tc "<link>" --case <key,key> --go
 ## 5d2. Luật QA đã chốt
 
 - **Precondition không tạo được thì BLOCKED, cấm đo thay** (chốt 03/11/2026: "đừng có làm giả"): thiếu máy OPPO, kho
-  không trả native full → `--cham-tay ... --ket BLOCKED --ly-do "<vì sao>"`. **Ad về muộn / throttle tạo được** bằng proxy
-  làm chậm domain quảng cáo (tool tự bật, không cần root) — đừng ghi "máy không root, không có proxy"; chi tiết ở
+  không trả native full → `--cham-tay ... --ket BLOCKED --ly-do "<vì sao>"`. **Ad về muộn tạo được trên máy Android 13+**:
+  tool chặn/trả mạng app theo màn bằng tường lửa có sẵn (không cần root). Máy ≤ 12 → BLOCKED "cần Android 13+", nhắn
+  qa-auto đổi máy; proxy HTTP không dùng được (GMA đi QUIC). Throttle băng thông không tạo được; chi tiết ở
   `docs/rc-check/doc-ket-qua-va-precondition.md`. Rà **mọi** dòng `cham_tay` trước khi
   báo. Case cần ad fill mà kho không fill → BLOCKED, báo tên case để user xoá khỏi sheet; **không cố ép fill**.
 - **Cách hiểu TC (3.6.1, 3.5.4, kiến thức nền SDK)** → `docs/rc-check/luat-qa-da-chot.md`, đọc trước khi chấm.

@@ -81,15 +81,24 @@ def man_hinh(window: str, power: str) -> tuple[str, str]:
 
 
 def muc_http_proxy(gia_tri: str) -> dict:
-    """Proxy lam cham ad (mang_cham) con tro tren may -> luot do chet giua chung, proxy da tat:
-    may mat mang (moi request HTTP di vao cong khong con ai nghe) cho moi luot sau."""
+    """Proxy 127.0.0.1 con tro tren may (cong cu cu / lan do tay de lai), proxy da tat: may mat mang
+    (moi request HTTP di vao cong khong con ai nghe) cho moi luot sau."""
     v = (gia_tri or "").strip()
     if v in ("", "null", ":0"):
         return _muc("HTTP proxy", OK, "không đặt")
     if v.startswith("127.0.0.1:"):
-        return _muc("HTTP proxy", LOI, f"còn {v} (proxy làm chậm ad của lượt trước)",
+        return _muc("HTTP proxy", LOI, f"còn {v} (proxy của lượt trước)",
                     "adb shell settings put global http_proxy :0; adb reverse --remove-all")
     return _muc("HTTP proxy", CANH_BAO, f"máy đặt proxy {v}", "Proxy lạ có thể làm ads / Firebase chậm")
+
+
+def muc_tuong_lua(ra: str) -> dict:
+    """Tuong lua giu mang ad (mang_cham) con chan app -> luot do chet giua chung: app mat mang moi luot sau.
+    Android < 13 khong co lenh (in loi) -> coi nhu khong chan."""
+    if ":deny" in (ra or ""):
+        return _muc("Tường lửa app", LOI, "app đang bị chặn mạng (tường lửa giữ ad về muộn của lượt trước)",
+                    "adb shell cmd connectivity set-package-networking-enabled true <package>")
+    return _muc("Tường lửa app", OK, "không chặn")
 
 
 def muc_private_dns(mode: str, specifier: str) -> dict:
@@ -331,6 +340,8 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
            _muc("Màn hình", tt, ct, "Mở khoá máy, tắt khoá màn hình tự động" if tt == LOI else ""),
            muc_private_dns(*dns),
            muc_http_proxy((await client.shell(serial, "settings", "get", "global", "http_proxy"))[0]),
+           muc_tuong_lua((await client.shell(serial, "cmd", "connectivity", "get-package-networking-enabled",
+                                             package))[0]),
            muc_snapshot(out_dir, package, serial)]
     app = await _app(client, serial, package)
     muc += app

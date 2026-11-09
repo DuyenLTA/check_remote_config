@@ -15,6 +15,8 @@ from . import (
     audit_tom_tat,
     net_ctl,
     ad_positions,
+    ad_units,
+    case_evidence,
     fo_screens,
     assert_ads,
     case_run,
@@ -35,6 +37,7 @@ from . import (
     report_html,
     tc_select,
 )
+from . import mang_cham_cua_so as cua_so_mod
 from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
 
@@ -139,9 +142,13 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # cung mot ket qua (do 2026-09-28, case 22/23/24).
             ep = precond_guards.ep_duoc(chosen["precondition"])
             # Precondition doi ad VE MUON ("roi OB3 truoc khi 303 ve", "202 chua kip show o LFO2",
-            # throttle): lam cham domain quang cao bang proxy cho ca case, kiem bang log sau khi chay.
+            # throttle): giu mang app theo man (Android 13+), kiem bang log sau khi chay.
             cham, man_cham = mang_cham.can_lam_cham(chosen["precondition"])
             them = precond_guards.khoa_ep_fail(tokens, baseline.configs) if ep else {}
+            # "Ad ve muon": chan mang app THEO MAN (mang_cham_cua_so) tu truoc luc preload toi khi roi man dich.
+            kh_cua_so = (cua_so_mod.ke_hoach(man_cham, cua_so_mod.id_cua_man(case_evidence.ung_vien_id(
+                ad_units.cho_package(baseline.package), dict(baseline.configs)), man_cham))
+                if cham and not ep and man_cham else None)
             if them:
                 log_fn(f"  ép ad fail ({', '.join(ep)}): "
                        + ", ".join(f"{k}=…/{v.rsplit('/', 1)[-1]}" for k, v in them.items()))
@@ -169,23 +176,26 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # ID cua vi tri nam cung trong app (RC khong khai `id_*`) -> khong doi slot duoc:
             # chan domain quang cao bang Private DNS cho ca case, xong tra DNS cu ve.
             dns_cu = None
-            proxy_cu = None
+            tuong_lua_cu = None
             loi_cham = ""
-            if cham and not ep:
+            cua_so = None
+            if kh_cua_so:
                 try:
-                    proxy_cu = await mang_cham.bat(client, baseline.serial)
-                    log_fn(f"  ad về muộn: {mang_cham.mo_ta()}")
+                    tuong_lua_cu = await mang_cham.bat(client, baseline.serial, baseline.package)
+                    cua_so = cua_so_mod.CuaSo(client, baseline.serial, baseline.package, kh_cua_so)
+                    cua_so.bat()
+                    log_fn("  ad về muộn: " + cua_so_mod.mo_ta(kh_cua_so))
                 except (RuntimeError, OSError, AdbError) as exc:
                     if isinstance(exc, AdbTransportError):
                         raise
-                    loi_cham = f"không bật được proxy làm chậm ad ({exc})"
+                    loi_cham = f"không tạo được điều kiện ad về muộn: {exc}"
                     log_fn("  " + loi_cham)
             if ep and not them:
                 dns_cu = await net_ctl.chan_ad(client, baseline.serial)
                 log_fn(f"  ép ad không về: Private DNS {net_ctl.DNS_CHAN_AD} (RC không khai id_* của vị trí)")
             if chuoi:
                 ly_do = (chay_chuoi.ly_do_khong_noi(truoc_chuoi, chosen, runs, ep)
-                         or ("case làm chậm mạng ad phải chạy riêng" if proxy_cu else ""))
+                         or ("case giữ mạng ad theo màn phải chạy riêng" if tuong_lua_cu else ""))
                 if ly_do:
                     log_fn(f"  chuỗi: chạy riêng ({ly_do})")
                 else:
@@ -271,8 +281,12 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             finally:
                 if dns_cu is not None:
                     await net_ctl.bo_chan_ad(client, baseline.serial, dns_cu)
-                if proxy_cu is not None:
-                    await mang_cham.tat(client, baseline.serial, proxy_cu)
+                if cua_so is not None:
+                    await cua_so.tat()
+                    for dong in cua_so.lich:
+                        log_fn(f"    giữ mạng theo màn: {dong}")
+                if tuong_lua_cu is not None:
+                    await mang_cham.tat(client, baseline.serial, tuong_lua_cu)
             if (result is not None and ro_gan_nhat is not None
                     and result.get("verdict") not in ("PASS", "FAIL", "KEY_NOT_USED")):
                 # Het so lan ma lan cuoi khong ra ket luan (BLOCKED / chua cham duoc):
@@ -325,13 +339,13 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                                         "ad không fill")
         if cham and not ep:
             # Tao dieu kien chua du: chi nhan ket qua khi log cho thay ad that su ve muon.
-            chua_dat, ghi_chu = mang_cham.kiem_dieu_kien(result.get("runs") or [], man_cham,
-                                                         proxy_cu is not None, loi_cham)
+            chua_dat, ghi_chu = mang_cham.kiem_dieu_kien(
+                result.get("runs") or [], man_cham, tuong_lua_cu is not None, loi_cham,
+                (cua_so_mod.mo_ta(kh_cua_so) + (" [" + "; ".join(cua_so.lich) + "]" if cua_so and cua_so.lich else ""))
+                if kh_cua_so else "")
             thieu = thieu + chua_dat
             if ghi_chu:
                 result["mang_cham"] = ghi_chu
-                if not man_cham and result.get("verdict") == "PASS":
-                    result["verdict"] = "NEEDS_HUMAN"    # chua kiem duoc dieu kien -> khong PASS im lang
         # FAIL cung vay: case chay sai nhanh thi FAIL chua chung minh gi ve app - FAIL gia
         # (Sorapix SDK353-OB3A-002 23/10/2026: doi 303 no-fill, ad 303 high1 van fill ->
         # dong "vung ad trong" FAIL).

@@ -25,15 +25,21 @@ Nhiều case đòi **điều kiện môi trường** (simulate no-fill, chặn a
   có ad. Chỉ với vị trí RC có khai `id_*` (Piclux chỉ 12/92 vị trí; 302 không có).
 - **ID nằm cứng trong app** → tool bật Private DNS `dns.adguard-dns.com` cho cả case (chặn domain quảng cáo, Firebase vẫn
   chạy), đổi wifi để bỏ cache DNS, xong trả DNS cũ. Khi đó **mọi** vị trí đều không về ad — dòng cần ad vị trí khác thì đo tay.
-- **Ad về muộn / throttle** ("Đi qua LFO2 ngay để 202 chưa kịp show", "Rời OB3 trước khi 303 về", "throttle mạng",
-  "mạng vừa phải để native show sau ~2–3s") → tool chạy `sdk-check/scripts/slow_ads_proxy.py` trên máy tính, trỏ máy
-  vào bằng `adb reverse` + `http_proxy` (**không cần root**): chỉ domain quảng cáo bị trễ kết nối 6s + 20 KB/s, Firebase
-  đi thẳng (`src/rcr/mang_cham.py`). Trễ phải < 10s, không thì GMA timeout và ad FAIL thay vì về muộn. Case chạy riêng
-  (không nối chuỗi), xong luôn gỡ proxy. **Chỉ nhận kết quả khi log xác nhận**: ad của màn đó có về nhưng KHÔNG show
-  ngay tại màn đó (`mang_cham` trên report). Vẫn show ngay tại màn, hoặc không về lần nào (fail / no-fill) → `BLOCKED`.
-  Precondition không nêu màn (chỉ "throttle") → PASS hạ `NEEDS_HUMAN`, đối chiếu log tay rồi `--cham-tay`.
-  Proxy chỉ làm ad đến chậm, không làm kho có ad: case cần fill mà kho không fill vẫn BLOCKED.
-  Preflight bắt `http_proxy` còn sót của lượt chết giữa chừng (`LOI`, máy mất mạng).
+  Không có cách no-fill riêng một màn: tường lửa theo app chặn từ đầu thì SDK không gửi request nào (= mất mạng), chặn
+  giữa chừng thì request treo chứ không fail (đo Pixel 6, 09/11/2026).
+- **Ad về muộn** ("Đi qua LFO2 ngay để 202 chưa kịp show", "Rời OB3 trước khi 303 về") → **cần máy Android 13+**.
+  Tool chặn mạng của riêng app bằng tường lửa có sẵn (`cmd connectivity set-package-networking-enabled`, không cần root,
+  `src/rcr/mang_cham.py`) **theo màn** (`src/rcr/mang_cham_cua_so.py`): đọc logcat trực tiếp (`<màn>_view`, AdActivity
+  của inter splash), chặn **ngay khi app gửi request của ad đích** (event `track_ad_request` có ID đầy đủ; chặn sớm hơn thì SDK thấy mất mạng và bỏ luôn request), chặn kèm `com.google.android.gms` (GMA có đường dự phòng qua Play services)
+  tới khi rời màn đích rồi trả mạng. Tường lửa chỉ drop gói tin nên request đang chạy treo lại, trả mạng thì về muộn
+  (~15s sau); giữ quá 45s thì tự trả (GMA cắt request ở 60s). Trả mạng xong tool đứng ở màn hứng tối đa 30s chờ `ad_load` của ad đích.
+  Case chạy riêng (không nối chuỗi), xong luôn trả mạng; preflight bắt app còn bị chặn của lượt chết giữa chừng (`LOI`).
+  - Máy Android ≤ 12 → `BLOCKED` "cần Android 13+". **Proxy HTTP không dùng được**: GMA tải ad bằng QUIC đi thẳng,
+    proxy giữ hay cắt thì ad vẫn load sau ~2s (đo Pixel 4, 09/11/2026).
+  - "Throttle băng thông" không nêu màn → `BLOCKED`: tường lửa chỉ chặn/mở, không bóp băng thông.
+  **Chỉ nhận kết quả khi log xác nhận**: ad của màn đó có về nhưng KHÔNG show ngay tại màn đó (`mang_cham` trên report,
+  kèm giờ chặn/trả). Vẫn show ngay tại màn, hoặc không về lần nào (fail / timeout) → `BLOCKED`. Ad trùng đuôi ID (202/303
+  `…034`) chỉ tính "đã về" khi có `ad_show` mang ID đầy đủ. Giữ mạng không làm kho có ad: cần fill mà kho không fill vẫn BLOCKED.
 - **Không ép được** (mediation test mode, cần root, sai hãng máy) → case không được PASS, hạ `BLOCKED` kèm `precondition_thieu`.
 - Dù ép hay không, vẫn kiểm bằng log (`ep_ad_fail`). Ép rồi mà ad vẫn fill → `BLOCKED`, ép hỏng.
 - **Ngắt mạng KHÔNG phải no-fill.** Mất mạng thì log không có unit nào; no-fill thật là "có request, kho không trả ad".
