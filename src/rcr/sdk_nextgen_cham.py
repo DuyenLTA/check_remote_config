@@ -11,7 +11,8 @@ import json
 import time
 from pathlib import Path
 
-from . import sdk_nextgen_cham_build, sdk_nextgen_cham_ev_3a, sdk_nextgen_cham_ev_3b, sdk_nextgen_cham_muc4
+from . import (sdk_nextgen_buoc_do_tay, sdk_nextgen_cham_build, sdk_nextgen_cham_ev_3a, sdk_nextgen_cham_ev_3b,
+               sdk_nextgen_cham_muc4, sdk_nextgen_gop_luot)
 from .models import RcError
 from .sdk_nextgen_cham_build import MARK_TAG
 from .sdk_nextgen_events import _TT, chan_khi_offline, crash, doc_events, loc, tach_moc
@@ -68,7 +69,8 @@ def cham_thu_muc(d: Path) -> dict:
         # Lai FO hong giua chung: log thieu doan sau -> "thieu event" co the chi la chua toi, khong ket luan Sai.
         ket = [{**r, "ket": DO_TAY, "ly_do": f"Lái FO lỗi ({bc['fo_loi']}) — code ra Sai trên log thiếu: {r['ly_do']}"}
                if r["ket"] == SAI and r["ma"].startswith(("EV", "1.7", "HT", "HV")) else r for r in ket]
-    meta = {k: bc.get(k) for k in ("package", "serial", "muc", "debuggable", "mo_lai_ms", "ad_click", "app_label", "sdk")}
+    meta = {k: bc.get(k) for k in ("package", "serial", "muc", "debuggable", "mo_lai_ms", "ad_click", "app_label", "sdk",
+                                   "phien_ban", "apk_sha256")}
     meta["cham_luc"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     return {"meta": meta, "ket_qua": ket}
 
@@ -92,6 +94,8 @@ def giu_cham_tay(moi: dict, cu: dict | None) -> dict:
         return moi
     tay = {r["ma"]: r for r in cu.get("ket_qua", []) if r.get("cham_boi", "code") != "code"}
     moi["ket_qua"] = [tay.get(r["ma"], r) for r in moi["ket_qua"]]
+    if cu.get("luot_truoc"):
+        moi["luot_truoc"] = cu["luot_truoc"]
     return moi
 
 
@@ -108,8 +112,14 @@ def doc(d: Path) -> dict:
     return json.loads(f.read_text("utf-8"))
 
 
-def cham_tay(data: dict, ma: str, ket: str, ly_do: str, ai: str = "Claude") -> dict:
-    """Ghi ket qua do tay cho dong `ma` (thuong la DO_TAY): Khop/Sai, hoac Khong ap dung + ly do co so do."""
+def cham_tay(data: dict, ma: str, ket: str, ly_do: str, ai: str = "Claude", buoc: dict | None = None,
+             khong_tai_hien: str = "") -> dict:
+    """Ghi ket qua do tay cho dong `ma` (thuong la DO_TAY): Khop/Sai, hoac Khong ap dung + ly do co so do.
+
+    `buoc`: {id: ok|sai|khong:<ly do>} theo `sdk_nextgen_buoc_do_tay.BUOC` - thieu buoc thi khong duoc Khop /
+    ngoai pham vi. Dong da co Sai (luot nay hoac luot truoc cung build) chi doi sang ket khac khi
+    `khong_tai_hien` ghi lai da chay dung buoc tai hien cua Sai do ma khong ra loi.
+    """
     if ket not in KET_GHI_TAY:
         raise RcError("--ket phải là KHOP, SAI hoặc KHONG_AP_DUNG (ngoài phạm vi / N/A)")
     if not (ly_do or "").strip():
@@ -117,9 +127,23 @@ def cham_tay(data: dict, ma: str, ket: str, ly_do: str, ai: str = "Claude") -> d
     hit = [r for r in data["ket_qua"] if r["ma"] == ma]
     if len(hit) != 1:
         raise RcError(f"Không có dòng {ma!r}. Có: " + ", ".join(r["ma"] for r in data["ket_qua"]))
-    r = hit[0]
-    r.update(ket=ket, ly_do=" ".join(ly_do.split()), cham_boi=f"{ai} đo tay {time.strftime('%d/%m/%Y %H:%M')}",
-             ket_code=r.get("ket_code", r["ket"]))
+    da_khai = sdk_nextgen_buoc_do_tay.kiem(ma, ket, buoc or {})
+    # Dong theo (1.2 -> KT-03/04) cung bi doi: Sai rieng cua dong theo cung dinh nhu dong chinh.
+    dich = [m for m in (ma, *sdk_nextgen_buoc_do_tay.THEO.get(ma, ())) if any(x["ma"] == m for x in data["ket_qua"])]
+    cu_sai = {m: s for m in dich if (s := sdk_nextgen_gop_luot.sai_truoc(data, m))}
+    if ket != SAI and cu_sai and not (khong_tai_hien or "").strip():
+        raise RcError("; ".join(f"{m} đã Sai ở {s['thu_muc']}: {s['ly_do'][:300]}" for m, s in cu_sai.items())
+                      + f" — muốn đổi sang {ket} phải chạy lại đúng các bước tái hiện đó rồi ghi "
+                      "--khong-tai-hien \"<đã làm gì, kết quả>\"")
+    luc = time.strftime('%d/%m/%Y %H:%M')
+    for m in dich:
+        r = next(x for x in data["ket_qua"] if x["ma"] == m)
+        r.update(ket=ket, ly_do=" ".join(ly_do.split()) if m == ma else f"Theo {ma}: {' '.join(ly_do.split())}",
+                 cham_boi=f"{ai} đo tay {luc}", ket_code=r.get("ket_code", r["ket"]), buoc=da_khai)
+        r.pop("tu_luot", None)
+        r.pop("khong_tai_hien", None)   # ghi de lan cham cu: chi giu ghi chu cua lan cham nay
+        if (khong_tai_hien or "").strip() and m in cu_sai:
+            r["khong_tai_hien"] = {"sai_o": cu_sai[m]["thu_muc"], "ghi": " ".join(khong_tai_hien.split())}
     return data
 
 

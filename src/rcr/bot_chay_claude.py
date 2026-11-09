@@ -47,7 +47,10 @@ MAX_TRUONG_BUG = 1000
 NHAC_NEXT_GEN = (
     "Nhanh checklist Next-Gen: CHAY HET va DO TAY HET moi dong DO_TAY theo sdk-check/WORKFLOW.md (luat 10-11), ghi "
     "--cham-tay ra Khop/Sai; chi bao xong khi report khong con dong Do tay. Duoc bam quang cao de do. Dong that su "
-    "khong do duoc thi thu het cach roi ghi ro da thu gi va can dung thu gi.\n"
+    "khong do duoc thi thu het cach roi ghi ro da thu gi va can dung thu gi. Moi dong do tay lam DU buoc trong "
+    "`can_do_tay` (stdout rcr-sdk-check) va khai tung buoc bang --buoc; dong da Sai o luot cu cung build giu Sai tru "
+    "khi chay lai buoc tai hien (--khong-tai-hien); report co muc 'Lech giua cac luot' thi neu ro trong cau bao "
+    "(WORKFLOW.md muc 'Do tay ra cung ket qua moi luot').\n"
 )
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.

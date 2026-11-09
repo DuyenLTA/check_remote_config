@@ -4,8 +4,12 @@
       thu bang chung tren may vao out/sdk-<pkg>-<gio>/ roi cham + xuat report
   rcr-sdk-check --cham-lai DIR
       cham lai tu log da thu (khong can may) - cung log, cung ket qua
-  rcr-sdk-check --cham-tay DIR --ma EV-07 --ket KHOP|SAI|KHONG_AP_DUNG --ly-do "..."
-      ghi dong do tay (dong code tra DO_TAY), dung lai report; KHONG_AP_DUNG = muc ngoai pham vi / N/A
+  rcr-sdk-check --cham-tay DIR --ma HV-01 --ket KHOP|SAI|KHONG_AP_DUNG --buoc inter=ok --buoc native=sai --buoc "banner=khong:..."
+                --ly-do "..." [--khong-tai-hien "..."]
+      ghi dong do tay (dong code tra DO_TAY), dung lai report; KHONG_AP_DUNG = muc ngoai pham vi / N/A.
+      Buoc bat buoc tung dong: `sdk_nextgen_buoc_do_tay.BUOC` (stdout `can_do_tay` liet ke dong + buoc con thieu).
+  --gop-luot DIR1,DIR2   (kem --package hoac --cham-lai) gop luot cu cung build: dong do tay lay tu luot cu,
+      Sai luot cu giu nguyen. Luot moi tu tim luot cu cung package + phien ban trong --out-dir.
 
 stdout: mot dong JSON {thu_muc, report, dem}. Log tien do ra stderr.
 """
@@ -21,7 +25,8 @@ import time
 from datetime import date, datetime
 from pathlib import Path
 
-from . import audit_tom_tat, report_tab_audit, sdk_nextgen_cham, sdk_nextgen_report, sdk_nextgen_thu_log
+from . import (audit_tom_tat, report_tab_audit, sdk_nextgen_buoc_do_tay, sdk_nextgen_cham, sdk_nextgen_gop_luot,
+               sdk_nextgen_report, sdk_nextgen_thu_log)
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .cli_check import _stdio_utf8, pick_serial
@@ -61,7 +66,24 @@ def _xuat(d: Path, data: dict) -> dict:
     data["meta"]["audit"] = _audit(d, data)
     sdk_nextgen_cham.ghi(d, data)
     report = sdk_nextgen_report.ghi(data, d / "report.html")
-    return {"thu_muc": str(d), "report": str(report), "dem": sdk_nextgen_cham.dem(data)}
+    return {"thu_muc": str(d), "report": str(report), "dem": sdk_nextgen_cham.dem(data),
+            "can_do_tay": sdk_nextgen_buoc_do_tay.goi_y(data["ket_qua"]),
+            "lech": [x["ma"] for x in sdk_nextgen_gop_luot.lech(data)]}
+
+
+def _gop(d: Path, data: dict, args) -> dict:
+    """Gop luot cu cung build: --gop-luot ghi ro, cong luot cung package + phien ban + sha APK tim trong --out-dir."""
+    g = sdk_nextgen_gop_luot
+    pkg = data["meta"]["package"]
+    cu = [g.doc_luot(Path(x.strip()), pkg) for x in (args.gop_luot or "").split(",")
+          if x.strip() and not g.cung_thu_muc(x.strip(), str(d))]
+    cu += [l for l in g.tim(Path(args.out_dir), pkg, g.khoa_build(data["meta"]), tru=d)
+           if not any(g.cung_thu_muc(l["thu_muc"], c["thu_muc"]) for c in cu)]
+    data, lay = sdk_nextgen_gop_luot.gop(data, cu)
+    if cu:
+        _log(f"Gộp {len(cu)} lượt cũ cùng build: " + ", ".join(l["thu_muc"] for l in cu)
+             + (f" · lấy kết quả đo tay cũ cho {', '.join(lay)}" if lay else ""))
+    return data
 
 
 async def _thu(args) -> dict:
@@ -78,17 +100,20 @@ async def _thu(args) -> dict:
     bc_file = d / "bang-chung.json"
     bc.update(sdk=args.sdk, app_label=args.app_label)
     bc_file.write_text(json.dumps(bc, ensure_ascii=False, indent=1), "utf-8")
-    return _xuat(d, sdk_nextgen_cham.cham_thu_muc(d))
+    return _xuat(d, _gop(d, sdk_nextgen_cham.cham_thu_muc(d), args))
 
 
 def run(args) -> dict:
     if args.cham_lai:
         d = Path(args.cham_lai)
         cu = sdk_nextgen_cham.doc(d) if (d / sdk_nextgen_cham.KET_QUA).exists() else None
-        return _xuat(d, sdk_nextgen_cham.giu_cham_tay(sdk_nextgen_cham.cham_thu_muc(d), cu))
+        data = sdk_nextgen_cham.giu_cham_tay(sdk_nextgen_cham.cham_thu_muc(d), cu)
+        return _xuat(d, _gop(d, data, args) if args.gop_luot else data)
     if args.cham_tay:
         d = Path(args.cham_tay)
-        data = sdk_nextgen_cham.cham_tay(sdk_nextgen_cham.doc(d), args.ma, args.ket, args.ly_do)
+        data = sdk_nextgen_cham.cham_tay(sdk_nextgen_cham.doc(d), args.ma, args.ket, args.ly_do,
+                                         buoc=sdk_nextgen_buoc_do_tay.doc_buoc(args.buoc),
+                                         khong_tai_hien=args.khong_tai_hien)
         return _xuat(d, data)
     if not args.package:
         raise RcError("Thiếu --package (hoặc --cham-lai / --cham-tay DIR)")
@@ -109,6 +134,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--ma", default="")
     p.add_argument("--ket", default="")
     p.add_argument("--ly-do", default="")
+    p.add_argument("--buoc", action="append", default=[], help="id=ok|sai|khong:<lý do>, mỗi bước một --buoc")
+    p.add_argument("--khong-tai-hien", default="", help="đổi dòng đã Sai: đã chạy lại bước tái hiện, ghi kết quả")
+    p.add_argument("--gop-luot", default="", metavar="DIR1,DIR2", help="gộp lượt cũ cùng build")
     return p
 
 

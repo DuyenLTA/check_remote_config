@@ -18,6 +18,7 @@ Lai FO dung script `sdk-check/scripts/*.sh` (cung cach skill goc).
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -155,12 +156,15 @@ async def thu_apk(client, serial: str, package: str, out: Path) -> dict:
     """File trong APK (base + split), co debuggable, minSdk app demo."""
     paths, _, _ = await client.shell(serial, "pm", "path", package)
     files: set[str] = set()
+    sha = ""
     for i, remote in enumerate(x.split(":", 1)[1].strip() for x in paths.splitlines() if x.startswith("package:")):
         local = out / f"apk-{i}.apk"
         await client._run("-s", serial, "pull", remote, str(local), timeout=180)
         if local.exists():
             with zipfile.ZipFile(local) as z:
                 files.update(z.namelist())
+            if i == 0:   # base.apk: khoa "cung build" khi gop luot (dev day lai cung version la build khac)
+                sha = hashlib.sha256(local.read_bytes()).hexdigest()
             local.unlink()  # chi can danh sach file, khong giu APK (nang, co the chua key)
     info, _, _ = await client.shell(serial, "dumpsys", "package", package)
     demo = {}
@@ -168,7 +172,13 @@ async def thu_apk(client, serial: str, package: str, out: Path) -> dict:
         d, _, _ = await client.shell(serial, "dumpsys", "package", p)
         m = _MIN_SDK.search(d)
         demo[p] = int(m.group(1)) if m else None
-    return {"apk_files": sorted(files), "debuggable": "DEBUGGABLE" in info, "demo_min_sdk": demo}
+    return {"apk_files": sorted(files), "debuggable": "DEBUGGABLE" in info, "demo_min_sdk": demo, "apk_sha256": sha}
+
+
+def phien_ban(dumpsys: str) -> str:
+    """'3.3.0 (25)' tu dumpsys package - khoa nhan luot cung build de gop (`sdk_nextgen_gop_luot`)."""
+    ten, ma = re.search(r"versionName=(\S+)", dumpsys), re.search(r"versionCode=(\d+)", dumpsys)
+    return f"{ten.group(1)} ({ma.group(1)})" if ten and ma else ""
 
 
 async def khoi_dong(client, serial: str, package: str, out: Path, log_fn) -> None:
@@ -291,7 +301,8 @@ async def thu(client, serial: str, package: str, out: Path, muc: set[str], log_f
     await fa_log.bat(client, serial)
     await client.shell(serial, "setprop", "debug.firebase.analytics.app", package)
     await client._run("-s", serial, "logcat", "-G", "16M")
-    bc: dict = {"package": package, "serial": serial, "muc": sorted(muc)}
+    info, _, _ = await client.shell(serial, "dumpsys", "package", package)
+    bc: dict = {"package": package, "serial": serial, "muc": sorted(muc), "phien_ban": phien_ban(info)}
     if muc & {"1", "4"}:
         log_fn("Đọc APK + app demo...")
         bc.update(await thu_apk(client, serial, package, out))

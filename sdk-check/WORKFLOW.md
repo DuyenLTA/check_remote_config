@@ -81,7 +81,8 @@ bản debug (để tool bật ads) rồi chạy lại — không phải bug dev.
   sửa luật trong `src/rcr/sdk_nextgen_cham_*.py` + thêm test bằng chính log đó (mục 5e của `rc-check.md`), rồi
   `rcr-sdk-check --cham-lai <thu_muc>` — cùng log thì cùng kết quả; dòng đã đo tay được giữ nguyên.
 - Chỉ dòng `DO_TAY` mới đo tay (bấm quảng cáo test, nhìn native/banner, Ad Inspector, mua sub, bản release…), đo xong ghi:
-  `rcr-sdk-check --cham-tay <thu_muc> --ma EV-07 --ket KHOP|SAI --ly-do "<số đo / cách đo>"`. Report còn `Đo tay` = chưa xong.
+  `rcr-sdk-check --cham-tay <thu_muc> --ma HV-01 --ket KHOP|SAI|KHONG_AP_DUNG --buoc inter=ok --buoc native=sai
+  --buoc "banner=khong:<vì sao>" --ly-do "<số đo / cách đo>"`. Report còn `Đo tay` = chưa xong.
 - Code không chắc thì ra `DO_TAY`, không đoán: lượt lái FO lỗi → mọi `SAI` dựa trên log đó thành `DO_TAY`; tắt mạng mà
   máy vẫn ra internet → dòng mất mạng thành `DO_TAY`.
 - Footer report có `ad_click` từng lượt: ghi vào report, chạy tiếp và đo tay hết (mọi máy là máy test — luật 10).
@@ -89,6 +90,29 @@ bản debug (để tool bật ads) rồi chạy lại — không phải bug dev.
 Đo tay theo cách đo + bẫy ở `references/how-to-measure-each-case.md` và quy trình dưới.
 
 ## Quy trình đo tay
+## Đo tay ra cùng kết quả mọi lượt (user chốt 09/11/2026)
+
+ADA895 3.3.0: lượt chiều HV-01 Sai (bấm native → ad resume hiện đè), lượt tối chỉ bấm inter nên ra Khớp; KT-03/04 lượt
+này chấm theo minSdk, lượt kia để ngoài phạm vi. Từ nay code chặn:
+
+1. **Bước bắt buộc** (`src/rcr/sdk_nextgen_buoc_do_tay.py` `BUOC`): mỗi dòng đo tay có danh sách nhánh phải thử (vd HV-01:
+   inter, native, banner). stdout `can_do_tay` + report ("Bước phải làm") liệt kê. Mỗi bước khai một `--buoc id=…`:
+   `ok` (làm, đúng), `sai` (làm, ra lỗi), `khong:<vì sao>` (nhánh không có trong app). **Khớp / ngoài phạm vi phải khai đủ
+   mọi bước**, không bước nào `sai`; **Sai chỉ cần một bước `sai`** (luật 6). Thiếu bước → lệnh báo lỗi, đo tiếp.
+2. **Ngoài phạm vi cố định** (`CAM_NGOAI_PHAM_VI`): 1.2, KT-03, KT-04, HV-01, HT-03 không được `KHONG_AP_DUNG`. 1.2 chấm
+   theo minSdk lib ads + SDK (tìm APK demo ở máy, `~/.cache/ad-checklist-diff`, máy QA khác); **chấm 1.2 là KT-03/04 tự lấy
+   cùng kết quả** — không chấm KT-03/04 riêng.
+3. **Sai đã có bằng chứng không bị lượt sau xoá**: dòng đã Sai (lượt này hoặc lượt cũ cùng build) muốn đổi sang
+   Khớp / ngoài phạm vi phải chạy lại đúng bước tái hiện của Sai đó rồi ghi `--khong-tai-hien "<đã làm gì, ra sao>"`
+   (report hiện cả Sai cũ lẫn lần chạy lại). Không có thì lệnh từ chối.
+4. **Gộp lượt cùng build**: `rcr-sdk-check --package` tự tìm lượt cũ cùng package + `phien_ban` (versionName + versionCode)
+   + `apk_sha256` (dev đẩy lại cùng version là build khác) trong `--out-dir`. Dòng `DO_TAY` lấy kết quả đo tay **mới nhất**
+   (theo giờ trong tên thư mục): Sai, hoặc lần đã gỡ Sai bằng `--khong-tai-hien`; không có thì Khớp / ngoài phạm vi
+   **đã khai đủ bước** → chỉ đo tay dòng còn lại. Sai do code không dính (lượt mới tự chạy lại đúng quy trình). Lượt cũ
+   không ghi `phien_ban`/sha (trước 09/11/2026) hoặc nằm thư mục khác: `--gop-luot DIR1,DIR2` (kèm `--package` hoặc
+   `--cham-lai`). Dòng nào hai lượt ra khác nhau → mục **"Lệch giữa các lượt cùng build"** trên report, stdout `lech` — nói
+   rõ trong câu báo, không tự chọn một bên.
+
 
 1. **Máy + bản**: `adb devices -l`. Cắm nhiều máy thì `export ANDROID_SERIAL=<serial>` trước mọi lệnh `adb` /
    script dưới đây (script gọi `adb` trơn) — không đặt là `adb` báo "more than one device" hoặc đụng máy của lượt khác. `dumpsys package <pkg> | grep -E "versionName|versionCode|lastUpdateTime"`,

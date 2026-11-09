@@ -259,7 +259,8 @@ def test_cham_thu_muc_cham_tay_cham_lai_va_report(tmp_path):
     data = sdk_nextgen_cham.cham_thu_muc(d)
     assert data["ket_qua"] == sdk_nextgen_cham.cham_thu_muc(d)["ket_qua"]
     assert {r["ma"][:2] for r in data["ket_qua"]} >= {"1.", "HT", "EV", "KT", "ME", "CM", "HV", "RG"}
-    sdk_nextgen_cham.cham_tay(data, "EV-07", "KHOP", "bấm native test ở OB1: 1 event_user_click_ads …3003051013")
+    sdk_nextgen_cham.cham_tay(data, "EV-07", "KHOP", "bấm native test ở OB1: 1 event_user_click_ads …3003051013",
+                              buoc={"inter": "ok", "native": "ok", "banner": "khong:không có banner trong luồng"})
     r = _ket(data["ket_qua"], "EV-07")
     assert r["ket"] == "KHOP" and r["ket_code"] == "DO_TAY" and "đo tay" in r["cham_boi"]
     # cham lai tu log khong xoa dong do tay
