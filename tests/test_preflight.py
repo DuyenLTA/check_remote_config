@@ -126,12 +126,13 @@ TEST_NATIVE = "ca-app-pub-3940256099942544/2247696110"
 THAT_INTER = "ca-app-pub-4584260126367940/2920391588"
 
 
-def test_build_dung_id_test_cua_google_la_loi(monkeypatch):
+def test_build_dung_id_test_cua_google_chi_canh_bao_va_chay_tiep(monkeypatch):
     _gia(monkeypatch, units=(TEST_NATIVE, THAT_INTER))
     kq = _chay(FakeClient())
-    assert not kq["ok"] and _trang_thai(kq, "Ads dùng ID thật") == "loi"
+    assert kq["ok"] and _trang_thai(kq, "Ads dùng ID thật") == "canh_bao"
     muc = next(m for m in kq["muc"] if m["ten"] == "Ads dùng ID thật")
-    assert "2247696110" in muc["chi_tiet"] and "ID ads thật" in muc["viec_can_lam"]
+    assert "2247696110" in muc["chi_tiet"] and "chạy tiếp" in muc["viec_can_lam"]
+    assert "debuggable" not in muc["viec_can_lam"]
 
 
 def test_chua_thay_request_ads_chi_canh_bao(monkeypatch):

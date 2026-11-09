@@ -94,7 +94,7 @@ yên quan sát**: đo mốc vào/rời trang OB3 + ad show/fail bằng `logcat -
 FAIL oan (07/10/2026).
 
 **Không gắn cứng theo một app** (user chốt 07/10/2026 — tool dùng cho nhiều app).
-Nút X / số đếm nhận theo **vai trò**: gợi ý id trong `data/ui_names.yaml` + nghĩa
+Nút X / số đếm nhận theo **vai trò**: gợi ý id trong `src/rcr/data/ui_names.yaml` + nghĩa
 tên id (skip/close/dismiss… — timeout/countdown/timer) + content-desc + chữ chỉ là số
 ở vùng trên màn. App mới đặt tên id lạ thì **thêm vào yaml**, không sửa code, không
 viết id của một app vào code hay vào workflow này.
@@ -124,7 +124,7 @@ kế"* chấm bằng **một cú vuốt thật**, dòng *"app bắn event X"* ch
 `FA-SVC`, dòng *"luồng FO thông suốt"* chấm bằng nhật ký lái. Dòng **bố cục splash**
 (*"progress + text neo ngay trên mép native"*, *"không đè banner"*, *"cách mép 12–16dp"*,
 *"nhãn ngay dưới progress"*, *"giữa màn"*, *"không dịch chuyển khi native show"*) chấm bằng
-bounds trong dump, đổi dp theo `wm density` (id ở mục `bo_cuc` của `data/ui_names.yaml`).
+bounds trong dump, đổi dp theo `wm density` (id ở mục `bo_cuc` của `src/rcr/data/ui_names.yaml`).
 Dòng **màu chữ** (*"Title đúng màu #4957FF"*) chấm trên ảnh PNG gốc: đếm pixel trùng màu
 (lệch ≤4/kênh) trong khung chữ so với dải đối chứng sát bên, bounds đọc lại theo từng khung
 (cụm chữ splash nhảy lên khi native về). Nền trùng màu chữ thì ra NEEDS_HUMAN, không FAIL.
@@ -189,17 +189,20 @@ cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>] --preflight [--next-
 ```
 (`--next-gen` chỉ khi `$ARGUMENTS` có — xem 0b.)
 
-Khoảng 20 giây, kiểm hết một lượt: máy, màn hình không khoá, app đã cài, **vào được dữ liệu app
-(bản debuggable / root)**, **ads dùng ID thật** (mở app một lần, đọc log `FA-SVC` tối đa 15s),
+Khoảng 20 giây, kiểm hết một lượt: máy, màn hình không khoá, app đã cài, **đổi được RC** (bản
+debuggable / root patch trên máy, hoặc bản release qua điều kiện `testvsl` trên Firebase — mục 2), **ads dùng ID thật** (mở app một lần, đọc log `FA-SVC` tối đa 15s),
 tải được sheet TC, sheet ID ads có tab của package, RAM trống của máy tính, **Private DNS
 không còn sót** giá trị chặn/treo ads của lượt trước, và **không còn snapshot `--keep`** chưa
 `--restore` (máy đang giữ config đã patch).
 
-Dòng `Ads dùng ID thật` ra `LOI` = build request bằng unit test của Google
+Dòng `Ads dùng ID thật` ra `CHU Y` = build request bằng unit test của Google
 (`ca-app-pub-3940256099942544/…`): mọi vị trí chung một ID nên không quy được ad về vị trí
-nào, dòng ads ra NEEDS_HUMAN hàng loạt hoặc PASS giả (24/10/2026, Piclux 2.4.0: native/banner
-là ID test, inter 102 là ID thật — chạy 50 phút mới biết). **Dừng, xin dev bản debuggable dùng
-ID ads thật**, đừng chạy thử. Exit 1 = có dòng `LOI` → **dừng**, in nguyên bảng cho người dùng kèm việc
+nào (24/10/2026, Piclux 2.4.0: native/banner là ID test, inter 102 là ID thật). **Không dừng,
+chạy tiếp** (user chốt 09/11/2026: "ID test thì cảnh báo rồi chạy tiếp"), không xin dev bản khác.
+Câu báo cuối mở đầu bằng dòng này (unit nào là ID test) để dev xác nhận. Ở 5c, dòng ads của vị trí
+dùng ID test **không được PASS chỉ vì có request** — đối chiếu bằng log màn + ảnh; không quy được
+về vị trí thì `--cham-tay ... --ket BLOCKED --ly-do "build dùng ID test, không quy được ad về vị trí"`.
+Exit 1 = có dòng `LOI` → **dừng**, in nguyên bảng cho người dùng kèm việc
 cần làm (đừng chạy thử cho biết: 23/10/2026 cài nhầm bản release 3 lần mới phát hiện
 lúc đọc baseline). Dòng `CHU Y` về RAM (< 4 GB) không chặn nhưng phải nói trước: lượt dài
 có thể bị Claude Code tắt giữa chừng. Báo Discord khi dừng:
@@ -354,16 +357,11 @@ cd <repo> && <bin>/rcr-check --package <pkg> --tiep out/run-x.luot.json
 kết quả, chạy nốt phần còn lại và ghi tiếp vào chính file đó. Lệnh chết vì lỗi thì JSON
 lỗi cũng có trường `luot` trỏ tới file này.
 
-**Lượt tự dừng khi log có `ad_click`** (stderr `DUNG LUOT: case … co N ad_click`, record
-có `ad_click > 0`, case BLOCKED). Tool chỉ được đóng ad (`fo_flow`: chạm nút Close, rồi
-BACK), không được bấm vào; click trên unit thật là traffic không hợp lệ, và app rời luồng
-nên kết quả case đó không dùng được. Case đó không chạy lại, các case sau không chạy. **Đây
-là điểm chặn của người**: báo ngay, kèm case + unit đang show, **không tự `--tiep`**:
-`<bin>/rcr-notify --kind stop --title "Có ad_click trong lượt" --line "<case> · <N> ad_click" --action "Kiểm cách đóng ad trước khi chạy tiếp"`
-
-**Mọi máy là máy test AdMob (mục 0c):** ad_click không phải traffic không hợp lệ, **không** dừng chờ người:
-ghi ad_click vào report (case + unit), chạy lại riêng case bị ad_click (`--case <key>`, kết quả lần đầu không
-dùng được vì app rời luồng), rồi `--tiep` chạy nốt các case còn lại.
+**`ad_click` không dừng lượt** (mọi máy là máy test AdMob, mục 0c). Tool vẫn chỉ đóng ad
+(`fo_flow`: chờ hết đếm ngược, chạm nút Close, rồi BACK), không bấm vào. Case có `ad_click` thì app
+rời luồng nên lần đó không dùng được: `run_batch` tự chạy lại case đó, report giữ dấu vết số click;
+chạy lại vẫn còn click thì case BLOCKED kèm số click, lượt vẫn chạy tiếp các case sau. Không gửi
+`rcr-notify --kind stop` vì `ad_click`.
 
 Case có giá trị lựa chọn (`layout1/2/3`) chạy **nhiều lượt** — mỗi giá trị một
 lượt mở app, `run.runs` là từng lượt. Verdict của case = lượt xấu nhất.
@@ -488,7 +486,7 @@ Bảng `tc.cases`, đọc ba cột:
   runtime toggle (`a → b → a` — nhận cả khi nó nằm ở **tên case** hay **Precondition**
   chứ không ở Test Data), sửa field trong JSON, giá trị còn là chỗ trống
   (`<id template đang test>`), ký hiệu ép trạng thái ad chưa có key ID đã đo
-  (`data/ad_id_keys.yaml`), quá 16 tổ hợp giá trị, hoặc không key nào thuộc RC
+  (`src/rcr/data/ad_id_keys.yaml`), quá 16 tổ hợp giá trị, hoặc không key nào thuộc RC
 - `from_precondition` — key lấy từ cột Precondition (bộ TC từ SDK 3.2.0 bỏ cột
   Test Data). Trùng key thì Test Data thắng
 - `tc_lech` — giá trị JSON TC đặt có trường mà giá trị server của cùng key không có
@@ -565,11 +563,13 @@ làm hết các bước dưới đây:
      bấm tới khi inter đứng yên. Dải trắng status bar được; nhìn thấy màn app phía sau là lỗi
    - precondition đòi máy khác (OPPO, Samsung…): **nhắn qa-auto** (trả lời dưới tin build) nhờ
      cắm máy đó, máy lên là tự chạy tiếp — không để NEEDS_HUMAN, không chỉ hỏi ở terminal.
-     App trên máy mới là bản store (không `DEBUGGABLE`, `run-as` lỗi) thì `pm path` + `pull`
-     APK debug từ máy cũ, gỡ bản store, cài APK debug
-4. Chấm từng dòng với **số đo thật** làm lý do. Report gửi đi **chỉ có PASS / FAIL**
-   (user nhắc lần 3, 06/10/2026: *"không được phép need_human với not_verifiable
-   blocked"*). Điều kiện chưa đạt thì tự ép, tự chạy lại; lỗi đọc/race của tool thì
+     Máy mới chưa có đúng bản build thì **gỡ app rồi cài lại bản release từ App Tester**
+     (`rcr-cai-build`), không pull APK từ máy cũ, không dùng nút "Mở"/xoá data. Máy không có
+     → case BLOCKED (5d2)
+4. Chấm từng dòng với **số đo thật** làm lý do. Report gửi đi **không còn NEEDS_HUMAN /
+   NOT_VERIFIABLE** (user nhắc lần 3, 06/10/2026), chỉ PASS / FAIL — **trừ** case precondition
+   thật sự không tạo được (thiếu máy, kho không fill…): case đó `BLOCKED` kèm lý do theo 5d2, cấm
+   đo thay trên điều kiện khác (user chốt 03/11/2026). Điều kiện tạo được mà chưa đạt thì tự ép, tự chạy lại; lỗi đọc/race của tool thì
    tool tự thử lại (`run_batch` chạy lại case tối đa 3 lần khi verdict lơ lửng). Tool
    **không** chạy lại khi các dòng còn mở đều suy từ câu chữ, khi lần sau ra y hệt lần
    trước, hoặc khi precondition không tạo được (case đó ra BLOCKED kèm lý do ngay)
@@ -610,7 +610,7 @@ case PASS bằng **ad của vị trí khác**. Từ giờ, trước khi báo s�
    Mỗi lượt tool **tự tải bản mới nhất**, chọn tab theo dòng `Package name` (không theo
    tên tab ADA895/AIP916…), đọc mục ID ads FO + resume. Log in `ID ads tung vi tri: …
    N vị trí` — **ra 0 / "không có tab nào ghi package"** thì app chưa có trong sheet:
-   báo user bổ sung tab, đừng chạy tiếp như thể có ID. `data/ad_units.yaml` chỉ là bản
+   báo user bổ sung tab, đừng chạy tiếp như thể có ID. `src/rcr/data/ad_units.yaml` chỉ là bản
    dự phòng; ID đọc từ RC của máy vẫn thắng
 2. **Không fill = PASS chỉ khi có request đúng unit.** Không phải "có ad nào đó được
    request". Dòng thứ tự preload / alternate cũng vậy: tool chỉ xét unit map được về vị trí
@@ -653,7 +653,7 @@ tự viết Python gộp record nữa. Publish đè **cùng link**.
   "không load ad 302" luôn không chấm được
 - TC ghi `layout_native_ads_language_1`, APK chỉ có `layout_ad_native_lfo_1` (shimmer
   chung bộ id) → chấm bằng đủ bộ `nativeAdView, ad_headline, ad_media, ad_call_to_action`
-  (`data/ui_names.yaml`, trường `ids_all`)
+  (`src/rcr/data/ui_names.yaml`, trường `ids_all`)
 - Sau `pm clear` config mới có `enable_all_ads*=false` → tool tự đặt nền `true`; log ads
   trống thì đọc 3 key này trước khi nghi app
 - (07/10/2026) "Ad vị trí X show / KHÔNG show tại màn Y": tool chấm bằng event `ad_show`
@@ -748,7 +748,7 @@ User chốt 24/10/2026: chạy app khác mà tool lỗi / chạy chập chờn /
 1. Phân biệt trước: **bug app** (báo dev), **điều kiện máy/tài khoản** (mạng, máy khoá, sub
    test — tự xử), hay **lỗi tool** (crash, lái sai màn, nhận nhầm node, regex log không khớp app
    mới, PASS/FAIL giả do cách chấm). Chỉ loại cuối mới sửa code.
-2. App mới đặt tên id lạ → thêm vào `data/ui_names.yaml`, không sửa code (mục 1).
+2. App mới đặt tên id lạ → thêm vào `src/rcr/data/ui_names.yaml`, không sửa code (mục 1).
 3. Lỗi code → sửa đúng chỗ gốc trong `src/rcr/` (hoặc `sdk-check/scripts/`), thêm test tái hiện
    đúng tình huống vừa gặp, chạy **cả bộ** `<bin>/python -m pytest -q` — đỏ thì sửa tới xanh.
 4. Chạy lại **chỉ các case bị lỗi đó ảnh hưởng**, gộp vào file lượt (`--gop`), rồi đi tiếp
@@ -778,8 +778,8 @@ Trên report chỉ có **4 nhãn**, dịch từ verdict của tool qua `report_r
 **không được lộ ra** — luôn kèm tên tiếng Việt và lý do của bước.
 
 Lượt đã **đo được thật** (có case ra PASS/FAIL/BLOCKED) thì publish trang đó thành
-artifact **rồi tự mở link** cho người dùng — tool chạy ở máy, không tự lên claude.ai
-được. Report của tool mà mọi case đều `NEEDS_HUMAN` thì **đừng publish trang đó**,
+artifact và **chỉ đưa link** trong câu báo — **không tự mở trang** (không gọi Artifact `open`,
+không bật browser; user đã dặn). Report của tool mà mọi case đều `NEEDS_HUMAN` thì **đừng publish trang đó**,
 vì nó không nói được gì về app. Làm mục 5b trước, rồi publish report đã chấm tay.
 
 Publish xong thì ghi link lại, lấy `generated_at` từ **chính dòng JSON của lượt vừa chạy**:
@@ -855,6 +855,10 @@ sau đó dùng skill log bug để tự log bug lên jira"*.
    `<bin>/rcr-notify --kind bug --title "Nhờ dev check bug · bản build <MÃ>---<Tên app> v<versionName> (<versionCode>)" --line "<KEY-1> — <tóm tắt bug> · <mức độ> · <link issue>" [--line ...]`
    — mỗi issue một `--line`, bỏ bug không tạo được issue. Bản build ghi **đúng mẫu tin build của dev**
    (`AIP882---AI-Video v4.3.0 (40)`); versionName/versionCode lấy từ `dumpsys package <pkg>` của bản đã test.
+   Tin này **không tag dev**. Tin báo dev ở kênh project (gọn 2 dòng "Nhờ dev check bug" + link, tag đúng dev
+   theo assignee qua `DISCORD_DEV_THEO_ASSIGNEE`, assignee = dev gửi build) do bot lo (`bot_kenh_project.py`) —
+   nên ưu tiên đường `rcr-bao-bug` ở trên để QA bấm Log Jira qua bot. Đổi mẫu tin gửi dev thì gửi bản xem
+   trước vào qa-auto cho user duyệt trước.
 3. **Lượt do bot Discord gọi (headless, không có người):** KHÔNG hỏi, KHÔNG log Jira. Chỉ đưa danh
    sách bug vào trường `bugs` của dòng `KET_QUA` (mẫu nằm trong prompt của bot). Bot đăng menu tick
    lên kênh QA; QA bấm **Log Jira** thì bot chạy lượt riêng (`src/rcr/bot_log_jira.py`): project key =

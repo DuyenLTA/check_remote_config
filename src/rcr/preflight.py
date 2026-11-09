@@ -235,10 +235,13 @@ def muc_ads_test(units: list[str]) -> dict:
                     "Kiểm mạng / enable_all_ads; ads chưa chạy thì dòng ads sẽ không chấm được")
     test = sorted({u for u in units if u.startswith(GOOGLE_TEST_PUB)})
     if test:
-        return _muc("Ads dùng ID thật", LOI,
+        # Chi canh bao, khong chan luot (user chot 09/11/2026): van chay case, dong ads cua vi tri
+        # dung ID test phai doi chieu tay vi moi vi tri chung mot unit.
+        return _muc("Ads dùng ID thật", CANH_BAO,
                     f"{len(test)} unit là ID test của Google ({', '.join(u.rsplit('/', 1)[-1] for u in test)})"
                     f" trên {len(set(units))} unit đã request",
-                    "Xin dev bản debuggable dùng ID ads thật; build ID test không quy được ad về vị trí")
+                    "Vẫn chạy tiếp; ghi vào câu báo để dev xác nhận. Dòng ads của vị trí dùng ID test "
+                    "không quy được ad về vị trí — đối chiếu bằng log + ảnh, đừng nhận PASS chỉ vì có request")
     return _muc("Ads dùng ID thật", OK, f"{len(set(units))} unit đã request đều là ID thật")
 
 
