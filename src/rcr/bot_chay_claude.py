@@ -148,7 +148,8 @@ TIMEOUT_VERIFY_SUB = 60 * 60
 
 
 def lenh(package: str, serial: str, cases: list[str] | None = None,
-         next_gen: bool = False, sdk: str = "", sub_version: str = "") -> tuple[list[str], str]:
+         next_gen: bool = False, sdk: str = "", sub_version: str = "",
+         bo_qua_plan: bool = False) -> tuple[list[str], str]:
     """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
     Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt.
     `next_gen`: bot da cai ban release vi tin build ghi next-gen -> `--next-gen` de rc-check chay checklist
@@ -170,8 +171,9 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
             raise ValueError(f"version không hợp lệ: {sub_version!r}")
         return cmd, PROMPT_SUB.format(package=package, serial=serial, version=sub_version)
     if not cases:
+        # --bo-qua-plan: QA bam "Chạy bỏ qua plan" sau luot dung vi build khac plan tuan.
         return cmd, PROMPT.format(package=package, serial=serial, next_gen=" --next-gen" if next_gen else "",
-                                  sdk=f" --sdk {sdk}" if sdk else "",
+                                  sdk=(f" --sdk {sdk}" if sdk else "") + (" --bo-qua-plan" if bo_qua_plan else ""),
                                   nhac=NHAC_NEXT_GEN if next_gen else "")
     loai = {c: loai_case(c) for c in cases}
     sai = [c for c, lo in loai.items() if lo is None]
@@ -245,12 +247,13 @@ def moi_truong() -> dict[str, str]:
 
 
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
-         cases: list[str] | None = None, next_gen: bool = False, sdk: str = "", sub_version: str = "") -> dict:
+         cases: list[str] | None = None, next_gen: bool = False, sdk: str = "", sub_version: str = "",
+         bo_qua_plan: bool = False) -> dict:
     """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
-        cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version)
+        cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan)
         # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
         p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo,
                                 encoding="utf-8", errors="replace", env=moi_truong())

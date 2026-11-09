@@ -60,9 +60,23 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     bot_dung_luot.danh_dau_pha_rc(job, next_gen)       # Dung tu day -> phai don RC testvsl
     # Tin build ghi next-gen -> ep rc-check nhanh checklist; con lai bo TC (ban release doi RC qua Firebase).
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, timeout, out,
-                                 None, next_gen, job.get("tutorial") or "")
+                                 None, next_gen, job.get("tutorial") or "", "", bool(job.get("bo_qua_plan")))
     bot.q.cap_nhat(job, kq=kq, ten_may=ten, bat_dau=bat_dau)
     return True
+
+
+def dung_vi_plan(kq: dict) -> bool:
+    """Luot dung o preflight vi build khac plan tuan (rc-check.md 3b: `tom_tat` mo dau "Build khác plan tuần")."""
+    return kq.get("trang_thai") == "DUNG" and "khác plan tuần" in (kq.get("tom_tat") or "").lower()
+
+
+def nut_ket_qua(job: dict, kq: dict) -> list[tuple]:
+    """Nut tren tin ket qua. Dung vi khac plan tuan -> them "Chạy bỏ qua plan": dev hay chi nang / ha version, ben
+    trong giong nhau, QA muon chay luon (user chot 09/11/2026). Luot da bo qua plan roi thi khong hien lai."""
+    cac = [("verify", "Verify bug Jira", XAM)]
+    if dung_vi_plan(kq) and not job.get("bo_qua_plan"):
+        cac.insert(0, ("boquaplan", "Chạy bỏ qua plan", XANH))
+    return cac
 
 
 async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
@@ -82,7 +96,7 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
                       embeds=[tin_goc.embed(tin_goc.KET_QUA, bot_cong_viec.tin_ket_qua(job, kq, f)
                                             + (f"\n{audit}" if audit else ""))],
                       attachments=[discord.File(f)] if f else [],
-                      view=nut(("verify", "Verify bug Jira", XAM), msg_id=job["msg_id"]))
+                      view=nut(*nut_ket_qua(job, kq), msg_id=job["msg_id"]))
         bot.q.cap_nhat(job, da_bao=True)
     else:
         await qa.edit(content=dong_dau)

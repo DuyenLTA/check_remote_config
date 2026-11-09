@@ -139,3 +139,19 @@ def test_id_ads_lech_khong_phai_ly_do_dung():
     from rcr.bot_chay_claude import PROMPT
     assert "ID ads lech sheet (audit-fanout) KHONG phai ly do dung" in PROMPT
     assert "(preflight LOI, ID ads lech sheet" not in PROMPT
+
+
+def test_bo_qua_plan_vao_lenh_rc_check():
+    from rcr.bot_chay_claude import lenh
+    _cmd, p = lenh("com.ai.app", "S1", next_gen=True, sdk="3.7.1", bo_qua_plan=True)
+    assert p.splitlines()[0] == "/rc-check com.ai.app --serial S1 --next-gen --sdk 3.7.1 --bo-qua-plan"
+    assert "--bo-qua-plan" not in lenh("com.ai.app", "S1", next_gen=True, sdk="3.7.1")[1].splitlines()[0]
+
+
+def test_nut_chay_bo_qua_plan_chi_khi_dung_vi_plan():
+    from rcr.bot_job_check import nut_ket_qua
+    dung_plan = {"trang_thai": "DUNG", "tom_tat": "Build khác plan tuần: máy đang cài v1.3.0, plan ghi v1.4.0"}
+    assert [n[0] for n in nut_ket_qua({}, dung_plan)] == ["boquaplan", "verify"]
+    assert [n[0] for n in nut_ket_qua({"bo_qua_plan": True}, dung_plan)] == ["verify"]
+    assert [n[0] for n in nut_ket_qua({}, {"trang_thai": "DUNG", "tom_tat": "Dừng: máy khoá"})] == ["verify"]
+    assert [n[0] for n in nut_ket_qua({}, {"trang_thai": "XONG", "tom_tat": "ok"})] == ["verify"]

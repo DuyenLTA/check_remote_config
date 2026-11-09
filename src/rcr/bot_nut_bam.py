@@ -59,12 +59,17 @@ async def xu_ly(bot, it: discord.Interaction) -> None:
                                                   f"🔁 Verify bug Jira — {it.user.mention}: {tom_tat}"))
         return
     c = {**c, "loai_ban": build_ma_app.loai_ban(c)}   # tin hoi tu truoc 31/10/2026 con ghi "debug" -> ban release
-    vi_tri = bot.q.them({**c, "nguoi_duyet": it.user.id})   # check | thu lai
+    # check | thu lai | boquaplan (chay lai luot vua dung vi build khac plan tuan, preflight chi con CHU Y)
+    c.pop("bo_qua_plan", None)
+    bo_qua = hanh_dong == "boquaplan"
+    vi_tri = bot.q.them({**c, "nguoi_duyet": it.user.id, **({"bo_qua_plan": True} if bo_qua else {})})
     if vi_tri is None:                   # da trong hang: tin goc da ghi vi tri, khong tra loi them
         await it.response.defer()
         return
-    await it.response.edit_message(view=nut(*NUT_HUY, msg_id=c["msg_id"]), content=f"{bot_cong_viec.dau_tin(c)}\n"
-                                   f"Đã duyệt bởi {it.user.mention} — bản {c['loai_ban']}, vị trí {vi_tri} trong hàng đợi.")
+    ghi = " — **bỏ qua plan tuần**" if bo_qua else ""
+    await it.response.edit_message(view=nut(*NUT_HUY, msg_id=c["msg_id"]),
+                                   content=f"{bot_cong_viec.dau_tin(c)}\nĐã duyệt bởi {it.user.mention}{ghi} — "
+                                           f"bản {c['loai_ban']}, vị trí {vi_tri} trong hàng đợi.")
 
 
 async def huy(bot, it: discord.Interaction, c: dict) -> None:

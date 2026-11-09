@@ -115,8 +115,11 @@ còn snapshot `--keep` chưa `--restore`, và **plan tuần**.
 - `CHU Y` RAM < 4 GB: không chặn, nói trước (lượt dài có thể bị tắt giữa chừng).
 - **`Plan tuần` = `LOI`** (bản SDK khác dòng của app trong tab tuần này của plan QA, biến `RC_PLAN_TUAN_SHEET`) → **dừng
   ngay**, không check ID ads, không chạy case (user chốt 30/10/2026). Gửi `rcr-notify --kind stop` với nguyên dòng; lượt
-  bot thì `KET_QUA.trang_thai` = `DUNG`, `tom_tat` mở đầu "Build khác plan tuần: …". Plan chưa có tab / không ghi SDK /
-  không tải được → `CHU Y`, chạy tiếp.
+  bot thì `KET_QUA.trang_thai` = `DUNG`, `tom_tat` mở đầu "Build khác plan tuần: …" (đúng chữ này: bot dựa vào nó để
+  hiện nút **Chạy bỏ qua plan**). Plan chưa có tab / không ghi SDK / không tải được → `CHU Y`, chạy tiếp.
+- **`$ARGUMENTS` có `--bo-qua-plan`** (QA bấm "Chạy bỏ qua plan" — dev chỉ nâng / hạ version, bên trong giống nhau,
+  user chốt 09/11/2026) → truyền `--bo-qua-plan` vào preflight: dòng `Plan tuần` thành `CHU Y`, **chạy hết như thường**
+  (check ID ads, case / checklist). Câu báo mở đầu: "Chạy bỏ qua plan tuần theo QA: <nguyên dòng lệch>".
 
 ## 3c. Check ID ads (audit-fanout) — sau preflight, trước khi chạy case
 

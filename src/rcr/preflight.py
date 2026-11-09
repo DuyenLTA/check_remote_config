@@ -187,9 +187,11 @@ def muc_sdk_lech(sdk_khai: str, sdk_log: str) -> dict | None:
 
 
 def muc_plan(package: str, sdk_khai: str, sdk_log: str, out_dir, ngay: dt.date | None = None,
-             ver_app: str = "", loai_app: str = "") -> dict:
+             ver_app: str = "", loai_app: str = "", bo_qua: bool = False) -> dict:
     """Build khac yeu cau SDK trong plan tuan -> LOI, dung luot (user chot 30/10/2026: "khac plan thi dung lai
-    bao toi vao qa-auto"). Khong doc duoc plan / plan khong ghi SDK cho app -> chi CHU Y, khong chan."""
+    bao toi vao qa-auto"). Khong doc duoc plan / plan khong ghi SDK cho app -> chi CHU Y, khong chan.
+    `bo_qua` (--bo-qua-plan, QA bam "Chạy bỏ qua plan"): lech chi con CHU Y - dev chi nang / ha version, ben
+    trong giong nhau (user chot 09/11/2026); dong lech van in ra de ghi len dau cau bao."""
     link = env(plan_tuan.ENV)
     if not link:
         return _muc("Plan tuần", CANH_BAO, f"chưa cấu hình {plan_tuan.ENV}", "Đặt link sheet plan tuần")
@@ -215,6 +217,9 @@ def muc_plan(package: str, sdk_khai: str, sdk_log: str, out_dir, ngay: dt.date |
     ]))
     pham_vi = " | ".join(" ".join(x.split()) for x in yc.get("pham_vi") or [])
     ct = f"tab {yc['tab']}, {ma}: {yeu}" + (f" · scope: {pham_vi}" if pham_vi else "")
+    if lech and bo_qua:
+        return _muc("Plan tuần", CANH_BAO, f"build KHÁC plan ({ct}) — " + "; ".join(lech)
+                    + " — QA cho chạy bỏ qua plan (--bo-qua-plan)", "Ghi dòng lệch lên đầu câu báo")
     if lech:
         return _muc("Plan tuần", LOI, f"build KHÁC plan ({ct}) — " + "; ".join(lech),
                     "Dừng, báo QA ở qa-auto: build không đúng yêu cầu plan (sai version / SDK / loại bản), "
@@ -322,7 +327,7 @@ def _ram() -> dict:
 
 
 async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "",
-               ep_nextgen: bool = False) -> dict:
+               ep_nextgen: bool = False, bo_qua_plan: bool = False) -> dict:
     """Kiem het, KHONG dung o muc dau tien hong: nguoi dung can thay moi viec phai lam.
 
     `sdk` (tham so --sdk) de trong thi doc tu log lan mo app. Ban Next-Gen ->
@@ -365,7 +370,8 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
     ver_app = app[0]["chi_tiet"].split()[-1] if app and app[0]["trang_thai"] == OK else ""
     vao = next((m["chi_tiet"] for m in app if m["ten"] == "Vào được dữ liệu app"), "")
     loai_app = "release" if "bản release" in vao else ("debug" if vao else "")
-    muc.append(muc_plan(package, sdk_khai, sdk_log, out_dir, ver_app=ver_app, loai_app=loai_app))
+    muc.append(muc_plan(package, sdk_khai, sdk_log, out_dir, ver_app=ver_app, loai_app=loai_app,
+                        bo_qua=bo_qua_plan))
     muc.append(_ram())
     return {"ok": all(m["trang_thai"] != LOI for m in muc), "muc": muc, "sdk": sdk, "nhanh": nhanh}
 

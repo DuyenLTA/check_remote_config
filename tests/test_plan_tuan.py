@@ -159,3 +159,13 @@ def test_bang_co_cot_app_version_doc_dung_cot(tmp_path):
     assert trong["version"] == [] and trong["sdk"] == [] and trong["pham_vi"] == []
     # so "2.3.0" dau o Detail cua Lensie (iOS) khong bi doc thanh version cua app khac
     assert pt.yeu_cau(_plan_cot(tmp_path), "IIP036", dt.date(2026, 11, 10))["version"] == []
+
+
+def test_bo_qua_plan_chi_con_canh_bao(tmp_path, monkeypatch):
+    # AIP944 1.3.0 09/11/2026: plan ghi v1.4.0, QA bam "Chạy bỏ qua plan" (dev chi nang / ha version).
+    plan, kt = _plan(tmp_path), _kt(tmp_path)
+    monkeypatch.setattr(preflight, "env", lambda ten: "link-plan" if ten == pt.ENV else "")
+    monkeypatch.setattr(preflight.tc_source, "tai_ve", lambda link, out: kt)
+    monkeypatch.setattr(pt, "tai", lambda link, out: plan)
+    m = preflight.muc_plan(PKG, "3.6.1", "3.7.0", tmp_path, NGAY, bo_qua=True)
+    assert m["trang_thai"] == "canh_bao" and "KHÁC plan" in m["chi_tiet"] and "--bo-qua-plan" in m["chi_tiet"]

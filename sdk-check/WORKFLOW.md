@@ -12,7 +12,7 @@ build trước rồi mới chấm. Thứ tự, không bỏ bước:
 1. Preflight phải có dòng `Sheet ID ads` = `OK` (tab của app trong sheet "Check thông số KT"). `LOI` → dừng như
    nhánh bộ TC: báo thiếu tab, không chạy checklist.
 2. Dòng `Plan tuần` = `LOI` (build khác yêu cầu trong plan tuần của QA) → **dừng, báo qa-auto**, không chấm
-   (`rc-check.md` mục 3b).
+   (`rc-check.md` mục 3b). Lượt có `--bo-qua-plan` (QA bấm "Chạy bỏ qua plan") thì dòng này chỉ `CHU Y` → chạy hết.
 3. Có dòng `SDK tin build vs log app` (số SDK tin build / `--sdk` khác số app in ra) → **không vào nhánh này**: chạy
    theo số tin build (`rc-check.md` mục 0b). Chỉ vào đây khi bản đã chốt là 3.7.0 / 3.7.1 hoặc có `--next-gen`.
 4. Chạy check ID ads (`rc-check.md` mục 3c, audit-fanout) **xong** mới chạy `rcr-sdk-check` — hai bên cùng lái máy.

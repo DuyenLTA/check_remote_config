@@ -151,7 +151,7 @@ async def _tren_may(args: argparse.Namespace, client, serial: str, started: floa
     if args.preflight:
         _log("Kiem dieu kien truoc khi chay...")
         kq = await preflight.chay(client, serial, args.package, args.tc or TC_MAC_DINH, args.out_dir, args.sdk,
-                                  ep_nextgen=args.next_gen)
+                                  ep_nextgen=args.next_gen, bo_qua_plan=args.bo_qua_plan)
         preflight.in_bang(kq, _log)
         return {"serial": serial, "package": args.package, "preflight": kq}
 
@@ -325,6 +325,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--next-gen", action="store_true",
                    help="tin build ghi next-gen: --preflight chon nhanh checklist Next-Gen bat ke so SDK "
                         "(bot Discord truyen khi da cai ban release theo tin build)")
+    p.add_argument("--bo-qua-plan", action="store_true",
+                   help="build khac plan tuan van chay (QA bam 'Chạy bỏ qua plan'): dong Plan tuan chi CHU Y")
     p.add_argument("--tab", default="",
                    help="chi chay dung mot tab, vd `--tab 3.4.0` (khong keo theo base + delta)")
     p.add_argument("--case",
