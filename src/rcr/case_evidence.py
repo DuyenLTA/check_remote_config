@@ -27,18 +27,8 @@ async def _read_ads(client, baseline: RcBaseline, overrides=None) -> dict:
     if not pid:
         return {"pid": "", "note": "app không còn chạy — không đọc được log quảng cáo"}
     parsed = ad_log.parse(await ad_log.read(client, baseline.serial, pid))
-    # Checklist cua team truoc, ID doc tu may DE len tren: ID trong RC la cai
-    # app that su dung, checklist chi la so team khai va co the cu hon build.
-    # `overrides` DE LEN TREN baseline: case co the tu dat `id_*` (vd ep unit
-    # fail bang mot ID khong ton tai). Tra bang ID cu thi unit trong log khong
-    # khop vi tri nao, va dong Expected ve vi tri do thanh khong cham duoc.
-    dang_chay = dict(baseline.configs) | dict(overrides or {})
-    sheet = ad_units.cho_package(baseline.package)
-    rc_ids = sheet | {k: v for k, v in dang_chay.items() if v.startswith("ca-app-pub")}
-    # RC khai `id_*` ma app KHONG dung (ID nam cung trong app, trung ID sheet): de RC de mat ID sheet thi unit that
-    # trong log khong quy duoc ve vi tri, moi dong "native 201 hien thi" ra FAIL oan (AIP999 2.5.0, 04/11/2026:
-    # RC id_201_lfo1_n_native_high …3653, app request …9039 dung sheet). Giu ca hai, ID sheet duoi ten "<key>#sheet".
-    rc_ids |= {f"{k}#sheet": v for k, v in sheet.items() if rc_ids.get(k) != v}
+    rc_ids = ung_vien_id(ad_units.cho_package(baseline.package), dict(baseline.configs),
+                         dict(overrides or {}))
     # Key RC ten khong mang ma vi tri ma SDK that su doc (`splash_inter_high_n_id` = 102-spl-n-inter-high, da do
     # trong data/ad_id_keys.yaml): them ten vi tri de dong "Inter 102 hien thi" quy duoc unit (AIP999 …794).
     rc_ids |= {f"id_{ma.replace('-', '_')}#{key}": rc_ids[key]
@@ -47,10 +37,32 @@ async def _read_ads(client, baseline: RcBaseline, overrides=None) -> dict:
     for row in units.values():
         # Unit khong khop key nao: app hardcode ID, hoac lay tu key app khong doc.
         row["rc_keys"] = ad_log.match_rc_id(row["unit"], rc_ids, row["type"])
+        # Log app chi in 3 so cuoi: hai vi tri trung duoi (AIP872: 202 high …2764762034 va 303 high
+        # …8588924034) gop thanh MOT unit. Giu ID day du ung vien cua tung key de event Firebase
+        # `ad_show` (co ID day du) tach lai dung vi tri (assert_ad_screen.show_theo_man).
+        row["ids"] = {k: list(rc_ids.get(k) or ()) for k in row["rc_keys"]}
     # Vi tri DA BIET ID: log khong co unit nao cua vi tri do = vi tri do khong
     # duoc request, ket luan duoc. Khong biet ID thi im lang khong noi len gi.
     return {"pid": pid, "units": units, "banner_states": parsed["banner_states"],
             "positions": sorted({k[3:].split("#")[0] for k in rc_ids if k.startswith("id_")})}
+
+
+def ung_vien_id(checklist: dict[str, str], rc: dict[str, str],
+                overrides: dict[str, str] | None = None) -> dict[str, tuple[str, ...]]:
+    """{key: cac ID ung vien} = ID trong RC + ID checklist cua team.
+
+    Khong de ID RC DE MAT ID checklist: app SDK moi hardcode ID theo ten vi tri
+    va khong doc `id_*` trong RC (AIP872 3.5.4: moi `id_*` trong RC deu khac
+    checklist, log chi thay ID checklist). RC de len thi unit that thanh "khong
+    khop vi tri nao" va hai vi tri trung duoi ID chi con mot key.
+    Key case tu dat (`overrides`, vd ep unit fail bang ID gia) thi CHI lay ID do.
+    """
+    def _ids(d):
+        return {k: v for k, v in (d or {}).items() if str(v).startswith("ca-app-pub")}
+    rc, dat = _ids(rc), _ids(overrides)
+    ra = {k: tuple(dict.fromkeys(i for i in (rc.get(k), checklist.get(k)) if i))
+          for k in checklist.keys() | rc.keys()}
+    return ra | {k: (v,) for k, v in dat.items()}
 
 
 async def _dong_thoi_gian(client, baseline: RcBaseline, drive: dict) -> dict:

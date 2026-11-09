@@ -29,6 +29,14 @@ def test_sang_inter_splash_va_dong_inter_sang_lfo1():
     assert assert_luong_ad.cham("Đóng inter → sang LFO1 bình thường.", [], d)["verdict"] == "PASS"
 
 
+def test_inter_splash_doc_id_tu_key_splash_inter_id():
+    """App doc ID inter splash tu `splash_inter_high_n_id` (khong co `id_102_*` trong log): request khong fill = PASS."""
+    units = [_u("*****751", ["splash_inter_high_n_id"]), _u("*****187", ["splash_inter_high1_n_id"])]
+    dong = "Splash chạy tiếp, luồng sang Inter Splash bình thường."
+    assert assert_luong_ad.cham(dong, units, {})["verdict"] == "PASS"
+    assert assert_luong_ad.cham(dong, [_u("*****284", ["id_201_lfo1_n_native_high"])], {})["verdict"] == "FAIL"
+
+
 def test_chay_lai_tu_splash_hien_lai_lfo1():
     dong = "App chạy lại từ Splash, hiện lại LFO1 (pass_lfo_criteria=false, chưa pass OB)."
     ev = [{"name": "splash_view"}]

@@ -1,0 +1,211 @@
+# Tổng hợp SDK 6.4.0
+Tổng hợp SDK1.0.1 inhouse(SDK6.4.0)
+ | I. Logic preload ads
+ | II. Logic remote layout luồng FO
+ | III. Logic remote id ads
+ | IV. Logic remote layout
+I. Logic preload ads
+splash | inter splash | LFO1 | LFO2 | OB1 | OB2 | OB3
+new user
+splash
+splash_banner_change = false
+load 101_high và 101_all price
+splash_banner_change = true
+load 105_high và 105_allprice
+inter splash
+splash_inter_change = true
+102_n_high, 102_n_high1 và 102_n_allprice
+splash_inter_change = false
+102_n_high, 102_n_high1
+LFO1
+chưa có event complete_lfo or remote pass_lfo_criteria = false
+201_high và 201_high1 | 201_high2 và 201_all price
+LFO2
+chưa có event complete_lfo or remote pass_lfo_criteria = false
+ | 202_high và 202_high1 | 202_high2 và 202_all price
+ads 102 = false/no fill
+ |  | 202_high và 202_all price
+OB1
+lần đầu vào app or lần tiếp theo vào app (pass_lfo = false)
+ |  | 301_high và 301_high1 | 301-high2 và 301-allprice
+lần tiếp theo vào app(pass_lfo = true)
+301_high và 301_high1 | 301_high2 và 301_ allprice
+OB2
+ |  |  |  | 302_high và 302_allprice
+OB3(check cả case pass_lfo=false/true(do sdk của 6.1.1 đang chia ra 2 TH pass true/false)
+ |  |  |  | 303_high và 303_high1 | 303-high2 và 303-allprice
+OB4
+ |  |  |  |  |  | 304_high và 304_allprice
+Tắt all màn
+Old user
+splash_inter_change = true
+inter_native_change = false
+102_o_high và 102_o_allprice
+inter_native_change = true
+106_high, 106_high1 và 106_allprice
+splash_inter_change = false
+102_a_high và 102_a_allprice |  |  |  |  |  |  | theo o khi không a
+logic show màn OB5 (màn không cố định, việc show hay không tuỳ thuộc vào điều kiện bên dưới)
+Chưa show ads 102_n_high/high1/303_high/303_high1/303_high2/303_allprice trước đó
+102_n_high | 102_n_high1 | 303_high | 303_high1 | 303_high2 | 303_allprice | OB5
+fill | N/A | N/A | N/A | N/A | N/A | show 102_n_high
+no fill/off | fill | N/A | N/A | N/A | N/A | show 102_n_high1
+no fill/off | no fill/off | fill | N/A | N/A | N/A | show 303_high
+no fill/off | no fill/off | no fill/off | fill | N/A | N/A | show 303_high1
+no fill/off | no fill/off | no fill/off | no fill/off | fill | N/A | show 303_high2
+no fill/off | no fill/off | no fill/off | no fill/off | no fill/off | fill | show 303_allprice
+no fill/off | no fill/off | no fill/off | no fill/off | no fill/off | no fill/off | không show màn ob5
+Đã show ads 102_n_high/high1/303_high/303_high1/303_high2/303_allprice trước đó => không show ob5
+enable_onb5_screen = false -> không show ob5
+II. Logic config UI FO
+Remote config | Screen | Params | Value | Key | Description | Remote config value | Note
+onboard_config_content | LFO | Button | File icon | lfo_button | Link của icon next | {
+ "lfo": {
+ "lfo_button": "https://static.apero.vn/cms-upload/AIP187/tick.png",
+ "lfo_button_color": "lfo_button_color"
+ },
+ "onb1": {
+ "content": "https://static.apero.vn/cms-upload/AIP187/OB/OB1.png",
+ "background_text_color": "background_text_color",
+ "enable_background_text": "true",
+ "title": "Enhance and beautify photos",
+ "title_color": "title_color",
+ "subtitle": "Improve the quality and aesthetics of your photos with advanced editing tools.",
+ "subtitle_color": "subtitle_color",
+ "button_content": "Next",
+ "button_content_color": "button_content_color",
+ "slider_color": "button_content_color",
+ "is_image": "true"
+ },
+ "onb2": {
+ "content": "https://static.apero.vn/cms-upload/AIP187/OB/OB2.png",
+ "background_text_color": "background_text_color",
+ "enable_background_text": "true",
+ "title": "AI Art Generator",
+ "title_color": "title_color",
+ "subtitle": "Using the power of Artificial Intelligence to turn your photo into an art piece in seconds",
+ "subtitle_color": "subtitle_color",
+ "button_content": "Next",
+ "button_content_color": "button_content_color",
+ "slider_color": "button_content_color",
+ "is_image": "true"
+ },
+ "onb4": {
+ "content": "https://static.apero.vn/cms-upload/AIP187/OB/OB4.png",
+ "background_text_color": "background_text_color",
+ "enable_background_text": "true",
+ "title": "Photo Expansion",
+ "title_color": "title_color",
+ "subtitle": "Expands your image's canvas, allowing you to draw more and enhance composition.",
+ "subtitle_color": "subtitle_color",
+ "button_content": "Get Started",
+ "button_content_color": "button_content_color",
+ "slider_color": "button_content_color",
+ "is_image": "true"
+ }
+} | trường hợp các giá trị của các trường bị thiếu, bỏ trống hoặc config sai format thì chuyển về giao diện default
+Image và video sẽ được truyền theo dạng link, với image là JPG và Video là MP4, Icon truyền theo định dạng PNG
+"is_image" là trường định dạng content của màn:giá trị là "true" thì content nhận định dạng ảnh
+giá trị là "false" nhận định dạng video
+ |  |  | Color | lfo_button_color | Màu của icon next
+ | Onboard 1 | Content |  | "is_image": "true/false" | Chọn định dạng của Content: image/video = true/false
+ |  |  | Video link | content | Link của Video
+ |  |  | Image link | content | Link của Ảnh
+ |  | Background text | Color | background_text_color | Màu nền của cụm text
+ |  |  | Enable | true/false | Bật/Tắt nền của cụm text
+ |  | Title | Text | title | Văn bản title
+ |  |  | Color | title_color | Màu văn bản
+ |  | Subtitle | Text | subtitle | Văn bản subtitle
+ |  |  | Color | subtitle_color | Màu văn bản
+ |  | Button | Text | button_content | Văn bản Button
+ |  |  | Color text | button_content_color | Màu văn bản Button
+ |  | Slider | Color | slider_color | Màu của slider
+ | Onboard 2 | Content |  | "is_image": "true/false" | Chọn định dạng của Content: image/video = true/false
+ |  |  | Video link | content | Link của Video
+ |  |  | Image link | content | Link của Ảnh
+ |  | Background text | Color | background_text_color | Màu nền của cụm text
+ |  |  | Enable | true/false | Bật/Tắt nền của cụm text
+ |  | Title | Text | title | Văn bản title
+ |  |  | Color | title_color | Màu văn bản
+ |  | Subtitle | Text | subtitle | Văn bản subtitle
+ |  |  | Color | subtitle_color | Màu văn bản
+ |  | Button | Text | button_content | Văn bản Button
+ |  |  | Color text | button_content_color | Màu văn bản Button
+ |  | Slider | Color | slider_color | Màu của slider
+ | Onboard 4 | Content |  | "is_image": "true/false" | Chọn định dạng của Content: image/video = true/false
+ |  |  | Video link | content | Link của Video
+ |  |  | Image link | content | Link của Ảnh
+ |  | Background text | Color | background_text_color | Màu nền của cụm text
+ |  |  | Enable | true/false | Bật/Tắt nền của cụm text
+ |  | Title | Text | title | Văn bản title
+ |  |  | Color | title_color | Màu văn bản
+ |  | Subtitle | Text | subtitle | Văn bản subtitle
+ |  |  | Color | subtitle_color | Màu văn bản
+ |  | Button | Text | button_content | Văn bản Button
+ |  |  | Color text | button_content_color | Màu văn bản Button
+ |  | Slider | Color | slider_color | Màu của slider
+onboard_design_system |  |  |  |  |  | {
+ "custom_colors": [
+ {
+ "color_id": "lfo_button_color",
+ "color_value": "#000000"
+ },
+ {
+ "color_id": "background_text_color",
+ "color_value": "#FFFFFF"
+ },
+ {
+ "color_id": "title_color",
+ "color_value": "#222222"
+ },
+ {
+ "color_id": "subtitle_color",
+ "color_value": "#131318"
+ },
+ {
+ "color_id": "button_content_color",
+ "color_value": "#B66DCF"
+ }
+ ]
+}
+III. Logic remote id ad inter splash
+ | Ad unit | Key remote | Value | Mô tả
+splash_inter_change = true | 102_n_high | splash_inter_high_n_id | theo kịch bản ad | trường hợp không lấy được remote firebase (value default trong code)
+ |  |  | empty string (rỗng) | lấy giá trị default code
+ |  |  | khác rỗng | nhận giá trị theo remote firebase
+ | 102_n_high1 | splash_inter_high1_n_id | theo kịch bản ad
+ |  |  | empty string (rỗng)
+ |  |  | khác rỗng
+ | 102_n_allprice | splash_inter_n_id | theo kịch bản ad
+ |  |  | empty string (rỗng)
+ |  |  | khác rỗng
+ | 102_o_high | splash_inter_high_o_id | theo kịch bản ad
+ |  |  | empty string (rỗng)
+ |  |  | khác rỗng
+ | 102_o_allprice | splash_inter_o_id | theo kịch bản ad
+ |  |  | empty string (rỗng)
+ |  |  | khác rỗng
+splash_inter_change = false | 102_a_high | splash_inter_high_n_id | theo kịch bản ad
+ |  |  | empty string (rỗng)
+ |  |  | khác rỗng
+ | 102_a_allprice | splash_inter_high1_n_id | theo kịch bản ad
+ |  |  | empty string (rỗng)
+ |  |  | khác rỗng
+IV. Remote layout
+Key Remote | Action | Value Remote | UI
+layout_native_ads_language_1
+layout_native_ads_language_2
+layout_native_ads_onb1
+layout_native_ads_onb2
+layout_native_ads_onb3
+layout_native_ads_onb4 | UI | layout1 (default) | native ads ui default
+ |  | layout2 | native ads ui thấp | PO đang chốt k dùng vì lỗi nhiều
+ |  | layout3 | native ads ui cao
+check ui ob theo config:
+enable_onboard_config_content | True | bật config onboarding content
+ | False | tắt config onboarding content
+Key Remote | Action | Value Remote | UI
+layout_onb1_screen
+layout_onb2_screen
+layout_onb4_screen | UI | layout1 | layout text ở bên dưới
+ |  | layout2 | layout text ở bên trên

@@ -1,0 +1,62 @@
+# Tổng hợp SDK 3.5.0
+Kỳ vọng: Khi tắt remoteconfig high1/high2, luồng SDK không gọi loadAd() cho các unit này → AdMob = 0 request.
+2. Thêm SWIPE khi off ads ở OB2
+3. Chỉnh sửa SWIPE khi ads OB2 = on / ads ob2 Fill
+4. Onboarding 3 — Native full screen + Auto swipe
+5. Onboarding 3 — Native full screen + Button X
+I. LOGIC PRELOAD ADS — Preload theo màn
+Trigger / Điều kiện | splash | LFO1 | LFO2 | OB1 | OB2 | OB3
+new user — tắt remote high1/high2 → 0 request
+Remote 102 high1 = OFF → KHÔNG loadAd() (verify AdMob 0 request) | 102-spl-n-inter-high1
+Remote 201 high1/high2 = OFF → KHÔNG loadAd() |  | 201-lfo1-n-native-high1
+201-lfo1-n-native-high2
+Remote 202 high1/high2 = OFF → KHÔNG loadAd() |  |  | 202-lfo2-n-native-high1
+202-lfo2-n-native-high2
+Remote 301 high1/high2 = OFF → KHÔNG loadAd() |  |  |  | 301-onb1-n-native-high1
+301-onb1-n-native-high2
+Remote native onb2 = OFF → KHÔNG request (ID unit: xác nhận với DEV) |  |  |  |  | native onb2*
+Remote 303 high1/high2 = OFF → KHÔNG loadAd() |  |  |  |  |  | 303-onb3-n-native-high1
+303-onb3-n-native-high2
+old user — tắt remote high1 → 0 request
+Remote 106 high1 = OFF → KHÔNG loadAd() | 106_spl_o_native_high1
+* Ad đặt ở cột màn show theo prefix ID. Impressions > 0 khi remote OFF = lỗi nặng, ưu tiên fix.
+1. Yêu cầu tắt high1/high2 (ALL screen)
+- Kỳ vọng: remote high1/high2 = OFF → luồng SDK không gọi loadAd() cho unit đó → AdMob Requests = 0, Bid requests = 0.
+- Thực tế (số liệu AdMob AI805): các unit 102/106/201/202/301/303 high1-high2 vẫn có request → code vẫn khởi tạo/load ad.
+- Dòng có Impressions > 0 = ad vẫn hiển thị thật cho user → lỗi nặng, ưu tiên fix (vd 102 high1: 195 imp; 201 high2: 112 imp; 202 high2: 116 imp; 301 high2: 191 imp).
+- Vị trí cần rà: Splash (inter + native), LFO1, LFO2, OB1, OB2, OB3.
+2. OB2 — SWIPE khi OFF ads (remote native onb2 = OFF, swipe_onb2 = true)
+- App KHÔNG request/load native ad; vùng ad hiển thị icon SWIPE (animation lặp, gợi ý rõ hướng vuốt ngang theo hướng chuyển màn onboarding).
+- User vuốt theo gợi ý → chuyển sang Onboarding 3.
+- Remote OFF không được phát sinh request AdMob (đồng bộ checklist tắt ads). UI: https://prnt.sc/t7BUYWGuhcnt
+3. OB2 — SWIPE khi ads ON (remote native onb2 = ON)
+- Có fill: hiển thị native ad ở vùng ad + icon SWIPE nhỏ như figma (https://prnt.sc/FyhN8_7Pucau).
+- No-fill / load fail / timeout: để trống phần ads không load được + icon SWIPE hiển thị như figma.
+4. OB3 — Native full screen + Auto swipe (auto_swipe_onb3, timer_auto_swipe)
+- auto_swipe = TRUE, timer > 0, ad đã show: hết timer & user không thao tác → app tự chuyển sang OB4.
+- auto_swipe = TRUE, không có ad (OFF/no-fill) nhưng vẫn vào OB3: hết timer → vẫn tự chuyển màn (get theo remote config).
+- Ad đang loading: timer bắt đầu đếm từ khi ad được show.
+- auto_swipe = FALSE, timer > 0: KHÔNG auto-swipe (kể cả không có ad).
+- User vuốt tay trước khi hết timer: chuyển màn ngay + hủy auto-timer (không double navigate). Timer phải cancel khi rời màn.
+- timer_auto_swipe <= 0 → dùng default 5s (chỉ nhận số nguyên).
+5. OB3 — Native full screen + Button X (ob3_show_button_skip, timer_button_x)
+- ob3_show_button_skip = TRUE: đọc countdown từ remote → hết đếm ngược hiển thị button X; trước đó có thể hiện số đếm ngược thay cho X.
+- timer_button_x = 0 → hiển thị X ngay từ đầu; < 0 hoặc ký tự khác → default 5s.
+- User bấm X: đóng native full screen, chuyển màn kế tiếp, hủy auto-timer nếu đang chạy.
+- X countdown và auto-swipe delay là 2 timer ĐỘC LẬP.
+- Lướt qua lướt lại OB3, reload & show ad mới thành công → reset countdown button X từ đầu theo ad mới.
+REMOTE CONFIG LIÊN QUAN
+remote | value | Description
+swipe_onb2 | False | Default TRUE. Bật/tắt UI swipe ở OB2.
+ | True
+ob3_show_button_skip | False | Key từ SDK cũ. Default FALSE. Bật/tắt button X trên native full screen OB3.
+ | True
+auto_swipe_onb3 | False | Default TRUE. Bật/tắt auto swipe OB3.
+ | True
+timer_auto_swipe | <= 0 → default 5 | Giây. Thời gian auto swipe OB3.
+ | 5 (default)
+ | > 0 (số nguyên)
+timer_button_x | 0 → X ngay | Giây. Đếm ngược hiển thị button X trên OB3.
+ | 5 (default)
+ | > 0 → countdown
+ | < 0 / ký tự → default

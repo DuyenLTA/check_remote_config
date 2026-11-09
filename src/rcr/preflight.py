@@ -80,6 +80,18 @@ def man_hinh(window: str, power: str) -> tuple[str, str]:
     return OK, "màn hình đang mở, không khoá"
 
 
+def muc_http_proxy(gia_tri: str) -> dict:
+    """Proxy lam cham ad (mang_cham) con tro tren may -> luot do chet giua chung, proxy da tat:
+    may mat mang (moi request HTTP di vao cong khong con ai nghe) cho moi luot sau."""
+    v = (gia_tri or "").strip()
+    if v in ("", "null", ":0"):
+        return _muc("HTTP proxy", OK, "không đặt")
+    if v.startswith("127.0.0.1:"):
+        return _muc("HTTP proxy", LOI, f"còn {v} (proxy làm chậm ad của lượt trước)",
+                    "adb shell settings put global http_proxy :0; adb reverse --remove-all")
+    return _muc("HTTP proxy", CANH_BAO, f"máy đặt proxy {v}", "Proxy lạ có thể làm ads / Firebase chậm")
+
+
 def muc_private_dns(mode: str, specifier: str) -> dict:
     """Private DNS con o gia tri tool dat -> ads khong ve / treo toi timeout,
     moi dong ads cua luot nay sai ma nhin y het app khong fill."""
@@ -235,10 +247,13 @@ def muc_ads_test(units: list[str]) -> dict:
                     "Kiểm mạng / enable_all_ads; ads chưa chạy thì dòng ads sẽ không chấm được")
     test = sorted({u for u in units if u.startswith(GOOGLE_TEST_PUB)})
     if test:
-        return _muc("Ads dùng ID thật", LOI,
+        # Chi canh bao, khong chan luot (user chot 09/11/2026): van chay case, dong ads cua vi tri
+        # dung ID test phai doi chieu tay vi moi vi tri chung mot unit.
+        return _muc("Ads dùng ID thật", CANH_BAO,
                     f"{len(test)} unit là ID test của Google ({', '.join(u.rsplit('/', 1)[-1] for u in test)})"
                     f" trên {len(set(units))} unit đã request",
-                    "Xin dev bản debuggable dùng ID ads thật; build ID test không quy được ad về vị trí")
+                    "Vẫn chạy tiếp; ghi vào câu báo để dev xác nhận. Dòng ads của vị trí dùng ID test "
+                    "không quy được ad về vị trí — đối chiếu bằng log + ảnh, đừng nhận PASS chỉ vì có request")
     return _muc("Ads dùng ID thật", OK, f"{len(set(units))} unit đã request đều là ID thật")
 
 
@@ -314,7 +329,9 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
            for k in ("private_dns_mode", "private_dns_specifier")]
     muc = [_muc("Máy", OK, serial),
            _muc("Màn hình", tt, ct, "Mở khoá máy, tắt khoá màn hình tự động" if tt == LOI else ""),
-           muc_private_dns(*dns), muc_snapshot(out_dir, package, serial)]
+           muc_private_dns(*dns),
+           muc_http_proxy((await client.shell(serial, "settings", "get", "global", "http_proxy"))[0]),
+           muc_snapshot(out_dir, package, serial)]
     app = await _app(client, serial, package)
     muc += app
     sdk_khai, sdk_log = sdk, ""

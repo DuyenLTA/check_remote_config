@@ -14,7 +14,7 @@ from pathlib import Path
 import discord
 
 from . import bot_cong_viec, bot_jira_rest, bot_job_verify, bot_kenh_project, build_ma_app
-from .bot_giao_dien import GIU_KHI_HOI_LAI, NUT_HOI, noi_dung, nut, tha_tim
+from .bot_giao_dien import GIU_KHI_HOI_LAI, NUT_HOI, noi_dung, nut
 
 log = logging.getLogger("rcr-bot")
 CHO_JIRA, SO_LAN_JIRA = 5 * 60, 6     # Jira mat ket noi khi xep verify: thu lai moi 5 phut, toi da 30 phut
@@ -33,8 +33,8 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
         getattr(getattr(m.channel, "parent", None) or m.channel, "name", ""))
     if not o_kenh_build and not (ma_kenh and m.guild):
         return
-    # QA nhan o kenh project ("test pass v1.4.0(14)... rls") khong phai tin bao build: khong tha tim, khong hoi
-    # (user chot 30/10/2026 - bot tha tim nham vao tin bao rls AIP805). QA gui lai build thi gui o qa-auto.
+    # QA nhan o kenh project ("test pass v1.4.0(14)... rls") khong phai tin bao build: khong hoi
+    # (user chot 30/10/2026 - tin bao rls AIP805 bi nhan nham la build). QA gui lai build thi gui o qa-auto.
     if m.channel.id != bot.kenh_qa and not m.webhook_id and bot._duoc_duyet(m.author):
         return
     chu = noi_dung(m)
@@ -51,11 +51,6 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
             await kenh.send(f"Bot không đọc được mã app + version (dạng `AIP922 v3.7.0 (30)`) "
                             f"trong tin báo build — QA xem giúp: {m.jump_url}")
         return
-    # Chi tha tim vao tin bot Assistant cua dev gui build (user chot 03/11/2026): nguoi trong kenh project
-    # hoi lai version ("day version nhu nao the chi, vang 3.7.0 (30) a?") van doc ra ma + version nhung
-    # khong phai tin bao build -> khong tha.
-    if m.channel.id != bot.kenh_qa and bot_kenh_project.la_bot_dev(m.author.id):
-        await tha_tim(m)
     cu = tin_da_hoi(bot, tin)
     if cu:
         # Giai doan chuyen kenh dev co the bao mot build o ca kenh chung lan kenh project.
@@ -81,6 +76,10 @@ async def hoi_build_moi(bot, tin: dict, link_tin: str, kenh, out: Path) -> str:
         # Build chuc nang / fix bug, khong apply SDK: khong hoi Check (chua co workflow, user chot 28/10/2026)
         # nhung VAN verify bug dev da keo Reviewing - build fix bug thuong khong ghi SDK (user chot 28/10/2026).
         log.info("build khong apply SDK, chi verify bug Reviewing: %s %s", tin["ma"], tin["version"])
+        # Van BAO QA moi build (user chot 05/11/2026): dev hay quen ghi SDK, QA tu kiem roi go /check kem SDK.
+        await kenh.send(f"🔔 **{tin['ma']}** `{tin['version']}` — tin build không ghi SDK nên bot chưa hỏi Check, "
+                        f"chỉ verify bug Reviewing.\nBuild có apply SDK thì gõ `/check {tin['ma']} {tin['version']} "
+                        f"<sdk>` (vd `3.6.1`, `3.7.0`, `next-gen`){goc}")
         if not pkg:
             return f"Sheet Check thông số KT không có package của **{tin['ma']}**."
         await bot._xep_verify({**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin),

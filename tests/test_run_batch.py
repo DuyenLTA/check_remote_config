@@ -172,13 +172,12 @@ def test_chay_lai_van_ad_click_thi_giu_blocked_va_chay_tiep(monkeypatch):
 
 
 def test_precondition_khong_tao_duoc_thi_blocked_va_khong_chay_lai(monkeypatch):
-    """Piclux NAT-004 24/10/2026: "mang vua phai de native show sau ~2-3s" - may khong
-    throttle duoc, case ra NEEDS_HUMAN 3 lan lien. Phai BLOCKED kem ly do, chay 1 lan."""
-    monkeypatch.setitem(RUNNABLE["a"], "precondition",
-                        "1. Mạng vừa phải để native show sau ~2–3s (vẫn fill).")
+    """Precondition may nay khong tao duoc (mediation test mode): lan nao cung NEEDS_HUMAN.
+    Phai BLOCKED kem ly do, chay 1 lan."""
+    monkeypatch.setitem(RUNNABLE["a"], "precondition", "1. Bật mediation test mode.")
     recs = run(monkeypatch, {"a": "NEEDS_HUMAN", "b": "PASS", "c": "PASS"}, lan=3)
     assert recs[0]["verdict"] == "BLOCKED" and recs[0]["lich_su_verdict"] == ["NEEDS_HUMAN"]
-    assert any("show muộn" in t for t in recs[0]["precondition_thieu"])
+    assert any("mediation" in t for t in recs[0]["precondition_thieu"])
     assert [r["verdict"] for r in recs[1:]] == ["PASS", "PASS"]
 
 

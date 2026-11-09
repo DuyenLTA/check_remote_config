@@ -1,0 +1,44 @@
+# Tổng hợp SDK 3.4.0
+- Base trên SDK visionlab:tutorial:3.4.0 — DELTA (chỉ màn Splash + inter splash bị ảnh hưởng; các màn LFO/OB giữ nguyên 3.3.0)
+- Ad đặt ở cột màn SẼ SHOW (theo prefix ID); trigger preload ghi ở cột điều kiện
+I. LOGIC PRELOAD ADS — Preload theo màn
+Trigger / Điều kiện | splash | inter splash | màn kế (LFO / OB)
+new user — preload tại Splash (giữ logic 3.3.0, UI thay đổi theo 3.4.0)
+Splash · splash_banner_change = FALSE → banner | 101-spl-a-banner-high
+ 101-spl-a-banner
+Splash · splash_banner_change = TRUE → native | 105-spl-n-native-high
+ 105-spl-n-native
+Splash → load inter theo priority (progress đồng bộ trạng thái load) |  | 102-spl-n-inter-high
+ 102-spl-n-inter-high1
+ 102-spl-n-inter
+old user — preload tại Splash
+Splash · old user → native splash | 106-spl-o-native-high
+ 106-spl-o-native-high1
+ 106-spl-o-native
+Splash · old user → inter |  | 102-spl-o-inter-high
+ 102-spl-o-inter
+* 3.4.0 không đổi list preload — thay đổi nằm ở UI splash + cách progress đồng bộ với trạng thái load inter + reserve vùng ads.
+II. Remote config UI
+splash_ui_config | type | image | Kiểu media nền: "image" | "gif".
+ |  | gif
+ | media_url / image_url | URL (.webp) | Ảnh/media nền splash, phủ kín màn. Rỗng/lỗi → fallback nền màu + icon. Nên dùng .webp, preload/cache.
+ | title |  | Tiêu đề đè trên ảnh.
+ | title_color |  | Màu chữ tiêu đề (đủ tương phản để đọc).
+ | sub_title |  | Phụ đề đè trên ảnh.
+ | sub_title_color |  | Màu chữ phụ đề (đủ tương phản để đọc).
+ | video_loop | True | Lặp video (áp dụng khi type = gif/video).
+ |  | False
+ | video_mute | True | Tắt tiếng video.
+ |  | False
+1. Flow loading đồng bộ Inter Splash (spec 3.4.0)
+- [SPLASH_START] → render ảnh nền (remote) + progress = 0% → bắt đầu load inter splash (logic 3.3.0: load list theo priority) → progress animate 0% → 50% → ~90% → 100%.
+- (A) onAdLoaded (inter sẵn sàng) → fill nhanh 100% → showInterSplash() → onAdDismissed/onAdClosed → navigate màn kế (LFO/OB).
+- (B) Hết splashConfig.timeout mà chưa load xong (timeout progress bar = timeout splash) → fill 100% → BỎ QUA inter → Language Screen.
+- (C) onAdFailedToLoad / no fill / no internet / remote tắt → fill ~90%, khi xác định xong → 100% → BỎ QUA inter → navigate màn kế.
+- Quy tắc bắt buộc: progress không bao giờ tụt lùi, không đứng yên ở 100% quá lâu, không loading forever.
+2. Vị trí progress + text theo trạng thái ads (native & banner)
+- Vị trí do remote toggle (show_105_spl_n_native / banner) quyết định — KHÔNG phụ thuộc ad có fill hay không.
+- BẬT & show (layout1 = 1/3 dưới | layout2 | layout3): progress + text neo trên mép vùng ad, cách 12–16dp, không đè lên ad.
+- BẬT nhưng fail/no fill: vùng ad VẪN reserve cố định, ảnh nền xuyên qua, không box trống/placeholder rỗng, progress + text giữ nguyên vị trí (không nhảy xuống đáy).
+- TẮT: không load/show ad → progress + text neo đáy màn, phía trên safe-area.
+- Vùng ad reserve cố định theo size từ remote config, dù ad đang loading hay đã show → progress không nhảy.

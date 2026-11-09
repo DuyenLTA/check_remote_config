@@ -248,7 +248,8 @@ def test_log_jira_xong_bao_duoc_dev_thi_khong_dang_them_o_kenh_qa(monkeypatch):
 
 
 def test_build_khong_ghi_sdk_van_verify_bug_reviewing_nhung_khong_hoi_check(monkeypatch):
-    """Build fix bug thuong khong ghi SDK: khong dang tin hoi Check, nhung van xep verify bug Reviewing."""
+    """Build fix bug thuong khong ghi SDK: khong co nut Check, chi BAO QA (kem lenh /check de QA tu chay neu
+    build that ra co SDK - user chot 05/11/2026) va van xep verify bug Reviewing."""
     gui, xep = [], []
 
     async def send(chu, **k):
@@ -266,7 +267,8 @@ def test_build_khong_ghi_sdk_van_verify_bug_reviewing_nhung_khong_hoi_check(monk
     m = SimpleNamespace(author=SimpleNamespace(bot=False, id=7), webhook_id=None, channel=SimpleNamespace(id=2),
                         guild=None, content="AIP922---Nexus AI v3.7.1 (31) fix bug round 1", jump_url="u")
     asyncio.run(bot.on_message(m))
-    assert gui == []                                        # khong co tin hoi Check
+    assert len(gui) == 1 and "không ghi SDK" in gui[0]       # chi bao, khong co nut Check
+    assert "/check AIP922 3.7.1 (31)" in gui[0]
     assert len(xep) == 1 and xep[0]["version"] == "3.7.1 (31)" and xep[0]["package"] == "pkg.nexus"
 
     gui.clear(), xep.clear()
@@ -369,36 +371,22 @@ def test_chi_nhan_build_o_kenh_project_va_qa_auto_bo_kenh_chung(monkeypatch):
     assert len(gui) == 1 and "không đọc được" in gui[0]
 
 
-def test_chi_tin_build_cua_bot_assistant_duoc_tha_tim(monkeypatch):
+def test_bot_khong_tha_tim_vao_tin_build(monkeypatch):
+    # User chot 07/11/2026: bot thoi tha ❤️ vao tin bao build, ke ca tin cua bot Assistant cua dev.
     monkeypatch.setattr(d.bot_hoi_dap, "la_cau_hoi", lambda bot, m: False)
     monkeypatch.setattr(d.bot_nhan_build.bot_kenh_project, "la_bot_dev", lambda i: i == 6)
     bot = object.__new__(d.BuildBot)
     bot.kenh_qa, bot.kenh_build, bot.duyet, bot.role = 1, {1}, set(), 0
     bot.q = SimpleNamespace(tin={1: {"ma": "AIP882", "version": "4.4.0 (41)", "loai_job": "verify"}})
     bot.get_channel = lambda cid: SimpleNamespace(send=None)
+    tha = []
 
-    def tin(kenh_id, ten, nguoi_gui=SimpleNamespace(bot=True, id=6),
-            chu="Bản build **AIP882---AI-Video** v4.4.0 (41) đã được hoàn thiện. apply tutorial 3.6.1"):
-        tha = []
-
-        async def add_reaction(e):
-            tha.append(e)
-        m = SimpleNamespace(author=nguoi_gui, webhook_id=None, guild=SimpleNamespace(id=9),
-                            channel=SimpleNamespace(id=kenh_id, name=ten), jump_url="u", add_reaction=add_reaction,
-                            content=chu)
-        return m, tha
-    m, tha = tin(8, "aip882-artspire-official-group")             # bot Assistant cua dev gui build: tha
-    asyncio.run(bot.on_message(m))
-    assert tha == ["❤️"]
-    m, tha = tin(8, "aip882-artspire-official-group", SimpleNamespace(bot=False, id=5),
-                 "con này đẩy version như nào thế chị, vâng AIP882 4.4.0 (41) ạ ?")   # nguoi hoi lai: khong tha
-    asyncio.run(bot.on_message(m))
-    assert tha == []
-    m, tha = tin(1, "qa-auto")                                    # QA gui lai o qa-auto: khong tha
-    asyncio.run(bot.on_message(m))
-    assert tha == []
-    bot.duyet, bot.role = {5}, 0                                  # QA nhan o kenh project (bao rls): bo qua
-    m, tha = tin(8, "aip882-artspire-official-group", SimpleNamespace(bot=False, id=5))
+    async def add_reaction(e):
+        tha.append(e)
+    m = SimpleNamespace(author=SimpleNamespace(bot=True, id=6), webhook_id=None, guild=SimpleNamespace(id=9),
+                        channel=SimpleNamespace(id=8, name="aip882-artspire-official-group"), jump_url="u",
+                        add_reaction=add_reaction,
+                        content="Bản build **AIP882---AI-Video** v4.4.0 (41) đã được hoàn thiện. apply tutorial 3.6.1")
     asyncio.run(bot.on_message(m))
     assert tha == []
 

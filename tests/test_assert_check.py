@@ -774,7 +774,8 @@ def test_phan_biet_dieu_kien_ep_duoc_voi_dieu_kien_khong_ep_duoc():
     assert g.ep_duoc("5. Simulate AdMob no-fill cho 302-onb2-n-native-high.")
     assert g.ep_duoc("6. Chặn mạng đến ad server ngay khi bắt đầu load native OB2.")
     assert not g.khong_ep_duoc("5. Simulate AdMob no-fill cho 302.")
-    assert g.khong_ep_duoc("6. Throttle mạng ≤50kbps để ad load vượt timeout.")
+    # Throttle tao duoc bang proxy lam cham domain quang cao (mang_cham), khong con la "khong ep duoc".
+    assert not g.khong_ep_duoc("6. Throttle mạng ≤50kbps để ad load vượt timeout.")
     assert g.khong_ep_duoc("4. Bật mediation test mode.")
 
 

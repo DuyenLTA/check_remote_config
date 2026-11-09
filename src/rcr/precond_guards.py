@@ -9,8 +9,9 @@ tuong da phu ba nhanh - that ra moi phu mot (do 2026-09-28).
 Chia lam hai nhom, vi cach xu ly khac han nhau:
   EP_DUOC      - ep ad fail bang cach doi `id_*` sang mot unit khong ton tai.
                  Day la cach team QA van dung, khong phai meo moi.
-  KHONG_EP_DUOC- throttle bang thong, mediation test mode: may khong root,
-                 khong co proxy -> khong tao duoc. Case do KHONG duoc ra PASS.
+  KHONG_EP_DUOC- mediation test mode, can root: khong tao duoc. Case do KHONG duoc ra PASS.
+Precondition "ad ve muon" / throttle KHONG nam o day: `mang_cham` tao duoc bang proxy lam cham
+domain quang cao (khong can root), run_batch kiem bang log xem dieu kien co dat khong.
 """
 
 from __future__ import annotations
@@ -32,12 +33,6 @@ EP_DUOC = (
 )
 # Dieu kien KHONG tao duoc tren may test hien tai.
 KHONG_EP_DUOC = (
-    (re.compile(r"throttle|m[ạa]ng\s+ch[ậa]m|\d+\s*kbps|charles\s*proxy", re.I),
-     "throttle băng thông (máy không root, không có proxy)"),
-    # "Mang vua phai de native show sau ~2-3s (van fill)" = canh mang de ad VE MUON:
-    # khong throttle thi ad ve luc nao la tuy kho (Piclux NAT-004/BAN-002, 24/10/2026).
-    (re.compile(r"m[ạa]ng\s+v[ừu]a\s+ph[ảa]i|show\s+mu[ộo]n|show\s+sau\s+~?\s*\d", re.I),
-     "canh mạng để ad show muộn vài giây (cần giới hạn băng thông, máy không root, không có proxy)"),
     (re.compile(r"mediation\s+test\s+mode|mediation\s+inspector", re.I),
      "bật mediation test mode (tester không có quyền vào AdMob console)"),
     (re.compile(r"debug\s+menu|adb\s+root|thi[ếe]t\s*b[ịi]\s+root", re.I),

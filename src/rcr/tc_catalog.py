@@ -19,6 +19,10 @@ from pathlib import Path
 from . import rc_extract, tc_loader
 from .models import Case, RcError
 
+class KhongPhaiWorkbookTC(RcError):
+    """File khong co tab `TC SDK ...` nao -> la file mot sheet (bo cu viet rieng cho tung app)."""
+
+
 TAB_RE = re.compile(r"^\s*TC SDK\s+(.+?)\s*$", re.I)
 VERSION_RE = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 SDK_LOG_RE = re.compile(r"VslTemplate4FirstOpenSDK[^:\n]*:\s*Using version\s+(\S+)")
@@ -54,17 +58,53 @@ def read_tabs(path: str | Path) -> list[Tab]:
     wb = openpyxl.load_workbook(p, read_only=True, data_only=True)
     try:
         tabs = []
+        co_tab_tc_ten = False
         for ws in wb.worksheets:
             m = TAB_RE.match(ws.title)
             if not m:
                 continue
+            co_tab_tc_ten = True
             rows = [tuple(r) for r in ws.iter_rows(values_only=True)]
-            tabs.append(_tab(ws.title, m.group(1), tc_loader.parse_rows(rows, f"{p.name} / {ws.title}")))
+            try:
+                cases = tc_loader.parse_rows(rows, f"{p.name} / {ws.title}")
+            except tc_loader.TabRongError:
+                # Mot tab rong (QA dang soan / xoa het case) khong duoc lam hong ca workbook: truoc day
+                # loi nay lam tc_select tuong file mot sheet va doc sheet DAU TIEN ("TC SDK Next Gen")
+                # cho app 3.5.4 - 46 case SDKNG, 0 chay duoc (tab "TC SDK rating" rong, 09/11/2026).
+                continue
+            tabs.append(_tab(ws.title, m.group(1), cases))
     finally:
         wb.close()
     if not tabs:
-        raise RcError(f"{p.name}: khong co tab nao ten 'TC SDK <version|tinh nang>'.")
+        if co_tab_tc_ten:
+            raise RcError(f"{p.name}: co tab 'TC SDK ...' nhung tab nao cung chua co dong case.")
+        raise KhongPhaiWorkbookTC(f"{p.name}: khong co tab nao ten 'TC SDK <version|tinh nang>'.")
     return tabs
+
+
+BAN_SAO_RE = re.compile(r"TC SDK\s+(.+?)\s*$", re.I)
+
+
+def read_tab_ten(path: str | Path, title: str) -> Tab | None:
+    """Tab nguoi dung chi dich danh theo TEN THAT, ten khong bat dau bang `TC SDK` (vd QA nhan ban
+    `Ban sao cua TC SDK 3.5.4` roi chot ban sao la ban dung). Tab tra ve mang ten chuan `TC SDK 3.5.4`
+    de khoa case (`3.5.4#...`) trung khoa luot cu -> `--gop` de dung record. Khong co tab do -> None."""
+    import openpyxl
+
+    want = " ".join(title.split()).lower()
+    if not want or TAB_RE.match(title):
+        return None  # tab `TC SDK x` thuong: pick_tab lo
+    p = Path(path)
+    wb = openpyxl.load_workbook(p, read_only=True, data_only=True)
+    try:
+        ws = next((w for w in wb.worksheets if " ".join(w.title.split()).lower() == want), None)
+        m = BAN_SAO_RE.search(ws.title) if ws else None
+        if not m:
+            return None
+        rows = [tuple(r) for r in ws.iter_rows(values_only=True)]
+        return _tab(f"TC SDK {m.group(1)}", m.group(1), tc_loader.parse_rows(rows, f"{p.name} / {ws.title}"))
+    finally:
+        wb.close()
 
 
 def select(tabs: list[Tab], app_version: str, whitelist) -> tuple[list[Tab], list[str]]:

@@ -28,6 +28,7 @@ from . import (
     fo_ngon_ngu,
     luong_toan_bo,
     luot_file,
+    mang_cham,
     rc_guards,
     rc_patch,
     report_data,
@@ -137,6 +138,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # tu nhien cua may, va ba case ta ba dieu kien khac nhau deu ra
             # cung mot ket qua (do 2026-09-28, case 22/23/24).
             ep = precond_guards.ep_duoc(chosen["precondition"])
+            # Precondition doi ad VE MUON ("roi OB3 truoc khi 303 ve", "202 chua kip show o LFO2",
+            # throttle): lam cham domain quang cao bang proxy cho ca case, kiem bang log sau khi chay.
+            cham, man_cham = mang_cham.can_lam_cham(chosen["precondition"])
             them = precond_guards.khoa_ep_fail(tokens, baseline.configs) if ep else {}
             if them:
                 log_fn(f"  ép ad fail ({', '.join(ep)}): "
@@ -165,11 +169,23 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # ID cua vi tri nam cung trong app (RC khong khai `id_*`) -> khong doi slot duoc:
             # chan domain quang cao bang Private DNS cho ca case, xong tra DNS cu ve.
             dns_cu = None
+            proxy_cu = None
+            loi_cham = ""
+            if cham and not ep:
+                try:
+                    proxy_cu = await mang_cham.bat(client, baseline.serial)
+                    log_fn(f"  ad về muộn: {mang_cham.mo_ta()}")
+                except (RuntimeError, OSError, AdbError) as exc:
+                    if isinstance(exc, AdbTransportError):
+                        raise
+                    loi_cham = f"không bật được proxy làm chậm ad ({exc})"
+                    log_fn("  " + loi_cham)
             if ep and not them:
                 dns_cu = await net_ctl.chan_ad(client, baseline.serial)
                 log_fn(f"  ép ad không về: Private DNS {net_ctl.DNS_CHAN_AD} (RC không khai id_* của vị trí)")
             if chuoi:
-                ly_do = chay_chuoi.ly_do_khong_noi(truoc_chuoi, chosen, runs, ep)
+                ly_do = (chay_chuoi.ly_do_khong_noi(truoc_chuoi, chosen, runs, ep)
+                         or ("case làm chậm mạng ad phải chạy riêng" if proxy_cu else ""))
                 if ly_do:
                     log_fn(f"  chuỗi: chạy riêng ({ly_do})")
                 else:
@@ -255,6 +271,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             finally:
                 if dns_cu is not None:
                     await net_ctl.bo_chan_ad(client, baseline.serial, dns_cu)
+                if proxy_cu is not None:
+                    await mang_cham.tat(client, baseline.serial, proxy_cu)
             if (result is not None and ro_gan_nhat is not None
                     and result.get("verdict") not in ("PASS", "FAIL", "KEY_NOT_USED")):
                 # Het so lan ma lan cuoi khong ra ket luan (BLOCKED / chua cham duoc):
@@ -305,6 +323,15 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 result["ep_ad_fail"] = (f"RC không khai `id_*` cho {vi} → chặn domain quảng cáo bằng Private DNS "
                                         f"{net_ctl.DNS_CHAN_AD} cả lượt (mọi vị trí đều không về ad); log xác nhận "
                                         "ad không fill")
+        if cham and not ep:
+            # Tao dieu kien chua du: chi nhan ket qua khi log cho thay ad that su ve muon.
+            chua_dat, ghi_chu = mang_cham.kiem_dieu_kien(result.get("runs") or [], man_cham,
+                                                         proxy_cu is not None, loi_cham)
+            thieu = thieu + chua_dat
+            if ghi_chu:
+                result["mang_cham"] = ghi_chu
+                if not man_cham and result.get("verdict") == "PASS":
+                    result["verdict"] = "NEEDS_HUMAN"    # chua kiem duoc dieu kien -> khong PASS im lang
         # FAIL cung vay: case chay sai nhanh thi FAIL chua chung minh gi ve app - FAIL gia
         # (Sorapix SDK353-OB3A-002 23/10/2026: doi 303 no-fill, ad 303 high1 van fill ->
         # dong "vung ad trong" FAIL).
