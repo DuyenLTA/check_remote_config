@@ -87,9 +87,6 @@ bản debug (để tool bật ads) rồi chạy lại — không phải bug dev.
   máy vẫn ra internet → dòng mất mạng thành `DO_TAY`.
 - Footer report có `ad_click` từng lượt: ghi vào report, chạy tiếp và đo tay hết (mọi máy là máy test — luật 10).
 
-Đo tay theo cách đo + bẫy ở `references/how-to-measure-each-case.md` và quy trình dưới.
-
-## Quy trình đo tay
 ## Đo tay ra cùng kết quả mọi lượt (user chốt 09/11/2026)
 
 ADA895 3.3.0: lượt chiều HV-01 Sai (bấm native → ad resume hiện đè), lượt tối chỉ bấm inter nên ra Khớp; KT-03/04 lượt
@@ -113,6 +110,9 @@ này chấm theo minSdk, lượt kia để ngoài phạm vi. Từ nay code chặ
    `--cham-lai`). Dòng nào hai lượt ra khác nhau → mục **"Lệch giữa các lượt cùng build"** trên report, stdout `lech` — nói
    rõ trong câu báo, không tự chọn một bên.
 
+Đo tay theo cách đo + bẫy ở `references/how-to-measure-each-case.md` và quy trình dưới.
+
+## Quy trình đo tay
 
 1. **Máy + bản**: `adb devices -l`. Cắm nhiều máy thì `export ANDROID_SERIAL=<serial>` trước mọi lệnh `adb` /
    script dưới đây (script gọi `adb` trơn) — không đặt là `adb` báo "more than one device" hoặc đụng máy của lượt khác. `dumpsys package <pkg> | grep -E "versionName|versionCode|lastUpdateTime"`,
