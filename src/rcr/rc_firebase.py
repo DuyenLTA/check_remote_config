@@ -54,14 +54,21 @@ def da_dang_nhap() -> bool:
         return False
 
 
+LOI_TAM = (429, 500, 502, 503, 504)
+CHO_LOI_TAM = 20.0
+
+
 def _mang(goi):
     """Goi `goi()`; loi ket noi / timeout -> thu lai THU_MANG lan roi RcError (run_batch bat RcError tung case,
-    URLError tran ra la chet ca luot - AIP886 31/10/2026). HTTPError (server tra loi) khong thu lai o day."""
+    URLError tran ra la chet ca luot - AIP886 31/10/2026). HTTPError: chi thu lai loi tam cua server (503 / 5xx /
+    429) - 09/11/2026 RC tra 503 bon lan trong mot buoi, moi lan dung ca luot; loi khac (401, 412...) nem ngay."""
     for lan in range(THU_MANG):
         try:
             return goi()
-        except urllib.error.HTTPError:
-            raise
+        except urllib.error.HTTPError as exc:
+            if exc.code not in LOI_TAM or lan == THU_MANG - 1:
+                raise
+            time.sleep(CHO_LOI_TAM)
         except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
             if lan == THU_MANG - 1:
                 raise RcError(f"không kết nối được Firebase sau {THU_MANG} lần: {exc}") from None

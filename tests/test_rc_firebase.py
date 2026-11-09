@@ -100,3 +100,48 @@ def test_chot_chan_chi_cho_sua_gia_tri_cua_testvsl():
             moi["conditions"].reverse()
         with pytest.raises(RcError, match="ngoài điều kiện"):
             f.chi_doi_dieu_kien(cu, moi)
+
+
+def _http(code):
+    import io
+    import urllib.error
+    return urllib.error.HTTPError("u", code, "x", {}, io.BytesIO(b"{}"))
+
+
+def test_loi_tam_cua_firebase_thi_thu_lai(monkeypatch):
+    """09/11/2026: RC tra 503 bon lan trong mot buoi, moi lan dung ca luot."""
+    monkeypatch.setattr(f.time, "sleep", lambda s: None)
+    lan = []
+
+    def goi():
+        lan.append(1)
+        if len(lan) < 3:
+            raise _http(503)
+        return "ok"
+    assert f._mang(goi) == "ok" and len(lan) == 3
+
+
+def test_loi_khong_tam_thi_nem_ngay(monkeypatch):
+    import urllib.error
+    monkeypatch.setattr(f.time, "sleep", lambda s: None)
+    lan = []
+
+    def goi():
+        lan.append(1)
+        raise _http(412)
+    with pytest.raises(urllib.error.HTTPError):
+        f._mang(goi)
+    assert len(lan) == 1
+
+
+def test_503_mai_thi_het_luot_thu_moi_nem(monkeypatch):
+    import urllib.error
+    monkeypatch.setattr(f.time, "sleep", lambda s: None)
+    lan = []
+
+    def goi():
+        lan.append(1)
+        raise _http(503)
+    with pytest.raises(urllib.error.HTTPError):
+        f._mang(goi)
+    assert len(lan) == f.THU_MANG
