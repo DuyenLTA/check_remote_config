@@ -54,7 +54,9 @@ NHAC_NEXT_GEN = (
 PROMPT = (
     "/rc-check {package} --serial {serial}{next_gen}{sdk}\n\n"
     "{nhac}Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi, khong co nguoi ngoi truoc may. Gap diem can "
-    "nguoi quyet (preflight LOI, ID ads lech sheet, man la) thi dung, khong tu chay tiep. Moi may deu la may test AdMob "
+    "nguoi quyet (preflight LOI, man la) thi dung, khong tu chay tiep. ID ads lech sheet (audit-fanout) KHONG phai ly "
+    "do dung: ghi vi tri lech vao cau bao roi CHAY NOT checklist / bo TC, cham dong ads vi tri lech theo unit that "
+    "trong log (rc-check.md muc 3c). Moi may deu la may test AdMob "
     "(rc-check.md muc 0c): ad_click KHONG phai ly do dung - ghi vao report, chay lai case bi ad_click roi chay tiep. "
     "Khong commit/push.\n"
     "Truoc khi chay bo TC: trong out/ co file *.luot.json cung package + serial nay, \"xong\": false, "

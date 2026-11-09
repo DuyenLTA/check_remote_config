@@ -132,3 +132,10 @@ def test_so_sdk_tin_build_truyen_sdk_cho_rc_check():
     assert c.lenh("pkg.a", "S1", next_gen=True, sdk="3.7.1-alpha01")[1].splitlines()[0] ==         "/rc-check pkg.a --serial S1 --next-gen --sdk 3.7.1-alpha01"
     with pytest.raises(ValueError):
         c.lenh("pkg.a", "S1", sdk="3.6.1 --keep")
+
+
+def test_id_ads_lech_khong_phai_ly_do_dung():
+    # AIP944 1.3.0 (6) 09/11/2026: audit 53/54, Claude dung truoc checklist vi prompt liet ke "ID ads lech sheet".
+    from rcr.bot_chay_claude import PROMPT
+    assert "ID ads lech sheet (audit-fanout) KHONG phai ly do dung" in PROMPT
+    assert "(preflight LOI, ID ads lech sheet" not in PROMPT

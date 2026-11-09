@@ -16,6 +16,9 @@ build trước rồi mới chấm. Thứ tự, không bỏ bước:
 3. Có dòng `SDK tin build vs log app` (số SDK tin build / `--sdk` khác số app in ra) → **không vào nhánh này**: chạy
    theo số tin build (`rc-check.md` mục 0b). Chỉ vào đây khi bản đã chốt là 3.7.0 / 3.7.1 hoặc có `--next-gen`.
 4. Chạy check ID ads (`rc-check.md` mục 3c, audit-fanout) **xong** mới chạy `rcr-sdk-check` — hai bên cùng lái máy.
+   **ID lệch sheet không dừng lượt** (user chốt lại 09/11/2026 sau AIP944 1.3.0 dừng sai ở 53/54): chạy nốt cả
+   checklist, dòng ads của vị trí lệch chấm theo unit thật trong log, câu báo liệt kê vị trí lệch (vị trí · ID sheet →
+   ID build) để dev / ads-team xác nhận. Chỉ dừng ở bước 1–2 (thiếu tab sheet, khác plan tuần).
    Câu báo mở đầu bằng kết quả audit (khớp/tổng, vị trí lệch), và bản SDK FO đã chạy theo nguồn nào (tin build / log).
 
 `$SK` = `<repo>/sdk-check` (repo tìm như `rc-check.md` mục 0). Trong đó:
