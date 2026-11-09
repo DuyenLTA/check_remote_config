@@ -111,7 +111,11 @@ async def thong_tin_tren_may(client, serial: str, package: str) -> dict:
         out, err, code = await client._run("-s", serial, "pull", duong[0], str(local), timeout=PUSH_TIMEOUT * 4)
         if code != 0:
             raise AdbError(f"Khong keo duoc {duong[0]}: {(err or out).strip()}")
-        return thong_tin_apk(local)
+        info = thong_tin_apk(local)
+        # Nho app id cho App Tester: lan cai build sau mo thang trang app bang deep link, khong cuon tim.
+        from . import app_tester_link
+        app_tester_link.ghi(package, info.get("app_id", ""))
+        return info
     finally:
         local.unlink(missing_ok=True)
 

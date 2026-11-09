@@ -17,6 +17,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from . import app_tester_link
 from . import app_tester_screens as s
 from . import device_app, screencap, ui_dump
 from .adb_parsers import AdbError, parse_debuggable
@@ -123,9 +124,20 @@ async def _ve_dau_ds(client, serial, nodes) -> None:
         truoc = sau
 
 
-async def mo_chi_tiet(client, serial, package, out_dir: Path):
-    """Mo App Tester toi man chi tiet cua `package`. Tra node man chi tiet."""
+async def mo_chi_tiet(client, serial, package, out_dir: Path, app_id: str = ""):
+    """Mo App Tester toi man chi tiet cua `package`. Tra node man chi tiet.
+
+    Biet Firebase app id (`app_tester_link`) -> mo thang trang app bang deep link; khong ra dung trang moi cuon
+    danh sach tim nhu cu."""
     await danh_thuc(client, serial)
+    nodes = await app_tester_link.mo(client, serial, package, app_id or app_tester_link.doc(package), _nodes, s.man)
+    if nodes is None:
+        nodes = await _tim_trong_ds(client, serial, package, out_dir)
+    return await _vao_chi_tiet(client, serial, package, out_dir, nodes)
+
+
+async def _tim_trong_ds(client, serial, package, out_dir: Path):
+    """Cuon danh sach App Tester tim `package`, bam vao. Tra nodes sau khi bam."""
     await device_app.launch(client, serial, s.APP_TESTER)
     await asyncio.sleep(3)
     nodes = await _nodes(client, serial)
@@ -161,7 +173,11 @@ async def mo_chi_tiet(client, serial, package, out_dir: Path):
         await _cuon_nua_trang(client, serial)
     if not dong:
         raise LoiCai(f"App Tester không có app {package} (tài khoản tester chưa được mời?)")
-    nodes = await _nodes(client, serial)
+    return await _nodes(client, serial)
+
+
+async def _vao_chi_tiet(client, serial, package, out_dir: Path, nodes):
+    """Tu man vua mo (consent / chi tiet dang load): tick consent, doi trang chi tiet cua `package`."""
     if s.man(nodes) == "consent":
         await _bam(client, serial, s._co(nodes, "consent_checkbox"), 1)
         nut = s._co(await _nodes(client, serial), "consent_button")
@@ -259,9 +275,11 @@ async def cai(client, serial, package, version, loai, out_dir: Path) -> dict:
     # dang cai lam App Tester hien "Open" (khong tin duoc: lan day cu / app da go van hien), bot tung bo qua cai
     # hoac bao "App Tester chua co" (AIP886 2.7.0 (20) 02/11/2026). Go truoc -> release nao cung hien Download.
     truoc = await ban_dang_cai(client, serial, package)
+    # Nho Firebase app id TRUOC khi go (doc tu APK dang cai) -> mo thang trang app, khong cuon tim.
+    app_id = await app_tester_link.nho(client, serial, package) if truoc else ""
     if truoc:
         await client.shell(serial, "pm", "uninstall", package)
-    nodes = await mo_chi_tiet(client, serial, package, out_dir)
+    nodes = await mo_chi_tiet(client, serial, package, out_dir, app_id)
     dich, ly_do = s.chon_ban(await doc_cac_ban(client, serial, nodes, version), version, loai)
     if dich is None:
         raise await _luu_man_la(client, serial, out_dir, ly_do)

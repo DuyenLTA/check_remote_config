@@ -227,6 +227,11 @@ def _cai_cung_version(monkeypatch, cai_luc, nut_sau_go="tai", nut_dau="dang_cai"
         st["lenh"].append(("mo_app_tester",))
         return []
 
+    async def nho(*a):
+        st["nho_app_id"] = True        # doc app id TRUOC khi go (deep link App Tester)
+        return ""
+    monkeypatch.setattr(ui.app_tester_link, "nho", nho)
+
     async def doc_cac_ban(*a):
         return [dich]
 
@@ -313,6 +318,7 @@ def test_may_co_san_cung_version_thi_van_go_roi_tai_lai(monkeypatch):
     app truoc khi vao App Tester roi tai lai (user chot 30/10, nhac lai 02/11/2026)."""
     kq, st = _cai_cung_version(monkeypatch, "2026-10-29 14:40:00", nut_dau="tai")
     assert st["lenh"][:2] == [("pm", "uninstall", "pkg.a"), ("mo_app_tester",)]      # go TRUOC khi mo
+    assert st.get("nho_app_id")
     assert kq == {"da_cai": True, "go_ban_cu": True} and len(st["bam"]) == 1
 
 
