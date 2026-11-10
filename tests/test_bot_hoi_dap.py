@@ -61,11 +61,12 @@ def test_boi_canh_tach_job_may_phu_va_job_dang_gui_lai():
     assert dong["Chờ trong hàng (cùng app thì chạy lần lượt)"] == "AIP805 3 (check)"
 
 
-def _m(guild=True, mentions=(), bot=False, content="", uid=1):
+def _m(guild=True, mentions=(), bot=False, content="", uid=1, ref=None, **_):
     async def reply(chu, **k):
         m.replies.append((chu, k))
     m = SimpleNamespace(author=SimpleNamespace(bot=bot, id=uid, roles=[]), guild=object() if guild else None,
-                        mentions=list(mentions), content=content, replies=[], reply=reply)
+                        mentions=list(mentions), content=content, replies=[], reply=reply,
+                        reference=SimpleNamespace(resolved=ref) if ref else None)
     return m
 
 
@@ -77,6 +78,26 @@ def test_chi_dm_hoac_tag_bot_moi_la_cau_hoi():
     assert not h.la_cau_hoi(bot, _m(mentions=[me], content="ok cảm ơn"))   # bam Reply: Discord tu mention
     assert not h.la_cau_hoi(bot, _m())                         # tin build / chat thuong
     assert not h.la_cau_hoi(bot, _m(guild=False, bot=True))    # webhook / bot khac
+
+
+def test_server_hoi_tu_do_khong_can_tag():
+    me = SimpleNamespace(id=99)
+    bot = SimpleNamespace(user=me, _duoc_duyet=lambda u: u.id == 1)
+    g = SimpleNamespace(id=h.GUILD_HOI_TU_DO)
+
+    def m(**k):
+        x = _m(**k)
+        x.guild = k.get("g", g)
+        return x
+    tin_bot = SimpleNamespace(author=me)
+    assert h.la_cau_hoi(bot, m(content="AIP916 chạy tới đâu rồi"))                 # nhan thuong
+    assert h.la_cau_hoi(bot, m(content="ok cảm ơn", ref=tin_bot))                  # Reply tin bot
+    assert h.la_cau_hoi(bot, m(content="AIP916 v1.3.0 (5)", ref=tin_bot))          # Reply bot: van la hoi
+    assert not h.la_cau_hoi(bot, m(content="AIP916 v1.3.0 (5) sdk 3.7.1"))         # gui lai tin build
+    assert not h.la_cau_hoi(bot, m(content=""))                                    # chi anh / sticker
+    assert not h.la_cau_hoi(bot, m(content="hỏi gì đó", uid=2))                    # ngoai danh sach duyet
+    assert not h.la_cau_hoi(bot, m(content="hỏi gì đó", bot=True))                 # webhook / bot khac
+    assert not h.la_cau_hoi(bot, m(content="ok cảm ơn", ref=tin_bot, g=SimpleNamespace(id=5)))  # server khac
 
 
 def test_nguoi_ngoai_danh_sach_khong_hoi_duoc(monkeypatch):

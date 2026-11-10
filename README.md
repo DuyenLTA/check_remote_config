@@ -480,6 +480,11 @@ nhận link Google Drive nữa.
   release từ App Tester; kết quả + menu log bug như Check, mã case trong Jira là `sub#<số TC>`.
 Bot thiếu scope `applications.commands` ở server nào thì lệnh không hiện ở server đó (log bot ghi rõ), bot vẫn chạy.
 
+**Hỏi bot:** nhắn riêng hoặc tag bot (`@bot AIP938 lượt gần nhất ra sao`); chỉ QA được duyệt, Claude chỉ đọc repo.
+Riêng server "bót bót =))" (`DISCORD_HOI_TU_DO_GUILD_ID`, mặc định server đó, `0` = tắt): QA được duyệt **Reply** tin
+của bot hoặc **nhắn thường** là bot trả lời, không cần tag — trừ tin nhắn thường có mã app + version (gửi lại tin
+build) vẫn đi luồng build. Server khác: Reply tin bot thì bot im.
+
 **Tự verify bug Reviewing** (có `JIRA_PERSONAL_TOKEN`): bug do tool log (từ bot Discord, `rc-check` trong terminal
 hay checklist Next-Gen) mang **label `auto-qa`** + một dòng marker cuối description
 `AUTOQA case=<mã case> ban=<debug|release> pkg=<package>`. Dev kéo bug sang **Reviewing** → khi dev báo build mới

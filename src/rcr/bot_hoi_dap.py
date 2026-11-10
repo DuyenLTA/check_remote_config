@@ -18,7 +18,12 @@ from pathlib import Path
 
 import discord
 
-from . import bot_chay_claude
+from . import bot_chay_claude, build_ma_app
+from .bot_giao_dien import noi_dung
+from .cau_hinh_bot import env
+
+# Server "bót bót =))" (chua kenh qa-auto): o day khong can tag bot moi hoi duoc. 0 = tat.
+GUILD_HOI_TU_DO = int(env("DISCORD_HOI_TU_DO_GUILD_ID") or 1535317341943107676)
 
 TOOLS = ["Read(./**)", "Glob(./**)", "Grep(./**)"]
 MAX_TURNS = "25"
@@ -99,13 +104,27 @@ def boi_canh(jobs: list[dict], dang_chay: dict[str, int], tin: dict[str, dict]) 
             + f"- Chờ trong hàng (cùng app thì chạy lần lượt): {'; '.join(cho) or 'không'}")
 
 
+def _tra_loi_tin_bot(bot, m) -> bool:
+    """Tin la Reply vao mot tin cua chinh bot."""
+    goc = getattr(getattr(m, "reference", None), "resolved", None)
+    return getattr(getattr(goc, "author", None), "id", None) == bot.user.id
+
+
 def la_cau_hoi(bot, m) -> bool:
     """Nhan rieng bot, hoac GO tag bot trong noi dung tin (khong tinh tin cua bot / webhook).
-    Bam Reply vao tin cua bot thi Discord tu dua bot vao mentions -> khong tinh la hoi
-    (user chot 28/10/2026: nguoi ta reply thi im lang)."""
+    O server khac, bam Reply vao tin cua bot thi im lang (user chot 28/10/2026; Discord tu dua bot vao mentions).
+    Rieng server GUILD_HOI_TU_DO (user chot 10/11/2026): QA duoc duyet Reply tin bot hoac nhan thuong la bot
+    tra loi, khong can tag - tru tin nhan thuong doc ra ma app + version (QA gui lai tin build) -> luong build."""
     if m.author.bot or bot.user is None:
         return False
-    return m.guild is None or re.search(rf"<@!?{bot.user.id}>", m.content or "") is not None
+    if m.guild is None or re.search(rf"<@!?{bot.user.id}>", m.content or "") is not None:
+        return True
+    duoc_duyet = getattr(bot, "_duoc_duyet", None)
+    if getattr(m.guild, "id", None) != GUILD_HOI_TU_DO or not (duoc_duyet and duoc_duyet(m.author)):
+        return False
+    if not noi_dung(m).strip():              # chi gui anh / sticker: khong phai cau hoi
+        return False
+    return _tra_loi_tin_bot(bot, m) or build_ma_app.tach(noi_dung(m)) is None
 
 
 async def tra_loi_tin(bot, m, repo: Path, log_dir: Path) -> None:
