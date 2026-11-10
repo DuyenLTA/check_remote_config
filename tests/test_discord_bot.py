@@ -276,7 +276,7 @@ def test_build_khong_ghi_sdk_van_verify_bug_reviewing_nhung_khong_hoi_check(monk
     monkeypatch.setattr(d.bot_cong_viec, "package_cua", lambda ma, out: "pkg.nexus")
     monkeypatch.setattr(d.bot_job_verify, "xep", xep_)
     bot = object.__new__(d.BuildBot)
-    bot.kenh_qa, bot.kenh_build, bot.q = 1, {1, 2}, SimpleNamespace(tin={})
+    bot.kenh_qa, bot.kenh_build, bot.q = 1, {1, 2}, SimpleNamespace(tin={}, bao_lan_dau=lambda k: True)
     bot.get_channel = lambda cid: SimpleNamespace(send=send)
     m = SimpleNamespace(author=SimpleNamespace(bot=False, id=7), webhook_id=None, channel=SimpleNamespace(id=2),
                         guild=None, content="AIP922---Nexus AI v3.7.1 (31) fix bug round 1", jump_url="u")

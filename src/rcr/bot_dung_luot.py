@@ -15,7 +15,8 @@ import logging
 
 import discord
 
-from . import bot_cong_viec, bot_kiem_testvsl, bot_may_phu, bot_tien_trinh, bot_verify_jira, rc_firebase_app
+from . import (bot_cong_viec, bot_forum, bot_kiem_testvsl, bot_may_phu, bot_tien_trinh, bot_verify_jira,
+               rc_firebase_app)
 from .adb_client import AdbClient
 
 log = logging.getLogger("rcr-bot")
@@ -94,3 +95,4 @@ async def sau_khi_dung(bot, job: dict, serial: str, ten: str, ly_do: str) -> Non
         v.add_item(discord.ui.Button(label=nhan, style=discord.ButtonStyle.secondary,
                                      custom_id=f"rcr:{hanh_dong}:{job['msg_id']}"))
     await msg.edit(content=f"{dau}\n🛑 Đã dừng — {ly_do}.{ghi}", view=v)
+    await bot_forum.dat_nhan(bot, job, bot_forum.CAN_XEM)

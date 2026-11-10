@@ -120,14 +120,14 @@ def tin_hang_doi(bot, may: list | None, link_kenh: str) -> tuple[str, discord.ui
             o = f"máy phụ `{j['dang_o']}`"
         else:
             o = f"máy **{bot_cong_viec.ten_may(serial, model.get(serial, ''))}**" if serial else "đang nhận máy"
-        dong.append(f"{i}. {_ten_luot(j)} — {o} · [tin]({link_kenh}/{j['msg_id']})")
+        dong.append(f"{i}. {_ten_luot(j)} — {o} · [tin]({bot_forum.link_tin(bot, j, link_kenh)})")
         if j.get("kq") is None:
             nut("dung", f"Dừng {j.get('ma', '')} #{i}", j, discord.ButtonStyle.danger)
     if not chay:
         dong.append("Không có lượt nào.")
     dong.append("**⏳ Đang chờ**")
     for i, j in enumerate(cho, 1):
-        dong.append(f"{i}. {_ten_luot(j)} · [tin]({link_kenh}/{j['msg_id']})")
+        dong.append(f"{i}. {_ten_luot(j)} · [tin]({bot_forum.link_tin(bot, j, link_kenh)})")
         nut("huyhd", f"Huỷ {j.get('ma', '')} #{i}", j, discord.ButtonStyle.secondary)
     if not cho:
         dong.append("Hàng đợi trống.")

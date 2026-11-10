@@ -29,6 +29,8 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
     # Chi nhan build o kenh rieng cua tung project (`aip922-...`, moi server bot dang o) va kenh trong
     # DISCORD_BUILD_CHANNEL_ID (qa-auto). Kenh chung build-notification bo tu 30/10/2026 (user chot: chat
     # thuong o do bi bot hoi nham la tin build).
+    if build_ma_app.la_kenh_bo(getattr(m.channel, "name", "")):
+        return
     o_kenh_build = m.channel.id in bot.kenh_build
     ma_kenh = "" if o_kenh_build else build_ma_app.ma_cua_kenh(
         getattr(getattr(m.channel, "parent", None) or m.channel, "name", ""))
@@ -76,6 +78,8 @@ async def hoi_build_moi(bot, tin: dict, link_tin: str, kenh, out: Path) -> str:
     if not tin["sdk"]:
         # Build chuc nang / fix bug, khong apply SDK: khong hoi Check (chua co workflow, user chot 28/10/2026)
         # nhung VAN verify bug dev da keo Reviewing - build fix bug thuong khong ghi SDK (user chot 28/10/2026).
+        if not bot.q.bao_lan_dau(f"{tin['ma']}|{tin['version']}"):   # quet lai tin lo sau restart: da bao roi
+            return f"Build **{tin['ma']}** `{tin['version']}` không ghi SDK — đã báo trước đó."
         log.info("build khong apply SDK, chi verify bug Reviewing: %s %s", tin["ma"], tin["version"])
         # Van BAO QA moi build (user chot 05/11/2026): dev hay quen ghi SDK, QA tu kiem roi go /check kem SDK.
         await kenh.send(f"🔔 **{tin['ma']}** `{tin['version']}` — tin build không ghi SDK nên bot chưa hỏi Check, "

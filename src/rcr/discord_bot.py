@@ -38,7 +38,7 @@ import discord
 from discord import app_commands
 
 from . import (audit_tom_tat, bot_bat_tin_lo, bot_canh_may, bot_chay_claude, bot_cong_viec,  # noqa: F401 - test thay
-               bot_dung_luot, bot_gui_lai, bot_hang_doi, bot_hoi_dap, bot_hop_thu_bug, bot_jira_rest, bot_job_check, bot_job_verify,
+               bot_dung_luot, bot_forum, bot_gui_lai, bot_hang_doi, bot_hoi_dap, bot_hop_thu_bug, bot_jira_rest, bot_job_check, bot_job_verify,
                bot_kenh_project, bot_keo_sprint, bot_lenh_slash, bot_log_jira, bot_may_phu, bot_nhan_build,
                bot_nut_bam, bot_tien_trinh)
 from .adb_client import AdbClient
@@ -133,6 +133,7 @@ class BuildBot(discord.Client):
         """Tin goc cua job: trong bai Forum (`kenh_id` cua tin) hoac o qa-auto (tin cu / Forum tat)."""
         kid = int((self.q.tin_cua(msg_id) or {}).get("kenh_id") or 0)
         kenh = (self.get_channel(kid) or await self.fetch_channel(kid)) if kid else await self._kenh_qa()
+        await bot_forum.mo_lai(kenh)          # bai Forum da archive -> mo lai truoc khi sua tin
         return await kenh.fetch_message(msg_id)
 
     # --- tien ich -----------------------------------------------------------------------
@@ -274,6 +275,7 @@ class BuildBot(discord.Client):
             log.exception("job loi")
             try:                             # mat mang thi bao loi cung hong -> chi ghi log
                 await (await self._kenh_qa()).send(f"⛔ {bot_cong_viec.dau_tin(job)} [{ten}]: lỗi bot {exc}")
+                await bot_forum.dat_nhan(self, job, bot_forum.CAN_XEM)
             except Exception as loi_bao:     # noqa: BLE001
                 log.warning("khong bao duoc loi job: %s", loi_bao)
         finally:

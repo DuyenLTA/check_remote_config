@@ -47,6 +47,15 @@ def _sach(text: str) -> str:
 KENH_PROJECT_RE = re.compile(r"^([a-z]{3}\d{3})-")
 
 
+# Kenh chung build-notification: bo tu 30/10/2026 (user chot, nhac lai 10/11/2026 khi bot Ubuntu con
+# DISCORD_BUILD_CHANNEL_ID cu tro vao kenh nay). Chan theo TEN de cau hinh may nao sot cung khong nhan.
+KENH_BO = frozenset({"build-notification"})
+
+
+def la_kenh_bo(ten: str) -> bool:
+    return (ten or "").strip().lower() in KENH_BO
+
+
 def ma_cua_kenh(ten: str) -> str:
     """Kenh rieng cua project `aip920-ai-english-official-group` -> "AIP920"; kenh khac -> ""."""
     m = KENH_PROJECT_RE.match((ten or "").lower())

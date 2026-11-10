@@ -25,6 +25,8 @@ async def quet(bot) -> int:
     kenh_build = getattr(bot, "kenh_build", set())
     for g in getattr(bot, "guilds", None) or []:
         for k in g.text_channels:
+            if build_ma_app.la_kenh_bo(k.name):
+                continue
             ma = build_ma_app.ma_cua_kenh(k.name)
             # qa-auto (DISCORD_BUILD_CHANNEL_ID): QA gui build o day - mat mang dung luc gui thi cung phai bat lai
             # (30/10/2026 AIP886 gui luc bot dang reconnect, bot im).

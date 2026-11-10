@@ -88,18 +88,31 @@ class HangDoi:
         # msg_id (tin cua bot o kenh QA, dang chuoi vi JSON) -> build cua tin do, de bam nut con biet build nao.
         self.tin: dict[str, dict] = {}
         self.dang_chay: set[int] = set()
+        # "MA|version" build khong ghi SDK da bao o qa-auto: bot khoi dong lai quet tin lo khong bao lai (10/11/2026
+        # AIP893 bi bao 6 lan sau 6 lan restart). Giu 200 build gan nhat.
+        self.da_bao: list[str] = []
         if self.path.exists():
             data = json.loads(self.path.read_text(encoding="utf-8") or "{}")
             self.jobs = data.get("jobs", [])
             self.tin = data.get("tin", {})
+            self.da_bao = data.get("da_bao", [])
         # Bot chet giua luot -> job do chua xong: chay lai tu dau, khong bo qua.
 
     def luu(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"jobs": self.jobs, "tin": self.tin}, ensure_ascii=False, indent=1),
+        tmp.write_text(json.dumps({"jobs": self.jobs, "tin": self.tin, "da_bao": self.da_bao[-200:]},
+                                  ensure_ascii=False, indent=1),
                        encoding="utf-8")
         tmp.replace(self.path)
+
+    def bao_lan_dau(self, khoa: str) -> bool:
+        """True (va ghi nho) neu chua bao `khoa` lan nao."""
+        if khoa in self.da_bao:
+            return False
+        self.da_bao.append(khoa)
+        self.luu()
+        return True
 
     def trung(self, job: dict) -> bool:
         return any(_khoa_job(j) == _khoa_job(job) for j in self.jobs)

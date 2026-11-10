@@ -54,20 +54,29 @@ def _nhan(forum, ten: str) -> list:
 async def gui_goc(bot, c: dict, noi_dung: str, gui_cu=None, **k) -> discord.Message:
     """Gui mot tin goc cua build `c`. Forum tat -> `gui_cu(noi_dung)` (mac dinh gui o qa-auto). Build da co bai
     -> gui vao bai; chua co -> tao bai moi (tag nguoi duyet de co thong bao, nhan Cho duyet)."""
+    gui = gui_cu or (await bot._kenh_qa()).send
     if not bat(bot):
-        gui = gui_cu or (await bot._kenh_qa()).send
         return await gui(noi_dung, **k)
     tid = bai_cua_build(bot, c)
     if tid:
         try:
+            # Gui tin vao bai da archive thi Discord tu mo lai bai.
             return await (await _kenh(bot, tid)).send(noi_dung, **k)
         except discord.HTTPException as exc:        # bai bi xoa / khoa -> tao bai moi
             log.warning("khong gui duoc vao bai %s: %s - tao bai moi", tid, exc)
-    forum = await _kenh(bot, bot.kenh_forum)
-    tag = " ".join(f"<@{u}>" for u in sorted(getattr(bot, "duyet", ()) or ()))
-    moi = await forum.create_thread(name=ten_bai(c), content=f"{noi_dung}\n{tag}".strip(),
-                                   applied_tags=_nhan(forum, CHO_DUYET), auto_archive_duration=LUU_TRU_PHUT, **k)
-    return moi.message
+    try:
+        forum = await _kenh(bot, bot.kenh_forum)
+        if not isinstance(forum, discord.ForumChannel):
+            raise TypeError(f"kenh {bot.kenh_forum} khong phai kenh Forum")
+        tag = " ".join(f"<@{u}>" for u in sorted(getattr(bot, "duyet", ()) or ()))
+        # Bai chi co luot verify: khong nhan Cho duyet (verify khong doi nhan nen se ket mai o do).
+        nhan = [] if c.get("loai_job") == "verify" else _nhan(forum, CHO_DUYET)
+        moi = await forum.create_thread(name=ten_bai(c), content=f"{noi_dung}\n{tag}".strip(),
+                                       applied_tags=nhan, auto_archive_duration=LUU_TRU_PHUT, **k)
+        return moi.message
+    except Exception as exc:                        # noqa: BLE001 - Forum sai cau hinh / thieu quyen: khong mat build
+        log.warning("khong tao duoc bai Forum (%s) - gui o qa-auto", exc)
+        return await gui(noi_dung, **k)
 
 
 async def dat_nhan(bot, c: dict, ten: str) -> None:
@@ -81,11 +90,27 @@ async def dat_nhan(bot, c: dict, ten: str) -> None:
         bai = await _kenh(bot, int(kid))
         nhan = _nhan(getattr(bai, "parent", None), ten)
         if nhan:
-            await bai.edit(applied_tags=nhan)
+            await bai.edit(applied_tags=nhan, archived=False)   # bai da archive: sua bi tu choi neu khong mo lai
         else:
             log.info("forum chua co nhan %r - bo qua", ten)
     except Exception as exc:                        # noqa: BLE001 - nhan hong khong duoc chan luot chay
         log.warning("khong doi duoc nhan %r: %s", ten, exc)
+
+
+async def mo_lai(kenh) -> None:
+    """Bai Forum da archive (7 ngay im) -> mo lai, khong thi sua tin trong bai bi Discord tu choi."""
+    if isinstance(kenh, discord.Thread) and kenh.archived:
+        try:
+            await kenh.edit(archived=False)
+        except discord.HTTPException as exc:
+            log.warning("khong mo lai duoc bai %s: %s", kenh.id, exc)
+
+
+def link_tin(bot, job: dict, link_kenh: str) -> str:
+    """Link nhay toi tin goc. `link_kenh` = .../<server>/<kenh QA>; tin trong bai Forum thi thay id kenh = id bai."""
+    kid = job.get("kenh_id") or (bot.q.tin_cua(job["msg_id"]) or {}).get("kenh_id")
+    goc = f"{link_kenh.rsplit('/', 1)[0]}/{kid}" if kid else link_kenh
+    return f"{goc}/{job['msg_id']}"
 
 
 def nhan_ket_qua(kq: dict) -> str:
