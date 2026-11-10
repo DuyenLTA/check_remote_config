@@ -92,12 +92,13 @@ class BuildBot(discord.Client):
             bot_lenh_slash.dang_ky(self)
 
     async def setup_hook(self):
+        # Bug cua luot chay tay -> menu tick o kenh QA. May phu cung quet: chuyen sang bot chinh (bot_hop_thu_bug).
+        asyncio.create_task(bot_hop_thu_bug.vong_lap(self))
         if self.la_phu:
             asyncio.create_task(self._vong_may_phu())
             return
         asyncio.create_task(self.worker())
         asyncio.create_task(bot_keo_sprint.vong_lap(self))   # bug log luc chua co sprint -> keo vao sprint moi
-        asyncio.create_task(bot_hop_thu_bug.vong_lap(self))  # bug cua luot chay tay -> menu tick o kenh QA
 
     async def on_ready(self):
         """Moi lan ket noi (ca reconnect sau mat mang - session bi huy thi Discord khong gui lai tin cu, 30/10/2026):
@@ -155,6 +156,8 @@ class BuildBot(discord.Client):
                 return
             if self.la_phu:
                 await bot_may_phu.nhan_o_may_phu(self, *goi, m.channel)
+            elif goi[0] == "bug":            # luot chay tay o may phu co bug -> bot chinh dang menu
+                await bot_hop_thu_bug.nhan_tu_may_phu(self, goi[1])
             else:
                 bot_may_phu.nhan_o_may_chinh(self, *goi)
         except Exception:                    # noqa: BLE001 - mot tin hong khong duoc giet bot

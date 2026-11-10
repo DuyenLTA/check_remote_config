@@ -76,3 +76,49 @@ def test_cli_tu_choi_file_khong_co_bug_va_link_khong_https(tmp_path, capsys):
     assert h.main(["--bugs", str(tot), "--package", "pkg.a", "--link", "https://claude.ai/a",
                    "--out", str(tmp_path)]) == 0
     assert len(list((tmp_path / h.THU_MUC).glob("*.json"))) == 1
+
+
+class _KenhDieuPhoi:
+    def __init__(self, loi=None):
+        self.gui, self.loi = [], loi
+
+    async def send(self, content, file=None):
+        if self.loi:
+            raise self.loi
+        self.gui.append((content, json.loads(file.fp.read())))
+
+
+def _may_phu(tmp_path, kenh):
+    async def _kenh_dieu_phoi():
+        return kenh
+    return SimpleNamespace(la_phu=True, ten_may="laptop", out=tmp_path, _kenh_dieu_phoi=_kenh_dieu_phoi)
+
+
+def test_may_phu_chuyen_bug_sang_bot_chinh_qua_kenh_dieu_phoi(tmp_path):
+    kenh = _KenhDieuPhoi()
+    f = h.tha_vao_hop(tmp_path, [BUG], "https://claude.ai/artifact/x", msg_id=7)
+    kq = asyncio.run(h.xu_ly_file(_may_phu(tmp_path, kenh), f))
+    assert "chuyen 1 bug" in kq and not f.exists()
+    noi_dung, d = kenh.gui[0]
+    assert noi_dung == "RCR bug laptop" and d["msg_id"] == 7 and d["bugs"][0]["case"] == BUG["case"]
+
+
+def test_may_phu_mat_mang_thi_giu_file_gui_lai_sau(tmp_path):
+    f = h.tha_vao_hop(tmp_path, [BUG], "", msg_id=7)
+    kq = asyncio.run(h.xu_ly_file(_may_phu(tmp_path, _KenhDieuPhoi(OSError("mat mang"))), f))
+    assert "thu lai sau" in kq and f.exists() and not f.with_suffix(".loi").exists()
+
+
+def test_bot_chinh_nhan_bug_tu_may_phu_dang_menu(tmp_path):
+    bot, qa = _bot(tmp_path, tin(7))
+    asyncio.run(h.nhan_tu_may_phu(bot, {"may": "laptop", "msg_id": 7, "bugs": [BUG],
+                                        "link_report": "https://claude.ai/artifact/x"}))
+    assert qa.msg_id == 7 and "1 bug cần review" in qa.tra_loi[0][0]
+    assert bot_hang_doi.HangDoi(tmp_path / "q.json").tin_cua(7)["bugs"][0]["case"] == BUG["case"]
+
+
+def test_bot_chinh_nhan_bug_khong_thay_tin_thi_ghi_file_loi(tmp_path):
+    bot, qa = _bot(tmp_path)
+    asyncio.run(h.nhan_tu_may_phu(bot, {"may": "laptop", "msg_id": 99, "bugs": [BUG]}))
+    loi = list((tmp_path / h.THU_MUC).glob("bug-tu-laptop-*.loi"))
+    assert len(loi) == 1 and "khong thay tin build" in loi[0].read_text(encoding="utf-8") and not qa.tra_loi

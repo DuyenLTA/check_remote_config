@@ -21,6 +21,8 @@ import sys
 import time
 from pathlib import Path
 
+import discord
+
 from . import bot_chay_claude, bot_cong_viec
 from . import bot_tin_goc as tin_goc
 
@@ -58,25 +60,62 @@ def view_menu_bug(c: dict, chon: list[int] | None):
     return tin_goc.view_gop(view_bug(c["bugs"], chon, int(c["msg_id"])), verify)
 
 
+async def xu_ly(bot, d: dict) -> str:
+    """Noi dung mot file hop thu -> gan bug vao tin build + dang menu (chi bot CHINH: giu hang doi / tin build).
+    Loi (khong co bug, khong thay tin build) thi raise ValueError."""
+    bugs = bot_chay_claude.doc_bugs(d.get("bugs"))
+    if not bugs:
+        raise ValueError("file khong co bug hop le (moi bug can truong `case`)")
+    c = bot.q.tin_cua(int(d["msg_id"])) if d.get("msg_id") else tim_tin(
+        bot.q.tin, str(d.get("package") or ""), str(d.get("version") or ""))
+    if not c:
+        raise ValueError(f"khong thay tin build cua {d.get('msg_id') or d.get('package')} {d.get('version') or ''}")
+    await dang_menu(bot, await bot._tin_qa(int(c["msg_id"])), gan_bug(c, bugs, str(d.get("link_report") or "")))
+    return f"da dang {len(bugs)} bug cho {c.get('ma')} {c.get('version')}"
+
+
 async def xu_ly_file(bot, f: Path) -> str:
-    """Mot file hop thu -> dang menu. Tra mo ta ket qua; loi thi doi ten file .loi kem ly do de nguoi xem."""
+    """Mot file hop thu -> dang menu. Tra mo ta ket qua; loi thi doi ten file .loi kem ly do de nguoi xem.
+
+    May PHU khong giu hang doi / tin build (bot_may_phu) -> chuyen nguyen noi dung sang bot chinh qua kenh dieu
+    phoi (`RCR bug <may>`), bot chinh dang menu. Chay tay o may nao cung bao duoc bug, khong phu thuoc vai tro.
+    Gui loi mang thi giu file, vong sau gui lai."""
     try:
         d = json.loads(f.read_text(encoding="utf-8"))
-        bugs = bot_chay_claude.doc_bugs(d.get("bugs"))
-        if not bugs:
-            raise ValueError("file khong co bug hop le (moi bug can truong `case`)")
-        c = bot.q.tin_cua(int(d["msg_id"])) if d.get("msg_id") else tim_tin(
-            bot.q.tin, str(d.get("package") or ""), str(d.get("version") or ""))
-        if not c:
-            raise ValueError(f"khong thay tin build cua {d.get('msg_id') or d.get('package')} {d.get('version') or ''}")
-        await dang_menu(bot, await bot._tin_qa(int(c["msg_id"])), gan_bug(c, bugs, str(d.get("link_report") or "")))
+        if getattr(bot, "la_phu", False):
+            from . import bot_may_phu
+            await bot_may_phu.gui(await bot._kenh_dieu_phoi(), "bug", {**d, "may": bot.ten_may})
+            f.unlink()
+            return f"da chuyen {len(d.get('bugs') or [])} bug sang bot chinh"
+        kq = await xu_ly(bot, d)
         f.unlink()
-        return f"da dang {len(bugs)} bug cho {c.get('ma')} {c.get('version')}"
+        return kq
+    except (discord.HTTPException, OSError) as exc:  # mat mang khi chuyen sang bot chinh -> giu file, gui lai sau
+        if f.exists() and getattr(bot, "la_phu", False):
+            return f"chua chuyen duoc {f.name}, thu lai sau: {exc}"
+        return _ghi_loi(f, exc)
     except Exception as exc:              # noqa: BLE001 - mot file hong khong chan file khac
-        f.with_suffix(".loi").write_text(f"{exc}\n\n{f.read_text(encoding='utf-8', errors='replace')}",
-                                         encoding="utf-8")
-        f.unlink(missing_ok=True)
-        return f"loi {f.name}: {exc}"
+        return _ghi_loi(f, exc)
+
+
+def _ghi_loi(f: Path, exc: Exception) -> str:
+    f.with_suffix(".loi").write_text(f"{exc}\n\n{f.read_text(encoding='utf-8', errors='replace')}",
+                                     encoding="utf-8")
+    f.unlink(missing_ok=True)
+    return f"loi {f.name}: {exc}"
+
+
+async def nhan_tu_may_phu(bot, d: dict) -> None:
+    """Bot chinh nhan `RCR bug` tu may phu -> dang menu nhu file hop thu cua chinh no. Loi thi ghi file .loi
+    vao hop thu cua bot chinh (may phu da xoa file goc) de nguoi xem."""
+    try:
+        log.info("hop thu bug (tu may %s): %s", d.get("may"), await xu_ly(bot, d))
+    except Exception as exc:              # noqa: BLE001 - tin hong khong duoc giet bot
+        hop = Path(bot.out) / THU_MUC
+        hop.mkdir(parents=True, exist_ok=True)
+        f = hop / f"bug-tu-{d.get('may') or 'phu'}-{int(time.time() * 1000)}.loi"
+        f.write_text(f"{exc}\n\n{json.dumps(d, ensure_ascii=False, indent=1)}", encoding="utf-8")
+        log.warning("hop thu bug (tu may %s) loi: %s", d.get("may"), exc)
 
 
 async def vong_lap(bot) -> None:
