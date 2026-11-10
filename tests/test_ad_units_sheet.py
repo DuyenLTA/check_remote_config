@@ -32,6 +32,23 @@ def test_chon_tab_theo_package_khong_theo_ten_tab(tmp_path):
                    "id_501_aoa_high": "ca-app-pub-2/3445258314"}
 
 
+def test_vi_tri_ghi_theo_ten_key_show_co_dau_cach(tmp_path):
+    """Tab AIP922 ghi `show_101_spl_a_banner_high`, co o `show_102_spl_n _inter_high` -> van doc duoc."""
+    wb = openpyxl.Workbook()
+    for r in (["Package name", "ai.photogenerator.aiart"], ["2. ID ads FO"],
+              ["show_101_spl_a_banner_high", "ca-app-pub-4/3458511852"],
+              ["show_102_spl_n _inter_high", "ca-app-pub-4/5425590839"],
+              ["4. ID ads resume"], ["ca-app-pub-4/2562724354", "show_501_aoa_high"],
+              ["Home", "inter_feature_high", "ca-app-pub-4/4070123043"]):
+        wb.active.append(r)
+    p = tmp_path / "kt.xlsx"
+    wb.save(p)
+    assert ad_units_sheet.doc_tab(p, "ai.photogenerator.aiart") == {
+        "id_101_spl_a_banner_high": "ca-app-pub-4/3458511852",
+        "id_102_spl_n_inter_high": "ca-app-pub-4/5425590839",
+        "id_501_aoa_high": "ca-app-pub-4/2562724354"}
+
+
 def test_package_khong_co_tab_thi_rong(tmp_path):
     assert ad_units_sheet.doc_tab(_wb(tmp_path), "khong.co.app") == {}
 

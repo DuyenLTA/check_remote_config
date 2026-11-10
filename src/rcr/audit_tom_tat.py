@@ -45,9 +45,13 @@ def doc(html_text: str) -> dict | None:
             "luc": luc.group(1).strip() if luc else "", "canh_bao": " ".join(c for c in canh if c)}
 
 
+def repo_audit() -> Path:
+    """Repo audit ID ads (rc-check muc 3c): $AD_AUDIT_REPO, khong thi ~/android-ad-audit."""
+    return Path(os.environ.get("AD_AUDIT_REPO") or str(Path.home() / "android-ad-audit"))
+
+
 def thu_muc_out() -> Path:
-    repo = os.environ.get("AD_AUDIT_REPO") or str(Path.home() / "android-ad-audit")
-    return Path(repo) / OUT_REL
+    return repo_audit() / OUT_REL
 
 
 def trang_audit(package: str, out: Path | None = None) -> Path | None:

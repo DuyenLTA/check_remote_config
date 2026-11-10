@@ -107,6 +107,10 @@ def gop(moi: dict, cu: list[dict]) -> tuple[dict, list[str]]:
     for r in moi["ket_qua"]:
         tay = [(l["thu_muc"], x) for l in cu for x in l["data"].get("ket_qua", []) if x["ma"] == r["ma"] and _la_tay(x)]
         chon = _chon(tay) if r["ket"] == DO_TAY else None
+        # Luot moi da do tay ra khac Sai ma khong chay lai buoc tai hien (khong `khong_tai_hien`) -> Sai do tay cu
+        # van dinh (ADA895 HV-01: luot sau chi bam inter nen ra Khop, de mat Sai bam native 305 cua luot truoc).
+        if chon is None and _la_tay(r) and r["ket"] != SAI and not r.get("khong_tai_hien"):
+            chon = next((t for t in reversed(tay) if t[1]["ket"] == SAI), None)
         if chon is None:
             ra.append(r)
             continue

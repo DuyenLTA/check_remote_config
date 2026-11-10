@@ -76,6 +76,19 @@ def test_log_that_muc1_va_muc4():
     assert M.ev31(ev)["ket"] == "KHOP" and M.hv02(FO)["ket"] == "KHOP"
 
 
+def test_med01_dem_adapter_theo_ten_khong_theo_latency():
+    """Cung adapter in lai moi lan mo lanh voi Latency khac -> van la 1 adapter."""
+    pk = "com.ai.aiphoto.aivideo.creator.generator"
+    log = "11-09 23:53:10.000  1837  1900 I ActivityManager: Start proc 111:" + pk + "/u0a1 for top-activity\n"
+    for lat in (95, 86, 50):
+        log += (f"11-09 23:53:12.000   111   111 D AperoAdmob: Adapter name: com.google.android.libraries.ads.mobile.sdk."
+                f"MobileAds, State: COMPLETE, Description: ok, Latency: {lat}\n"
+                f"11-09 23:53:12.000   111   111 D AperoAdmob: Adapter name: com.google.ads.mediation.facebook."
+                f"FacebookMediationAdapter, State: COMPLETE, Description: , Latency: {lat // 10}\n")
+    r = M.med01(log, pk)
+    assert r["ket"] == "KHOP" and r["ly_do"].startswith("2 adapter")
+
+
 # ---------- muc 3: Sai dung cho, khong Khop gia ----------
 
 def test_unit_va_dinh_dang_chuan_hoa_qua_ten_param_khac_nhau():
@@ -230,6 +243,35 @@ def test_kt02_timeout_tinh_tu_request_inter_splash_khong_tu_luc_mo_app():
     assert M.kt02(bc, "\n".join([_KT02_MO, _KT02_ROI]), _AISONG)["ket"] == "SAI"
 
 
+_LINGO = "lingospeak.english.learnlanguage.speak"
+
+
+def test_kt02_rom_khong_in_start_lay_moc_tu_displayed():
+    # vivo V2143 (LingoSpeak 2.1.0, 09/11/2026): khong co dong START, chi co Displayed
+    log = "\n".join([
+        "11-09 17:52:51.780  1837  2192 I ActivityTaskManager: Displayed "
+        f"{_LINGO}/.presentation.splash.SplashActivity: +1s245ms",
+        "11-09 17:53:00.493 28339 30975 V FA-SVC  : Logging event: origin=app,name=track_ad_request,params=Bundle[{"
+        "network_status=1, adunitid=ca-app-pub-4973559944609228/6379207096, ga_event_origin(_o)=app, "
+        "ga_screen_class(_sc)=SplashActivity, ga_screen_id(_si)=7773236556658348938, ad_format=INTERSTITIAL, "
+        "ad_platform=Admob}]",
+        "11-09 17:54:00.807  1837  2192 I ActivityTaskManager: Displayed "
+        f"{_LINGO}/com.visionlab.tutorial.vsltemplate4.language.language1.VslTemplate4Language14Activity: +407ms",
+    ])
+    r = M.kt02({"cham_roi_splash_s": 70.1}, log, _LINGO)
+    assert r["ket"] == "KHOP" and "inter splash 59.9s" in r["ly_do"], r
+
+
+def test_ev11_lay_ad_impression_o_luot_co_mang_khac_khi_fo_chi_co_ad_test():
+    # LingoSpeak 2.1.0: FO chi 1 paid inter ad test (valuemicros 0, khong _ai); luot bat mang lai co native that + _ai
+    fo = _evs([_ev("paid_ad_impression", 1, valuemicros="0.0")])
+    khac = E.doc_events(
+        "11-09 17:52:34.252 28339 30975 V FA-SVC  : Logging event: origin=am,name=ad_impression(_ai),params=Bundle["
+        "{ga_event_origin(_o)=am, ga_screen_class(_sc)=VslTemplate4OnboardingActivity}]")
+    assert _ket(A.tat_ca(fo, []), "EV-11")["ket"] == "SAI"
+    assert _ket(A.tat_ca(fo, [], khac), "EV-11")["ket"] == "KHOP"
+
+
 def test_ump_khong_form_la_ngoai_pham_vi_ev31_lech_nguon_la_sai():
     log = PROC + "\n" + _app("AdsConsentManager", "3: Publisher misconfiguration: no form(s) configured")
     assert {r["ket"] for r in M.kt05_06(log, PKG)} == {"KHONG_AP_DUNG"}
@@ -300,6 +342,19 @@ def test_dem_event_quang_cao_trong_log_mo_lanh(tmp_path):
     assert T.dem_ads(tmp_path / "khong-co.txt") == -1          # khong doc duoc -> khong bo FO
 
 
+def test_dem_ads_may_khong_in_fa_svc_van_thay_ads_qua_ad_event_logger(tmp_path):
+    """vivo V2143 (AI Song 2.3.0, 09/11/2026): 0 dong FA-SVC nhung app van xin/hien ads -> khong duoc bo FO."""
+    from rcr import sdk_nextgen_thu_log as T
+    log = tmp_path / "vivo.txt"
+    log.write_text(
+        "11-09 15:50:25.354 25370 25489 V FA      : Logging telemetry for logEvent from database\n"
+        "11-09 15:50:26.337 25370 25370 I AdEventLogger: trackAdRequest adPlatform:Admob  - adUnitId: *****210"
+        "  -  adType: INTERSTITIAL\n"
+        "11-09 15:50:33.128 25370 25370 I AdEventLogger: trackAdShowSuccess - adUnitId: *****210  -  adType: "
+        "interstitial  -  showStatus: success\n", "utf-8")
+    assert T.dem_ads(log) == 2
+
+
 def test_lai_fo_truyen_duong_dan_marks_tuyet_doi(tmp_path, monkeypatch):
     """Nexus AI 3.7.0 (28/10/2026): --out-dir tuong doi + _bash cwd=SCRIPTS -> script khong ghi duoc marks, FO hong."""
     import asyncio
@@ -367,4 +422,18 @@ def test_loi_unparcel_cua_firebase_khong_tinh_la_thieu_lop():
         "10-29 23:27:44.000 10850 10850 E AndroidRuntime: java.lang.NoClassDefFoundError: Failed resolution of: Lcom/google/android/gms/ads/AdView;",
     ])
     ra = loi_thieu_lop(log, pkg)
+    assert len(ra) == 1 and "AdView" in ra[0]
+
+
+def test_aconfig_feature_flags_do_lop_android16_khong_tinh_la_thieu_lop():
+    """vivo Android 13 (AI Song 2.3.0, 09/11/2026): FeatureFlagsImplExport do AconfigPackage roi catch, muc W."""
+    from rcr.sdk_nextgen_events import loi_thieu_lop
+    log = "\n".join([
+        "11-09 15:50:24.000  1000  1100 I ActivityManager: Start proc 25370:com.abc.app/u0a1 for activity",
+        "11-09 15:50:24.874 25370 25417 W FeatureFlagsImplExport: java.lang.NoClassDefFoundError: Class not found "
+        "using the boot class loader; no stack trace available",
+        "11-09 15:50:25.000 25370 25370 E AndroidRuntime: java.lang.NoClassDefFoundError: Failed resolution of: "
+        "Lcom/google/android/gms/ads/AdView;",
+    ])
+    ra = loi_thieu_lop(log, "com.abc.app")
     assert len(ra) == 1 and "AdView" in ra[0]

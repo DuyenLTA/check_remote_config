@@ -155,3 +155,16 @@ def test_nut_chay_bo_qua_plan_chi_khi_dung_vi_plan():
     assert [n[0] for n in nut_ket_qua({"bo_qua_plan": True}, dung_plan)] == ["verify"]
     assert [n[0] for n in nut_ket_qua({}, {"trang_thai": "DUNG", "tom_tat": "Dừng: máy khoá"})] == ["verify"]
     assert [n[0] for n in nut_ket_qua({}, {"trang_thai": "XONG", "tom_tat": "ok"})] == ["verify"]
+
+
+def test_luot_bot_mo_quyen_repo_audit_va_van_dung_trang_audit(tmp_path, monkeypatch):
+    """AIP886 09/11/2026: -p bi chan cp script workflow tu repo audit (ngoai cwd) va khong co tool Artifact
+    -> agent bo luon buoc dung <pkg>-artifact.html, report ghi "chua check ID ads"."""
+    monkeypatch.setenv("AD_AUDIT_REPO", str(tmp_path))
+    cmd, prompt = c.lenh("pkg.a", "S1", next_gen=True)
+    i = cmd.index("--add-dir")
+    assert cmd[i + 1] == str(tmp_path) and i < cmd.index("--allowedTools")
+    assert "Artifact" not in cmd
+    assert "artifact_report_builder.py" in prompt and "KHONG co tool Artifact" in prompt
+    monkeypatch.setenv("AD_AUDIT_REPO", str(tmp_path / "khong-co"))
+    assert "--add-dir" not in c.lenh("pkg.a", "S1")[0]

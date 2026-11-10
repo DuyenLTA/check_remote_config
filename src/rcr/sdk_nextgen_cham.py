@@ -51,7 +51,7 @@ def cham_thu_muc(d: Path) -> dict:
         mang_tat = bc.get("offline_mang_that_tat", True)
         crash_off = crash(off or "", pkg)
         failed = loc(ev, "ad_load", thanh_cong=False) + (loc(ev_off, "ad_load", thanh_cong=False) if mang_tat else [])
-        a = sdk_nextgen_cham_ev_3a.tat_ca(ev, failed)
+        a = sdk_nextgen_cham_ev_3a.tat_ca(ev, failed, doc_events(off_sau or ""))
         if crash_off:  # EV-04 doi ca "khong crash" luc mat mang
             a = [{**r, "ket": SAI, "ly_do": "App crash khi mất mạng. " + r["ly_do"], "bang_chung": crash_off + r["bang_chung"]}
                  if r["ma"] == "EV-04" else r for r in a]
