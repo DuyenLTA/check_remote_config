@@ -24,7 +24,16 @@ from .models import RcError
 # (link sheet cung khuon) thay vi sua code.
 LINK = "https://docs.google.com/spreadsheets/d/14XivZl9VPAnyf8hYICgRh-TOUmkGTZDCqoyWmPM57hM/edit"
 VI_TRI_RE = re.compile(r"^\d{3}[-_][a-z0-9_-]+$", re.I)
+# Mot so tab (AIP922, 10/11/2026) ghi vi tri theo ten key show: `show_101_spl_a_banner_high`, co o go
+# nham dau cach (`show_102_spl_n _inter_high`) -> bo tien to `show_` va dau cach truoc khi so khuon.
+SHOW_PREFIX_RE = re.compile(r"^show[-_]", re.I)
 ID_RE = re.compile(r"^ca-app-pub-\d+/\d+$")
+
+
+def _vi_tri(o: str) -> str:
+    """O ghi vi tri (`101_spl_a_banner`, `show_101_spl_a_banner`) -> ten vi tri; khong phai -> ''."""
+    o = SHOW_PREFIX_RE.sub("", re.sub(r"\s+", "", o))
+    return o if VI_TRI_RE.match(o) else ""
 # Cum tu trong ghi chu khi sheet khong co tab cua package (ad_units.nap_sheet dua vao de bao Discord).
 THIEU_TAB = "không có tab nào ghi package"
 
@@ -43,7 +52,7 @@ def doc_tab(path, package: str) -> dict[str, str]:
                 continue
             ra: dict[str, str] = {}
             for r in rows:
-                vi = next((c for c in r if VI_TRI_RE.match(c)), "")
+                vi = next((v for v in map(_vi_tri, r) if v), "")
                 ma = next((c for c in r if ID_RE.match(c)), "")
                 if vi and ma:
                     # Sheet viet lan `-` va `_` -> dang key remote config `id_<vi_tri>`.
