@@ -432,6 +432,8 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
 4. Mỗi máy điện thoại: App Tester đã đăng nhập tài khoản tester, USB debugging, màn hình không khoá.
 5. Chạy thử: `<bin>/rcr-bot`. Tự bật khi đăng nhập:
    - Ubuntu: `bash deploy/cai-bot-linux.sh` (systemd user service, log `journalctl --user -u rcr-bot -f`)
+     - Chạy 24/24 (bot chính): thêm `bash deploy/cai-24-24-ubuntu.sh` — linger (khởi động lại máy không cần đăng
+       nhập), chặn sleep/gập nắp, `Restart=always`, quyền adb, token Claude dài hạn, điện thoại luôn sáng khi sạc.
    - Windows: `powershell -ExecutionPolicy Bypass -File deploy\cai-bot-windows.ps1` (Task Scheduler, log `out/bot-run.log`)
 
 **Thêm máy tính phụ (vd Ubuntu) chạy chung một bot, không trùng:** chỉ **một** máy là bot chính — đọc tin build, hỏi
