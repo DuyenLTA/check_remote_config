@@ -41,6 +41,16 @@ def noi(content: str, dong: str) -> str:
     return chu if len(chu) <= MAX_CONTENT else chu[:MAX_CONTENT - 1] + "…"
 
 
+async def ping_xong(bot, tin, chu: str) -> None:
+    """Sua tin goc khong ping ai -> gui them MOT dong tra loi tin goc, tag QA duyet (DISCORD_DUYET_USER_IDS) de biet
+    luot da xong (user chot 10/11/2026: "sua tin goc thi cung ping lai, khong thi im lam"). Noi dung van o tin goc."""
+    ids = sorted(getattr(bot, "duyet", None) or ())
+    tag = " ".join(f"<@{i}>" for i in ids)
+    await tin.reply(f"{tag} {chu}".strip()[:MAX_CONTENT], mention_author=False,
+                    allowed_mentions=discord.AllowedMentions(users=[discord.Object(i) for i in ids],
+                                                             roles=False, everyone=False))
+
+
 def view_gop(*views: discord.ui.View | None) -> discord.ui.View:
     """Gop nut/menu cua nhieu view vao mot view (menu bug + nut Verify cung nam tren tin goc)."""
     v = discord.ui.View(timeout=None)

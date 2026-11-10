@@ -87,3 +87,30 @@ def test_gan_assignee_dev_gui_build(tmp_path, monkeypatch):
     monkeypatch.setattr(j.subprocess, "run", lambda cmd, **k: goi.update(k) or P)
     j.chay([BUG], {**JOB, "dev_jira": "trunghd"}, "", "qa.lead", tmp_path, tmp_path / "out")
     assert "Assignee" in goi["input"] and "trunghd" in goi["input"]
+
+
+def test_may_chua_khai_mcp_atlassian_thi_nap_qua_mcp_config(tmp_path, monkeypatch):
+    from rcr import bot_log_jira as b
+    cfg = tmp_path / ".claude.json"
+    cfg.write_text('{"mcpServers": {}, "projects": {"/x": {"mcpServers": {}}}}', encoding="utf-8")
+    assert b.co_mcp_atlassian(cfg) is False
+    cfg.write_text('{"projects": {"/x": {"mcpServers": {"mcp-atlassian": {}}}}}', encoding="utf-8")
+    assert b.co_mcp_atlassian(cfg) is True
+    assert b.co_mcp_atlassian(tmp_path / "khong-co.json") is False
+    monkeypatch.setattr(b, "co_mcp_atlassian", lambda: False)
+    cmd, _ = b.lenh("AIP922", "a.b@apero.vn", tmp_path / "f.json", "App 1.0")
+    assert cmd[cmd.index("--mcp-config") + 1] == b.MCP_CONFIG and "TOKEN" not in b.MCP_CONFIG
+    monkeypatch.setattr(b, "co_mcp_atlassian", lambda: True)
+    assert "--mcp-config" not in b.lenh("AIP922", "a.b@apero.vn", tmp_path / "f.json", "App 1.0")[0]
+
+
+def test_prompt_tro_toi_skill_dong_bo_khi_co(tmp_path, monkeypatch):
+    from rcr import bot_log_jira as b
+    f = tmp_path / "skills/synced/abc/jira-log-bug/SKILL.md"
+    f.parent.mkdir(parents=True)
+    f.write_text("x", encoding="utf-8")
+    assert b.file_skill(tmp_path) == f
+    monkeypatch.setattr(b, "file_skill", lambda: f)
+    assert f.as_posix() in b.lenh("AIP922", "a.b@apero.vn", tmp_path / "j.json", "App 1.0")[1]
+    monkeypatch.setattr(b, "file_skill", lambda: None)
+    assert "SKILL.md" not in b.lenh("AIP922", "a.b@apero.vn", tmp_path / "j.json", "App 1.0")[1]

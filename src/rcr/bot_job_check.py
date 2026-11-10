@@ -113,3 +113,8 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
         # ngay tai tin can review, khong phai keo len tim tin ket qua.
         await bot_hop_thu_bug.dang_menu(bot, qa, c)
         bot.q.cap_nhat(job, da_bao_bug=True)
+    if not job.get("da_ping"):
+        so_bug = len(kq.get("bugs") or [])
+        await tin_goc.ping_xong(bot, qa, f"🔔 **{job['ma']}** `{job['version']}` xong — {chu}"
+                                         + (f", {so_bug} bug cần review" if so_bug else "") + " (xem tin gốc).")
+        bot.q.cap_nhat(job, da_ping=True)

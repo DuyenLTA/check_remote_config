@@ -61,3 +61,17 @@ def test_notify_co_tin_goc_thi_khong_gui_tin_moi(monkeypatch):
     assert them == ["pkg.a"] and post == []
     monkeypatch.setattr(discord_notify.discord_tin_goc, "them_dong", lambda pkg, dong: False)
     assert discord_notify.send("done", "Report đã publish", [], package="pkg.b") and post == [1]
+
+
+def test_ping_xong_tra_loi_tin_goc_tag_qa_duyet():
+    import asyncio
+    goi = {}
+
+    class Tin:
+        async def reply(self, chu, **kw):
+            goi.update(chu=chu, **kw)
+
+    asyncio.run(tg.ping_xong(SimpleNamespace(duyet={42}), Tin(), "🔔 AIP916 xong"))
+    assert goi["chu"] == "<@42> 🔔 AIP916 xong"
+    assert goi["mention_author"] is False
+    assert [u.id for u in goi["allowed_mentions"].users] == [42]
