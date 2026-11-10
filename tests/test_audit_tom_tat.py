@@ -108,3 +108,22 @@ def test_xuat_sdk_check_giu_audit_khi_cham_lai(out, tmp_path, monkeypatch):
     cli._xuat(d, {"meta": {"package": PKG, "muc": []}, "ket_qua": []})
     assert "54/54" in (d / "report.html").read_text("utf-8")
     assert sdk_nextgen_cham.doc(d)["meta"]["audit"]["khop"] == 54
+
+
+def test_xuat_sdk_check_lay_audit_luot_cu_cung_build(out, tmp_path, monkeypatch):
+    """Luot sang ngay khac (khong co audit cung ngay) lay audit cua luot cu cung build thay vi ghi "chua check"."""
+    from rcr import cli_sdk_check as cli
+    monkeypatch.setattr(at, "thu_muc_out", lambda: out)
+    meta = {"package": PKG, "muc": [], "phien_ban": "1.3.0", "apk_sha256": "abc"}
+    cu = tmp_path / f"sdk-{PKG}-261028-235306"
+    cu.mkdir()
+    cli._xuat(cu, {"meta": dict(meta), "ket_qua": []})          # audit cung ngay 28/10 -> luu ban sao
+    (out / f"{PKG}-artifact.html").unlink()                       # audit goc mat / khac ngay
+    moi = tmp_path / f"sdk-{PKG}-261029-100000"
+    moi.mkdir()
+    cli._xuat(moi, {"meta": dict(meta), "ket_qua": []})
+    assert "54/54" in (moi / "report.html").read_text("utf-8")
+    khac = tmp_path / f"sdk-{PKG}-261029-110000"                  # build khac (sha khac) -> khong muon audit
+    khac.mkdir()
+    cli._xuat(khac, {"meta": {**meta, "apk_sha256": "xyz"}, "ket_qua": []})
+    assert "chưa check ID ads cho build này" in (khac / "report.html").read_text("utf-8")

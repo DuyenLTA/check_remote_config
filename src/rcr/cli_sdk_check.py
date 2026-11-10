@@ -58,8 +58,22 @@ def _audit(d: Path, data: dict) -> dict | None:
             cu = None
     if cu and (d / report_tab_audit.BAN_SAO).is_file():
         return cu
-    tt = audit_tom_tat.tim(data["meta"].get("package") or "", ngay=_ngay_chay(d)) or cu
+    tt = audit_tom_tat.tim(data["meta"].get("package") or "", ngay=_ngay_chay(d)) or cu or _audit_luot_cu(d, data)
     return report_tab_audit.luu_ban_sao(tt, d)
+
+
+def _audit_luot_cu(d: Path, data: dict) -> dict | None:
+    """Audit cua luot cu CUNG BUILD (phien ban + sha APK) khi luot nay khong co audit cung ngay: chay lai / gop luot
+    sang ngay hom sau thi tab Check ID ads khong duoc trong (AIP944 1.3.0, 10/11/2026: luot 09/11 co audit 53/54,
+    report gop 10/11 ghi "chua check"). Lay luot moi nhat con ban sao audit.html."""
+    meta = data.get("meta") or {}
+    g = sdk_nextgen_gop_luot
+    for luot in reversed(g.tim(d.parent, meta.get("package") or "", g.khoa_build(meta), tru=d)):
+        tt = (luot["data"].get("meta") or {}).get("audit")
+        ban_sao = Path(luot["thu_muc"]) / report_tab_audit.BAN_SAO
+        if tt and ban_sao.is_file():
+            return {**tt, "trang": str(ban_sao)}
+    return None
 
 
 def _xuat(d: Path, data: dict) -> dict:
