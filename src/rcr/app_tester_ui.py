@@ -275,8 +275,8 @@ async def cai(client, serial, package, version, loai, out_dir: Path) -> dict:
     # dang cai lam App Tester hien "Open" (khong tin duoc: lan day cu / app da go van hien), bot tung bo qua cai
     # hoac bao "App Tester chua co" (AIP886 2.7.0 (20) 02/11/2026). Go truoc -> release nao cung hien Download.
     truoc = await ban_dang_cai(client, serial, package)
-    # Nho Firebase app id TRUOC khi go (doc tu APK dang cai) -> mo thang trang app, khong cuon tim.
-    app_id = await app_tester_link.nho(client, serial, package) if truoc else ""
+    # Firebase app id: cache / APK dang cai (doc TRUOC khi go) / sheet Check thong so KT -> mo thang trang app.
+    app_id = await app_tester_link.nho(client, serial, package)
     if truoc:
         await client.shell(serial, "pm", "uninstall", package)
     nodes = await mo_chi_tiet(client, serial, package, out_dir, app_id)
@@ -291,7 +291,12 @@ async def cai(client, serial, package, version, loai, out_dir: Path) -> dict:
     if b["nut"] not in ("tai", "da_tai"):
         raise await _luu_man_la(client, serial, out_dir, f"release {version} không có nút Download/Install")
     await _bam(client, serial, b["node_nut"])
-    return await _cho_cai_xong(client, serial, package, version, loai, bool(truoc), out_dir)
+    kq = await _cho_cai_xong(client, serial, package, version, loai, bool(truoc), out_dir)
+    # App lan dau len may nay (chua co app id) -> doc APK vua cai de nho app id: lan cai sau mo thang bang
+    # deep link, khong cuon tim (AI-Photoshoot 10/11/2026 phai cuon vi chua tung cai tren may).
+    if not app_id:
+        await app_tester_link.nho(client, serial, package)
+    return kq
 
 
 async def _cho_cai_xong(client, serial, package, version, loai, go, out_dir) -> dict:

@@ -71,3 +71,35 @@ def tai(package: str, out_dir, link: str | None = None) -> tuple[dict[str, str],
     if not bang:
         return {}, f"sheet Check thông số KT {THIEU_TAB} {package}"
     return bang, f"{nguon}: {len(bang)} vị trí"
+
+
+FIREBASE_APP_ID_RE = re.compile(r"^1:\d+:android:[0-9a-f]+$")
+
+
+def firebase_app_id(package: str, out_dir, link: str | None = None) -> str:
+    """Firebase app id (`1:<so>:android:<hex>`) ghi trong tab cua `package`, '' neu khong co.
+
+    App Tester mo thang trang app bang id nay (app_tester_link). Sheet chua co cot rieng (10/11/2026 chi co
+    AdMob "App ID" ca-app-pub-...~... va Facebook App ID) -> quet moi o theo dang id, dong nao ghi cung an.
+    """
+    import openpyxl
+
+    link = link or os.environ.get("RC_AD_UNITS_SHEET") or LINK
+    try:
+        path = tc_source.tai_ve(link, out_dir)
+    except RcError:
+        path = Path(out_dir) / f"tc-{tc_source.SHEET_RE.search(link).group(1)}.xlsx"
+        if not path.exists():
+            return ""
+    try:
+        wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    except Exception:  # noqa: BLE001 - file hong -> coi nhu khong co, App Tester cuon tim
+        return ""
+    try:
+        for ws in wb.worksheets:
+            o = [str(v).strip() for r in ws.iter_rows(values_only=True) for v in r if v not in (None, "")]
+            if any(a.lower() == "package name" and b == package for a, b in zip(o, o[1:])):
+                return next((c for c in o if FIREBASE_APP_ID_RE.match(c)), "")
+        return ""
+    finally:
+        wb.close()

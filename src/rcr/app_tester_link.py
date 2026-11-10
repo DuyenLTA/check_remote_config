@@ -7,7 +7,7 @@ thay app (App Tester nho vi tri cuon cu, dong bi cat o mep man). App Tester (v0.
 
 App id (`google_app_id` trong APK) khong co trong tin build -> nho theo package vao `out/app-tester-app-id.json`:
 ghi moi lan tool doc APK cua app (`rc_firebase_app.thong_tin_tren_may`: baseline RC, kiem testvsl) va truoc khi
-go ban cu luc cai build. Chua biet app id (app chua tung qua may nay) -> app_tester_ui cuon tim nhu cu.
+go ban cu luc cai build. App chua tung qua may nay -> tra sheet Check thong so KT; van khong co -> cuon tim nhu cu.
 """
 from __future__ import annotations
 
@@ -56,9 +56,19 @@ async def nho(client, serial: str, package: str) -> str:
         return co
     from . import rc_firebase_app
     try:
-        return (await rc_firebase_app.thong_tin_tren_may(client, serial, package)).get("app_id", "")
-    except Exception:  # noqa: BLE001 - chua cai / keo APK hong -> cuon tim nhu cu
+        co = (await rc_firebase_app.thong_tin_tren_may(client, serial, package)).get("app_id", "")
+    except Exception:  # noqa: BLE001 - chua cai / keo APK hong -> tra sheet
+        co = ""
+    if co:
+        return co
+    # App chua tung len may nay -> tra sheet Check thong so KT (tab cua package), co thi nho luon.
+    from . import ad_units_sheet
+    try:
+        co = await asyncio.to_thread(ad_units_sheet.firebase_app_id, package, CACHE.parent)
+    except Exception:  # noqa: BLE001 - tai sheet hong -> cuon tim nhu cu
         return ""
+    ghi(package, co)
+    return co
 
 
 async def mo(client, serial: str, package: str, app_id: str, doc_man, man_cua) -> list | None:
