@@ -292,7 +292,10 @@ def dem_ads(log: Path) -> int:
         text = log.read_text("utf-8", "replace")
     except OSError:
         return -1                         # khong doc duoc -> khong ket luan "khong co ads"
-    return sum(1 for e in fa_log.parse(text) if e["name"].split("(", 1)[0] in AD_EVENTS)
+    fa = sum(1 for e in fa_log.parse(text) if e["name"].split("(", 1)[0] in AD_EVENTS)
+    # Co may (vivo V2143, GMS 26.43) khong in FA-SVC "Logging event" du da bat VERBOSE: FA ra 0 trong khi
+    # app van xin/hien ads. Log AdEventLogger cua lib ads do chinh app in -> dem them, dung ket luan "RC tat ads".
+    return fa + len(re.findall(r"AdEventLogger\s*:\s*track", text))
 
 
 async def thu(client, serial: str, package: str, out: Path, muc: set[str], log_fn) -> dict:

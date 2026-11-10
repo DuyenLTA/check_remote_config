@@ -10,6 +10,7 @@ va cach cham user chot trong `how-to-measure-each-case.md`:
 from __future__ import annotations
 
 import re
+from datetime import timedelta
 
 from .sdk_nextgen_cham_build import MARK_TAG, adapter, muc12
 from .sdk_nextgen_events import crash, dong, dong_cua_app, doc_events, fmt, loc, tach_moc, unit
@@ -22,6 +23,7 @@ BO_THEO_YEU_CAU = "Bỏ theo yêu cầu (user chốt 15/10/2026): cần APK bả
 _UMP_KHONG_FORM = re.compile(r"misconfiguration|no form", re.I)
 _APPSFLYER = re.compile(r"pushTrackEventAdmob enableAppsflyer:(true|false)", re.I)
 _ADJUST_OK = re.compile(r"AdSdkAdjust.*Event success callback", re.I)
+_DISPLAYED = re.compile(r"ActivityTaskManager: Displayed ([\w.]+)/(\S+?):? \+(?:(\d+)s)?(\d+)ms")
 
 
 def kt01(bc: dict, off_mat: str, off_sau: str, package: str) -> dict:
@@ -97,6 +99,19 @@ def _inter_splash_s(log: str, package: str) -> tuple[float, float, list[str]] | 
         elif mo is not None and "Splash" not in d.split(f"cmp={package}/", 1)[1].split()[0]:
             roi, roi_dong = gio(d), d
             break
+    if not (mo and roi):
+        # Mot so ROM (vivo) khong in dong START: lay moc tu dong Displayed tru thoi gian ve (+1s245ms).
+        mo = roi = None
+        for d in log.splitlines():
+            m = _DISPLAYED.search(d)
+            if not m or m.group(1) != package or gio(d) is None:
+                continue
+            bat_dau = gio(d) - timedelta(seconds=int(m.group(3) or 0), milliseconds=int(m.group(4)))
+            if mo is None and "Splash" in m.group(2):
+                mo, mo_dong = bat_dau, d
+            elif mo is not None and "Splash" not in m.group(2):
+                roi, roi_dong = bat_dau, d
+                break
     req = next((e for e in loc(doc_events(log), "track_ad_request")
                 if fmt(e) == "interstitial" and "Splash" in e["params"].get("ga_screen_class", "")), None)
     if not (mo and roi and req) or gio(req["t"]) is None:
@@ -135,7 +150,10 @@ def med01(log_khoi_dong: str, package: str) -> dict:
         return kq("MED-01", ten, SAI, f"{len(loi)} adapter báo lỗi / chưa sẵn sàng", loi)
     if any(t == "?" for _, t in ads):
         return kq("MED-01", ten, DO_TAY, "Có adapter không đọc được trạng thái", sorted({a for a, t in ads if t == "?"}))
-    return kq("MED-01", ten, KHOP, f"{len({a for a, _ in ads})} adapter khởi tạo xong", sorted({a for a, _ in ads})[:8],
+    # Dem theo TEN adapter: moi lan mo lanh in lai cung adapter voi Latency khac, dem ca chuoi thi
+    # 2 adapter x 3 lan mo ra "6 adapter" (Gravida 1.3.0, 10/11/2026).
+    ten_ad = sorted({a.split(",", 1)[0].strip() for a, _ in ads})
+    return kq("MED-01", ten, KHOP, f"{len(ten_ad)} adapter khởi tạo xong", ten_ad[:8],
               "So với danh sách mediation dev gửi nếu có")
 
 

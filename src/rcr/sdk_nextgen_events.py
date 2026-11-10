@@ -23,7 +23,9 @@ CUA_SO_SHOW_PAID = 3.0
 CUA_SO_PAID_VALUE = 1.0
 
 _CLASS_ERR = re.compile(r"NoClassDefFoundError|ClassNotFoundException|NoSuchMethodError")
-_PARCEL_ERR = re.compile(r"\s[EW] Parcel\s*:|BadParcelableException")
+# FeatureFlagsImplExport (aconfig) do lop android.os.flagging.AconfigPackage - chi co tu Android 16 - roi tu catch,
+# in muc W tren may cu (vivo Android 13, AI Song 2.3.0, 09/11/2026). Khong phai thieu lop SDK quang cao.
+_PARCEL_ERR = re.compile(r"\s[EW] Parcel\s*:|BadParcelableException|\sW FeatureFlagsImplExport\s*:")
 # Lib chan request khi offline, khong goi SDK -> khong co ad_load failed (skill nextgen, LingoSpeak 10/2026).
 _FAST_FAIL = re.compile(r"no internet|failing ad request fast|MobileAds ready but no internet", re.I)
 

@@ -167,3 +167,17 @@ def test_gop_luot_chi_thu_muc_hien_tai_bi_bo_qua(tmp_path):
     cli_sdk_check.run(cli_sdk_check.build_parser().parse_args(
         ["--cham-lai", str(d1), "--out-dir", str(tmp_path), "--gop-luot", f"{d1},{d1}/."]))
     assert not sdk_nextgen_cham.doc(d1).get("luot_truoc")
+
+
+def test_do_tay_moi_khong_tai_hien_khong_de_sai_tay_cu():
+    """Luot sau do tay ra Khop/N/A (khong chay lai buoc tai hien) -> Sai do tay luot truoc van dinh."""
+    from rcr.sdk_nextgen_gop_luot import gop
+    sai = {"ma": "HV-01", "ten": "x", "ket": "SAI", "cham_boi": "Claude đo tay", "ly_do": "ad resume đè", "bang_chung": []}
+    khop = {"ma": "HV-01", "ten": "x", "ket": "KHOP", "cham_boi": "Claude đo tay", "ly_do": "chỉ bấm inter",
+            "bang_chung": [], "ket_code": "DO_TAY"}
+    cu = [{"thu_muc": "out/sdk-p-261109-183740", "data": {"meta": {}, "ket_qua": [sai]}}]
+    data, lay = gop({"meta": {}, "ket_qua": [dict(khop)]}, cu)
+    assert data["ket_qua"][0]["ket"] == "SAI" and lay == ["HV-01"]
+    go = {**khop, "khong_tai_hien": True}
+    data, lay = gop({"meta": {}, "ket_qua": [go]}, cu)
+    assert data["ket_qua"][0]["ket"] == "KHOP" and lay == []

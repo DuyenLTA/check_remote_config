@@ -172,8 +172,10 @@ def ev12_13() -> list[dict]:
             kq("EV-13", "Native trong danh sách có event doanh thu", KHONG_AP_DUNG, "Native danh sách chỉ có trong app, ngoài luồng tutorial")]
 
 
-def tat_ca(ev, failed_loads) -> list[dict]:
-    """EV-01..13. `failed_loads`: ad_load failed tu moi luot (ca luot offline) cho EV-04."""
+def tat_ca(ev, failed_loads, ev_them=()) -> list[dict]:
+    """EV-01..13. `failed_loads`: ad_load failed tu moi luot (ca luot offline) cho EV-04.
+    `ev_them`: event cac luot co mang khac (offline sau khi bat mang) - EV-11 chi hoi ad_impression con ban,
+    luot FO toan no-fill / ad test (valuemicros 0, Firebase khong bat _ai) thi lay o luot khac."""
     ra = [ev01(ev), ev02(ev), ev03(ev)]
     if failed_loads:
         thieu, note = loi_load_du_truong(failed_loads)
@@ -182,5 +184,5 @@ def tat_ca(ev, failed_loads) -> list[dict]:
                      [dong(e) for e in (thieu or failed_loads)], note))
     else:
         ra.append(kq("EV-04", "ad_load (thất bại)", DO_TAY, "Không có ad_load thất bại nào trong các lượt"))
-    return ra + [ev05(ev), ev06(ev), ev07(ev), ev08(ev), ev09(ev), ev10(ev), ev11(ev)] + ev12_13()
+    return ra + [ev05(ev), ev06(ev), ev07(ev), ev08(ev), ev09(ev), ev10(ev), ev11(list(ev) + list(ev_them))] + ev12_13()
 
