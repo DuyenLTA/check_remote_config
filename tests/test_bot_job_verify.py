@@ -21,7 +21,8 @@ class _Msg:
         self.embeds = k.get("embeds", self.embeds)
 
     async def reply(self, chu, **k):
-        raise AssertionError(f"không được trả lời tin mới: {chu}")
+        if "🔔" not in chu:                     # chi cho dong ping "xong" (bot_tin_goc.ping_xong)
+            raise AssertionError(f"không được trả lời tin mới: {chu}")
 
     def embed(self, ten):
         return next((e.description for e in self.embeds if e.title == ten), "")

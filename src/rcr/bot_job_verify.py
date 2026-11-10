@@ -187,6 +187,9 @@ async def _bao_ket_qua(bot, job: dict, vm, out: Path) -> None:
                      "attachments": [discord.File(f)] if f else []}
     await vm.edit(**noi_dung)
     bot.q.cap_nhat(job, da_bao=True)
+    if not job.get("da_ping"):
+        await tin_goc.ping_xong(bot, vm, f"🔔 Verify **{job['ma']}** `{job['version']}` xong (xem tin gốc).")
+        bot.q.cap_nhat(job, da_ping=True)
     tin_dev = v.tin_bao_dev_fail(job, dong)
     if tin_dev and not job.get("da_bao_dev"):   # bug van FAIL -> bao dev o kenh project
         await bot_kenh_project.bao(bot, job, tin_dev, vm, [u["key"] for loai, u, _ in dong if loai == "todo"])

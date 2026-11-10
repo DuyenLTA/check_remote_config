@@ -78,7 +78,10 @@ class _Msg:
         self.edits.append(k)
 
     async def reply(self, chu, **k):
-        pytest.fail(f"không được trả lời tin mới: {chu}")
+        # Chi duoc mot dong ping "xong" (bot_tin_goc.ping_xong); gui lai sau loi mang khong ping trung.
+        if "🔔" not in chu or getattr(self, "da_ping", False):
+            pytest.fail(f"không được trả lời tin mới: {chu}")
+        self.da_ping = True
 
     def embed_da_gui(self):
         return [e for k in self.edits for e in k.get("embeds") or ()]
