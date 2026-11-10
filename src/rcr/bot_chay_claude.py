@@ -22,14 +22,14 @@ import subprocess
 import time
 from pathlib import Path
 
-from . import bot_tien_trinh
+from . import audit_tom_tat, bot_tien_trinh
 
 SERIAL_RE = re.compile(r"[A-Za-z0-9.:_-]+")
 SDK_RE = re.compile(r"\d+\.\d+\.\d+(?:-[\w.]+)?")   # so tutorial tu tin build (3.6.1, 3.7.1-alpha01)
 VERSION_RE = re.compile(r"\d+(?:\.\d+)+ \(\d+\)")   # version build "3.7.0 (30)" (/check-sub)
 PACKAGE_RE = re.compile(r"^[a-zA-Z][\w]*(\.[a-zA-Z_][\w]*)+$")
 # Workflow: buoc check ID ads (rc-check.md muc 3c) chay workflow audit-fanout.
-TOOLS = ["Bash", "Read", "Edit", "Write", "Artifact", "Skill", "Workflow"]
+TOOLS = ["Bash", "Read", "Edit", "Write", "Skill", "Workflow"]   # Artifact: -p khong nap
 KET_QUA_RE = re.compile(r"^KET_QUA:\s*(\{.*\})\s*$", re.M)
 # Luot check (bo TC / checklist Next-Gen) KHONG gioi han thoi gian: chay het case moi thoi (user chot 04/11/2026
 # sau khi AIP893 52 case bi cat o 135 phut giua vong chay lai case chua PASS). Luot treo thi QA bam Dung.
@@ -69,6 +69,11 @@ PROMPT = (
     "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case. KHONG tu viet vong lap sleep doc "
     "journal.jsonl / file output de cho: thong bao xong chi toi khi lenh Bash dang chay ket thuc, vong lap do giu may "
     "dung im toi het han (AIP872 04/11/2026 mat ~7 phut). Trong luc cho thi lam viec khong can may (doc TC, preflight).\n"
+    "Phien `claude -p` KHONG co tool Artifact (khong nap, 09/11/2026): dung mat thoi gian thu publish. Check ID ads van "
+    "lam DU buoc dung trang audit (audit-fanout muc 3: findings/notes + artifact_report_builder.py -> <pkg>-artifact.html "
+    "trong out cua repo audit) - report rc-check lay tab Check ID ads tu file do; chi BO buoc publish + artifact_link. "
+    "Repo audit da duoc --add-dir: chep script workflow bang `cat <repo audit>/.claude/workflows/audit-fanout.mjs > out/scratch-<ngay>/audit-fanout.mjs` (lenh `cp` tu duong dan .claude bi -p chan) roi goi Workflow. "
+    "`link` = duong dan TUYET DOI report .html.\n"
     "Sua tool giua luot: chi chay test cua file vua sua (pytest tests/test_<file>.py), KHONG chay ca bo test - "
     "may dung im trong luc cho.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
@@ -80,9 +85,8 @@ PROMPT = (
     "Moi chu trong `tom_tat` va `bugs` (bot dang len Discord) viet tieng Viet CO DAU day du. "
     "`bugs` chi gom FAIL da ra lai theo muc 5d (FAIL gia, loi tool thi khong dua vao); khong co thi []. "
     "KHONG hoi user, KHONG tu log Jira: bot dua danh sach nay len Discord cho QA tick.\n"
-    "Co bug (`bugs` khac []) thi BAT BUOC publish report thanh artifact truoc khi tra loi, ke ca khi dung giua luot "
-    "(trang_thai DUNG) hay con dong chua do: publish report tam, ghi ro phan chua xong. QA can mo report de review bug, "
-    "nen `link` luc do phai la link claude.ai; chi ghi duong dan file khi publish that bai."
+    "Co bug (`bugs` khac []) thi report phai dung xong truoc khi tra loi, ke ca khi dung giua luot (trang_thai DUNG) "
+    "hay con dong chua do: dung report tam, ghi ro phan chua xong - bot dinh kem file report cho QA review bug."
 )
 # Luot verify bug dev da keo sang Reviewing: chi chay lai dung cac case, bot tu doi trang thai Jira theo verdict.
 PROMPT_VERIFY = (
@@ -133,7 +137,7 @@ PROMPT_SUB = (
     "Chay HET bo TC sub theo lich, may la tai khoan License Tester (khong hoi). Case thieu may / tai khoan -> CAN_TEST_TAY. "
     "Gap diem can nguoi quyet (popup khong phai giao dich test, khong tim duoc Paywall sau khi da thu het) thi dung. "
     "Truoc khi chay: co out/sub-{package}-{serial}.luot.json \"xong\": false, cap nhat trong 12 gio -> CHAY TIEP. "
-    "Het luot phai cancel goi con Active. Khong commit/push. Co bug thi BAT BUOC publish report artifact truoc khi tra loi.\n"
+    "Het luot phai cancel goi con Active. Khong commit/push. Co bug thi dung xong report truoc khi tra loi (phien khong co tool Artifact, bot dinh kem file).\n"
     + DUOI_KET_QUA
 )
 PROMPT_VERIFY_SUB = (
@@ -165,7 +169,11 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
     if sdk and not SDK_RE.fullmatch(sdk):
         raise ValueError(f"bản SDK không hợp lệ: {sdk!r}")
     exe = shutil.which("claude") or "claude"
-    cmd = [exe, "-p", "--output-format", "json", "--allowedTools", *TOOLS]
+    cmd = [exe, "-p", "--output-format", "json"]
+    audit = audit_tom_tat.repo_audit()
+    if audit.is_dir():          # -p khong duyet duoc quyen ngoai cwd: thieu thi cp script workflow audit bi chan (AIP886)
+        cmd += ["--add-dir", str(audit)]
+    cmd += ["--allowedTools", *TOOLS]
     if sub_version and not cases:                    # /check-sub: ca bo TC sub
         if not VERSION_RE.fullmatch(sub_version):
             raise ValueError(f"version không hợp lệ: {sub_version!r}")
