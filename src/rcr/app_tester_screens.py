@@ -167,6 +167,12 @@ def _luc_day(b: dict) -> datetime:
         return datetime.min
 
 
+def ma_build(version: str) -> int | None:
+    """So build trong ngoac cua "2.2.0 (16)" -> 16; khong doc duoc -> None."""
+    m = re.search(r"\((\d+)\)\s*$", version or "")
+    return int(m.group(1)) if m else None
+
+
 def chon_ban(cac: list[dict], version: str, loai: str) -> tuple[dict | None, str]:
     """Release dung version + loai -> (release, ""); khong co thi (None, ly do).
 
@@ -177,7 +183,8 @@ def chon_ban(cac: list[dict], version: str, loai: str) -> tuple[dict | None, str
     """
     cung_ver = [b for b in cac if b["version"] == version]
     if not cung_ver:
-        return None, f"App Tester chưa có {version}"
+        moi_nhat = f" (mới nhất trên App Tester: {cac[0]['version']})" if cac else ""
+        return None, f"App Tester chưa có {version}{moi_nhat}"
     dung = [b for b in cung_ver if b["loai"] == loai or (loai == "release" and b["loai"] == CHUA_RO)]
     if not dung:
         dung = [b for b in cung_ver if b["loai"] == CHUA_RO]

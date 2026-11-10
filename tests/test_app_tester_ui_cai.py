@@ -384,3 +384,16 @@ def test_mo_rong_release_o_day_man_thi_day_len_cho_note_hien(monkeypatch):
     monkeypatch.setattr(ui, "_cuon", cuon_)
     monkeypatch.setattr(ui.s, "cac_ban", lambda n: st["man"])
     assert asyncio.run(ui._toi_ban(_Client(), "S1", dich)) is dich and st["day"] == 1
+
+
+def test_ban_moi_nhat_cu_hon_ban_can_tim_thi_khong_cuon(monkeypatch):
+    """Tin build ghi 2.2.0 (26), App Tester moi nhat 2.2.0 (16) ngay dau trang -> doc mot man roi dung."""
+    cac = [dict(_ban("tai", "Nov 10, 2026", "a"), version=v) for v in ("2.2.0 (16)", "2.1.0 (15)", "2.0.0 (14)")]
+    cuon = _goi_cuon(monkeypatch, cac)
+    assert asyncio.run(ui.doc_cac_ban(_Client(), "S1", [], "2.2.0 (26)")) == cac and cuon == []
+    dich, ly_do = ui.s.chon_ban(cac, "2.2.0 (26)", "release")
+    assert dich is None and "mới nhất trên App Tester: 2.2.0 (16)" in ly_do
+
+
+def test_ma_build():
+    assert ui.s.ma_build("2.2.0 (16)") == 16 and ui.s.ma_build("2.2.0") is None

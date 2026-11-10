@@ -211,9 +211,15 @@ async def doc_cac_ban(client, serial, nodes, version: str) -> list[dict]:
         for b in moi:
             gom.setdefault(s.khoa_ban(b), b)
         da_qua = any(b["version"] == version for b in gom.values()) and moi and moi[-1]["version"] != version
+        # App Tester xep moi nhat len dau: da thay ban build nho hon ban can tim ma chua thay ban do -> ban do
+        # khong nam phia duoi, dung luon. Truoc day cuon het danh sach (Sorapix 10/11/2026: tin build ghi
+        # 2.2.0 (26), App Tester moi nhat 2.2.0 (16) ngay dau trang van cuon xuong tim).
+        dich_build = s.ma_build(version)
+        qua_build = dich_build is not None and any(
+            (s.ma_build(b["version"]) or dich_build + 1) < dich_build for b in gom.values())
         # Cuon ma khong ra release moi = het danh sach -> dung, khong cuon tiep cho du MAX_CUON_BAN.
         het = truoc and len(gom) == truoc
-        if da_qua or not moi or het:
+        if da_qua or qua_build or not moi or het:
             break
         await _cuon(client, serial, "up")
         nodes = await _nodes(client, serial)

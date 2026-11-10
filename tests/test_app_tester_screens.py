@@ -78,7 +78,7 @@ def test_chon_ban_theo_loai():
            {"version": "4.3.0 (40)", "loai": "debug", "ngay": "b", "note": "debug build"}]
     assert s.chon_ban(cac, "4.3.0 (40)", "debug")[0]["ngay"] == "b"
     assert s.chon_ban(cac[:1], "4.3.0 (40)", "debug") == (None, "4.3.0 (40) chưa có bản debug (mới có: release)")
-    assert s.chon_ban(cac, "4.4.0 (41)", "debug") == (None, "App Tester chưa có 4.4.0 (41)")
+    assert s.chon_ban(cac, "4.4.0 (41)", "debug") == (None, "App Tester chưa có 4.4.0 (41) (mới nhất trên App Tester: 4.3.0 (40))")
 
 
 def test_nut_play_protect_chi_nhan_cua_play_store():
