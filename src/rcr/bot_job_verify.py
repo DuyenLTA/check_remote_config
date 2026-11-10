@@ -15,7 +15,8 @@ from pathlib import Path
 
 import discord
 
-from . import bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_jira_marker, bot_kenh_project, bot_kiem_testvsl
+from . import (bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_forum, bot_jira_marker, bot_kenh_project,
+               bot_kiem_testvsl)
 from . import bot_jira_rest as jira
 from . import bot_tin_goc as tin_goc
 from . import bot_verify_jira as v
@@ -59,10 +60,11 @@ async def _xep(bot, c: dict, kenh) -> str:
            "bo_qua": [{**u, "ly_do": ly} for u, ly in bo]}
     dong_bo = [("bo", u, ly) for u, ly in bo]
     if not chay:
-        await kenh.send(v.tin_ket_qua(job, dong_bo))
+        await bot_forum.gui_goc(bot, job, v.tin_ket_qua(job, dong_bo), kenh.send)
         return f"{c['ma']}: {len(bo)} bug Reviewing nhưng không case nào chạy lại tự động được."
-    vm = await kenh.send(v.tin_ket_qua(job, [("cho", u, "") for u in chay] + dong_bo))
+    vm = await bot_forum.gui_goc(bot, job, v.tin_ket_qua(job, [("cho", u, "") for u in chay] + dong_bo), kenh.send)
     job["msg_id"] = vm.id
+    job.update(bot_forum.kenh_cua(vm))
     bot.q.nho_tin(job)
     vi_tri = bot.q.them(job)
     await vm.edit(view=nut(vm.id, ("huy", "Huỷ")))    # QA bo luot dang cho (vd dev bao day nham ban)

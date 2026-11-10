@@ -13,8 +13,8 @@ from pathlib import Path
 
 import discord
 
-from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_hop_thu_bug, bot_kiem_testvsl,
-               build_ma_app)
+from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_forum, bot_hop_thu_bug,
+               bot_kiem_testvsl, build_ma_app)
 from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import XAM, XANH, nut
 
@@ -33,8 +33,10 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     dau = f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**"
     await qa.edit(content=f"{dau}\nĐang cài bản {job['loai_ban']} từ App Tester…",
                   view=bot_dung_luot.view_dung(qa.id))   # thay nut Huy bang nut Dung
+    await bot_forum.dat_nhan(bot, job, bot_forum.DANG_CHAY)
     cai = await asyncio.to_thread(bot_cong_viec.cai, job["package"], job["version"], job["loai_ban"], serial)
     if "loi" in cai:
+        await bot_forum.dat_nhan(bot, job, bot_forum.CAN_XEM)
         # Moi build deu cai ban release tu App Tester -> cai hong chi bao loi + nut Thu lai (user chot 02/11/2026).
         await qa.edit(content=f"{dau}\n⛔ Cài không được: {cai['loi']}",
                       view=nut(("check", "Thử lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
@@ -51,6 +53,7 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     if bot_kiem_testvsl.doi_rc_firebase(job, next_gen):
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
         if loi:                          # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Firebase
+            await bot_forum.dat_nhan(bot, job, bot_forum.CAN_XEM)
             await qa.edit(content=tin_goc.noi(f"{dau}\n📲 Đã cài{ghi}.", bot_kiem_testvsl.tin_nhac(job, loi, bot.duyet)),
                           view=nut(("check", "Chạy lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
             return False
@@ -98,6 +101,7 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
                       attachments=[discord.File(f)] if f else [],
                       view=nut(*nut_ket_qua(job, kq), msg_id=job["msg_id"]))
         bot.q.cap_nhat(job, da_bao=True)
+        await bot_forum.dat_nhan(bot, job, bot_forum.nhan_ket_qua(kq))
     else:
         await qa.edit(content=dong_dau)
     if kq.get("bugs") and not job.get("da_bao_bug"):

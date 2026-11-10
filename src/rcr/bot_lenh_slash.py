@@ -21,7 +21,7 @@ import re
 import discord
 from discord import app_commands
 
-from . import bot_cong_viec, bot_hang_doi, bot_nhan_build, build_ma_app
+from . import bot_cong_viec, bot_forum, bot_hang_doi, bot_nhan_build, build_ma_app
 from .bot_giao_dien import NUT_HUY, nut as nut_tin
 from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
@@ -242,9 +242,9 @@ async def xep_check_sub(bot, tin: dict, nguoi) -> str:
            "loai_ban": "release", "loai_job": "sub", "link_tin": (cu or {}).get("link_tin", "")}
     if bot.q.trung(job):
         return f"Lượt check sub **{tin['ma']}** `{tin['version']}` đã trong hàng đợi."
-    kenh = await bot._kenh_qa()
-    qa = await kenh.send(f"🧾 Check sub — {bot_cong_viec.dau_tin(job)}…")
+    qa = await bot_forum.gui_goc(bot, job, f"🧾 Check sub — {bot_cong_viec.dau_tin(job)}…")
     job["msg_id"] = qa.id
+    job.update(bot_forum.kenh_cua(qa))
     bot.q.nho_tin(job)
     vi_tri = bot.q.them({**job, "nguoi_duyet": nguoi.id})
     await qa.edit(content=f"🧾 **Check sub** — {bot_cong_viec.dau_tin(job)}\nBộ TC sub Android, bản release từ App Tester "

@@ -12,6 +12,7 @@ tren Ubuntu cung doc file nay, khong doc ~/.bashrc):
   DISCORD_BOT_TOKEN        token bot (bi mat, khong in, khong ghi repo)
   DISCORD_BUILD_CHANNEL_ID kenh nhan build ngoai kenh project (qa-auto; phay ngan cach)
   DISCORD_QA_CHANNEL_ID    kenh bot hoi duyet + bao ket qua
+  DISCORD_FORUM_CHANNEL_ID (tuy) kenh Forum: moi build mot bai, tin goc nam trong bai (bot_forum)
   DISCORD_DUYET_USER_IDS   id nguoi duoc bam nut (phay ngan cach)
   DISCORD_QA_ROLE_ID       (tuy) role duoc bam nut
   DISCORD_JIRA_REVIEWER    email/username Jira gan lam Reviewer cho bug log tu Discord
@@ -67,6 +68,7 @@ class BuildBot(discord.Client):
         super().__init__(intents=intents)
         self.kenh_build = {int(x) for x in env("DISCORD_BUILD_CHANNEL_ID").split(",") if x.strip()}
         self.kenh_qa = int(env("DISCORD_QA_CHANNEL_ID"))
+        self.kenh_forum = int(env("DISCORD_FORUM_CHANNEL_ID") or 0)   # moi build mot bai (bot_forum); 0 = tat
         self.duyet = {int(x) for x in env("DISCORD_DUYET_USER_IDS").split(",") if x.strip()}
         self.role = int(env("DISCORD_QA_ROLE_ID") or 0)
         # May phu (bot_may_phu): cung token, khong doc tin build, chi chay job bot chinh giao.
@@ -128,7 +130,10 @@ class BuildBot(discord.Client):
         return self.get_channel(self.kenh_qa) or await self.fetch_channel(self.kenh_qa)
 
     async def _tin_qa(self, msg_id: int) -> discord.Message:
-        return await (await self._kenh_qa()).fetch_message(msg_id)
+        """Tin goc cua job: trong bai Forum (`kenh_id` cua tin) hoac o qa-auto (tin cu / Forum tat)."""
+        kid = int((self.q.tin_cua(msg_id) or {}).get("kenh_id") or 0)
+        kenh = (self.get_channel(kid) or await self.fetch_channel(kid)) if kid else await self._kenh_qa()
+        return await kenh.fetch_message(msg_id)
 
     # --- tien ich -----------------------------------------------------------------------
     def bi_mat(self) -> list[str]:

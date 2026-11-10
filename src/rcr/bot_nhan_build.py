@@ -13,7 +13,7 @@ from pathlib import Path
 
 import discord
 
-from . import bot_cong_viec, bot_jira_rest, bot_job_verify, bot_kenh_project, build_ma_app
+from . import bot_cong_viec, bot_forum, bot_jira_rest, bot_job_verify, bot_kenh_project, build_ma_app
 from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import GIU_KHI_HOI_LAI, NUT_HOI, noi_dung, nut
 
@@ -89,8 +89,9 @@ async def hoi_build_moi(bot, tin: dict, link_tin: str, kenh, out: Path) -> str:
     if not pkg:
         await kenh.send(f"Sheet Check thông số KT không có package của **{tin['ma']}**{goc}")
         return f"Sheet Check thông số KT không có package của **{tin['ma']}**."
-    qa = await kenh.send(f"**{tin['ma']}** `{tin['version']}`…")
-    c = {**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin), "link_tin": link_tin, "msg_id": qa.id}
+    qa = await bot_forum.gui_goc(bot, tin, f"**{tin['ma']}** `{tin['version']}`…", kenh.send)
+    c = {**tin, "package": pkg, "loai_ban": build_ma_app.loai_ban(tin), "link_tin": link_tin, "msg_id": qa.id,
+         **bot_forum.kenh_cua(qa)}
     bot.q.nho_tin(c)
     await qa.edit(content=bot_cong_viec.tin_hoi(c), view=nut(*NUT_HOI, msg_id=qa.id))
     await bot._xep_verify(c, kenh)
@@ -103,7 +104,8 @@ async def hoi_lai(bot, m: discord.Message, tin: dict) -> None:
     (user phan nan 29/10/2026). Tin cu giu nguyen (con menu log bug / ket qua). Dang cho/chay thi chi
     bao trang thai ngay duoi, khong tao luot trung. Dev bao trung o kenh khac thi van im (o noi goi)."""
     kq = await hoi_lai_build(bot, tin, m.jump_url, lambda chu: m.reply(chu, mention_author=False))
-    if kq.startswith("Build"):                       # dang cho / dang chay: bao ngay duoi tin QA gui
+    # dang cho / dang chay: bao ngay duoi tin QA gui. Forum bat: tin hoi moi nam trong bai cua build -> tra link.
+    if kq.startswith("Build") or bot_forum.bat(bot):
         await m.reply(kq, mention_author=False)
 
 
@@ -116,10 +118,10 @@ async def hoi_lai_build(bot, tin: dict, link_tin: str, gui, doi: dict | None = N
     if any(bot.q.vi_tri(t["msg_id"]) is not None for t in cung):
         return f"Build **{tin['ma']}** `{tin['version']}` đang chờ / đang chạy — xong bot báo kết quả."
     c_cu = max(cung, key=lambda t: int(t["msg_id"]))   # snowflake tang dan -> lan hoi gan nhat
-    qa = await gui(f"**{c_cu['ma']}** `{c_cu['version']}`…")
+    qa = await bot_forum.gui_goc(bot, c_cu, f"**{c_cu['ma']}** `{c_cu['version']}`…", gui)
     c = {**{k: c_cu[k] for k in GIU_KHI_HOI_LAI if k in c_cu}, **(doi or {})}
     # Tin luu tu truoc 31/10/2026 con ghi "debug" -> tinh lai: gio moi build deu cai ban release.
-    c.update(link_tin=link_tin, msg_id=qa.id, loai_ban=build_ma_app.loai_ban(c))
+    c.update(link_tin=link_tin, msg_id=qa.id, loai_ban=build_ma_app.loai_ban(c), **bot_forum.kenh_cua(qa))
     bot.q.nho_tin(c)
     await qa.edit(content=bot_cong_viec.tin_hoi(c), view=nut(*NUT_HOI, msg_id=qa.id))
     return f"Đã gửi tin hỏi Check mới: {qa.jump_url}"

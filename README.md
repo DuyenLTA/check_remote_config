@@ -422,6 +422,7 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
      DISCORD_BOT_TOKEN=...
      DISCORD_BUILD_CHANNEL_ID=<id kênh qa-auto> (ngoài kênh này bot chỉ nhận build ở kênh project `aipNNN-…`)
      DISCORD_QA_CHANNEL_ID=...
+     DISCORD_FORUM_CHANNEL_ID=<tuỳ chọn: id kênh Forum qa-builds — mỗi build một bài>
      DISCORD_DUYET_USER_IDS=<id người được bấm, phẩy ngăn cách>
      DISCORD_QA_ROLE_ID=<tuỳ chọn>
      DISCORD_DEV_IDS=<id dev được tag khi báo bug, phẩy ngăn cách>
@@ -479,6 +480,15 @@ nhận link Google Drive nữa.
 - `/check-sub <mã app> <version>` — chỉ QA được duyệt. Xếp lượt chạy **bộ TC sub Android** (xem mục dưới) trên bản
   release từ App Tester; kết quả + menu log bug như Check, mã case trong Jira là `sub#<số TC>`.
 Bot thiếu scope `applications.commands` ở server nào thì lệnh không hiện ở server đó (log bot ghi rõ), bot vẫn chạy.
+
+**Forum `qa-builds` — mỗi build một bài** (`DISCORD_FORUM_CHANNEL_ID`, để trống thì như cũ): build mới có SDK →
+bot tạo bài `AIP916 · 1.3.0 (5) · Tên app`, tin đầu bài là tin gốc (nút Check, kết quả, menu bug), tag người
+duyệt để có thông báo. Verify, hỏi lại (`/check`, gửi lại tin build ở qa-auto → bot trả link bài), `/check-sub` của
+cùng build đều vào bài đó. Bài vừa cập nhật tự lên đầu; lọc theo nhãn **Chờ duyệt · Đang chạy · PASS · FAIL · Cần
+xem** (QA tạo tay trong cài đặt kênh → Thẻ; bot khớp theo tên, thiếu nhãn nào thì bỏ qua nhãn đó). Lượt verify
+không đổi nhãn. Thông báo chung (không đọc được tin build, build không ghi SDK, sprint, lỗi bot) vẫn ở qa-auto.
+Job tạo trước khi bật Forum vẫn sửa tin ở qa-auto. Bot cần quyền Create Posts, Send Messages in Threads, Manage
+Threads trong kênh Forum.
 
 **Hỏi bot:** nhắn riêng hoặc tag bot (`@bot AIP938 lượt gần nhất ra sao`); chỉ QA được duyệt, Claude chỉ đọc repo.
 Riêng server "bót bót =))" (`DISCORD_HOI_TU_DO_GUILD_ID`, mặc định server đó, `0` = tắt): QA được duyệt **Reply** tin
