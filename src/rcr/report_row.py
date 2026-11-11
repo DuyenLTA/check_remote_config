@@ -95,6 +95,18 @@ def _ly_do(r: str) -> dict:
     return {"r": con, "tay": True}
 
 
+EP_AI_RE = re.compile(r"^\S{1,20} tạo điều kiện ở lượt đo tay:\s*")
+
+
+def _ep(ep: str) -> str:
+    """'Claude tạo điều kiện ở lượt đo tay: Cắm máy...' -> 'Tạo điều kiện trên máy: Cắm máy...'. Cung luat voi
+    `_ly_do`: report khong ghi ai do, khong ghi "do tay" (user 03/11/2026, nhac lai 11/11/2026)."""
+    if not ep:
+        return ep
+    ep = EP_AI_RE.sub("Tạo điều kiện trên máy: ", ep)
+    return DO_TAY_RE.sub(lambda m: "Đo trên máy" if m.group(0)[0] == "Đ" else "đo trên máy", ep)
+
+
 def build(rec: dict) -> dict:
     """Mot ban ghi case -> mot muc `DATA`. Chi du lieu, khong HTML."""
     return {
@@ -118,7 +130,7 @@ def build(rec: dict) -> dict:
         "pending": rec.get("pending", 0),
         "thieu": list(dict.fromkeys(DO_TAY_RE.sub("đo trên máy", DAU_DUNG_LAI_RE.sub("", t))
                                     for t in rec.get("precondition_thieu") or [])),
-        "ep": rec.get("ep_ad_fail", ""),
+        "ep": _ep(rec.get("ep_ad_fail", "")),
         "lech": rec.get("tc_lech") or [],
         "tuban": rec.get("ad_click_tu_ban", 0),
         "ads": rec.get("ads") or [],

@@ -118,6 +118,15 @@ def test_report_khong_ghi_do_tay():
     assert d == {"r": "Đo trên máy (out/manual/og0102.log): chọn 1 item", "tay": True}
 
 
+def test_report_dieu_kien_ep_khong_ghi_ai_do():
+    """Truong 'ep' (dieu kien tao o luot do tren may) cung khong ghi "Claude" hay "do tay" (user 11/11/2026)."""
+    ep = report_row._ep("Claude tạo điều kiện ở lượt đo tay: Cắm máy OPPO, đo tay lại 301")
+    assert ep == "Tạo điều kiện trên máy: Cắm máy OPPO, đo trên máy lại 301"
+    assert report_row.build({"ep_ad_fail": "Claude tạo điều kiện ở lượt đo tay: Private DNS chặn ad"})["ep"] \
+        == "Tạo điều kiện trên máy: Private DNS chặn ad"
+    assert report_row._ep("") == ""
+
+
 def test_dung_lai_dong_luot_cu_da_cham_tren_may_cung_cau_ky_vong():
     cu = [cham_tay.cham(REC, [1], "PASS", "screencap: ảnh phủ kín 1080x2400")]
     moi_ky_vong_doi = {**REC, "key": "3.4.0#UI-001", "lines": [dict(REC["lines"][0], e="Ảnh KHÁC")] + REC["lines"][1:]}
