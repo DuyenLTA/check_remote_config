@@ -12,7 +12,8 @@ import re
 
 from . import rc_extract
 
-NHU_RE = re.compile(r"\(\s*nh(?:ư|u)\s+([A-Z]{1,3}\d+(?:-\d+)?)\s*\)", re.I)
+# Co ngoac "(nhu R01)" hoac khong "JSON nhu R01 (co khoi en-US)" (TC 3.6.2 AIP862 11/11/2026).
+NHU_RE = re.compile(r"\bnh(?:ư|u)\s+([A-Z]{1,3}\d+(?:-\d+)?)\b", re.I)
 KEY_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9_]*)\s*[=:]")
 
 
