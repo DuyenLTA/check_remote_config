@@ -15,9 +15,10 @@ Dong FA-SVC do Google Play Services in ra, PID khac PID app -> khong loc theo PI
 
 from __future__ import annotations
 
-from . import log_moc
+from . import adb_client, log_moc
 
 import re
+import time
 
 from .app_sandbox import guard
 
@@ -58,7 +59,26 @@ async def doc_input(client, serial: str) -> list[float] | None:
     """Gio may cua tung lenh `input` tool gui qua adb, None neu may khong in log adbd."""
     guard(serial)
     out, _, _ = await client.shell(serial, "logcat", "-d", *log_moc.them(), "-v", "epoch", "-s", "adbd")
-    return parse_input(out)
+    ra = parse_input(out)
+    if ra is not None:
+        return ra
+    # May khong in log adbd: lay gio tool tu ghi luc gui lenh `input`, doi sang dong ho may.
+    gio = adb_client.gio_input(serial)
+    if not gio:
+        return None
+    lech = await _lech_dong_ho(client, serial)
+    return None if lech is None else [t + lech for t in gio]
+
+
+async def _lech_dong_ho(client, serial: str) -> float | None:
+    """Gio may tru gio may tinh (giay); None khi doc khong duoc -> khong duoc tha click nao."""
+    t0 = time.time()
+    out, _, _ = await client.shell(serial, "date", "+%s.%N")
+    t1 = time.time()
+    try:
+        return float(out.strip()) - (t0 + t1) / 2
+    except ValueError:
+        return None
 
 
 def parse_input(text: str) -> list[float] | None:
