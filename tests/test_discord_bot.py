@@ -391,22 +391,25 @@ def test_bot_khong_tha_tim_vao_tin_build(monkeypatch):
     monkeypatch.setattr(d.bot_nhan_build.bot_kenh_project, "la_bot_dev", lambda i: i == 6)
     bot = object.__new__(d.BuildBot)
     bot.kenh_qa, bot.kenh_build, bot.duyet, bot.role = 1, {1}, set(), 0
-    bot.q = SimpleNamespace(tin={1: {"ma": "AIP882", "version": "4.4.0 (41)", "loai_job": "verify"}})
+    bot.q = SimpleNamespace(tin={1: {"msg_id": 1, "ma": "AIP882", "version": "4.4.0 (41)", "loai_job": "verify"}},
+                            bao_lan_dau=lambda khoa: True)
     bot.get_channel = lambda cid: SimpleNamespace(send=None)
+    hoi = []
 
-    async def xep_verify(c, kenh):       # tin dev moi cung version -> bot xep verify lai (khong lien quan tim)
-        pass
-    bot._xep_verify = xep_verify
+    async def hoi_build_moi(*a):         # tin dev moi cung version co SDK -> bot hoi Check (khong lien quan tim)
+        hoi.append(a)
+    monkeypatch.setattr(d.bot_nhan_build, "hoi_build_moi", hoi_build_moi)
     tha = []
 
     async def add_reaction(e):
         tha.append(e)
-    m = SimpleNamespace(author=SimpleNamespace(bot=True, id=6), webhook_id=None, guild=SimpleNamespace(id=9),
+    m = SimpleNamespace(id=(60 * 60 * 1000) << 22, author=SimpleNamespace(bot=True, id=6), webhook_id=None,
+                        guild=SimpleNamespace(id=9), message_snapshots=[],
                         channel=SimpleNamespace(id=8, name="aip882-artspire-official-group"), jump_url="u",
                         add_reaction=add_reaction,
                         content="Bản build **AIP882---AI-Video** v4.4.0 (41) đã được hoàn thiện. apply tutorial 3.6.1")
     asyncio.run(bot.on_message(m))
-    assert tha == []
+    assert tha == [] and len(hoi) == 1
 
 
 def test_may_phu_bo_qua_tin_build_va_nut_chi_nghe_kenh_dieu_phoi(monkeypatch):

@@ -203,7 +203,7 @@ async def lenh_check(bot, it: discord.Interaction, ma_app: str, version: str, sd
 
 async def _check(bot, tin: dict) -> str:
     kenh = await bot._kenh_qa()
-    da_hoi = [t for t in bot_nhan_build.tin_da_hoi(bot, tin) if t.get("loai_job") != "verify"]
+    da_hoi = [t for t in bot_nhan_build.tin_da_hoi(bot, tin) if t.get("loai_job") in (None, "check")]
     if da_hoi:                             # build bot da thay: tin hoi moi, giu thong tin build (doi SDK neu go)
         doi = {k: tin[k] for k in ("next_gen", "tutorial", "sdk") if k in tin}
         return await bot_nhan_build.hoi_lai_build(bot, tin, "", kenh.send, doi)
