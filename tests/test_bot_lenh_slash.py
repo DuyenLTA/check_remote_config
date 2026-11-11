@@ -216,3 +216,22 @@ def test_check_sub_khong_co_package(tmp_path, monkeypatch):
     monkeypatch.setattr(s.bot_cong_viec, "package_cua", lambda ma, out: "")
     kq = asyncio.run(s.xep_check_sub(bot, {"ma": "AIP999", "version": "1.0.0 (1)"}, SimpleNamespace(id=1, display_name="QA A")))
     assert "không có package" in kq and bot.q.jobs == []
+
+
+def test_check_tinh_nang_xep_job_chi_tab_da_chon(tmp_path):
+    cu = {"ma": "AIP918", "ten": "Linguza", "version": "2.4.0 (22)", "package": "p.eng", "msg_id": 5, "link_tin": "l"}
+    bot = _bot(tmp_path, {"5": cu})
+    kenh = _Kenh()
+    bot._kenh_qa = lambda: asyncio.sleep(0, kenh)
+    nguoi = SimpleNamespace(id=1, mention="@qa", display_name="QA A")
+    tin, _ = s.doc_lenh_check("AIP918", "2.4.0 (22)", None)
+    kq = asyncio.run(s.xep_check_tinh_nang(bot, tin, nguoi, s.CHON_TINH_NANG["rating"]))
+    assert "Đã xếp lượt check rating" in kq
+    job = bot.q.jobs[0]
+    assert job["loai_job"] == "tinh_nang" and job["tabs"] == ["rating"] and job["package"] == "p.eng"
+    assert "không check ID ads" in kenh.sent[-1]
+    # widget cung build la viec khac -> van xep; go lai rating -> khong xep trung
+    asyncio.run(s.xep_check_tinh_nang(bot, tin, nguoi, s.CHON_TINH_NANG["widget"]))
+    assert len(bot.q.jobs) == 2
+    assert "đã trong hàng đợi" in asyncio.run(s.xep_check_tinh_nang(bot, tin, nguoi, ["rating"]))
+    assert s.CHON_TINH_NANG["cả 3"] == ["rating", "widget", "daily checkin"]

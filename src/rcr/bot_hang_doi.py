@@ -74,9 +74,10 @@ def may_ban(path: Path) -> bool:
 TRUONG_LUOT = ("kq", "dong", "da_bao", "da_bao_bug", "da_bao_dev", "da_log", "da_ping", "ten_may", "bat_dau", "dang_o", "giao_luc", "pha")
 
 
-def _khoa_job(job: dict) -> tuple[str, str, str]:
+def _khoa_job(job: dict) -> tuple[str, str, str, str]:
     # Luot verify bug va luot Check cung build la hai viec khac nhau -> khong chan nhau.
-    return job["package"], job["version"], job.get("loai_job", "check")
+    # Luot tab tinh nang: rating va widget cung build cung la hai viec khac nhau.
+    return job["package"], job["version"], job.get("loai_job", "check"), ",".join(job.get("tabs") or [])
 
 
 class HangDoi:

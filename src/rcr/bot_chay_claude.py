@@ -154,12 +154,37 @@ PROMPT_VERIFY_SUB = (
 )
 TIMEOUT_SUB = 240 * 60
 TIMEOUT_VERIFY_SUB = 60 * 60
+# /check tinh_nang: tab SDK rieng (rating / widget / daily checkin) trong bo TC chung. QA chon tab nao chay tab do:
+# khong FO, khong checklist Next-Gen, khong check ID ads, khong chan theo plan tuan (user chot 11/11/2026).
+TAB_TINH_NANG = ("rating", "widget", "daily checkin")
+PROMPT_TINH_NANG = (
+    "/rc-check {package} --serial {serial} {tab_arg}\n\n"
+    "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi (lenh /check chon SDK tinh nang), khong co nguoi "
+    "ngoi truoc may. CHI chay bo TC cua tab: {tabs} (bo TC chung mac dinh, moi tab mot lenh "
+    "`rcr-check --tab \"<tab>\" --case all`, tab sau chay khi tab truoc xong). KHONG chay tab FO / base / delta, KHONG "
+    "chay checklist Next-Gen, KHONG truyen --sdk, BO muc 3c (check ID ads). Preflight van chay nhung truyen "
+    "--bo-qua-plan (lech plan tuan khong phai ly do dung). Tab khong co case nao chay duoc (app khong co key cua "
+    "SDK do / tab trong) -> ghi ro trong tom_tat, khong phai loi. Moi may la may test AdMob, ad_click khong phai ly do "
+    "dung. Gap diem can nguoi quyet (preflight LOI, man la) thi dung. Khong commit/push.\n"
+    "Lenh nen bi cat (background time limit) -> chay tiep bang `rcr-check --tiep <file .luot.json>`, KHONG chay lai tu dau.\n"
+    "Nhieu tab: dung MOT report gop bang `--gop` cac file luot (khong can may); gop khong duoc thi `link` = report tab "
+    "dau, duong dan report tab con lai ghi trong `tom_tat`.\n"
+    "Phien `claude -p` KHONG co tool Artifact: `link` = duong dan TUYET DOI report .html.\n"
+    "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
+    'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<duong dan TUYET DOI file report .html>", '
+    '"tom_tat": "<tieng Viet co dau, toi da 300 ky tu: so PASS/FAIL tung tab hoac ly do dung>", '
+    '"bugs": [{{"case": "<tab>#<ma case>", "tieu_de": "<tom tat bug>", "precondition": "<config/user state>", '
+    '"buoc": "<buoc tai hien>", "expected": "<dong Expected>", "thuc_te": "<so do that>", '
+    '"muc_do": "Highest|High|Medium|Low"}}]}}\n'
+    "`bugs` chi gom FAIL da ra lai theo muc 5d; khong co thi []. KHONG hoi user, KHONG tu log Jira."
+)
 
 
 def lenh(package: str, serial: str, cases: list[str] | None = None,
          next_gen: bool = False, sdk: str = "", sub_version: str = "",
-         bo_qua_plan: bool = False) -> tuple[list[str], str]:
+         bo_qua_plan: bool = False, tabs: list[str] | None = None) -> tuple[list[str], str]:
     """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
+    `tabs`: luot /check tinh_nang - chi chay cac tab SDK rieng (gia tri trong TAB_TINH_NANG).
     Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt.
     `next_gen`: bot da cai ban release vi tin build ghi next-gen -> `--next-gen` de rc-check chay checklist
     Next-Gen thay vi tu chon theo so SDK (chi 3.7.0) - AIP918 tutorial 3.7.1 bi chay nham bo TC, 29/10/2026.
@@ -179,6 +204,12 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
     if audit.is_dir():          # -p khong duyet duoc quyen ngoai cwd: thieu thi cp script workflow audit bi chan (AIP886)
         cmd += ["--add-dir", str(audit)]
     cmd += ["--allowedTools", *TOOLS]
+    if tabs and not cases:                           # /check tinh_nang: chi tab SDK rieng
+        sai = [t for t in tabs if t not in TAB_TINH_NANG]
+        if sai:                                      # ten tab di vao prompt -> chi nhan dung danh sach co dinh
+            raise ValueError(f"tab tính năng không hợp lệ: {sai!r}")
+        return cmd, PROMPT_TINH_NANG.format(package=package, serial=serial, tabs=", ".join(tabs),
+                                            tab_arg=" ".join(f'--tab "{t}"' for t in tabs))
     if sub_version and not cases:                    # /check-sub: ca bo TC sub
         if not VERSION_RE.fullmatch(sub_version):
             raise ValueError(f"version không hợp lệ: {sub_version!r}")
@@ -261,12 +292,12 @@ def moi_truong() -> dict[str, str]:
 
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
          cases: list[str] | None = None, next_gen: bool = False, sdk: str = "", sub_version: str = "",
-         bo_qua_plan: bool = False) -> dict:
+         bo_qua_plan: bool = False, tabs: list[str] | None = None) -> dict:
     """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
-        cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan)
+        cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan, tabs)
         # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
         p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo,
                                 encoding="utf-8", errors="replace", env=moi_truong())

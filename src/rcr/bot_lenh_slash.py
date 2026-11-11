@@ -7,6 +7,8 @@ that (tin hoi Check, luot verify) van di qua dung duong cua tin build -> chi co 
 - /hang-doi: luot dang chay, luot dang cho, tinh trang may; nut Dung / Huy cho tung luot.
 - /check <ma app> <version> [sdk]: tin hoi Check moi o kenh QA (chi QA duoc duyet). Build bot da thay -> giu
   thong tin build cu; build chua thay -> can `sdk` de chon nhanh (Next-Gen / bo TC) nhu tin build.
+  Kem `tinh_nang` (rating / widget / daily checkin / ca 3) -> xep thang luot `loai_job: "tinh_nang"` chi chay
+  dung tab do, khong FO, khong check ID ads.
 - /check-bug <ma app>: bug bot da log cho app + trang thai Jira; nut verify bug Reviewing tren build gan nhat.
 - /check-sub <ma app> <version>: xep luot chay bo TC sub Android (`/sub-check`) - job `loai_job: "sub"`, cai ban
   release tu App Tester nhu Check (chi QA duoc duyet).
@@ -33,6 +35,9 @@ MAX_TIN = 1900
 MAX_NUT = 25                       # Discord: toi da 25 nut (5 hang x 5) mot tin
 MAX_GOI_Y = 25                     # Discord: toi da 25 goi y autocomplete
 SDK_HOP_LE = re.compile(r"^(?:\d+\.\d+\.\d+|next-?gen|revert next-?gen)$", re.I)
+# /check tinh_nang: tab SDK rieng trong bo TC chung (khong thuoc FO) - chi chay khi QA chon (user chot 11/11/2026).
+CHON_TINH_NANG = {"rating": ["rating"], "widget": ["widget"], "daily checkin": ["daily checkin"],
+                  "cả 3": ["rating", "widget", "daily checkin"]}
 ICON_TRANG_THAI = {"reviewing": "⏳", "closed": "✅", "done": "✅", "reopened": "🔁", "to do": "🔁"}
 
 
@@ -50,10 +55,17 @@ def dang_ky(bot) -> None:
 
     @tree.command(name="check", description="Gửi tin hỏi Check cho một build (chạy lại hoặc build bot chưa thấy)")
     @app_commands.describe(ma_app="Mã app, vd AIP922", version="Version kèm code, vd 3.7.0 (30)",
-                           sdk="Chỉ cần khi bot chưa thấy tin build: số SDK (3.6.1, 3.7.0…) hoặc next-gen")
+                           sdk="Chỉ cần khi bot chưa thấy tin build: số SDK (3.6.1, 3.7.0…) hoặc next-gen",
+                           tinh_nang="Chỉ chạy bộ TC SDK tính năng này (rating / widget / daily checkin), "
+                                     "không chạy FO, không check ID ads")
+    @app_commands.choices(tinh_nang=[app_commands.Choice(name=ten, value=ten) for ten in CHON_TINH_NANG])
     @app_commands.autocomplete(ma_app=goi_y_ma)
-    async def check(it: discord.Interaction, ma_app: str, version: str, sdk: str | None = None):
-        await lenh_check(bot, it, ma_app, version, sdk)
+    async def check(it: discord.Interaction, ma_app: str, version: str, sdk: str | None = None,
+                    tinh_nang: app_commands.Choice[str] | None = None):
+        if tinh_nang:
+            await lenh_check_tinh_nang(bot, it, ma_app, version, tinh_nang.value)
+        else:
+            await lenh_check(bot, it, ma_app, version, sdk)
 
     @tree.command(name="check-bug", description="Bug bot đã log cho một app, trạng thái Jira, verify bug Reviewing")
     @app_commands.describe(ma_app="Mã app, vd AIP922")
@@ -92,6 +104,8 @@ def goi_y_ma_app(bot, dang_go: str) -> list[str]:
 def _ten_luot(job: dict) -> str:
     if job.get("loai_job") == "sub":
         return f"🧾 check sub — **{job.get('ma', '')}** `{job.get('version', '')}`"
+    if job.get("loai_job") == "tinh_nang":
+        return f"⭐ check {', '.join(job.get('tabs') or [])} — **{job.get('ma', '')}** `{job.get('version', '')}`"
     if job.get("loai_job") == "verify":
         return f"🔁 verify {len(job.get('verify') or [])} bug — **{job.get('ma', '')}** `{job.get('version', '')}`"
     return f"**{job.get('ma', '')}** `{job.get('version', '')}`"
@@ -233,24 +247,56 @@ async def lenh_check_sub(bot, it: discord.Interaction, ma_app: str, version: str
 
 async def xep_check_sub(bot, tin: dict, nguoi) -> str:
     """Tin luot sub o kenh QA (nut Huy) + xep vao hang. Package lay tu tin build bot da thay, khong co thi tra sheet."""
+    return await _xep_luot_rieng(bot, tin, nguoi, {"loai_job": "sub"}, "🧾", "Check sub",
+                                 "Bộ TC sub Android, bản release từ App Tester", "/check-sub")
+
+
+async def lenh_check_tinh_nang(bot, it: discord.Interaction, ma_app: str, version: str, chon: str) -> None:
+    if not bot._duoc_duyet(it.user):
+        await it.response.send_message("Chỉ QA được duyệt mới dùng được /check.", ephemeral=True)
+        return
+    tin, loi = doc_lenh_check(ma_app, version, None)
+    if tin is None:
+        await it.response.send_message(loi, ephemeral=True)
+        return
+    await it.response.defer(ephemeral=True, thinking=True)
+    try:
+        kq = await xep_check_tinh_nang(bot, tin, it.user, CHON_TINH_NANG[chon])
+    except Exception as exc:              # noqa: BLE001 - loi sheet / Discord tra ve cho nguoi go
+        log.exception("/check tinh_nang loi")
+        kq = f"⛔ Lỗi: {exc}"
+    await it.followup.send(kq[:2000], ephemeral=True)
+
+
+async def xep_check_tinh_nang(bot, tin: dict, nguoi, tabs: list[str]) -> str:
+    """Luot chi chay tab SDK tinh nang QA chon: khong FO, khong checklist Next-Gen, khong check ID ads."""
+    ds = ", ".join(tabs)
+    return await _xep_luot_rieng(bot, tin, nguoi, {"loai_job": "tinh_nang", "tabs": list(tabs)}, "⭐",
+                                 f"Check {ds}", f"Chỉ bộ TC SDK {ds} (không FO, không check ID ads), bản release "
+                                 "từ App Tester", "/check")
+
+
+async def _xep_luot_rieng(bot, tin: dict, nguoi, them: dict, icon: str, ten_luot: str, mo_ta: str, lenh: str) -> str:
+    """Luot QA goi thang bang lenh (khong qua tin hoi Check): tin goc o kenh QA (nut Huy) + xep vao hang.
+    Package lay tu tin build bot da thay, khong co thi tra sheet."""
     cu = max((t for t in bot_nhan_build.tin_da_hoi(bot, tin) if t.get("package")),
              key=lambda t: int(t.get("msg_id") or 0), default=None)
     pkg = cu["package"] if cu else await asyncio.to_thread(bot_cong_viec.package_cua, tin["ma"], bot.out)
     if not pkg:
         return f"Sheet Check thông số KT không có package của **{tin['ma']}**."
     job = {"ma": tin["ma"], "ten": (cu or {}).get("ten", ""), "version": tin["version"], "package": pkg,
-           "loai_ban": "release", "loai_job": "sub", "link_tin": (cu or {}).get("link_tin", "")}
+           "loai_ban": "release", "link_tin": (cu or {}).get("link_tin", ""), **them}
     if bot.q.trung(job):
-        return f"Lượt check sub **{tin['ma']}** `{tin['version']}` đã trong hàng đợi."
-    qa = await bot_forum.gui_goc(bot, job, f"🧾 Check sub — {bot_cong_viec.dau_tin(job)}…")
+        return f"Lượt {ten_luot} **{tin['ma']}** `{tin['version']}` đã trong hàng đợi."
+    qa = await bot_forum.gui_goc(bot, job, f"{icon} {ten_luot} — {bot_cong_viec.dau_tin(job)}…")
     job["msg_id"] = qa.id
     job.update(bot_forum.kenh_cua(qa))
     bot.q.nho_tin(job)
     vi_tri = bot.q.them({**job, "nguoi_duyet": nguoi.id, "nguoi_duyet_ten": nguoi.display_name})
-    await qa.edit(content=f"🧾 **Check sub** — {bot_cong_viec.dau_tin(job)}\nBộ TC sub Android, bản release từ App Tester "
-                          f"— {nguoi.mention} gõ /check-sub, vị trí {vi_tri} trong hàng đợi.",
+    await qa.edit(content=f"{icon} **{ten_luot}** — {bot_cong_viec.dau_tin(job)}\n{mo_ta} "
+                          f"— {nguoi.mention} gõ {lenh}, vị trí {vi_tri} trong hàng đợi.",
                   view=nut_tin(*NUT_HUY, msg_id=qa.id))
-    return f"Đã xếp lượt check sub: {qa.jump_url}"
+    return f"Đã xếp lượt {ten_luot.lower()}: {qa.jump_url}"
 
 
 # --- /check-bug -----------------------------------------------------------------------------

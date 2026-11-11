@@ -52,7 +52,8 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
                                      out, None, False, "", job["version"])
         bot.q.cap_nhat(job, kq=kq, ten_may=ten, bat_dau=bat_dau)
         return True
-    next_gen = build_ma_app.la_next_gen(job)
+    tinh_nang = job.get("loai_job") == "tinh_nang"   # /check tinh_nang: chi tab SDK rieng, van doi RC qua testvsl
+    next_gen = False if tinh_nang else build_ma_app.la_next_gen(job)
     if bot_kiem_testvsl.doi_rc_firebase(job, next_gen):
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
         if loi:                          # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Firebase
@@ -66,7 +67,8 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     bot_dung_luot.danh_dau_pha_rc(job, next_gen)       # Dung tu day -> phai don RC testvsl
     # Tin build ghi next-gen -> ep rc-check nhanh checklist; con lai bo TC (ban release doi RC qua Firebase).
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, timeout, out,
-                                 None, next_gen, job.get("tutorial") or "", "", bool(job.get("bo_qua_plan")))
+                                 None, next_gen, "" if tinh_nang else job.get("tutorial") or "", "",
+                                 bool(job.get("bo_qua_plan")), job.get("tabs") if tinh_nang else None)
     bot.q.cap_nhat(job, kq=kq, ten_may=ten, bat_dau=bat_dau)
     return True
 
@@ -94,8 +96,8 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
     if not job.get("da_bao"):
         # Tom tat ID ads doc bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.
         # Trang audit day du nam trong tab cua chinh report -> chi dinh kem mot file report.
-        # Luot sub khong check ID ads -> khong co dong audit.
-        audit = "" if job.get("loai_job") == "sub" else audit_tom_tat.dong_tin(
+        # Luot sub / tab tinh nang khong check ID ads -> khong co dong audit.
+        audit = "" if job.get("loai_job") in ("sub", "tinh_nang") else audit_tom_tat.dong_tin(
             audit_tom_tat.tim(job["package"], tu_luc=job.get("bat_dau") or 0))
         # Ket qua + file report + nut Verify nam ngay tren tin goc (khong tra loi tin moi).
         await qa.edit(content=dong_dau,
