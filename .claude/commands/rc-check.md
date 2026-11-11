@@ -322,14 +322,11 @@ Mở đầu bằng kết quả check ID ads (3c: khớp/tổng, vị trí lệch
 báo dev/PO, trạng thái máy (đã restore chưa, có `pm clear` không). **Không liệt kê "bạn tự kiểm tiếp"** cho dòng 5b làm
 được. **Đưa link artifact ngay trong câu trả lời.**
 
-## 7a. Check policy Ads + Sub (`/policy-check`) — bước cuối
+## 7a. Check policy Ads + Sub — tách riêng, KHÔNG chạy trong lượt
 
-Chạy **sau cùng**, khi mọi case xong và máy đã `--restore` (policy `pm clear` + **mua sub test** → app Pro ~30 phút).
-
-1. Repo audit như 3c — cái có `tools/ad-policy-check/evidence_collector.py`. Không thấy → ghi vào câu báo, không chặn.
-2. Đọc **toàn bộ** `<audit-repo>/.claude/commands/policy-check.md`, làm đúng với `<package> --serial <serial>`.
-3. Policy không chặn rc-check. Gửi một tin ngắn sau câu báo: link + số PASS/FAIL/Cần xem/BLOCKED + từng FAIL một dòng.
-4. Bỏ qua khi lượt không chạy case, user nói `--no-policy`, hoặc máy đang có lượt khác giữ khóa (exit 3 — ghi vào câu báo).
+Từ 11/11/2026 (user chốt): lượt nghiệm thu SDK **không** tự chạy `/policy-check`, ở cả nhánh bộ TC lẫn Next-Gen.
+Policy là việc riêng: QA gọi `/policy-check <package>` khi cần. Sau này mới gộp lại vào cuối lượt.
+Câu báo không nhắc policy; user hỏi thì trả lời là chưa chạy trong lượt này.
 
 ## 7b. Có FAIL → user review, rồi log Jira
 
