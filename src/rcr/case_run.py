@@ -536,6 +536,14 @@ async def restore_saved(client, package: str, serial: str, out_dir) -> dict:
     khong con dung voi may nua.
     """
     path = rc_snapshot.path_for(out_dir, package, serial)
+    if not path.exists():
+        # Ban release: `--keep` khong luu snapshot (gia tri nam o dieu kien testvsl tren Firebase). Truoc day
+        # `--restore` bao "khong co snapshot" va de nguyen testvsl -> `--set` luot sau chong len gia tri cu
+        # (AIP862 11/11/2026). Doc baseline: la Firebase thi go het testvsl.
+        baseline = await rc_baseline.read(client, serial, package)
+        if baseline.firebase:
+            res = await rc_patch.restore(client, baseline)
+            return {"restored": True, "written": list(res.written), "snapshot": ""}
     baseline = rc_snapshot.load(path)
     res = await rc_patch.restore(client, baseline)
     path.unlink(missing_ok=True)
