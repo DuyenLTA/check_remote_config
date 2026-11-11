@@ -29,5 +29,5 @@ nhưng report không còn trên máy này.
 
 Ô "?" còn lại là lượt chạy tay ở terminal không lưu thời gian chạy — để trống, không điền số ước đoán.
 
-Từ v4.0 (11/11/2026) bot tự ghi mỗi lượt Check (kể cả lượt dừng / lỗi, kèm người duyệt) vào `out/usage-log-bot.md`
+Từ v4.0 (11/11/2026) bot tự ghi mỗi lượt chạy tới bước báo kết quả (XONG / DUNG / LOI / HET_GIO, kèm người duyệt) vào `out/usage-log-bot.md`
 trên máy chạy bot. File đó không theo git để `git pull` cập nhật bot không bị xung đột; khi tổng kết thì gộp sang đây.

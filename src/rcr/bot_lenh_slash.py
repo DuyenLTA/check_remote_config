@@ -246,7 +246,7 @@ async def xep_check_sub(bot, tin: dict, nguoi) -> str:
     job["msg_id"] = qa.id
     job.update(bot_forum.kenh_cua(qa))
     bot.q.nho_tin(job)
-    vi_tri = bot.q.them({**job, "nguoi_duyet": nguoi.id})
+    vi_tri = bot.q.them({**job, "nguoi_duyet": nguoi.id, "nguoi_duyet_ten": nguoi.display_name})
     await qa.edit(content=f"🧾 **Check sub** — {bot_cong_viec.dau_tin(job)}\nBộ TC sub Android, bản release từ App Tester "
                           f"— {nguoi.mention} gõ /check-sub, vị trí {vi_tri} trong hàng đợi.",
                   view=nut_tin(*NUT_HUY, msg_id=qa.id))

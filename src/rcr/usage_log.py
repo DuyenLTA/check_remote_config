@@ -54,7 +54,8 @@ def append_row(row: str, path: Path | None = None) -> bool:
 FILE_BOT = "usage-log-bot.md"
 DAU_BANG_BOT = (
     "# Log lượt bot — rc-check\n\n"
-    "Bot tự ghi một dòng mỗi lượt Check xong (kể cả lượt dừng / lỗi). \"Thời gian tool\" là thời gian Claude chạy\n"
+    "Bot tự ghi một dòng mỗi lượt chạy tới bước báo kết quả (XONG / DUNG / LOI / HET_GIO); lượt cài hỏng, thiếu\n"
+    "testvsl hoặc QA bấm Dừng không có dòng. \"Thời gian tool\" là thời gian Claude chạy\n"
     "/rc-check, không tính lúc cài app. Tiết kiệm = 3 giờ test tay − thời gian tool, chỉ tính lượt Xong của bộ TC.\n\n"
     "| Ngày | Máy | Loại | App | Version | Package | Người duyệt | Trạng thái | Kết quả | Bug | Report "
     "| Thời gian tool | Tiết kiệm |\n"

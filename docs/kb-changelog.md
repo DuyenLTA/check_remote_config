@@ -44,12 +44,17 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 | 09/11/2026 | Next-Gen: ID lệch sheet không dừng lượt (chốt lại sau AIP944) | `sdk-check/WORKFLOW.md` | `d1b1674` |
 | 09/11/2026 | Next-Gen: đo tay phải ra cùng kết quả giữa các lượt cùng build | `sdk-check/WORKFLOW.md` | `8d513b3` |
 | 06/11/2026 | Kiến thức nền SDK lấy từ tab "Tổng hợp SDK", tra trước khi báo bug | `docs/rc-check/luat-qa-da-chot.md` | `e38905a` |
+| 04/11/2026 | Sub: chu kỳ gia hạn test đọc từ popup (W/M 5 phút, Y 30 phút); billing chỉ cập nhật khi kill app | `.claude/commands/sub-check.md` | `374a9d7` |
 | 03/11/2026 | Precondition không tạo được thì BLOCKED, cấm đo thay ("đừng có làm giả") | `rc-check.md` 5d2 | — |
 | 30/10/2026 | Build khác plan tuần → dừng, không check ID ads, không chạy case | `rc-check.md` 3b | `8d36744` |
 | 30/10/2026 | Nhánh Next-Gen cũng check ID ads trước khi chạy | `sdk-check/WORKFLOW.md` | `8d36744` |
 | 29/10/2026 | Mọi máy QA là máy test AdMob: `ad_click` không dừng lượt | `rc-check.md` 0c | `f89d5aa` |
 | 28/10/2026 | ID ads lệch sheet: không dừng rc-check, chạy tiếp | `rc-check.md` 3c | `391477a` |
 | 28/10/2026 | Auto test có bug: QA review trên Discord trước rồi mới log Jira | `rc-check.md` 7b | `17efd13` |
+| 24/10/2026 | FAIL chạy một lần là đủ, không lặp lượt xác nhận (áp vào code 03/11) | `rc-check.md` 5d | `203cb17` |
+| 24/10/2026 | Next-Gen: kết quả phải giống nhau mỗi lần chạy, chấm bằng code; không lặp lượt chỉ để xác nhận | `sdk-check/WORKFLOW.md` | `bb5c51a` |
+| 07/10/2026 | Tool dùng cho nhiều app: không viết luật riêng cho một app, nút nhận theo vai trò | `docs/rc-check/kha-nang-lai-va-cham.md` | `12e2be3` |
+| 06/10/2026 | User chỉ cần gửi package, còn lại tool tự lấy (bản SDK, bộ TC, ID ads) | `rc-check.md` 4 | `67f0b39` |
 
 ## Commit đụng tới KB
 

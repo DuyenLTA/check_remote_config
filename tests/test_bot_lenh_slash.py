@@ -200,12 +200,13 @@ def test_check_sub_xep_job_sub_lay_package_tu_build_da_thay(tmp_path):
     bot = _bot(tmp_path, {"5": cu})
     kenh = _Kenh()
     bot._kenh_qa = lambda: asyncio.sleep(0, kenh)
-    nguoi = SimpleNamespace(id=1, mention="@qa")
+    nguoi = SimpleNamespace(id=1, mention="@qa", display_name="QA A")
     tin, _ = s.doc_lenh_check("AIP936", "1.9.0 (11)", None)
     kq = asyncio.run(s.xep_check_sub(bot, tin, nguoi))
     assert "Đã xếp lượt check sub" in kq
     job = bot.q.jobs[0]
     assert job["loai_job"] == "sub" and job["package"] == "p.home" and job["loai_ban"] == "release"
+    assert job["nguoi_duyet_ten"] == "QA A"                    # usage-log bot ghi ten nguoi go /check-sub
     assert job["msg_id"] == 900 and bot.q.tin["900"]["loai_job"] == "sub" and "vị trí 1" in kenh.sent[-1]
     assert "đã trong hàng đợi" in asyncio.run(s.xep_check_sub(bot, tin, nguoi))     # go lai: khong xep trung
 
@@ -213,5 +214,5 @@ def test_check_sub_xep_job_sub_lay_package_tu_build_da_thay(tmp_path):
 def test_check_sub_khong_co_package(tmp_path, monkeypatch):
     bot = _bot(tmp_path)
     monkeypatch.setattr(s.bot_cong_viec, "package_cua", lambda ma, out: "")
-    kq = asyncio.run(s.xep_check_sub(bot, {"ma": "AIP999", "version": "1.0.0 (1)"}, SimpleNamespace(id=1)))
+    kq = asyncio.run(s.xep_check_sub(bot, {"ma": "AIP999", "version": "1.0.0 (1)"}, SimpleNamespace(id=1, display_name="QA A")))
     assert "không có package" in kq and bot.q.jobs == []

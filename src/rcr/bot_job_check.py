@@ -8,6 +8,7 @@ job co `kq` thi chi gui ket qua, buoc da gui (`da_bao`, `da_bao_bug`) khong gui 
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from pathlib import Path
 
@@ -17,6 +18,8 @@ from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot
                bot_kiem_testvsl, build_ma_app, usage_log)
 from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import XAM, XANH, nut
+
+log = logging.getLogger("rcr-bot")
 
 
 async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> None:
@@ -106,8 +109,11 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
         await qa.edit(content=dong_dau)
     if not job.get("da_log"):
         # Bang chung dung that: moi luot mot dong (nguoi duyet, thoi gian, ket qua) - khong phu thuoc Claude nho ghi.
-        ngay = time.strftime("%d/%m/%Y", time.localtime(job.get("bat_dau") or time.time()))
-        usage_log.ghi_luot_bot(job, kq, out, ngay)
+        try:
+            ngay = time.strftime("%d/%m/%Y", time.localtime(job.get("bat_dau") or time.time()))
+            usage_log.ghi_luot_bot(job, kq, out, ngay)
+        except Exception:                # noqa: BLE001 - ghi log hong khong duoc chan menu bug / ping
+            log.exception("ghi usage-log bot loi")
         bot.q.cap_nhat(job, da_log=True)
     if kq.get("bugs") and not job.get("da_bao_bug"):
         # Luu vao tin cua build: bot khoi dong lai van tick / log tiep duoc.
