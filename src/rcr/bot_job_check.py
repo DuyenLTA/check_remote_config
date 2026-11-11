@@ -14,7 +14,7 @@ from pathlib import Path
 import discord
 
 from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_forum, bot_hop_thu_bug,
-               bot_kiem_testvsl, build_ma_app)
+               bot_kiem_testvsl, build_ma_app, usage_log)
 from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import XAM, XANH, nut
 
@@ -104,6 +104,11 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
         await bot_forum.dat_nhan(bot, job, bot_forum.nhan_ket_qua(kq))
     else:
         await qa.edit(content=dong_dau)
+    if not job.get("da_log"):
+        # Bang chung dung that: moi luot mot dong (nguoi duyet, thoi gian, ket qua) - khong phu thuoc Claude nho ghi.
+        ngay = time.strftime("%d/%m/%Y", time.localtime(job.get("bat_dau") or time.time()))
+        usage_log.ghi_luot_bot(job, kq, out, ngay)
+        bot.q.cap_nhat(job, da_log=True)
     if kq.get("bugs") and not job.get("da_bao_bug"):
         # Luu vao tin cua build: bot khoi dong lai van tick / log tiep duoc.
         # link_report la duong dan file chi khi file do thuc su duoc dinh kem (tin_bug ghi "đính kèm")

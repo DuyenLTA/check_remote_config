@@ -62,7 +62,7 @@ async def xu_ly(bot, it: discord.Interaction) -> None:
     # check | thu lai | boquaplan (chay lai luot vua dung vi build khac plan tuan, preflight chi con CHU Y)
     c.pop("bo_qua_plan", None)
     bo_qua = hanh_dong == "boquaplan"
-    vi_tri = bot.q.them({**c, "nguoi_duyet": it.user.id, **({"bo_qua_plan": True} if bo_qua else {})})
+    vi_tri = bot.q.them({**c, "nguoi_duyet": it.user.id, "nguoi_duyet_ten": it.user.display_name, **({"bo_qua_plan": True} if bo_qua else {})})
     if vi_tri is None:                   # da trong hang: tin goc da ghi vi tri, khong tra loi them
         await it.response.defer()
         return
