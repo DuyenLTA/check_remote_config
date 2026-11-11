@@ -40,6 +40,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
 | 11/11/2026 | Lệnh nền bị Claude Code cắt (~2 giờ) thì chạy tiếp bằng `rcr-check --tiep`, không chạy lại từ đầu, không báo xong khi còn case | `src/rcr/bot_chay_claude.py` PROMPT | — |
+| 11/11/2026 | SDK 3.7.2: chấm cả bộ TC tab 3.6.1 lẫn checklist Next-Gen | `rc-check.md` 0b | — |
 | 09/11/2026 | Build lệch plan tuần: QA bấm "Chạy bỏ qua plan" thì chạy hết như thường | `rc-check.md` 3b | `fc90976` |
 | 09/11/2026 | Build dùng unit test Google: không dừng, không xin dev bản khác | `rc-check.md` 3b | `054a3cf` |
 | 09/11/2026 | Next-Gen: ID lệch sheet không dừng lượt (chốt lại sau AIP944) | `sdk-check/WORKFLOW.md` | `d1b1674` |

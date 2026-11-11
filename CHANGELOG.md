@@ -5,6 +5,17 @@ Chỉ đánh số theo **mốc lớn** (thay đổi cách làm việc của QA),
 
 Mở lại bản cũ: `git checkout v2.0` (xem) rồi `git checkout main` (quay về). Mỗi version là một git tag.
 
+## Mục tiêu đã đạt chưa
+
+Số đo lấy từ `docs/usage-log.md`, log lượt bot trong `out/` và plan bot trong `docs/plan/`. Mốc so sánh: ~3 giờ test tay một bộ TC Remote Config.
+
+| Version | Mục tiêu | Đo được | Đạt? |
+|---|---|---|---|
+| v1.0 | Một lệnh thay 3 giờ test tay | Sorapix 1.6.0 (10/10, 54 case): ~2 giờ máy nhưng phải sửa tool và chạy lại nhiều lần, cộng dồn ~5,5 giờ. Piclux 2.4.0 (24/10, 22 case): 50 phút nhưng là bản tạm, 16 case chưa chấm | Một phần: chạy được đầu cuối, thời gian chưa ổn định |
+| v2.0 | QA không mở terminal, build mới tự được test | Lượt bot đầu 27/10 hỏng (Claude chờ duyệt quyền) → sửa cùng ngày. Từ 29/10 bot tự cài và chạy hết lượt; AIP886 2.7.0 (31/10): 31 phút | Đạt |
+| v3.0 | FAIL thành bug Jira mà QA vẫn kiểm soát | AIHomeDesign 1.9.0 (02/11): 3 bug; AIP893 2.5.0 (05/11): 7 bug, đều qua QA tick rồi mới log. Verify bug Reviewing chạy được nhưng chưa thống kê số lượt | Đạt phần log; verify chưa có số đo |
+| v4.0 | Chạy 24/7 không người trông, lượt full nhanh hơn test tay | Lượt full AIHomeDesign 270 phút (02/11) → 48 phút (03/11, 55 case, TB 54s/case); AIP893 46 phút; lượt bot AIP872 (05/11, 52 case) 138 phút. 24/7 trên Ubuntu từ 10/11, đang gom log bot | Đạt phần tốc độ; 24/7 chờ 1–2 tuần log |
+
 ## v4.0 — 11/11/2026 · Vận hành 24/7
 
 **Mục tiêu:** bot chạy liên tục không cần người trông, QA chỉ còn duyệt.
