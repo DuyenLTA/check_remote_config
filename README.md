@@ -435,6 +435,9 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
    - Ubuntu: `bash deploy/cai-bot-linux.sh` (systemd user service, log `journalctl --user -u rcr-bot -f`)
      - Chạy 24/24 (bot chính): thêm `bash deploy/cai-24-24-ubuntu.sh` — linger (khởi động lại máy không cần đăng
        nhập), chặn sleep/gập nắp, `Restart=always`, quyền adb, token Claude dài hạn, điện thoại luôn sáng khi sạc.
+     - Publish report thành artifact (bot không gửi file HTML): `bash deploy/cai-phien-publish-ubuntu.sh` — phiên
+       Claude Code thường trong `tmux` `rcr-publish` chạy `/loop 5m /publish-report`; lần đầu `tmux attach -t rcr-publish`
+       để xác nhận tin cậy thư mục. Bot ghi report chưa có link vào `out/cho-publish.json`, có link thì tự sửa tin.
    - Windows: `powershell -ExecutionPolicy Bypass -File deploy\cai-bot-windows.ps1` (Task Scheduler, log `out/bot-run.log`)
 
 **Thêm máy tính phụ (vd Ubuntu) chạy chung một bot, không trùng:** chỉ **một** máy là bot chính — đọc tin build, hỏi

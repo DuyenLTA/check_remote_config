@@ -32,12 +32,14 @@ def test_co_link_artifact_thi_chi_gan_link_khong_dinh_kem(tmp_path):
     assert "Report: https://claude.ai/artifact/x" in v.tin_ket_qua(CASE, kq)
 
 
-def test_khong_co_artifact_thi_dinh_kem_html_trong_out(tmp_path):
+def test_khong_co_artifact_thi_cho_publish_khong_dinh_kem(tmp_path):
+    """User 10-11/11/2026: khong gui file HTML - tin ghi 'dang publish', phien publish thay bang link."""
     f = tmp_path / "run-pkg.html"
     f.write_text("<html>", "utf-8")
     kq = {"trang_thai": "XONG", "link": str(f)}
     assert v.file_report(kq, tmp_path) == f.resolve()
-    assert "run-pkg.html` đính kèm" in v.tin_ket_qua(CASE, kq, f)
+    chu = v.tin_ket_qua(CASE, kq, f)
+    assert "đang publish" in chu and "đính kèm" not in chu
 
 
 def test_khong_dinh_kem_file_ngoai_out_hay_khong_phai_html(tmp_path):

@@ -98,13 +98,14 @@ def test_ban_sao_giu_noi_dung_khi_dung_lai_report(out, tmp_path):
     assert _srcdoc((d / "report.html").read_text("utf-8")) == FIX.read_text("utf-8")
 
 
-def test_bot_chi_dinh_kem_mot_file_report(out, tmp_path, monkeypatch):
+def test_bot_khong_dinh_kem_html_ma_dua_vao_hang_cho_publish(out, tmp_path, monkeypatch):
     rp = tmp_path / "out" / "report.html"
     rp.write_text("<html>r</html>", "utf-8")
     sent = {}
 
     class Qa:
         id = 1
+        channel = SimpleNamespace(id=7)
         async def edit(self, **kw):                     # ket qua + file report dat len tin goc
             if "embeds" in kw:
                 sent.update(text=kw["embeds"][0].description, files=kw.get("attachments"))
@@ -124,5 +125,8 @@ def test_bot_chi_dinh_kem_mot_file_report(out, tmp_path, monkeypatch):
     f = out / f"{PKG}-artifact.html"
     os.utime(f, (time.time() + 60, time.time() + 60))   # audit ghi trong luot bot
     asyncio.run(bot._chay(job, "S1", "May"))
-    assert [Path(x.fp.name).name for x in sent["files"]] == ["report.html"]
+    from rcr import bot_cho_publish
+    assert sent["files"] == [] and bot_cho_publish.CHO in sent["text"]   # khong gui HTML (user 10-11/11/2026)
+    cho = bot_cho_publish.chua_publish(rp.parent)
+    assert [(Path(m["file"]).name, m["kenh_id"], m["msg_id"]) for m in cho] == [("report.html", 7, 1)]
     assert "54/54 khớp" in sent["text"]

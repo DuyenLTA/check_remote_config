@@ -13,7 +13,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import ad_units_sheet, bot_tien_trinh, build_ma_app, tc_source
+from . import ad_units_sheet, bot_cho_publish, bot_tien_trinh, build_ma_app, tc_source
 from . import bot_jira_rest as jira_rest
 from .models import RcError
 
@@ -92,7 +92,7 @@ def tin_hoi(c: dict) -> str:
 
 
 def file_report(kq: dict, out_dir: Path) -> Path | None:
-    """File HTML de dinh kem khi KHONG co link artifact (user chot 27/10/2026: co link thi chi gan link).
+    """File HTML cua luot KHONG co link artifact -> dua vao hang cho publish (bot_cho_publish), khong dinh kem.
 
     `link` do Claude ghi -> chi nhan file .html nam trong `out_dir`, khong dinh kem file bat ky.
     """
@@ -120,7 +120,8 @@ def tin_ket_qua(c: dict, kq: dict, dinh_kem: Path | None = None) -> str:
     if kq.get("link", "").startswith("https://"):
         dong.append(f"Report: {kq['link']}")
     elif dinh_kem:
-        dong.append(f"Report: file `{dinh_kem.name}` đính kèm (chưa publish được artifact)")
+        # Khong dinh kem HTML nua (user 10-11/11/2026): phien publish thay dong nay bang link (bot_cho_publish).
+        dong.append(bot_cho_publish.CHO)
     elif kq.get("link"):
         dong.append(f"Report trên máy chạy bot: `{kq['link']}`")
     if kq.get("phut") is not None:

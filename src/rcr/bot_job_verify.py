@@ -15,7 +15,7 @@ from pathlib import Path
 
 import discord
 
-from . import (bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_forum, bot_jira_marker, bot_kenh_project,
+from . import (bot_chay_claude, bot_cho_publish, bot_cong_viec, bot_dung_luot, bot_forum, bot_jira_marker, bot_kenh_project,
                bot_kiem_testvsl)
 from . import bot_jira_rest as jira
 from . import bot_tin_goc as tin_goc
@@ -184,10 +184,13 @@ async def _bao_ket_qua(bot, job: dict, vm, out: Path) -> None:
                 "view": nut(vm.id, ("verify", "Verify bug Jira"))}
     if not job.get("da_bao"):
         # Tom tat + file report nam ngay tren tin goc cua luot verify (khong tra loi tin moi - bot_tin_goc).
-        link = f"\nReport: {kq['link']}" if kq.get("link") and not f else ""
+        # Chua co artifact -> dong CHO, phien publish thay bang link (khong dinh kem HTML - user 10-11/11/2026).
+        link = f"\n{bot_cho_publish.CHO}" if f else (f"\nReport: {kq['link']}" if kq.get("link") else "")
         noi_dung |= {"embeds": [tin_goc.embed(tin_goc.KET_QUA, f"{v.tin_tom_tat_verify(job, kq)}{link}")],
-                     "attachments": [discord.File(f)] if f else []}
+                     "attachments": []}
     await vm.edit(**noi_dung)
+    if f and not job.get("da_bao"):
+        bot_cho_publish.them(out, f, vm.channel.id, vm.id, f"{job.get('ma', '')} {job.get('version', '')}".strip())
     bot.q.cap_nhat(job, da_bao=True)
     if not job.get("da_ping"):
         await tin_goc.ping_xong(bot, vm, f"🔔 Verify **{job['ma']}** `{job['version']}` xong (xem tin gốc).")
