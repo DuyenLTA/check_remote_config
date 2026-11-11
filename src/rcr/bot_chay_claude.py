@@ -33,6 +33,8 @@ TOOLS = ["Bash", "Read", "Edit", "Write", "Skill", "Workflow"]   # Artifact: -p 
 KET_QUA_RE = re.compile(r"^KET_QUA:\s*(\{.*\})\s*$", re.M)
 # Luot check (bo TC / checklist Next-Gen) KHONG gioi han thoi gian: chay het case moi thoi (user chot 04/11/2026
 # sau khi AIP893 52 case bi cat o 135 phut giua vong chay lai case chua PASS). Luot treo thi QA bam Dung.
+# Vo han chi ap cho ca phien `claude -p`: lenh nen BEN TRONG phien van bi Claude Code cat ~2 gio (AIP862 3.0.0 (23)
+# 11/11/2026 cat o 10/33 case) -> PROMPT bat chay tiep bang --tiep moi lan bi cat.
 KHONG_GIOI_HAN = float("inf")
 TIMEOUT_BO_TC = KHONG_GIOI_HAN
 TIMEOUT_NEXT_GEN = KHONG_GIOI_HAN
@@ -65,6 +67,9 @@ PROMPT = (
     "Truoc khi chay bo TC: trong out/ co file *.luot.json cung package + serial nay, \"xong\": false, "
     "`cap_nhat` trong 12 gio -> luot truoc bi tat giua chung (may tinh khoi dong lai): "
     "CHAY TIEP bang `rcr-check --tiep <file>`, KHONG chay lai tu dau cac case da co ket qua.\n"
+    "Lenh nen (run_in_background) bi Claude Code cat o moc thoi gian toi da (status killed, 'background time limit'): "
+    "luot CHUA xong - chay tiep ngay bang `rcr-check --tiep <file .luot.json cua luot do>` (lai chay nen), lap lai moi "
+    "lan bi cat toi khi file luot \"xong\": true; KHONG chay lai tu dau, KHONG bao xong / dung khi con case chua chay.\n"
     "Workflow audit chay nen: CHO thong bao no xong roi lam tiep trong CUNG luot nay; KHONG ScheduleWakeup, KHONG "
     "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case. KHONG tu viet vong lap sleep doc "
     "journal.jsonl / file output de cho: thong bao xong chi toi khi lenh Bash dang chay ket thuc, vong lap do giu may "
