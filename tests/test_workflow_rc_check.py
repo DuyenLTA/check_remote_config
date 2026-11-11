@@ -112,3 +112,17 @@ def test_ban_tro_toan_cuc_khop_mo_ta():
     a, b = _frontmatter(_doc(tro)), _frontmatter(_doc(WORKFLOW))
     assert a.get("description") == b.get("description"), "description ban tro lech repo — chep lai tu repo"
     assert a.get("argument-hint") == b.get("argument-hint"), "argument-hint ban tro lech repo — chep lai tu repo"
+
+
+KB_CHANGELOG = REPO / "docs" / "kb-changelog.md"
+FILE_LUAT = [*CAC_FILE, REPO / "sdk-check" / "WORKFLOW.md"]
+NGAY_CHOT = re.compile(r"(?:chốt|đổi)(?: lại)? (\d{2}/\d{2}/\d{4})")
+
+
+def test_ngay_chot_luat_co_trong_kb_changelog():
+    """Luat moi ghi "user chot dd/mm/yyyy" trong file luat ma kb-changelog khong co dong ngay do -> lich su
+    thay doi luat bi dut, khong chung minh duoc luat duoc cap nhat theo nghiep vu."""
+    kb = _doc(KB_CHANGELOG)
+    ngay = {d for p in FILE_LUAT for d in NGAY_CHOT.findall(_doc(p))}
+    thieu = sorted(d for d in ngay if f"| {d} |" not in kb)
+    assert not thieu, f"them dong vao docs/kb-changelog.md (muc 'Luat user / QA chot') cho ngay: {thieu}"

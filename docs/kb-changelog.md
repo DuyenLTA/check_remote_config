@@ -10,6 +10,13 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 
 | Ngày | Đầu ra sai | Sửa gì | Trước → sau |
 |---|---|---|---|
+| 09/11/2026 | AIP944 1.3.0 Next-Gen dừng ở dòng 53/54 vì ID ads lệch sheet | Lệch ID không dừng lượt, dòng ads của vị trí lệch chấm theo unit thật trong log (`d1b1674`) | Dừng giữa lượt → chạy hết checklist, câu báo liệt kê vị trí lệch |
+| 09/11/2026 | File workflow có 6 chỗ mâu thuẫn và 6 đường dẫn `data/*.yaml` không tồn tại, agent làm sai mà không ai biết | Tách luồng chính / tài liệu đọc khi cần, thêm `tests/test_workflow_rc_check.py` kiểm đường dẫn, lệnh, độ dài (`ad2c09b`) | 12 lỗi → 0, test chặn lỗi mới |
+| 09/11/2026 | Build dùng unit test Google bị chặn ở preflight, phải xin dev bản khác | Unit test → `CHU Y`, chạy tiếp; dòng ads của vị trí dùng ID test không PASS chỉ nhờ request (`054a3cf`) | Dừng → chạy hết, cảnh báo đầu câu báo |
+| 05/11/2026 | SDK 3.5.4 chấm theo tab "Bản sao của…" (bản cũ, kỳ vọng ngược luật) | Chấm thẳng tab gốc "TC SDK 3.5.4" (`4032197`) | Kỳ vọng sai → đúng tab QA tạo |
+| 05/11/2026 | Sheet TC sửa giữa lượt nhưng tool chấm theo bản tải lúc đầu | Mọi lệnh (cả `--gop`/`--tiep`) tải lại sheet, cảnh báo khi sheet đổi (`4c95904`) | Chấm theo kỳ vọng cũ → đối chiếu kỳ vọng mới |
+| 03/11/2026 | AIHomeDesign 1.9.0 lượt full mất 270 phút (lâu hơn test tay 90 phút) | FAIL chạy một lần là đủ (`203cb17`), chế độ chuỗi chạy case tiếp nối trên app đang mở (`ba9032d`), tải sheet TC một lần mỗi lượt (`a6df78e`) | 270 phút → 48 phút (55 case, TB 54s/case) |
+| 02/11/2026 | Lượt bản release thiếu quyền Firebase lại gợi ý xin dev bản debuggable | Hướng dẫn `firebase login` / `--reauth`, không gợi ý sửa APK (`94afcc5`) | Chờ dev → QA tự đăng nhập |
 | 06/10/2026 | Report "35 PASS" có 3 PASS giả | Mọi PASS phải dẫn đúng ad unit của vị trí theo sheet, §5c (`c3ac959`) | 3 PASS giả → bị bắt trước khi publish |
 | 07/10/2026 | 8/12 FAIL là sai, do app tự fetch Firebase ghi đè giá trị đã patch | Chạy lại mọi FAIL, đọc lại config sau khi chấm, §5d (`09d23ee`) | 8 FAIL sai → BLOCKED kèm lý do |
 | 07/10/2026 | Luật viết riêng cho từng app (ID nút X) | Bỏ, dùng luật chung (`12e2be3`) | Quy tắc cũ đã xóa |
@@ -24,6 +31,25 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 | 24/10/2026 | BACK trên inter thật …588 → 2 `ad_click`; tool chưa từng đọc event này (cùng ngày tool tự bấm BACK trên AdActivity 23 lần, không biết có click không) | Đếm `ad_click` mỗi case; có thì BLOCKED, không chạy lại, dừng cả lượt; cấm Claude gửi phím/tap lên ad thật khi chấm tay | 0 → đo được mọi click trong lượt |
 | 10/10/2026 | Sorapix 1.6.0: 11 FAIL lặp lại, nghi do tool bắt thiếu frame (OB3X) và chưa đủ tiền đề | Xem dòng 23/10 | — |
 | 23/10/2026 | Sorapix 1.6.0 OB3X-001/002/004/005: "nút X không hiện" trong khi OB3 đứng 8,6s mà tool chỉ có 1–2 khung. `dumpsys activity top` treo cả cửa sổ, uiautomator chỉ được gọi lại sau mỗi khung nhanh nên dừng theo. OB3X-013: khung uiautomator ghi 0,12s sau lúc rời OB3 bị tính là màn kế | Hai vòng nhìn chạy độc lập, dumpsys quá 2s thì bỏ khung đó. Có quãng >3s không nhìn được màn thì không kết luận "không hiện", trả NEEDS_HUMAN. Khung uiautomator trong 0,5s sau lúc rời OB3 không tính là màn kế | Chấm lại offline dữ liệu 10/10: 6 FAIL OB3X → 5 cần chạy lại, 1 PASS. Chưa chạy lại trên máy |
+
+## Luật user / QA chốt
+
+Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "chốt" ghi trong file luật phải có dòng ở đây —
+`tests/test_workflow_rc_check.py` kiểm.
+
+| Ngày | Luật | File luật | Commit |
+|---|---|---|---|
+| 09/11/2026 | Build lệch plan tuần: QA bấm "Chạy bỏ qua plan" thì chạy hết như thường | `rc-check.md` 3b | `fc90976` |
+| 09/11/2026 | Build dùng unit test Google: không dừng, không xin dev bản khác | `rc-check.md` 3b | `054a3cf` |
+| 09/11/2026 | Next-Gen: ID lệch sheet không dừng lượt (chốt lại sau AIP944) | `sdk-check/WORKFLOW.md` | `d1b1674` |
+| 09/11/2026 | Next-Gen: đo tay phải ra cùng kết quả giữa các lượt cùng build | `sdk-check/WORKFLOW.md` | `8d513b3` |
+| 06/11/2026 | Kiến thức nền SDK lấy từ tab "Tổng hợp SDK", tra trước khi báo bug | `docs/rc-check/luat-qa-da-chot.md` | `e38905a` |
+| 03/11/2026 | Precondition không tạo được thì BLOCKED, cấm đo thay ("đừng có làm giả") | `rc-check.md` 5d2 | — |
+| 30/10/2026 | Build khác plan tuần → dừng, không check ID ads, không chạy case | `rc-check.md` 3b | `8d36744` |
+| 30/10/2026 | Nhánh Next-Gen cũng check ID ads trước khi chạy | `sdk-check/WORKFLOW.md` | `8d36744` |
+| 29/10/2026 | Mọi máy QA là máy test AdMob: `ad_click` không dừng lượt | `rc-check.md` 0c | `f89d5aa` |
+| 28/10/2026 | ID ads lệch sheet: không dừng rc-check, chạy tiếp | `rc-check.md` 3c | `391477a` |
+| 28/10/2026 | Auto test có bug: QA review trên Discord trước rồi mới log Jira | `rc-check.md` 7b | `17efd13` |
 
 ## Commit đụng tới KB
 

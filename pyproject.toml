@@ -1,6 +1,6 @@
 [project]
 name = "rcr"
-version = "0.1.0"
+version = "4.0"
 description = "Remote Config Case Runner - doi gia tri Firebase Remote Config tu file testcase, khong can quyen admin"
 requires-python = ">=3.12"
 dependencies = [
