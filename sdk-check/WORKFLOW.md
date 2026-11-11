@@ -1,7 +1,7 @@
-# Nhánh `/rc-check` cho app SDK FO 3.7.0 / 3.7.1: chấm checklist SDK Next-Gen
+# Nhánh `/rc-check` cho app SDK FO 3.7.0 / 3.7.1 / 3.7.2: chấm checklist SDK Next-Gen
 
 Vào đây từ `.claude/commands/rc-check.md` mục 0b — `--preflight` đọc được app dùng **SDK FO 3.7.0 / 3.7.1** (bộ TC không có
-bản này). Tham số: package, mục cần chấm (`1|2|3|4|all`, mặc định `all`), có thể kèm checklist dán vào. Bản SDK ghi
+bản này), hoặc **3.7.2** sau khi đã chạy xong bộ TC tab 3.6.1 (`rc-check.md` mục 0b). Tham số: package, mục cần chấm (`1|2|3|4|all`, mặc định `all`), có thể kèm checklist dán vào. Bản SDK ghi
 lên header report lấy từ dòng `Bản SDK FO` của preflight.
 
 ## Trước khi chạy: check ID ads + thông số như SDK thường (bắt buộc)
@@ -14,7 +14,7 @@ build trước rồi mới chấm. Thứ tự, không bỏ bước:
 2. Dòng `Plan tuần` = `LOI` (build khác yêu cầu trong plan tuần của QA) → **dừng, báo qa-auto**, không chấm
    (`rc-check.md` mục 3b). Lượt có `--bo-qua-plan` (QA bấm "Chạy bỏ qua plan") thì dòng này chỉ `CHU Y` → chạy hết.
 3. Có dòng `SDK tin build vs log app` (số SDK tin build / `--sdk` khác số app in ra) → **không vào nhánh này**: chạy
-   theo số tin build (`rc-check.md` mục 0b). Chỉ vào đây khi bản đã chốt là 3.7.0 / 3.7.1 hoặc có `--next-gen`.
+   theo số tin build (`rc-check.md` mục 0b). Chỉ vào đây khi bản đã chốt là 3.7.0 / 3.7.1 / 3.7.2 hoặc có `--next-gen`.
 4. Chạy check ID ads (`rc-check.md` mục 3c, audit-fanout) **xong** mới chạy `rcr-sdk-check` — hai bên cùng lái máy.
    **ID lệch sheet không dừng lượt** (user chốt lại 09/11/2026 sau AIP944 1.3.0 dừng sai ở 53/54): chạy nốt cả
    checklist, dòng ads của vị trí lệch chấm theo unit thật trong log, câu báo liệt kê vị trí lệch (vị trí · ID sheet →

@@ -1,6 +1,6 @@
 ---
-description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, hoặc tự chấm checklist SDK Next-Gen khi app dùng SDK 3.7.0 / 3.7.1, trên máy thật
-argument-hint: "<package> [mục 1|2|3|4|all — chỉ khi app SDK 3.7.0 / 3.7.1: tự chấm checklist Next-Gen] [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--next-gen] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
+description: Đổi giá trị Firebase Remote Config của app Android theo file testcase, hoặc tự chấm checklist SDK Next-Gen khi app dùng SDK 3.7.0 / 3.7.1 / 3.7.2, trên máy thật
+argument-hint: "<package> [mục 1|2|3|4|all — chỉ khi app SDK 3.7.0 / 3.7.1 / 3.7.2: tự chấm checklist Next-Gen] [--tc <link sheet | bo-tc.xlsx> [--tab <X.Y.Z>] [--sdk <X.Y.Z>] [--case <key,key>]] [--set key=value] [--report <file.html>] [--app-label '<ten app> <version>'] [--serial <serial>] [--next-gen] [--fresh] [--full-walk|--no-walk|--no-actions] [--keep|--restore]"
 ---
 
 Chạy `rcr-check` một lượt: đọc baseline remote config, nạp file testcase, đặt
@@ -43,7 +43,11 @@ Preflight (3b) mở app, đọc `VslTemplate4FirstOpenSDK: Using version X` củ
   toàn bộ `<repo>/sdk-check/WORKFLOW.md` và làm theo (checklist ở `<repo>/sdk-check/references/`, report Khớp/Sai).
 - **`$ARGUMENTS` có `--next-gen`** (bot truyền khi tin build ghi next-gen) → truyền `--next-gen` vào preflight: nhánh
   **luôn** Next-Gen, bất kể số SDK.
-- **Bản khác** (3.5.x, 3.6.x — 3.6.1 đã revert next-gen —, 3.7.2, 3.8.x…) → nhánh bộ TC. Bộ TC chưa có tab của bản thì
+- **3.7.2** (user chốt 11/11/2026) → chạy **cả hai**: bộ TC **tab `3.6.1`** (`--tab 3.6.1`, mục 4–7) rồi checklist
+  Next-Gen (`sdk-check/WORKFLOW.md`). Check ID ads (3c) một lần trước cả hai. Preflight in `→ chạy bộ TC` cho 3.7.2 là
+  bình thường, **vẫn chạy checklist** sau bộ TC và đo tay hết dòng `DO_TAY` của checklist. Report: `KET_QUA.link` = report
+  bộ TC; link report checklist ghi trong `tom_tat` và câu báo. Bug của cả hai phần gom chung trường `bugs`.
+- **Bản khác** (3.5.x, 3.6.x — 3.6.1 đã revert next-gen —, 3.8.x…) → nhánh bộ TC. Bộ TC chưa có tab của bản thì
   tool chấm base + delta tới tab gần nhất, ghi chú phần chưa có TC. User truyền `--tc` riêng thì theo `--tc`.
 - **`--sdk X.Y.Z`** (bot truyền số trong tin build) → truyền vào preflight và mọi lệnh sau: **số trong tin build quyết
   nhánh + tab, không theo log app**. Lệch (`SDK tin build vs log app` = `CHU Y`) → vẫn theo tin build, ghi dòng lệch lên
