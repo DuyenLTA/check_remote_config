@@ -61,8 +61,34 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
         # QA gui lai tin build de chay lai -> tro ve tin Check cu (build chi co luot verify thi khong co tin Check)
         if m.channel.id == bot.kenh_qa and any(t.get("loai_job") != "verify" for t in cu):
             await bot._hoi_lai(m, tin)
+        elif la_dev_day_lai(bot, m, cu):
+            log.info("dev day lai cung version: %s %s (%s)", tin["ma"], tin["version"], m.jump_url)
+            await dev_day_lai(bot, tin, m.jump_url, kenh)
         return
     await hoi_build_moi(bot, tin, m.jump_url, kenh, out)
+
+
+def la_dev_day_lai(bot, m: discord.Message, cu: list[dict]) -> bool:
+    """Tin bao build MOI cua dev (webhook / bot Assistant cua dev) trung ma + version voi build da hoi: dev build
+    lai ma khong tang so version. Tin da xu ly roi (quet lai tin lo sau restart) thi link trung `link_tin` da luu."""
+    tu_dev = bool(m.webhook_id) or bot_kenh_project.la_bot_dev(m.author.id)
+    return tu_dev and m.jump_url not in {t.get("link_tin") for t in cu}
+
+
+async def dev_day_lai(bot, tin: dict, link_tin: str, kenh) -> None:
+    """Dev day lai CUNG version (build moi that, vd AIP922 3.9.0 (32) ngay 11/11/2026 them TikTok config + ads-core
+    2.0.1 - truoc day bot im). Build da hoi Check -> hoi Check lai (cai ban moi nhat tu App Tester); lan nao cung
+    xep verify bug Reviewing tren build moi. Luot cu dang cho / dang chay thi ghi them dong vao tin goc cua no."""
+    check = [t for t in tin_da_hoi(bot, tin) if t.get("loai_job") != "verify"]
+    if check:
+        kq = await hoi_lai_build(bot, tin, link_tin, kenh.send)
+        if kq.startswith("Build"):       # dang cho / dang chay: khong tao luot trung, bao tren tin goc cu
+            c_cu = max(check, key=lambda t: int(t["msg_id"]))
+            await _canh_bao(bot, c_cu, kenh, f"🔁 Dev đẩy lại `{tin['version']}` (cùng version) lúc lượt này đang "
+                                             f"chờ / chạy — xong lượt thì QA gửi lại tin build để chạy bản mới: {link_tin}")
+            return
+    moi = max(tin_da_hoi(bot, tin), key=lambda t: int(t.get("msg_id") or 0))
+    await bot._xep_verify({**moi, "link_tin": link_tin}, kenh)
 
 
 def tin_da_hoi(bot, tin: dict) -> list[dict]:

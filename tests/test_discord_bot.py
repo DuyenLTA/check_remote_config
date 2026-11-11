@@ -393,6 +393,10 @@ def test_bot_khong_tha_tim_vao_tin_build(monkeypatch):
     bot.kenh_qa, bot.kenh_build, bot.duyet, bot.role = 1, {1}, set(), 0
     bot.q = SimpleNamespace(tin={1: {"ma": "AIP882", "version": "4.4.0 (41)", "loai_job": "verify"}})
     bot.get_channel = lambda cid: SimpleNamespace(send=None)
+
+    async def xep_verify(c, kenh):       # tin dev moi cung version -> bot xep verify lai (khong lien quan tim)
+        pass
+    bot._xep_verify = xep_verify
     tha = []
 
     async def add_reaction(e):
