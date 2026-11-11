@@ -144,3 +144,15 @@ def test_file_mot_sheet_van_doc_thang(tmp_path):
     assert not tc_select.needs_sdk(p)
     chon, _ = tc_select.read_cases(p, frozenset({"k1"}), "")
     assert len(chon) == 1 and chon[0][0] == ""
+
+
+def test_sdk_372_cham_tab_361_khong_lay_tab_gan_nhat():
+    """User chot 11/11/2026: app SDK 3.7.2 = bo TC tab 3.6.1 + checklist Next-Gen. Tab gan nhat (3.6.2) la sai
+    (AIP918 Linguza 11/11 cham nham tab 3.6.2)."""
+    from rcr import tc_select
+    tabs = [tc_catalog.Tab("TC SDK 3.6.1", "delta", (3, 6, 1)), tc_catalog.Tab("TC SDK 3.6.2", "delta", (3, 6, 2))]
+    assert tc_catalog.tab_ca_hai("3.7.2") == "3.6.1"
+    assert tc_catalog.tab_ca_hai("3.7.2-alpha01") == "3.6.1"
+    assert tc_catalog.tab_ca_hai("3.7.1") == "" and tc_catalog.tab_ca_hai("") == ""
+    assert tc_select.tab_for_version(tabs, "3.7.2").name == "TC SDK 3.6.1"
+    assert tc_select.tab_for_version(tabs, "3.6.5").name == "TC SDK 3.6.2"

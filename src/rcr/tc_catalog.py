@@ -50,6 +50,16 @@ def parse_version(text: str) -> tuple[int, int, int] | None:
     return tuple(int(x) for x in m.groups()) if m else None
 
 
+# Ban SDK cham CA HAI: bo TC o dung tab ghi ben canh, ROI checklist Next-Gen (user chot 11/11/2026 cho 3.7.2).
+# Khong de tab_for_version tu lay "tab gan nhat": 3.7.2 se roi vao 3.6.2 (AIP918 Linguza 11/11 cham nham tab).
+CA_HAI_SDK = {(3, 7, 2): "3.6.1"}
+
+
+def tab_ca_hai(sdk: str) -> str:
+    """'3.7.2' -> '3.6.1' (ban phai cham ca bo TC tab nay lan checklist Next-Gen); ban khac -> ''."""
+    return CA_HAI_SDK.get(parse_version(sdk) or (), "")
+
+
 def read_tabs(path: str | Path) -> list[Tab]:
     """Doc moi tab `TC SDK ...`. Tab khong co bang TC -> RcError neu ro."""
     import openpyxl

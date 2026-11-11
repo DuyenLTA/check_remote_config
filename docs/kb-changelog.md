@@ -10,6 +10,7 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 
 | Ngày | Đầu ra sai | Sửa gì | Trước → sau |
 |---|---|---|---|
+| 11/11/2026 | AIP918 Linguza ghi SDK 3.7.2 mà lượt chạy tab TC 3.6.2 (tool tự lấy tab gần nhất), không chấm checklist | Luật 3.7.2 đưa vào code: `tc_catalog.CA_HAI_SDK` chọn đúng tab 3.6.1, preflight in `Nhanh: CA HAI` kể cả khi tin build ghi next-gen | Chấm nhầm tab → tab 3.6.1 + checklist Next-Gen |
 | 09/11/2026 | AIP944 1.3.0 Next-Gen dừng ở dòng 53/54 vì ID ads lệch sheet | Lệch ID không dừng lượt, dòng ads của vị trí lệch chấm theo unit thật trong log (`d1b1674`) | Dừng giữa lượt → chạy hết checklist, câu báo liệt kê vị trí lệch |
 | 09/11/2026 | File workflow có 6 chỗ mâu thuẫn và 6 đường dẫn `data/*.yaml` không tồn tại, agent làm sai mà không ai biết | Tách luồng chính / tài liệu đọc khi cần, thêm `tests/test_workflow_rc_check.py` kiểm đường dẫn, lệnh, độ dài (`ad2c09b`) | 12 lỗi → 0, test chặn lỗi mới |
 | 09/11/2026 | Build dùng unit test Google bị chặn ở preflight, phải xin dev bản khác | Unit test → `CHU Y`, chạy tiếp; dòng ads của vị trí dùng ID test không PASS chỉ nhờ request (`054a3cf`) | Dừng → chạy hết, cảnh báo đầu câu báo |

@@ -44,8 +44,8 @@ Preflight (3b) mở app, đọc `VslTemplate4FirstOpenSDK: Using version X` củ
 - **`$ARGUMENTS` có `--next-gen`** (bot truyền khi tin build ghi next-gen) → truyền `--next-gen` vào preflight: nhánh
   **luôn** Next-Gen, bất kể số SDK.
 - **3.7.2** (user chốt 11/11/2026) → chạy **cả hai**: bộ TC **tab `3.6.1`** (`--tab 3.6.1`, mục 4–7) rồi checklist
-  Next-Gen (`sdk-check/WORKFLOW.md`). Check ID ads (3c) một lần trước cả hai. Preflight in `→ chạy bộ TC` cho 3.7.2 là
-  bình thường, **vẫn chạy checklist** sau bộ TC và đo tay hết dòng `DO_TAY` của checklist. Report: `KET_QUA.link` = report
+  Next-Gen (`sdk-check/WORKFLOW.md`). Check ID ads (3c) một lần trước cả hai. Preflight in `Nhanh: CA HAI` và tool tự
+  chọn tab 3.6.1 (không lấy tab gần nhất 3.6.2); **vẫn chạy checklist** sau bộ TC và đo tay hết dòng `DO_TAY` của checklist. Report: `KET_QUA.link` = report
   bộ TC; link report checklist ghi trong `tom_tat` và câu báo. Bug của cả hai phần gom chung trường `bugs`.
 - **Bản khác** (3.5.x, 3.6.x — 3.6.1 đã revert next-gen —, 3.8.x…) → nhánh bộ TC. Bộ TC chưa có tab của bản thì
   tool chấm base + delta tới tab gần nhất, ghi chú phần chưa có TC. User truyền `--tc` riêng thì theo `--tc`.
