@@ -142,3 +142,18 @@ def test_trang_ob_co_cham_chi_trang_khong_bam_btnskip(monkeypatch):
     assert fo_flow.fo_steps.onboarding_page(nodes(xml)) == 1
     _did, _adv, taps, swipes = _buoc_vuot(monkeypatch, xml)
     assert taps == [] and swipes == ["left"]
+
+
+# Trang cau hoi SDK 3.6.2 (AIP862): Next khoa khi chua chon -> lai qua phai chon dap an dau, khong vuot mai.
+OB_CAU_HOI = (Path(__file__).parent / "fixtures" / "uidump_ob_cau_hoi_chua_chon.xml").read_text(encoding="utf-8")
+
+
+def test_trang_cau_hoi_chua_chon_thi_chon_dap_an_dau():
+    node = fo_flow.dap_an_can_chon(nodes(OB_CAU_HOI))
+    assert node is not None and node.text == "FR - Fun"
+
+
+def test_trang_cau_hoi_da_chon_thi_khong_chon_lai():
+    da_chon = OB_CAU_HOI.replace('clickable="true" enabled="false"', 'clickable="true" enabled="true"')
+    assert fo_flow.dap_an_can_chon(nodes(da_chon)) is None
+    assert fo_flow.dap_an_can_chon(nodes(OB3_SKIP)) is None

@@ -27,7 +27,7 @@ HET_LUONG_RE =re.compile(r"^\s*(?:đi|di)\s+h[ếe]t\s+lu[ồo]ng\b", re.I)
 CHON_ITEM_RE = re.compile(r"^\s*(?:ch[ọo]n|b[ấa]m|tap)\s+(?:1|m[ộo]t)\s+(?:item|style|[ôo]|l[ựu]a\s*ch[ọo]n|"
                           r"đ[áa]p\s*[áa]n)\b", re.I)
 # "Di qua OB1 → OB4": lai toi OB4, chup moi trang.
-DI_QUA_TOI_RE = re.compile(r"^\s*(?:đi|di)\s+qua\s+(?:OB|onb)\s*\d\s*(?:→|->|đến|den|tới|toi)\s*(?:OB|onb)\s*(\d)\b",
+DI_QUA_TOI_RE = re.compile(r"^\s*(?:đi|di)\s+(?:qua|h[ếe]t)\s+(?:OB|onb)\s*\d\s*(?:→|->|đến|den|tới|toi)\s*(?:OB|onb)\s*(\d)\b",
                            re.I)
 # Buoc chi ghi ten man: "LFO2.", "OB3.", "OB4."
 # "Di tiep den OB4." (AIP936 SG03-01) - truoc day khong dich duoc, case dung o OB1 va dong OB4 FAIL oan.
@@ -47,6 +47,15 @@ def resolve(text: str, nodes):
     if tags:
         return XemTag(tuple(tags), "đọc log của tag " + ", ".join(tags)
                       + (" (bật tester mode trước)" if tag_logcat.TESTER_TAG in tags else ""))
+    ghep = fo_ngon_ngu.tach(text)
+    if ghep:
+        # Ngon ngu da dat cho ca case (fo_ngon_ngu.tim -> CHON): con lai la ve sau ("di den OB3"); chi lai qua
+        # LFO thi nhu "Chon X o LFO1".
+        (_goc, bien_the), con_lai = ghep
+        if not con_lai:
+            return ChonNgonNgu(bien_the, f"chọn {bien_the} khi lái qua LFO")
+        from . import act_resolver  # noqa: PLC0415 - act_resolver import module nay
+        return act_resolver.resolve(", ".join(con_lai), nodes)
     nn = fo_ngon_ngu.doc_cau(text)
     if nn:
         return ChonNgonNgu(nn[1], f"chọn {nn[1]} khi lái qua LFO")

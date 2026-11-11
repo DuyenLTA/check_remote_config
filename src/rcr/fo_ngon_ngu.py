@@ -49,10 +49,28 @@ def doc_cau(step: str) -> tuple[str, str] | None:
     return goc, f"{goc} ({m.group('bt').strip()})" if m.group("bt") else goc
 
 
+# Ve sau cau ghep chi la lai qua LFO ("sang LFO2", "bam tick") - fo_flow da lam khi qua LFO voi ngon ngu da chon.
+VE_LFO_RE = re.compile(r"^\s*(?:(?:sang|qua|t[ớo]i|[đd][ếe]n)\s+LFO\s*\d|(?:b[ấa]m|nh[ấa]n|tap)\s+(?:n[úu]t\s+)?tick)"
+                       r"\s*\.?\s*$", re.I)
+
+
+def tach(step: str) -> tuple[tuple[str, str], list[str]] | None:
+    """Cau ghep "Chon Francais o LFO1, sang LFO2, bam tick." / "Chon Francais, di den OB3." (TC 3.6.2 AIP862
+    11/11/2026) -> ((goc, bien the), [ve sau khong phai lai qua LFO]). Truoc day CHON_RE doi ca cau chi la
+    "Chon X" nen ca bo 3.6.2 lai bang English roi cham khoi 'fr' -> FAIL gia. Khong phai cau ghep -> None."""
+    dau, _, sau = (step or "").partition(",")
+    if not sau.strip():
+        return None
+    ra = doc_cau(dau)
+    if not ra:
+        return None
+    return ra, [v.strip() for v in sau.split(",") if v.strip() and not VE_LFO_RE.match(v)]
+
+
 def tim(precondition: str, steps=()) -> tuple[str, str] | None:
     """Ngon ngu case doi: buoc Action "Chon X" thang, roi toi precondition "ngon ngu da chon = X"."""
     for st in steps:
-        ra = doc_cau(st)
+        ra = doc_cau(st) or (tach(st) or (None,))[0]
         if ra:
             return ra
     m = TIEN_DK_RE.search(precondition or "")

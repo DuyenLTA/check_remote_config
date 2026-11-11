@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+import time
 
 from .adb_parsers import (
     PACKAGE_RE,
@@ -37,6 +39,25 @@ TRANSPORT_HINTS = (
     "no devices/emulators found",
     "daemon not running",
 )
+
+
+# Gio (epoch may tinh) moi lenh `input` tool gui, theo serial. May khong in log adbd (Vivo V2143, AIP862
+# 11/11/2026) thi fa_log khong biet tool thao tac luc nao -> moi ad_click GMA tu ban (~10s sau inter show) bi tinh
+# la tool bam, ca bo case BLOCKED. Day la nguon du phong cho `fa_log.doc_input`.
+INPUT_RE = re.compile(r"(?:^|[;&|\s])input\s+(?:tap|swipe|keyevent|text)\b")
+_GIO_INPUT: dict[str, list[float]] = {}
+GIU_INPUT = 2000
+
+
+def _ghi_input(serial: str) -> None:
+    ds = _GIO_INPUT.setdefault(serial, [])
+    ds.append(time.time())
+    del ds[:-GIU_INPUT]
+
+
+def gio_input(serial: str) -> list[float]:
+    """Gio may tinh cac lenh `input` tool da gui toi `serial` trong tien trinh nay."""
+    return list(_GIO_INPUT.get(serial, []))
 
 
 class AdbClient:
@@ -137,6 +158,8 @@ class AdbClient:
         self, serial: str, *args: str, timeout: float | None = None
     ) -> tuple[str, str, int]:
         self._guard(serial)
+        if args and args[0] == "input":
+            _ghi_input(serial)
         return await self._run("-s", serial, "shell", *args, timeout=timeout)
 
     async def _shell_checked(
@@ -154,4 +177,6 @@ class AdbClient:
         Moi thanh phan bien doi trong `line` phai da qua _guard hoac la hang so.
         """
         self._guard(serial)
+        if INPUT_RE.search(line):
+            _ghi_input(serial)
         return await self._run("-s", serial, "shell", line, timeout=timeout)

@@ -304,3 +304,20 @@ def _testvsl_san_sang(monkeypatch):
     async def san_sang(serial, package):
         return None
     monkeypatch.setattr(bot_kiem_testvsl, "loi_testvsl", san_sang)
+
+
+@pytest.fixture(autouse=True)
+def _usage_log_khong_ghi_vao_out_that(tmp_path, monkeypatch):
+    """Test goi `bao_ket_qua` voi bot gia (out = out/ that cua repo) tung ghi dong gia "AIP920 ... pkg.a" vao
+    out/usage-log-bot.md moi lan chay suite (11/11/2026). Ghi vao out/ that thi chuyen sang tmp_path."""
+    from rcr import usage_log
+
+    that = (pathlib.Path(__file__).resolve().parents[1] / "out").resolve()
+    goc = usage_log.ghi_luot_bot
+
+    def ghi(job, kq, out_dir, *a, **k):
+        if pathlib.Path(out_dir).resolve() == that:
+            out_dir = tmp_path
+        return goc(job, kq, out_dir, *a, **k)
+
+    monkeypatch.setattr(usage_log, "ghi_luot_bot", ghi)

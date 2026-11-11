@@ -56,3 +56,43 @@ def test_khong_doc_duoc_gio_thao_tac_thi_tinh_het_la_do_tool():
     assert fa_log.chia_click(events, None) == (2, 0)
     khong_gio = fa_log.parse(CLICK_LOG.replace("1792858541.696", "10-24 22:30:41.696"))
     assert fa_log.chia_click(khong_gio, []) == (1, 1)
+
+
+class _MayKhongAdbd:
+    """May khong in log adbd (Vivo V2143): logcat -s adbd rong, `date` tra gio may."""
+
+    def __init__(self, gio_may: float):
+        self.gio_may = gio_may
+
+    async def shell(self, serial, *args, timeout=None):
+        if args[0] == "date":
+            return f"{self.gio_may}\n", "", 0
+        return "", "", 0
+
+
+def test_may_khong_log_adbd_dung_gio_tool_tu_ghi(monkeypatch):
+    import asyncio
+    import time as _t
+
+    from rcr import adb_client
+    monkeypatch.setattr(adb_client, "_GIO_INPUT", {"S1": [_t.time() - 30.0]})
+    # Dong ho may nhanh hon may tinh 100s: gio input phai doi sang gio may.
+    ra = asyncio.run(fa_log.doc_input(_MayKhongAdbd(_t.time() + 100.0), "S1"))
+    assert ra is not None and abs(ra[0] - (_t.time() + 70.0)) < 1.0
+    # Click GMA tu ban 10s sau input cuoi -> khong tinh la tool.
+    assert fa_log.chia_click([{"name": "ad_click(_ac)", "t": ra[0] + 10.0}], ra) == (0, 1)
+    assert fa_log.chia_click([{"name": "ad_click(_ac)", "t": ra[0] + 2.0}], ra) == (1, 0)
+
+
+def test_may_khong_log_adbd_tool_chua_gui_input_thi_none(monkeypatch):
+    import asyncio
+
+    from rcr import adb_client
+    monkeypatch.setattr(adb_client, "_GIO_INPUT", {})
+    assert asyncio.run(fa_log.doc_input(_MayKhongAdbd(0.0), "S2")) is None
+
+
+def test_adb_client_ghi_gio_lenh_input():
+    from rcr import adb_client
+    assert adb_client.INPUT_RE.search("for i in $(seq 1 5); do input tap 10 20; done")
+    assert not adb_client.INPUT_RE.search("dumpsys input_method")

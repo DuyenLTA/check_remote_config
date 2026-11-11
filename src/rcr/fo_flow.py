@@ -145,6 +145,16 @@ def rule_for(activity: str, ruleset: list[dict]) -> dict | None:
     return next((r for r in ruleset if r["match"] in activity), None)
 
 
+def dap_an_can_chon(nodes: list):
+    """Trang OB dang cau hoi (SDK 3.6.2) chua chon dap an: nut Next `...QuestionNext` bi khoa, vuot cung khong
+    chuyen trang -> lai qua phai chon dap an dau tien truoc. Tra node dap an do, hoac None (khong phai trang cau
+    hoi / da chon roi). Chi dung khi LAI QUA man, khong dung cho buoc Action cua case (case "vuot khi chua chon")."""
+    nut = next((n for n in nodes if n.resource_id.endswith("QuestionNext") and n.visible), None)
+    if nut is None or nut.enabled:
+        return None
+    return next((n for n in nodes if n.resource_id.endswith("QuestionAnswer") and n.visible), None)
+
+
 async def _tap(client, serial: str, node) -> None:
     x, y = node.bounds.center
     await device_app.tap(client, serial, x, y)
@@ -350,6 +360,16 @@ async def walk_to(client, serial: str, package: str, target: str,
                 return {"reached": False, "activity": f"{activity} (trang {now})", "trail": trail,
                         "reason": f"da qua trang {page}: app tu chuyen sang trang {now} "
                                   "truoc khi tool kip doc man (auto-swipe nhanh hon mot lan dump UI)"}
+            dap_an = dap_an_can_chon(nodes) if now and now < page else None
+            if dap_an is not None:
+                # Trang cau hoi khoa vuot toi khi chon: chon dap an dau roi vong sau moi vuot (truoc day
+                # vuot mai o trang 1 -> ca bo 3.6.2 AIP862 ket ~15 phut/case).
+                await _tap(client, serial, dap_an)
+                trail.append({"activity": activity.split(".")[-1], "did": f"chọn đáp án {dap_an.label}"})
+                log_fn(f"      onboarding: chon dap an {dap_an.label} (trang cau hoi khoa vuot)")
+                await asyncio.sleep(POLL_SECONDS)
+                waited += POLL_SECONDS
+                continue
             if now and now < page:
                 vua_vuot, xml_truoc = (now, True), xml
                 await do_step(client, serial, {"swipe": "left"}, nodes, screen)
@@ -415,6 +435,11 @@ async def walk_to(client, serial: str, package: str, target: str,
                 # "Bam 'FR - Go'" ma app con o splash: lai toi khi nut / o lua chon hien thi dung lai, khong bam tiep.
                 return {"reached": True, "activity": activity, "trail": trail}
             did, advance = await _qua_native_full(client, serial, nodes, screen)
+            dap_an = None if did else dap_an_can_chon(nodes)
+            if dap_an is not None and ("swipe" in steps[index] or steps[index].get("tap_continue")):
+                # Nhu tren: trang cau hoi chua chon thi vuot / Next deu khong qua duoc.
+                await _tap(client, serial, dap_an)
+                did, advance = f"chon dap an {dap_an.label} (trang cau hoi khoa vuot)", False
             if not did:
                 did, advance = await do_step(client, serial, steps[index], nodes, screen)
         except AdbError as exc:
