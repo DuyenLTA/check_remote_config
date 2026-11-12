@@ -113,17 +113,11 @@ def doc_file(path: str | Path, tab: str = TAB) -> list[dict]:
 
 
 def tai(out_dir: Path, link: str = LINK, tab: str = TAB) -> list[dict]:
-    """Tai sheet ve (ban moi nhat) roi doc. Mang loi -> dung ban da tai lan truoc neu co."""
+    """Tai sheet ve (ban moi nhat) roi doc. Tai hong -> RcError, KHONG dung ban da tai lan truoc (QA sua sheet
+    lien tuc, user chot 12/11/2026)."""
     from . import tc_source
-    from .models import RcError
 
-    try:
-        path = tc_source.tai_ve(link, out_dir)
-    except RcError:
-        path = tc_source.file_da_tai(link, out_dir)
-        if path is None:
-            raise
-    return doc_file(path, tab)
+    return doc_file(tc_source.tai_ve(link, out_dir), tab)
 
 
 def lich(cases: list[dict], chon: set[str] | None = None) -> list[dict]:

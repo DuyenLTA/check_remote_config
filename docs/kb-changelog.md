@@ -40,6 +40,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 12/11/2026 | Check gì cũng tải lại sheet liên quan trước (TC, Check thông số KT, plan, TC sub, Tổng hợp SDK); tải hỏng thì dừng, bỏ đường lùi về bản `out/` cũ của sheet ID ads và sheet TC sub | `rc-check.md` 4, `src/rcr/ad_units_sheet.py`, `src/rcr/sub_tc.py` | — |
 | 12/11/2026 | Bộ IAA đọc mục "3. ID ads inapp" của tab app ở sheet Check thông số KT (QA dán kịch bản vào đó); bộ gen ngầm đọc sheet TC gen ngầm riêng; cả hai chạy qua `/check` ô `tinh_nang` | `rc-check.md` 4, `src/rcr/tc_tinh_nang_rieng.py` | — |
 | 11/11/2026 | Lệnh nền bị Claude Code cắt (~2 giờ) thì chạy tiếp bằng `rcr-check --tiep`, không chạy lại từ đầu, không báo xong khi còn case | `src/rcr/bot_chay_claude.py` PROMPT | — |
 | 11/11/2026 | SDK 3.7.2: chấm cả bộ TC tab 3.6.1 lẫn checklist Next-Gen | `rc-check.md` 0b | — |

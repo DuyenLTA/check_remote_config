@@ -79,3 +79,15 @@ def test_bien_moi_truong_doi_duoc_sheet(tmp_path, monkeypatch):
     monkeypatch.delenv("RC_AD_UNITS_SHEET")
     ad_units_sheet.tai("photomaker.image.editor.ai", tmp_path)
     assert da_tai[-1] == ad_units_sheet.LINK
+
+
+def test_tai_hong_khong_lui_ve_ban_cu(tmp_path, monkeypatch):
+    """QA sua sheet lien tuc: tai hong thi bao loi, khong cham theo ban da tai lan truoc."""
+    _wb(tmp_path)                                         # ban cu nam san trong out_dir
+
+    def hong(link, out_dir):
+        raise ad_units_sheet.RcError("mang loi")
+
+    monkeypatch.setattr(ad_units_sheet.tc_source, "tai_ve", hong)
+    bang, ghi_chu = ad_units_sheet.tai("photomaker.image.editor.ai", tmp_path)
+    assert bang == {} and "bản mới nhất" in ghi_chu

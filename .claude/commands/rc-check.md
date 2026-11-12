@@ -158,6 +158,12 @@ còn snapshot `--keep` chưa `--restore`, và **plan tuần**.
 
 Chỉ hỏi khi: log không in bản SDK, sheet ID không có tab của package, hoặc nhiều máy.
 
+**Check gì cũng tải lại sheet liên quan trước** (user chốt 12/11/2026, QA sửa sheet liên tục): bộ TC (cả tab SDK,
+tab tính năng, `--tc iaa` / `--tc gen-ngam`), sheet Check thông số KT (ID ads, mục 3 IAA), plan tuần, sheet TC sub,
+tab "Tổng hợp SDK x" — tool tải bản mới nhất **mỗi lệnh** (kể cả `--gop` / `--tiep`), không dùng bản `out/` có sẵn,
+không dựa vào điều Claude nhớ từ lượt trước. Tải hỏng thì dừng báo lỗi, không chấm theo bản cũ. Claude đọc sheet
+(mô tả, kỳ vọng, cách hiểu) cũng đọc bản vừa tải của lượt này.
+
 **Bộ TC lấy từ Google Sheet, KHÔNG tìm file trong Downloads.** User đưa link / `.xlsx` khác thì dùng đúng cái đó. Tải
 không được → dừng, **đừng lùi về file cũ**:
 `<bin>/rcr-notify --kind stop --title "Không tải được sheet TC" --line "<link sheet>" --action "Chia sẻ sheet hoặc gửi file .xlsx"`
