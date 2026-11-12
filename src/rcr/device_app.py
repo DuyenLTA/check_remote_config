@@ -86,8 +86,13 @@ async def launch(client, serial: str, package: str) -> str:
 async def focus(client, serial: str) -> tuple[str, str]:
     """(package, activity) dang o foreground. ("", "") neu khong doc duoc."""
     guard(serial)
-    out, _, _ = await client.shell(serial, "dumpsys", "window")
+    # `dumpsys window displays` du mCurrentFocus / mFocusedApp ma chi ~1/4 kich thuoc (vivo V2143 12/11/2026:
+    # 0,07s vs 0,13s, goi ~100 lan moi luot). Ban Android khong in o muc nay -> doc ca `dumpsys window`.
+    out, _, _ = await client.shell(serial, "dumpsys", "window", "displays")
     match = _FOCUS_RE.search(out)
+    if not match:
+        out, _, _ = await client.shell(serial, "dumpsys", "window")
+        match = _FOCUS_RE.search(out)
     return (match.group(1), match.group(2)) if match else ("", "")
 
 

@@ -18,7 +18,7 @@ import logging
 import time
 from pathlib import Path
 
-from . import device_app, fo_ngon_ngu, fo_steps, mang_cham_cua_so, ui_dump
+from . import device_app, fo_ngon_ngu, fo_steps, mang_cham_cua_so, popup_che_nut, ui_dump
 from .fo_screens import (  # noqa: F401 - tai xuat cho cho goi cu
     MAN_THEO_MA,
     SCREEN_WORDS,
@@ -46,6 +46,11 @@ SETTLE_SECONDS = 0.8
 # nhip ngan lai ma giu 10 vong la bao ket oan luc splash chua xong.
 STUCK_POLLS = int(20 / POLL_SECONDS)
 DEFAULT_TIMEOUT = 180.0
+# Nhip cho giua hai lan doc man theo TRANG THAI (activity dang focus, `dumpsys window displays` ~0,1s) thay vi
+# ngu cung POLL_SECONDS: activity doi thi doc lai sau SAU_KHI_DOI (cho man moi ve xong), khong doi thi van cho du
+# POLL_SECONDS nhu cu. Do 12/11/2026 vivo V2143: 1/4 thoi gian lai FO la ngu 1s.
+NHIP_DOI = 0.25
+SAU_KHI_DOI = 0.5
 # Vuot lien tiep ma van dung o cung trang -> trang cuoi cua pager (tat OB1/OB2
 # lam pager it trang hon so trang dich). Truoc day vuot ~540 lan toi het
 # DEFAULT_TIMEOUT (do 2026-10-23, Sorapix SDK353-H202-008).
@@ -140,6 +145,22 @@ async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
         await asyncio.sleep(POLL_SECONDS)
 
 
+async def cho_man_doi(client, serial: str, activity: str, toi_da: float) -> None:
+    """Cho toi da `toi_da` giay (tung nhip NHIP_DOI), ve som khi activity dang focus khac `activity` - con cho them
+    SAU_KHI_DOI de man moi ve xong (khong qua `toi_da`). Activity khong doi thi cho du `toi_da` nhu sleep cu."""
+    da_cho = 0.0
+    while da_cho < toi_da:
+        nhip = min(NHIP_DOI, toi_da - da_cho)
+        await asyncio.sleep(nhip)
+        da_cho += nhip
+        if da_cho >= toi_da:
+            return
+        _pkg, moi = await device_app.focus(client, serial)
+        if moi and moi != activity:
+            await asyncio.sleep(min(SAU_KHI_DOI, toi_da - da_cho))
+            return
+
+
 def rule_for(activity: str, ruleset: list[dict]) -> dict | None:
     """Luat DAU TIEN co `match` nam trong ten activity."""
     return next((r for r in ruleset if r["match"] in activity), None)
@@ -205,9 +226,8 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
             return "", True
         # Popup "AdMob native ad validator" (may test) noi de len nua tren / nua trai nut Next cua OB va khong co
         # trong cay UI: bam giua nut la trung popup, app dung yen, vong lai FO lap toi het gio (vivo V2143 12/11/2026,
-        # 25 phut). Bam diem goc duoi-phai van trong nut - phan popup khong che.
-        b = node.bounds
-        x, y = b.left + (b.right - b.left) * 3 // 4, b.top + (b.bottom - b.top) * 5 // 6
+        # 25 phut). Bam diem trong nut nam ngoai moi popup (doc khung popup tu dumpsys) - `popup_che_nut`.
+        x, y = await popup_che_nut.diem_bam(client, serial, node.package, node.bounds)
         await device_app.tap(client, serial, x, y)
         return f"nut tiep tuc ({node.label})", True
     if step.get("tap_close_ad"):
@@ -229,7 +249,9 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
     node = fo_steps.find_node(nodes, target.get("resource_id", ""), target.get("text", ""))
     if not node:
         return "", True
-    await _tap(client, serial, node)
+    # Popup validator cung che duoc nut Next LFO2 (vivo 12/11/2026: bam trung popup, LFO2 dung toi het gio) -> ne.
+    x, y = await popup_che_nut.diem_bam(client, serial, node.package, node.bounds, popup_che_nut.DIEM_GIUA_TRUOC)
+    await device_app.tap(client, serial, x, y)
     return f"bam {node.label}", True
 
 
@@ -395,7 +417,7 @@ async def walk_to(client, serial: str, package: str, target: str,
                 await device_app.launch(client, serial, package)
                 trail.append({"activity": activity, "did": "mo lai app dich"})
             idle += 1
-            await asyncio.sleep(POLL_SECONDS)
+            await cho_man_doi(client, serial, activity, POLL_SECONDS)
             waited += POLL_SECONDS
             continue
 
@@ -425,10 +447,22 @@ async def walk_to(client, serial: str, package: str, target: str,
         if index >= len(steps):
             if "repeat_from" not in rule:
                 idle += 1
-                await asyncio.sleep(POLL_SECONDS)
+                await cho_man_doi(client, serial, activity, POLL_SECONDS)
                 waited += POLL_SECONDS
                 continue
             index = rule["repeat_from"]
+
+        if "wait" in steps[index]:
+            # Buoc CHO khong can cay node: khong dump (~2,6s) truoc khi cho. Man nay van duoc dump (chup, dung_khi,
+            # native full, nut dong ad) o buoc ke ngay sau - buoc do moi can node.
+            did, advance = await do_step(client, serial, steps[index], [], screen)
+            progress[rule["match"]] = index + 1
+            idle = 0
+            trail.append({"activity": activity.split(".")[-1], "did": did})
+            log_fn(f"      {activity.split('.')[-1]}: {did}")
+            await cho_man_doi(client, serial, activity, POLL_SECONDS)
+            waited += POLL_SECONDS
+            continue
 
         try:
             xml = await ui_dump.dump(client, serial)
@@ -456,7 +490,8 @@ async def walk_to(client, serial: str, package: str, target: str,
         if did:
             trail.append({"activity": activity.split(".")[-1], "did": did})
             log_fn(f"      {activity.split('.')[-1]}: {did}")
-        await asyncio.sleep(POLL_SECONDS)
+        # `waited` dem theo vong (moi vong POLL_SECONDS) nhu cu: moc het gio / ket khong doi nghia.
+        await cho_man_doi(client, serial, activity, POLL_SECONDS)
         waited += POLL_SECONDS
 
     _, activity = await device_app.focus(client, serial)

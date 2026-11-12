@@ -132,7 +132,7 @@ async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop
                 _, act = await device_app.focus(client, serial)
                 if act and "Splash" not in act:
                     break
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(NHIP_DOC_MAN)
         await asyncio.sleep(CHO_SAU_THAO_TAC)
     elif isinstance(action, act_resolver.Rotate):
         record["xoay"] = await device_motion.xoay(client, serial, action.orientations)
@@ -144,6 +144,8 @@ async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop
 # deu duoc - roi mo lai. Do 03/11/2026 AIP936: AOA load xong sau 4-6s, cho cung 10s phi ~5s moi lan resume.
 CHO_NEN_TOI_THIEU = 3.0
 CHO_QUA_SPLASH_SAU_KILL = 40.0
+# Nhip doc activity khi cho qua Splash (doc ~0,1s): truoc 1s -> tre toi 1s moi biet da qua.
+NHIP_DOC_MAN = 0.3
 # CHI ket qua load cua AOA (app_open): dung o bat ky ad nao load xong (native man Question) thi mo lai truoc khi
 # AOA kip request -> resume khong hien -> FAIL gia (thu 03/11/2026 Pixel 6 RG01-12). Inter / native full resume
 # khong nhan ra duoc o day -> cho du `toi_da`.
