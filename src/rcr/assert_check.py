@@ -19,7 +19,7 @@ from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_bo_cuc, as
                assert_giu_nguyen, assert_khong_co_ad, assert_luong_ad, assert_nut_lfo, assert_resume,
                assert_man_khong, assert_qa_man_tat_hung_202,
                assert_anh_content, assert_mau, assert_ads, assert_splash_media, assert_tag,
-               assert_timing, assert_trong_luc, assert_ui, ui_names)
+               assert_timing, assert_trong_luc, assert_ui, assert_widget, ui_names)
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -87,6 +87,11 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         # pattern) -> cham noi dung do nhu dong thuong, ghi chu la gia dinh.
         ket = check(noi_dung, ads, drive, crash, rc_keys, scope, vi_tri, events, cfg)
         return ket | {"reason": f"{ket['reason']} (kỳ vọng do TC giả định, chưa có spec)"}
+
+    # Tab widget: widget tren launcher, toast, popup dong, mo app tu widget - cham bang bang chung buoc widget.
+    ket = assert_widget.cham(text, drive or {}, cfg)
+    if ket:
+        return ket
 
     # Dong ve THOI GIAN / nut X tren trang native full OB3: cham bang dong thoi
     # gian do duoc (log co moc ms + khung nhin lien tuc), khong day cho nguoi.

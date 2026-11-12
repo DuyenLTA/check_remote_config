@@ -24,6 +24,7 @@ from . import (
     log_moc,
     device_app,
     chay_lai,
+    precond_android,
     precond_guards,
     rc_json_lech,
     fo_flow,
@@ -80,6 +81,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
     by_key = {r["key"]: r for r in rows}
     records = []
     may = await device_app.hang_may(client, baseline.serial)
+    android = await precond_android.doc(client, baseline.serial)
     co_ket_qua = luot_file.da_xong(list(goc))
 
     def luu(xong: bool = False) -> list[dict]:
@@ -120,6 +122,16 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             chosen = runnable[key]
             log_fn(f"--- case {key} ---")
             row = by_key.get(key, {})
+            # Precondition doi phien ban Android may nay khong co (Android < 8.0 tren may Android 12): chay chi ra
+            # ket qua cua nhanh khac -> BLOCKED ngay, khong chay / khong chay lai (user chot, AIP893 widget R03).
+            chan = precond_android.thieu_android(fo_ngon_ngu.tien_dk_chuoi(key, runnable), *android)
+            if chan:
+                log_fn("    precondition không tạo được: " + "; ".join(chan) + " -> BLOCKED, không chạy")
+                records.append(precond_android.record_blocked(key, row, chosen, chan)
+                               | {"thoi_gian_s": round(time.monotonic() - bat_dau), "noi_chuoi": False})
+                truoc_chuoi = None
+                luu()
+                continue
             goto = "" if args.no_walk else _goto_cua(row.get("label", ""), row.get("feature", ""),
                                                       chosen["precondition"])
             # Ma vi tri ads noi san key cua case nam o man nao. Buoc Action cua

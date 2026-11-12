@@ -34,7 +34,7 @@ import re
 
 from .act_types import (Action, Background, ChonMotNgonNgu, ChonNgonNgu, KillMoLai, ThongBao, GoTo, MoLai, Net, NeedsHuman, NoOp, Rotate, Seq,
                         Swipe, Tap, TapId, Wait, Watch, XemTag)
-from . import act_compound, act_cau_fo, net_ctl
+from . import act_compound, act_cau_fo, act_widget, net_ctl
 from .act_cau_fo import DI_QUA, MO_LAI_TU_RE, RA_KHOI_OB  # noqa: F401 - case_drive / act_exec dung qua day
 from .act_nodes import find, tap_by_text
 from .ui_dump import DeviceNode
@@ -54,6 +54,8 @@ QUOTED_RE = re.compile(r"[\"“”'‘’]([^\"“”'‘’]{1,60})[\"“”'�
 # Buoc mo app: tool da tu mo app sau khi patch -> khong lam gi them.
 # "Mo app -> LFO1" thi ve phai mui ten la man hinh MONG DOI, khong phai thao tac.
 LAUNCH_RE = re.compile(r"^\s*(?:mở|mo|open|cold\s*start|khởi\s*động|khoi\s*dong)\s*(?:lại|lai)?\s*app\b", re.I)
+# Cau mo app co kem dich Home ("Mo app vao Home", "Mo app, di het luong FO vao Home").
+VAO_HOME_RE = re.compile(r"\b(?:vào|vao|tới|toi|đến|den)\s+(?:màn\s+|man\s+)?home\b", re.I)
 # Buoc dat config: chinh la viec tool vua lam xong truoc do.
 CONFIG_RE = re.compile(r"^\s*(?:config|cấu\s*hình|cau\s*hinh|set|đặt|dat)\s+(?:rc|remote\s*config)\b", re.I)
 # "Bam Submit." - dong tu + ten nut, khong co ngoac kep. Van phai khop DUY NHAT
@@ -103,6 +105,10 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     he_thong = act_compound.thao_tac_he_thong(text)
     if he_thong is not None:
         return he_thong
+    # Tab widget: dialog ghim widget / home screen / widget deu la man LAUNCHER, khong co node app de tap theo chu.
+    widget = act_widget.resolve(text)
+    if widget is not None:
+        return widget
     ghep = act_compound.resolve(text, nodes, resolve)
     if ghep is not None:
         return ghep
@@ -118,6 +124,10 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     if LAUNCH_RE.match(text):
         if net_ctl.TAT_RE.search(text):
             return NoOp("app đã được mở sẵn trong lúc mạng đang tắt — bước này xong rồi")
+        # "Mo app vao Home, cho popup X": ve "vao Home" la ca mot chuyen di qua FO. NoOp thi case dung o LFO1
+        # va moi dong ve Home thanh "chua toi noi" (AIP893 widget R02-01 12/11/2026).
+        if VAO_HOME_RE.search(text):
+            return GoTo("MainActivity", "mở app rồi lái qua luồng FO tới Home")
         return NoOp("app đã được mở lại sau khi đặt config — bước này xong rồi")
     if net_ctl.TAT_RE.search(text):
         return Net(False, "bước bảo tắt mạng")

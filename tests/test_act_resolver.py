@@ -178,3 +178,12 @@ def test_nut_trong_app_ten_console_van_la_buoc_tap():
     """Chuoi trong ngoac kep la ten node trong app, khong phai console ngoai."""
     act = kind('Nhấn nút "Moment"')
     assert isinstance(act, act_resolver.Tap)
+
+
+@pytest.mark.parametrize("step", ["Mở app vào Home, chờ popup Add Widget.", "Mở app vào Home.",
+                                  "Mở app, đi hết luồng FO vào Home."])
+def test_mo_app_kem_vao_home_la_lai_toi_home(step):
+    # NoOp thi case dung o LFO1, dong "Popup dong, ve Home" thanh chua toi noi.
+    act = kind(step)
+    assert isinstance(act, act_resolver.GoTo)
+    assert act.target == "MainActivity"
