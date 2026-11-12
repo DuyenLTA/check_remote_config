@@ -54,6 +54,10 @@ async def bat(client, serial: str) -> None:
     # FA-SVC verbose in rat nhieu (dump ca lo upload): buffer mac dinh (~256K) troi sau khoang 1 phut, `logcat -d`
     # cuoi case mat event dau case (Pixel 6 09/11/2026: mat sach request / view luc vao OB1).
     await client.shell(serial, "logcat", "-G", BUFFER_LOG)
+    # ROM vivo: tat han gioi han log moi process (khong can root). Chi tat tag rac van con mat dong AdEventLogger / FA
+    # (AIP918 Linguza 12/11/2026, vivo V2143 log.ratelimit.level=1: case "khong co request native nao" la FAIL gia).
+    # May khong co prop nay thi setprop vo hai.
+    await client.shell(serial, "setprop", "log.ratelimit.level", "0")
     for tag in TAG_RAC:
         await client.shell(serial, "setprop", f"log.tag.{tag}", "S")
 

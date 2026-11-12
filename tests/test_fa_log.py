@@ -96,3 +96,20 @@ def test_adb_client_ghi_gio_lenh_input():
     from rcr import adb_client
     assert adb_client.INPUT_RE.search("for i in $(seq 1 5); do input tap 10 20; done")
     assert not adb_client.INPUT_RE.search("dumpsys input_method")
+
+
+class _GhiLenh:
+    def __init__(self):
+        self.lenh = []
+
+    async def shell(self, serial, *args, timeout=None):
+        self.lenh.append(args)
+        return "", "", 0
+
+
+def test_bat_log_tat_gioi_han_log_rom_vivo():
+    """vivo V2143 log.ratelimit.level=1 bo dong AdEventLogger -> FAIL gia 'khong co request' (AIP918 12/11/2026)."""
+    import asyncio
+    c = _GhiLenh()
+    asyncio.run(fa_log.bat(c, "3454184009000HI"))
+    assert ("setprop", "log.ratelimit.level", "0") in c.lenh
