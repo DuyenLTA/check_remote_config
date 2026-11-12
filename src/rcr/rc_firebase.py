@@ -29,9 +29,9 @@ API = "https://firebaseremoteconfig.googleapis.com/v1/projects/{project}/remoteC
 CLIENT_ID = "563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com"
 CLIENT_SECRET = "j9iVZfS8kkCEFUPaAeJV0sAi"
 SO_LAN_THU = 3
-THU_MANG = 4          # loi mang (VPN / handshake timeout, do 31/10/2026) -> thu lai
-CHO_MANG = 5.0
-TIMEOUT = 30
+# Tang goi HTTP (thu lai loi tam, nho token / template) o rc_firebase_http; tai xuat cho cho goi cu + test.
+from .rc_firebase_http import (CHO_LOI_TAM, CHO_MANG, LOI_TAM, THU_MANG, TIMEOUT, _mang,  # noqa: E402,F401
+                               _than_loi, mau_da_nho, nho_mau, quen, token_nho)
 # Danh dau tham so do tool tao (key app doc ma server chua khai): chi tham so mang dau nay moi duoc xoa khi go.
 # Tham so cua nguoi khac du co mac dinh "dung gia tri trong app" van giu nguyen (user chot 31/10/2026: khong
 # dong vao bat cu thu gi ngoai gia tri cua dieu kien testvsl).
@@ -54,27 +54,6 @@ def da_dang_nhap() -> bool:
         return False
 
 
-LOI_TAM = (429, 500, 502, 503, 504)
-CHO_LOI_TAM = 20.0
-
-
-def _mang(goi):
-    """Goi `goi()`; loi ket noi / timeout -> thu lai THU_MANG lan roi RcError (run_batch bat RcError tung case,
-    URLError tran ra la chet ca luot - AIP886 31/10/2026). HTTPError: chi thu lai loi tam cua server (503 / 5xx /
-    429) - 09/11/2026 RC tra 503 bon lan trong mot buoi, moi lan dung ca luot; loi khac (401, 412...) nem ngay."""
-    for lan in range(THU_MANG):
-        try:
-            return goi()
-        except urllib.error.HTTPError as exc:
-            if exc.code not in LOI_TAM or lan == THU_MANG - 1:
-                raise
-            time.sleep(CHO_LOI_TAM)
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
-            if lan == THU_MANG - 1:
-                raise RcError(f"không kết nối được Firebase sau {THU_MANG} lần: {exc}") from None
-            time.sleep(CHO_MANG)
-
-
 HET_HAN = "đăng nhập Firebase hết hạn"
 # Ban release doi RC qua Firebase: may chay luot (ca may phu Ubuntu) chua `firebase login` thi khong duoc quay ve
 # "xin dev ban debuggable" (AIP886 2.7.0 (20) tren Ubuntu 02/11/2026) - user da chot chay ban release.
@@ -83,6 +62,11 @@ LOI_DANG_NHAP = (HET_HAN, CHUA_DANG_NHAP)
 
 
 def token() -> str:
+    """Access token OAuth (nho ~50 phut, khong doi lai moi lan goi)."""
+    return token_nho(_token_moi)
+
+
+def _token_moi() -> str:
     try:
         rt = json.loads(_configstore().read_text(encoding="utf-8"))["tokens"]["refresh_token"]
     except (OSError, KeyError, ValueError):
@@ -120,10 +104,12 @@ def _goi(project: str, tok: str, method: str = "GET", template: dict | None = No
 
 def doc(project: str, tok: str) -> tuple[dict, str]:
     try:
-        return _goi(project, tok)
+        t, etag = _goi(project, tok)
     except urllib.error.HTTPError as e:
         raise RcError(f"không đọc được Remote Config {project} (HTTP {e.code}): "
                       f"{e.read()[:200].decode('utf-8', 'replace')}") from None
+    nho_mau(project, t, etag)
+    return t, etag
 
 
 def kiem_dieu_kien(t: dict, dk: str = DIEU_KIEN) -> str:
@@ -198,43 +184,37 @@ def chi_doi_dieu_kien(cu: dict, moi: dict, dk: str = DIEU_KIEN) -> None:
 
 
 def _sua(project: str, sua, dk: str) -> int:
-    """Doc -> kiem dieu kien -> `sua(template)` -> publish voi If-Match; 412 (nguoi khac vua publish) -> lam lai."""
+    """Doc -> kiem dieu kien -> `sua(template)` -> publish voi If-Match; 412 (nguoi khac vua publish) -> lam lai.
+
+    Lan dau dung template + ETag da nho (lan doc / publish truoc trong tien trinh): ETag cu thi server tra 412,
+    roi doc lai that - khong ghi de duoc thay doi cua ai."""
+    import copy
+
     tok = token()
+    co = mau_da_nho(project)
     for _ in range(SO_LAN_THU):
-        t, etag = doc(project, tok)
+        t, etag = co or doc(project, tok)
+        co = None
         kiem_dieu_kien(t, dk)
         t.pop("version", None)
-        import copy
-
         cu = copy.deepcopy(t)
         gui = sua(t)
         chi_doi_dieu_kien(cu, gui, dk)
         try:
-            moi, _ = _goi(project, tok, "PUT", gui, etag)
-            return int((moi.get("version") or {}).get("versionNumber") or 0)
+            moi, etag_moi = _goi(project, tok, "PUT", gui, etag)
         except urllib.error.HTTPError as e:
+            quen(project)
             if e.code in LOI_TAM:
-                # Firebase 5xx tam thoi (HTTP 503 luc publish, AIP886 31/10/2026): doc lai roi gan lai, If-Match
-                # van chan de thay doi cua nguoi khac.
+                # Firebase 5xx / 429 tam thoi (HTTP 503 luc publish, AIP886 31/10/2026): doc lai roi gan lai,
+                # If-Match van chan de thay doi cua nguoi khac.
                 time.sleep(CHO_MANG)
                 continue
             if e.code != 412:
                 raise RcError(f"publish Remote Config {project} lỗi (HTTP {e.code}): {_than_loi(e)}") from None
+            continue
+        nho_mau(project, moi, etag_moi)
+        return int((moi.get("version") or {}).get("versionNumber") or 0)
     raise RcError(f"Remote Config {project} bị người khác publish liên tục / Firebase lỗi tạm liên tục, thử lại sau")
-
-
-LOI_TAM = (500, 502, 503, 504)
-
-
-def _than_loi(e: urllib.error.HTTPError) -> str:
-    """Than loi Firebase (co the gzip) -> chu doc duoc, toi da 300 ky tu."""
-    raw = e.read()
-    if e.headers.get("Content-Encoding") == "gzip" or raw[:2] == b"\x1f\x8b":
-        try:
-            raw = gzip.decompress(raw)
-        except OSError:
-            pass
-    return raw[:300].decode("utf-8", "replace")
 
 
 def dat(project: str, gia_tri: dict[str, str], dk: str = DIEU_KIEN) -> int:
@@ -255,7 +235,11 @@ def keys_dang_gan(t: dict, dk: str = DIEU_KIEN) -> list[str]:
 
 def tra_het(project: str, dk: str = DIEU_KIEN) -> int:
     """Go MOI gia tri cua `dk` (sau case / cuoi luot / don luot chet giua chung). Khong co gi -> khong publish."""
-    t, _ = doc(project, token())
-    if not keys_dang_gan(t, dk):
-        return 0
+    # Template da nho con key tren `dk` (vua patch case nay) -> PUT thang (ETag cu thi 412 roi doc lai). Nho
+    # khong con key nao -> van GET that: may khac / luot chet giua chung co the da gan, phai thay moi go duoc.
+    co = mau_da_nho(project)
+    if not (co and keys_dang_gan(co[0], dk)):
+        t, _ = doc(project, token())
+        if not keys_dang_gan(t, dk):
+            return 0
     return _sua(project, lambda t: go(t, keys_dang_gan(t, dk), dk), dk)

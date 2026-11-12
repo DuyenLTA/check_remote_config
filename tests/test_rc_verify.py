@@ -175,3 +175,39 @@ def test_summary_liet_ke_du_lech(adb):
     assert len(s["mismatches"]) >= 2
     keys = {m["key"] for m in s["mismatches"]}
     assert {"ad_load_timeout", "splash_banner_change"} <= keys
+
+
+def test_gia_tri_that_dung_lai_installation_trong_tien_trinh(monkeypatch):
+    """Moi case doi chieu Firebase 2 lan: installation tao mot lan, lan sau chi fetch."""
+    from rcr import rc_firebase_app as a
+    goi = []
+
+    def post(url, body, headers):
+        goi.append("inst" if "installations" in url else "fetch")
+        if "installations" in url:
+            return {"fid": body["fid"], "authToken": {"token": "t"}}
+        return {"entries": {"k": "v"}}
+    monkeypatch.setattr(a, "_post", post)
+    info = {"project": "p", "app_id": "1:2:android:x", "api_key": "k", "package": "pk", "version": "1"}
+    assert a.gia_tri_that(info) == a.gia_tri_that(info) == {"k": "v"}
+    assert goi == ["inst", "fetch", "fetch"]
+
+
+def test_gia_tri_that_installation_bi_tu_choi_thi_tao_moi(monkeypatch):
+    import io
+    import urllib.error
+    from rcr import rc_firebase_app as a
+    goi = []
+
+    def post(url, body, headers):
+        goi.append("inst" if "installations" in url else "fetch")
+        if "installations" in url:
+            return {"fid": body["fid"], "authToken": {"token": "t"}}
+        if goi.count("fetch") == 2:
+            raise urllib.error.HTTPError("u", 403, "x", {}, io.BytesIO(b""))
+        return {"entries": {}}
+    monkeypatch.setattr(a, "_post", post)
+    info = {"project": "p", "app_id": "1:2:android:x", "api_key": "k", "package": "pk", "version": "1"}
+    a.gia_tri_that(info)
+    a.gia_tri_that(info)
+    assert goi == ["inst", "fetch", "fetch", "inst", "fetch"]

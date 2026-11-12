@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import tempfile
+import time
 import urllib.request
 from pathlib import Path
 
@@ -66,21 +67,45 @@ def _post(url: str, body: dict, headers: dict) -> dict:
     return _mang(goi)
 
 
+# Installation Firebase gia lap (fid + auth token, song 7 ngay) nho theo app trong tien trinh: moi case doi chieu
+# 2 lan (verify sau patch + verify cuoi) - tao installation moi moi lan la them 1 lan goi (~0,8s). Dieu kien testvsl
+# theo app.id + version, khong theo fid, nen dung lai mot installation van ra dung gia tri cua may vua pm clear.
+INST_SONG = 3600.0
+_INST: dict[tuple[str, str], tuple[str, str, float]] = {}
+
+
+def _installation(info: dict) -> tuple[str, str]:
+    khoa = (info["project"], info["app_id"])
+    co = _INST.get(khoa)
+    if co and co[2] > time.monotonic():
+        return co[0], co[1]
+    fid = base64.urlsafe_b64encode(bytes([0x70 | (os.urandom(1)[0] & 0x0F)]) + os.urandom(16)).decode()[:22]
+    inst = _post(f"https://firebaseinstallations.googleapis.com/v1/projects/{info['project']}/installations",
+                 {"fid": fid, "appId": info["app_id"], "authVersion": "FIS_v2", "sdkVersion": "a:17.0.0"},
+                 {"x-goog-api-key": info["api_key"], "X-Android-Package": info["package"]})
+    _INST[khoa] = (inst["fid"], inst["authToken"]["token"], time.monotonic() + INST_SONG)
+    return _INST[khoa][0], _INST[khoa][1]
+
+
+def _fetch(info: dict, fid: str, tok: str, country: str) -> dict:
+    return _post(f"https://firebaseremoteconfig.googleapis.com/v1/projects/{info['app_id'].split(':')[1]}"
+                 f"/namespaces/firebase:fetch?key={info['api_key']}",
+                 {"appInstanceId": fid, "appInstanceIdToken": tok, "appId": info["app_id"],
+                  "countryCode": country, "languageCode": "en-US", "platformVersion": "36",
+                  "timeZone": "Asia/Bangkok", "appVersion": info["version"], "packageName": info["package"],
+                  "sdkVersion": "22.0.0", "analyticsUserProperties": {}},
+                 {"X-Android-Package": info["package"], "X-Goog-Firebase-Installations-Auth": tok})
+
+
 def gia_tri_that(info: dict, country: str = "VN") -> dict[str, str]:
     """Gia tri RC Firebase tra cho app + version nay (installation moi, nhu may vua pm clear)."""
-    fid = base64.urlsafe_b64encode(bytes([0x70 | (os.urandom(1)[0] & 0x0F)]) + os.urandom(16)).decode()[:22]
     try:
-        inst = _post(f"https://firebaseinstallations.googleapis.com/v1/projects/{info['project']}/installations",
-                     {"fid": fid, "appId": info["app_id"], "authVersion": "FIS_v2", "sdkVersion": "a:17.0.0"},
-                     {"x-goog-api-key": info["api_key"], "X-Android-Package": info["package"]})
-        tok = inst["authToken"]["token"]
-        rc = _post(f"https://firebaseremoteconfig.googleapis.com/v1/projects/{info['app_id'].split(':')[1]}"
-                   f"/namespaces/firebase:fetch?key={info['api_key']}",
-                   {"appInstanceId": inst["fid"], "appInstanceIdToken": tok, "appId": info["app_id"],
-                    "countryCode": country, "languageCode": "en-US", "platformVersion": "36",
-                    "timeZone": "Asia/Bangkok", "appVersion": info["version"], "packageName": info["package"],
-                    "sdkVersion": "22.0.0", "analyticsUserProperties": {}},
-                   {"X-Android-Package": info["package"], "X-Goog-Firebase-Installations-Auth": tok})
+        try:
+            rc = _fetch(info, *_installation(info), country)
+        except OSError:
+            # Installation da nho bi tu choi (het han / bi xoa) -> tao moi, thu mot lan nua.
+            _INST.pop((info["project"], info["app_id"]), None)
+            rc = _fetch(info, *_installation(info), country)
     except OSError as exc:
         raise RcError(f"không đọc được Remote Config thật của {info['package']}: {exc}") from None
     return {str(k): str(v) for k, v in (rc.get("entries") or {}).items()}

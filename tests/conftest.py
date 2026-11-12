@@ -296,6 +296,17 @@ def _khong_dung_firebase_that(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _quen_firebase_da_nho():
+    """Template / token / installation Firebase nho theo tien trinh - test sau khong duoc thay cua test truoc."""
+    from rcr import rc_firebase_app, rc_firebase_http
+    rc_firebase_http.quen()
+    rc_firebase_app._INST.clear()
+    yield
+    rc_firebase_http.quen()
+    rc_firebase_app._INST.clear()
+
+
+@pytest.fixture(autouse=True)
 def _testvsl_san_sang(monkeypatch):
     """Bot kiem dieu kien testvsl tren Firebase that (keo APK qua adb) truoc luot release -> test mac dinh coi la
     san sang; test cua chinh buoc kiem (test_bot_kiem_testvsl) goi ham that qua `bot_kiem_testvsl.THAT`."""
