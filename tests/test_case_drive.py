@@ -148,7 +148,7 @@ def test_buoc_vuot_vuot_that_tren_may():
     assert out["status"] == "DONE"
     assert [s["action"]["kind"] for s in out["steps"][:-1]] == ["swipe"]
     # Man mac dinh 1080x2400 -> vuot doc dai giua man, tu 80% ve 20% chieu ngang.
-    assert adb.cmds_with("input swipe 864 1200 216 1200 300")
+    assert adb.cmds_with("input swipe 864 720 216 720 300")
 
 
 def test_quang_cao_che_man_khong_chan_buoc_vuot():

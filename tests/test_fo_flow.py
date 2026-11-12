@@ -165,3 +165,26 @@ def test_paywall_revenuecat_chi_back_khong_bam_continue():
     assert luat and luat["match"] == "RevenueCatPaywallActivity"
     assert {"key": "KEYCODE_BACK"} in luat["steps"]
     assert not any("tap" in b or "tap_close" in b or "tap_continue" in b for b in luat["steps"])
+
+
+# Popup "AdMob native ad validator" (khong co trong cay UI) che nua tren / nua trai nut Next OB: bam giua nut la trung
+# popup, lai FO lap 25 phut (vivo V2143, 12/11/2026). Bam goc duoi-phai, van nam trong nut.
+OB_NUT_NEXT = ('<?xml version="1.0" encoding="UTF-8"?><hierarchy rotation="0">'
+               '<node index="0" text="FR - Get Started" resource-id="x:id/btnNextOnboarding" '
+               'class="android.widget.TextView" package="x" content-desc="" clickable="true" enabled="true" '
+               'bounds="[554,1260][951,1363]" /></hierarchy>')
+
+
+def test_bam_nut_tiep_tuc_o_goc_duoi_phai_ne_popup_validator(monkeypatch):
+    taps = []
+
+    async def tap(client, serial, x, y):
+        taps.append((x, y))
+
+    monkeypatch.setattr(fo_flow.device_app, "tap", tap)
+    did, advance = asyncio.run(fo_flow.do_step(None, "S", {"tap_continue": True}, nodes(OB_NUT_NEXT), (1080, 2408)))
+    assert advance and "tiep tuc" in did
+    (x, y), = taps
+    # Popup lan do che toi y=1294 (het ngang nut) va toi x=847 (lan Next hep [792,1260][951,1363]).
+    assert 554 < x < 951 and 1294 < y < 1363
+    assert 792 + (951 - 792) * 3 // 4 > 847

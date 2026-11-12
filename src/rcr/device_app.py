@@ -121,9 +121,14 @@ async def screen_size(client, serial: str) -> tuple[int, int]:
 # gesture), vuot tu do thi noi dung app khong nhan duoc gi.
 SWIPE_NEAR, SWIPE_FAR = 0.2, 0.8
 SWIPE_MS = 300
+# Vuot ngang o 30% chieu cao, khong o giua man: popup "AdMob native ad validator" (may test) nam ngay giua man
+# (y ~46-60%) tren trang OB co native, an het cu vuot -> lai OB ket "vuot sang trang N" (vivo V2143 12/11/2026).
+# Native OB nam nua duoi man nen 30% van la vung anh cua ViewPager.
+SWIPE_NGANG_Y = 0.3
+
 _SWIPE_ENDS = {
-    "left": (SWIPE_FAR, 0.5, SWIPE_NEAR, 0.5),
-    "right": (SWIPE_NEAR, 0.5, SWIPE_FAR, 0.5),
+    "left": (SWIPE_FAR, SWIPE_NGANG_Y, SWIPE_NEAR, SWIPE_NGANG_Y),
+    "right": (SWIPE_NEAR, SWIPE_NGANG_Y, SWIPE_FAR, SWIPE_NGANG_Y),
     "up": (0.5, SWIPE_FAR, 0.5, SWIPE_NEAR),
     "down": (0.5, SWIPE_NEAR, 0.5, SWIPE_FAR),
 }

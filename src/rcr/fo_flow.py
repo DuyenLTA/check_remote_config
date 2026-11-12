@@ -203,7 +203,12 @@ async def do_step(client, serial: str, step: dict, nodes: list, screen) -> tuple
         node = fo_steps.find_continue(nodes, screen)
         if not node:
             return "", True
-        await _tap(client, serial, node)
+        # Popup "AdMob native ad validator" (may test) noi de len nua tren / nua trai nut Next cua OB va khong co
+        # trong cay UI: bam giua nut la trung popup, app dung yen, vong lai FO lap toi het gio (vivo V2143 12/11/2026,
+        # 25 phut). Bam diem goc duoi-phai van trong nut - phan popup khong che.
+        b = node.bounds
+        x, y = b.left + (b.right - b.left) * 3 // 4, b.top + (b.bottom - b.top) * 5 // 6
+        await device_app.tap(client, serial, x, y)
         return f"nut tiep tuc ({node.label})", True
     if step.get("tap_close_ad"):
         node = nut_dong_ad(serial, nodes)
