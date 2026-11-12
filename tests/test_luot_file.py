@@ -215,3 +215,20 @@ def test_gop_giu_case_khi_overrides_chi_lech_key_nen_va_key_app_khong_doc():
     giu, da_xoa, doi = luot_file.loc_theo_tc(cu, rows)
     assert [r["key"] for r in giu] == ["a"]
     assert da_xoa == [] and doi == ["b"]
+
+
+def test_gop_nhieu_tab_giu_bo_tc_cua_moi_tab(tmp_path):
+    """Gop luot rating + widget: bo TC cua tung tab giu lai, loc_theo_tc khong bo case tab khac."""
+    def luot(path, tab, keys):
+        cases = [{"key": f"{tab}#{k}", "tab": f"TC SDK {tab}", "runnable": True} for k in keys]
+        path.write_text(json.dumps({"package": PKG, "tc": {"cases": cases, "notes": [f"tab {tab}"]},
+                                    "records": [{"key": c["key"]} for c in cases]}), encoding="utf-8")
+    a, b, c = tmp_path / "a.json", tmp_path / "b.json", tmp_path / "c.json"
+    luot(a, "rating", ["R1", "R2"])
+    luot(b, "widget", ["W1"])
+    luot(c, "rating", ["R1"])  # sheet rating moi: R2 da xoa
+    meta, recs = luot_file.doc_nhieu([str(a), str(b), str(c)], PKG)
+    keys = sorted(x["key"] for x in meta["tc"]["cases"])
+    assert keys == ["rating#R1", "widget#W1"] and meta["tc"]["total"] == 2
+    giu, da_xoa, _ = luot_file.loc_theo_tc(recs, meta["tc"]["cases"])
+    assert da_xoa == ["rating#R2"] and sorted(r["key"] for r in giu) == ["rating#R1", "widget#W1"]

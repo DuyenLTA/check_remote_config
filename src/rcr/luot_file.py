@@ -150,7 +150,29 @@ def loc_theo_tc(records: list[dict], rows: list[dict]) -> tuple[list[dict], list
 def doc_nhieu(paths: list[str], package: str) -> tuple[dict, list[dict]]:
     """-> (meta cua file CUOI, record da gop). File sau thang file truoc."""
     datas = [doc(p, package) for p in paths]
-    return datas[-1], gop(*(d["records"] for d in datas))
+    return {**datas[-1], "tc": _gop_tc(d.get("tc") or {} for d in datas)}, gop(*(d["records"] for d in datas))
+
+
+def _gop_tc(tcs) -> dict:
+    """Bo TC cua cac file luot gop: moi TAB lay ban cua file SAU CUNG co tab do.
+
+    Gop nhieu tab (rating + widget + daily checkin, moi tab mot luot) ma lay nguyen bo TC cua file
+    cuoi thi `loc_theo_tc` coi moi case cua tab khac la "khong con tren sheet" va bo sach
+    (AIP893 12/11/2026: 3 file -> report con 14/36 case). Cung tab thi file sau van thang.
+    """
+    tcs = [t for t in tcs if t]
+    if not tcs:
+        return {}
+    theo_tab: dict[str, list[dict]] = {}
+    for t in tcs:
+        nhom: dict[str, list[dict]] = {}
+        for c in t.get("cases") or ():
+            nhom.setdefault(c.get("tab", ""), []).append(c)
+        theo_tab.update(nhom)
+    cases = [c for nhom in theo_tab.values() for c in nhom]
+    notes = list(dict.fromkeys(n for t in tcs for n in t.get("notes") or ()))
+    return {**tcs[-1], "cases": cases, "notes": notes, "total": len(cases),
+            "runnable": sum(1 for c in cases if c.get("runnable"))}
 
 
 def baseline_tu(meta: dict) -> BaselineTom:
