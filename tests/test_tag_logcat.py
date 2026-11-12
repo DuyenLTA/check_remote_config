@@ -71,3 +71,14 @@ class _Adb:
 def test_doc_chi_lay_dong_cua_pid_app():
     ra = asyncio.run(tag_logcat.doc(_Adb(), "S", "com.a", ["FOR_TESTER_CONFIG", "VslTemplate4FirstOpenSDK"]))
     assert ra == {"FOR_TESTER_CONFIG": ["Version Lib Ads: 1.2.10"], "VslTemplate4FirstOpenSDK": ["Using version 3.6.1"]}
+
+
+def test_sdk_ke_nhieu_ban_alpha_x_deu_duoc():
+    """TC 3.6.2 R01-01 (AIP862 11/11/2026): '3.6.2 hay 3.6.2-alpha x đều được' - build 3.6.2-alpha01 la PASS."""
+    log = {"VslTemplate4FirstOpenSDK": ["Using version 3.6.2-alpha01"]}
+    cau = "SDK = visionlab:tutorial 3.6.2 hay 3.6.2-alpha x đều được."
+    assert _check(cau, log)["verdict"] == a.PASS
+    assert _check("SDK = visionlab:tutorial 3.6.2.", log)["verdict"] == a.FAIL
+    assert _check(cau, {"VslTemplate4FirstOpenSDK": ["Using version 3.6.1"]})["verdict"] == a.FAIL
+    assert _check(cau, {"VslTemplate4FirstOpenSDK": ["Using version 3.6.2"]})["verdict"] == a.PASS
+    assert _check("SDK = visionlab:tutorial 3.6.2 hay 3.6.2-alpha02.", log)["verdict"] == a.FAIL

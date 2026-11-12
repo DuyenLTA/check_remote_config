@@ -833,3 +833,14 @@ def test_vung_ads_collapsed_la_ky_vong_vang_mat():
     assert assert_ui.AN_DI_RE.search("Vùng ads bị collapsed/gone")
     assert assert_ui.AN_DI_RE.search("Layout ads bị ẩn")
     assert not assert_ui.AN_DI_RE.search("Native ads hiển thị bên dưới")
+
+
+def test_ky_vong_khong_vuot_duoc_cham_nguoc():
+    """TC 3.6.2 R01-09 (AIP862 11/11/2026): 'Vuốt chuyển màn không vuốt được chỉ bấm Next mới sang màn khác.'"""
+    cau = "Vuốt chuyển màn không vuốt được chỉ bấm Next mới sang màn khác."
+    dung_yen = {"steps": [], "thu_vuot": {"doi": False, "trang_truoc": 4, "trang_sau": 4}}
+    assert a.check(cau, {}, dung_yen, OK_CRASH)["verdict"] == a.PASS
+    sang = {"steps": [], "thu_vuot": {"doi": True, "trang_truoc": 4, "trang_sau": 5}}
+    assert a.check(cau, {}, sang, OK_CRASH)["verdict"] == a.FAIL
+    # cau cu "Vuot chuyen man giong bam Next" van doi vuot duoc
+    assert a.check("Vuốt chuyển màn giống bấm Next.", {}, dung_yen, OK_CRASH)["verdict"] == a.FAIL

@@ -46,6 +46,10 @@ DOI_VUOT_RE = re.compile(
     r"(?:c[óo]\s*th[ểe]|\bcan\b|\bable\b).{0,20}(?:vu[ốo]t|swipe)|"
     r"(?:vu[ốo]t|swipe).{0,24}(?:sang|qua|t[ớo]i|to|chuy[ểe]n)\s*(?:m[àa]n|trang|next)|"
     r"chuy[ểe]n\s+(?:đ[ưu][ợo]c\s+)?sang\s+m[àa]n.{0,20}(?:vu[ốo]t|swipe)", re.I)
+# "Vuot chuyen man khong vuot duoc chi bam Next moi sang man khac" (TC 3.6.2 R01-09, AIP862 11/11/2026): ky vong
+# NGUOC - vuot thu ma man dung yen moi la dung. Truoc day cham nhu "co the vuot" -> FAIL gia.
+KHONG_VUOT_RE = re.compile(r"kh[ôo]ng\s+(?:th[ểe]\s+)?vu[ốo]t\s*(?:đ[ưu][ợo]c|sang|qua)|"
+                           r"ch[ỉi]\s+(?:c[óo]\s+)?b[ấa]m\s+next|\bcan(?:no|')t\s+swipe", re.I)
 ANIM_RE = re.compile(r"animation|animated|hi[ệe]u\s*[ứu]ng|l[ặa]p\s*l[ạa]i|\bl[ặa]p\b|loop|"
                      r"nh[áa]y|chuy[ểe]n\s*[đd][ộo]ng", re.I)
 # "Luong FO thong suot", "flow tiep tuc binh thuong", "khong bi ket o man nao".
@@ -173,7 +177,8 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     # luat ads - cau co chu "native" nhung hoi vi tri, khong hoi request.
     ket = assert_bo_cuc.cham(text, drive or {})
     if ket:
-        return ket
+        # Dong vua hoi vi tri vua hoi mau ("dong 'X' mau #888 tren progress"): cham ca hai, xau nhat thang.
+        return _gop(ket, assert_mau.cham(text, drive or {}, cfg), text)
     ket = assert_mau.cham(text, drive or {}, cfg)
     if ket:
         # "Nen text #F5F5F5, button 'FR - Next', slider mau #1565C0, anh content OB1": ma mau chi la mot phan -
@@ -208,7 +213,7 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
     # Bo chu trong ngoac truoc: "Text 'Swipe to next' dung mau primary" la chu tren UI, khong phai doi vuot
     # (AIP886 R04-01: tool vuot thu roi PASS, mau khong ai do).
     if DOI_VUOT_RE.search(QUOTED_RE.sub("", text)) and not ANIM_RE.search(text):
-        ket = assert_ui.vuot_duoc(drive)
+        ket = assert_ui.vuot_duoc(drive, phai_vuot=not KHONG_VUOT_RE.search(text))
         if ket:
             return ket
 

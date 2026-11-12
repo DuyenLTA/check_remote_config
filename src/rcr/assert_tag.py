@@ -20,6 +20,28 @@ BAN_RE = re.compile(r"^v?(\d+(?:\.\d+)+(?:-\w+)?)$", re.I)
 TAG_SDK = "VslTemplate4FirstOpenSDK"
 
 
+# "3.6.2 hay 3.6.2-alpha x đều được" (TC 3.6.2 R01-01, AIP862 11/11/2026): moi ban ke ra deu dung; "-alpha x" /
+# "-alpha*" = alpha so may cung duoc. Truoc day chi so ban dau tien -> build 3.6.2-alpha01 ra FAIL gia.
+BAN_KE_RE = re.compile(r"(\d+(?:\.\d+)+)(?:-(alpha|beta|rc)(\d+|\s*x\b|\*)?)?", re.I)
+
+
+def khop_ban(thay: str, mong: str, dau: str) -> bool:
+    """`thay` (Using version) co nam trong cac ban `mong` ke ra khong; khong ke them ban nao thi so voi `dau`."""
+    if thay == dau:
+        return True
+    for m in BAN_KE_RE.finditer(mong):
+        goc, loai, so = m.group(1), m.group(2), (m.group(3) or "").strip()
+        if not loai:
+            if thay == goc:
+                return True
+        elif so in ("x", "*"):
+            if re.fullmatch(re.escape(goc) + "-" + loai + r"\d*", thay, re.I):
+                return True
+        elif thay.casefold() == f"{goc}-{loai}{so}".casefold():
+            return True
+    return False
+
+
 def _gia_tri_sau_nhan(nhan: str, dongs: list[str]) -> str | None:
     mau = re.compile(re.escape(nhan.strip()) + r"\s*[:=]\s*(.+)$", re.I)
     for d in dongs:
@@ -42,8 +64,8 @@ def cham(text: str, drive: dict) -> dict | None:
         thay = next((USING_RE.search(d).group(1) for d in tag_log.get(TAG_SDK, []) if USING_RE.search(d)), None)
         if thay is None:
             return out(NEEDS_HUMAN, f"log tag {TAG_SDK} không có dòng 'Using version'", "")
-        v = PASS if thay == sdk.group(1) else FAIL
-        return out(v, f"tag {TAG_SDK}: 'Using version {thay}' — kỳ vọng {sdk.group(1)}", thay)
+        v = PASS if khop_ban(thay, mong, sdk.group(1)) else FAIL
+        return out(v, f"tag {TAG_SDK}: 'Using version {thay}' — kỳ vọng {mong if v == PASS else sdk.group(1)}", thay)
     for tag, dongs in tag_log.items():
         thay = _gia_tri_sau_nhan(nhan, dongs)
         if thay is not None:

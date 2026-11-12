@@ -26,6 +26,10 @@ NGAY_TREN_RE = re.compile(r"ngay\s+tr[êe]n", re.I)
 CUNG_CUM_RE = re.compile(r"di\s+chuy[ểe]n\s+c[ùu]ng", re.I)
 GIUA_MAN_RE = re.compile(r"gi[ữu]a\s+m[àa]n", re.I)
 KHONG_DICH_RE = re.compile(r"kh[ôo]ng\s+d[ịi]ch\s+chuy[ểe]n|\b0\s*shift", re.I)
+# "Dong 'Preparing your data...' mau #888888 tren progress bar" (TC 3.6.1 R01-02/R02-01): truoc day chi cham
+# chu + mau nen PASS ca khi dong chu nam DUOI progress (AIP918 Linguza 2.5.0 11/11/2026, QA bat bang mat).
+TREN_PROGRESS_RE = re.compile(r"tr[êe]n\s+(?:thanh\s+)?progress", re.I)
+TRICH_RE = re.compile(r"['‘’\"“”]([^'‘’\"“”]{3,})['‘’\"“”]")
 # Bounds la so nguyen px; lech 1dp la sai so lam tron cua layout, khong phai loi.
 SAI_SO_DP = 1.0
 
@@ -34,7 +38,8 @@ def routes(text: str) -> bool:
     """Dong noi ve vi tri cum progress/nhan so voi ad hoac man hinh."""
     return bool(CUM_RE.search(text) and (
         KHONG_DE_RE.search(text) or TREN_MEP_RE.search(text) or DP_RE.search(text)
-        or DUOI_PROGRESS_RE.search(text) or GIUA_MAN_RE.search(text) or KHONG_DICH_RE.search(text)))
+        or DUOI_PROGRESS_RE.search(text) or GIUA_MAN_RE.search(text) or KHONG_DICH_RE.search(text)
+        or (TREN_PROGRESS_RE.search(text) and TRICH_RE.search(text))))
 
 
 def _tim(nodes, nhom: dict):
@@ -155,6 +160,26 @@ def _nhan_duoi(text: str, khung: list[dict]) -> list[dict]:
     return [out(PASS, dong + (", di chuyển cùng progress" if CUNG_CUM_RE.search(text) else ""), text)]
 
 
+def _chu_tren_progress(text: str, khung: list[dict]) -> list[dict]:
+    """Dong chu trong ngoac phai nam TREN progress (tam y nho hon, cung cot ngang)."""
+    chu = TRICH_RE.search(text).group(1).strip().rstrip(".…").strip().casefold()
+    co = []
+    for k in khung:
+        n = next((x for x in k["nodes"] if x.visible and not x.bounds.empty and chu in (x.text or "").casefold()), None)
+        if n is not None and k["progress"]:
+            co.append((k, n))
+    if not co:
+        return [out(NEEDS_HUMAN, f"không có khung nào thấy cùng lúc progress và dòng '{chu}'", text)]
+    for k, n in co:
+        p, c = k["progress"].bounds, n.bounds
+        if not c.center[1] < p.center[1]:
+            return [out(FAIL, f"bước {k['buoc']}: dòng '{n.text}' y={c.top}–{c.bottom} nằm DƯỚI progress "
+                              f"y={p.top}–{p.bottom}, kỳ vọng nằm trên", text)]
+    k, n = co[-1]
+    return [out(PASS, f"dòng '{n.text}' (tâm y={n.bounds.center[1]}) nằm trên tâm progress "
+                      f"(y={k['progress'].bounds.center[1]}) ở {len(co)} khung", text)]
+
+
 def _giua_man(text: str, khung: list[dict]) -> list[dict]:
     co = [k for k in khung if k["progress"] and k["cao"]]
     if not co:
@@ -193,6 +218,8 @@ def cham(text: str, drive: dict) -> dict | None:
         ket += _nhan_duoi(text, khung)
     if GIUA_MAN_RE.search(text):
         ket += _giua_man(text, khung)
+    if TREN_PROGRESS_RE.search(text) and TRICH_RE.search(text):
+        ket += _chu_tren_progress(text, khung)
     if not ket:
         return None
     if len(ket) == 1:

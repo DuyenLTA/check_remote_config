@@ -93,3 +93,20 @@ def test_giua_man_lay_khung_co_ad():
     o_day = _dump(_node("splProcessId", "[0,1960][1080,2100]", cls="android.widget.ImageView"))
     out = check("Progress + text vẫn ở vị trí giữa màn", _drive(_dump(PROGRESS, NHAN, NATIVE), o_day))
     assert out["verdict"] == a.PASS and "53%" in out["reason"]
+
+
+def _chu(y0, y1, text="Preparing your data..."):
+    return _node("tvLoading", f"[0,{y0}][1080,{y1}]", text, "android.widget.TextView")
+
+
+def test_dong_chu_nam_duoi_progress_thi_fail_du_dung_mau():
+    """AIP918 Linguza 2.5.0 (11/11/2026): 'Preparing your data...' nam DUOI progress, tool tung cham PASS."""
+    line = "Dòng 'Preparing your data...' màu #888888 trên progress bar."
+    ket = check(line, _drive(_dump(PROGRESS, _chu(1420, 1480))))
+    assert ket["verdict"] == a.FAIL and "DƯỚI progress" in ket["reason"]
+
+
+def test_dong_chu_nam_tren_progress_thi_dat_phan_vi_tri():
+    ket = check("Dòng 'Loading data...' trên progress bar.",
+                _drive(_dump(PROGRESS, _chu(1060, 1120, "Loading data..."))))
+    assert ket["verdict"] == a.PASS and "nằm trên" in ket["reason"]
