@@ -6,7 +6,8 @@
   duoc dan o cac trang version cua app dang `Checklist: <link sheet>`. Lay link sheet dau tien co chu "checklist"
   dung ngay truoc, tren trang sua gan nhat duoi trang app. Bo "Checklist test" (sheet test chung, khong cua app).
 
-Can CONFLUENCE_BASE_URL + CONFLUENCE_TOKEN (PAT) - doc qua `cau_hinh_bot.env` (env -> bien User Windows -> bot.env).
+Can CONFLUENCE_BASE_URL + CONFLUENCE_TOKEN (PAT) - doc qua `cau_hinh_bot.env` (env -> bien User Windows -> bot.env),
+khong co thi dung lai dong `export CONFLUENCE_...` trong ~/.bashrc (cung cap ma `spec_sync` dang dung).
 Nginx cua confluence.apero.vn chan User-Agent mac dinh cua urllib -> gui UA trinh duyet.
 """
 
@@ -19,7 +20,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from .cau_hinh_bot import env
+from pathlib import Path
+
+from .cau_hinh_bot import _doc_file_env, env
 
 UA = "Mozilla/5.0"
 SO_TRANG_DO = 25                      # so trang con (sua gan nhat) doc body de tim link checklist
@@ -32,7 +35,11 @@ class ConfluenceLoi(Exception):
 
 
 def _cau_hinh() -> tuple[str, str]:
-    base, token = env("CONFLUENCE_BASE_URL").rstrip("/"), env("CONFLUENCE_TOKEN")
+    """Dung lai URL + PAT Confluence dang dung cho `spec_sync` (dong `export CONFLUENCE_...` trong ~/.bashrc):
+    bot chay bang systemd / Task Scheduler khong nap .bashrc -> doc thang file khi env + bot.env khong co."""
+    bashrc = _doc_file_env(Path.home() / ".bashrc")
+    base = (env("CONFLUENCE_BASE_URL") or bashrc.get("CONFLUENCE_BASE_URL", "")).strip().rstrip("/")
+    token = (env("CONFLUENCE_TOKEN") or bashrc.get("CONFLUENCE_TOKEN", "")).strip()
     if not base or not token:
         raise ConfluenceLoi("bot chưa có CONFLUENCE_BASE_URL / CONFLUENCE_TOKEN")
     return base, token

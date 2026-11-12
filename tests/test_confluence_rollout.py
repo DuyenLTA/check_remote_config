@@ -54,8 +54,17 @@ def test_chon_checklist_chi_co_file_app_khac_thi_khong_chon():
     assert chon is None and bo == ["AIP918 - Checklist"]
 
 
-def test_thieu_cau_hinh_bao_loi(monkeypatch):
+def test_dung_lai_cau_hinh_trong_bashrc(monkeypatch, tmp_path):
+    (tmp_path / ".bashrc").write_text("export CONFLUENCE_BASE_URL=https://conf.vn/\nexport CONFLUENCE_TOKEN='abc'\n",
+                                      encoding="utf-8")
     monkeypatch.setattr(c, "env", lambda ten: "")
+    monkeypatch.setattr(c.Path, "home", lambda: tmp_path)
+    assert c._cau_hinh() == ("https://conf.vn", "abc")
+
+
+def test_thieu_cau_hinh_bao_loi(monkeypatch, tmp_path):
+    monkeypatch.setattr(c, "env", lambda ten: "")
+    monkeypatch.setattr(c.Path, "home", lambda: tmp_path)
     try:
         c.tim("AIP924")
     except c.ConfluenceLoi as exc:
