@@ -80,10 +80,20 @@ def dev_theo_assignee(assignee: dict[str, list[str]], keys: list[str], bang: dic
     return ra
 
 
+def link_tin_cung_build(bot, c: dict) -> str:
+    """Tin do QA tao bang /check (ke ca /check tinh_nang) khong co `link_tin` -> lay link tin build cua dev moi nhat
+    CUNG ma app + version trong hang doi. Thieu buoc nay bot tag ca `DISCORD_DEV_IDS` thay vi nguoi gui build
+    (AIP918-147 12/11/2026: tin /check rong link, bug log xong tag 2 dev mac dinh)."""
+    tin = getattr(getattr(bot, "q", None), "tin", None) or {}
+    cung = [t for t in tin.values() if t.get("link_tin") and t.get("ma") == c.get("ma")
+            and str(t.get("version") or "").strip() == str(c.get("version") or "").strip()]
+    return max(cung, key=lambda t: int(t.get("msg_id") or 0))["link_tin"] if cung else ""
+
+
 async def _ten_gui_build(bot, c: dict, bang: dict[str, int]) -> str | None:
     """Dev (hoac bot Assistant cua dev) gui tin build -> ten dev trong bang ('trunghd'); webhook
     'Build Notification' hay QA gui lai tin -> None. Doc tin loi cung None (van bao dev, tag nhu cu)."""
-    m = LINK_RE.search(c.get("link_tin") or "")
+    m = LINK_RE.search(c.get("link_tin") or link_tin_cung_build(bot, c))
     if not bang or not m or not m.group(3):
         return None
     try:
