@@ -40,7 +40,6 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
-| 12/11/2026 | Mọi lượt rc-check có lái máy (bộ TC, Next-Gen, tab tính năng, verify bug) đều check ID ads (audit-fanout) trước — có thể sai ID app hoặc thông số | `rc-check.md` 3c, `src/rcr/bot_chay_claude.py` | — |
 | 12/11/2026 | Tab TC widget: chạy theo lượt chuẩn AIP893 2.6.0 (16) — tool tự xác nhận dialog launcher, xem widget trên home screen (`dumpsys appwidget`), tap widget phải mở Splash; case cần Android < 8.0 (R03) ra BLOCKED ngay vì không có máy, không chạy lặp | `src/rcr/act_widget.py`, `assert_widget.py`, `precond_android.py` | — |
 | 12/11/2026 | Chạy hết bộ case trước rồi mới chạy lại case chưa PASS, tối đa 2 vòng `--gop`; sửa tool giữa lượt không dừng lượt đang chạy | `src/rcr/bot_chay_claude.py` PROMPT | — |
 | 12/11/2026 | Check gì cũng tải lại sheet liên quan trước (TC, Check thông số KT, plan, TC sub, Tổng hợp SDK); tải hỏng thì dừng, bỏ đường lùi về bản `out/` cũ của sheet ID ads và sheet TC sub | `rc-check.md` 4, `src/rcr/ad_units_sheet.py`, `src/rcr/sub_tc.py` | — |
