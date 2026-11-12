@@ -12,6 +12,7 @@ that (tin hoi Check, luot verify) van di qua dung duong cua tin build -> chi co 
 - /check-bug <ma app>: bug bot da log cho app + trang thai Jira; nut verify bug Reviewing tren build gan nhat.
 - /check-sub <ma app> <version>: xep luot chay bo TC sub Android (`/sub-check`) - job `loai_job: "sub"`, cai ban
   release tu App Tester nhu Check (chi QA duoc duyet).
+- /rollout <ma app>: link trang Rollout + link Checklist cua app tren Confluence (`bot_lenh_rollout`).
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ import re
 import discord
 from discord import app_commands
 
-from . import bot_cong_viec, bot_forum, bot_hang_doi, bot_nhan_build, build_ma_app
+from . import bot_cong_viec, bot_forum, bot_hang_doi, bot_lenh_rollout, bot_nhan_build, build_ma_app
 from .bot_giao_dien import NUT_HUY, nut as nut_tin
 from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
@@ -80,6 +81,8 @@ def dang_ky(bot) -> None:
     @app_commands.autocomplete(ma_app=goi_y_ma)
     async def check_sub(it: discord.Interaction, ma_app: str, version: str):
         await lenh_check_sub(bot, it, ma_app, version)
+
+    bot_lenh_rollout.dang_ky(tree, goi_y_ma)
 
 
 async def dong_bo(bot) -> None:
