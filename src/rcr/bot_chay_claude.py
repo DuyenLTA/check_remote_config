@@ -101,7 +101,7 @@ PROMPT = (
 PROMPT_VERIFY = (
     "/rc-check {package} --serial {serial} --case \"{cases}\"\n\n"
     "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi de VERIFY bug dev bao da fix: chi chay dung cac case "
-    "tren (bo TC mac dinh), bo muc 3c (check ID ads), van ra lai FAIL theo muc 5d. Khong co nguoi ngoi truoc may: gap diem "
+    "tren (bo TC mac dinh), van check ID ads (muc 3c) truoc, van ra lai FAIL theo muc 5d. Khong co nguoi ngoi truoc may: gap diem "
     "can nguoi quyet thi dung. Khong commit/push. KHONG doc/sua/log Jira - bot tu lam theo verdict.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
@@ -116,7 +116,7 @@ PROMPT_VERIFY_CHECKLIST = (
     "/rc-check {package} --serial {serial} --next-gen\n\n"
     "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi de VERIFY bug dev bao da fix, bug thuoc NHANH CHECKLIST "
     "Next-Gen. Chay checklist (rcr-sdk-check) cho app nhu thuong; dong nao ra DO_TAY thi CHI do tay (theo sdk-check/WORKFLOW.md) "
-    "cac ma dong sau, khong do tay dong khac, bo muc 3c (check ID ads): {cases}\n"
+    "cac ma dong sau, khong do tay dong khac, van check ID ads (muc 3c) truoc: {cases}\n"
     "Khong co nguoi ngoi truoc may: gap diem can nguoi quyet thi dung. Khong commit/push. KHONG doc/sua/log Jira - bot tu lam "
     "theo verdict.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON), moi ma dong mot phan tu trong `cases`:\n"
@@ -159,7 +159,8 @@ PROMPT_VERIFY_SUB = (
 TIMEOUT_SUB = 240 * 60
 TIMEOUT_VERIFY_SUB = 60 * 60
 # /check tinh_nang: tab SDK rieng (rating / widget / daily checkin) trong bo TC chung. QA chon tab nao chay tab do:
-# khong FO, khong checklist Next-Gen, khong check ID ads, khong chan theo plan tuan (user chot 11/11/2026).
+# khong FO, khong checklist Next-Gen, khong chan theo plan tuan (user chot 11/11/2026). Van check ID ads truoc:
+# moi luot lai may deu check ID ads - co the sai ID app / thong so (user chot 12/11/2026).
 TAB_TINH_NANG = ("rating", "widget", "daily checkin")
 # Bo TC tinh nang KHONG nam trong sheet chung: rcr-check tu dung tu sheet goc moi lenh (`--tc <nguon>`):
 # iaa = muc "3. ID ads inapp" cua tab app o sheet KT, gen-ngam = sheet checklist gen ngam (user chot 12/11/2026).
@@ -170,7 +171,7 @@ PROMPT_TINH_NANG = (
     "ngoi truoc may. CHI chay bo TC: {tabs} (moi bo mot lenh: {lenh_bo}; bo sau chay khi bo truoc xong). "
     "Bo `--tc iaa` / `--tc gen-ngam` rcr-check tu dung tu sheet goc; dong tool khong tu cham duoc thi cham tay theo "
     "muc 5b, dieu kien khong tao duoc (nho dev gia lap...) thi BLOCKED kem ly do. KHONG chay tab FO / base / delta, KHONG "
-    "chay checklist Next-Gen, KHONG truyen --sdk, BO muc 3c (check ID ads). Preflight van chay nhung truyen "
+    "chay checklist Next-Gen, KHONG truyen --sdk; VAN check ID ads (muc 3c) truoc khi chay bo dau. Preflight van chay nhung truyen "
     "--bo-qua-plan (lech plan tuan khong phai ly do dung). Tab khong co case nao chay duoc (app khong co key cua "
     "SDK do / tab trong) -> ghi ro trong tom_tat, khong phai loi. Moi may la may test AdMob, ad_click khong phai ly do "
     "dung. Gap diem can nguoi quyet (preflight LOI, man la) thi dung. Khong commit/push.\n"

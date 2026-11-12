@@ -170,10 +170,10 @@ def test_luot_bot_mo_quyen_repo_audit_va_van_dung_trang_audit(tmp_path, monkeypa
     assert "--add-dir" not in c.lenh("pkg.a", "S1")[0]
 
 
-def test_luot_tinh_nang_chi_chay_tab_chon_bo_check_id_ads():
+def test_luot_tinh_nang_chi_chay_tab_chon_van_check_id_ads():
     _, prompt = c.lenh("pkg.a", "S1", tabs=["rating", "daily checkin"])
     assert prompt.startswith('/rc-check pkg.a --serial S1 --tab "rating" --tab "daily checkin"\n')
-    assert "BO muc 3c" in prompt and "KHONG chay checklist Next-Gen" in prompt and "--bo-qua-plan" in prompt
+    assert "VAN check ID ads (muc 3c)" in prompt and "KHONG chay checklist Next-Gen" in prompt and "--bo-qua-plan" in prompt
     with pytest.raises(ValueError):
         c.lenh("pkg.a", "S1", tabs=["rating; rm -rf /"])
 

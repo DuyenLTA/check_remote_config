@@ -127,8 +127,10 @@ còn snapshot `--keep` chưa `--restore`, và **plan tuần**.
 
 ## 3c. Check ID ads (audit-fanout) — sau preflight, trước khi chạy case
 
-Áp dụng **cả hai nhánh**. Bỏ qua khi lượt không chạy case: kiểu (a)/(b) ở mục 4, `--set` đứng riêng, `--restore`,
-`--tiep`, `--cham-tay`, `--gop` chỉ dựng lại report; và lượt chỉ chạy tab tính năng (rating / widget / daily checkin).
+**Mọi lượt có lái máy đều check ID ads trước** (user chốt 12/11/2026: có thể sai ID app hoặc thông số khác): bộ TC,
+checklist Next-Gen, tab tính năng (rating / widget / daily checkin / iaa / gen ngầm), lượt verify bug. Chỉ bỏ khi lệnh
+không chạy case: kiểu (a)/(b) ở mục 4, `--set` đứng riêng, `--restore`, `--cham-tay`, `--gop` chỉ dựng lại report; và
+`--tiep` của lượt đã check ID ads ở đầu lượt (cùng build).
 
 1. Repo audit: `$AD_AUDIT_REPO`, rồi `~/android-ad-audit` — cái có `tools/ad-checklist-diff/audit_runner.py`. Không thấy
    → ghi "chưa check ID ads (không thấy repo audit)" vào câu báo, chạy tiếp.
@@ -172,7 +174,7 @@ Tab: mặc định **không truyền `--tab`** (tool tự chọn đúng một ta
 `--tab 3.4.0`, `sdk rating` / `sdk widget` / `sdk daily checkin` → `--tab rating` / `widget` / `"daily checkin"`. Ba SDK
 riêng này không thuộc FO — user không nhắc thì **đừng tự chạy**. Lượt chỉ chạy tab tính năng (user nêu, hoặc bot gọi qua
 `/check` ô `tinh_nang`, user chốt 11/11/2026): **chọn tab nào chạy tab đó** — không FO, không checklist Next-Gen, không
-`--sdk`, **bỏ 3c**, preflight kèm `--bo-qua-plan`; nhiều tab thì mỗi tab một lệnh rồi `--gop` thành một report.
+`--sdk`, **vẫn chạy 3c trước** (user chốt 12/11/2026), preflight kèm `--bo-qua-plan`; nhiều tab thì mỗi tab một lệnh rồi `--gop` thành một report.
 
 Hai bộ tính năng **không nằm trong sheet TC chung** (user chốt 12/11/2026) — truyền `--tc <tên>` thay cho link, tool
 tải lại sheet gốc mỗi lệnh (cả `--gop`/`--tiep`) rồi dựng bộ case, phần còn lại chạy như bộ TC thường:
