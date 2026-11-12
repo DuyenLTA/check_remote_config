@@ -6,7 +6,8 @@
 #   1. cai tmux neu thieu
 #   2. systemd user service `rcr-publish`: mo tmux session `rcr-publish` chay
 #      `claude "/loop 5m /publish-report"` trong thu muc repo; phien chet thi tu mo lai
-#   3. in cach lam LAN DAU (bat buoc co nguoi): attach tmux, xac nhan tin cay thu muc / dang nhap
+#   3. timer mo lai phien moi 6 ngay (lich /loop het han sau 7 ngay)
+#   4. in cach lam LAN DAU (bat buoc co nguoi): attach tmux, xac nhan tin cay thu muc / dang nhap
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -48,9 +49,36 @@ systemctl --user enable rcr-publish >/dev/null 2>&1
 systemctl --user restart rcr-publish
 ok "service rcr-publish: $(systemctl --user is-active rcr-publish)"
 
+# Lich `/loop` cua Claude Code tu het han sau 7 ngay ma phien van song -> service khong tu mo lai, report nam cho.
+# Timer mo lai phien moi 6 ngay de lich luon duoc tao lai (Claude Code da nho tin cay thu muc, khong hoi lai).
+echo "3. Timer mo lai phien moi 6 ngay"
+cat > "$(dirname "$UNIT")/rcr-publish-restart.service" <<EOF2
+[Unit]
+Description=Mo lai phien rcr-publish (lich /loop cua Claude Code tu het han sau 7 ngay)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --user restart rcr-publish
+EOF2
+cat > "$(dirname "$UNIT")/rcr-publish-restart.timer" <<EOF2
+[Unit]
+Description=Moi 6 ngay mo lai phien rcr-publish truoc khi lich /loop 7 ngay het han
+
+[Timer]
+OnActiveSec=6d
+OnUnitActiveSec=6d
+Unit=rcr-publish-restart.service
+
+[Install]
+WantedBy=timers.target
+EOF2
+systemctl --user daemon-reload
+systemctl --user enable --now rcr-publish-restart.timer >/dev/null 2>&1
+ok "timer rcr-publish-restart: $(systemctl --user is-active rcr-publish-restart.timer)"
+
 cat <<EOF
 
-3. LAN DAU - can nguoi ngoi may (chi mot lan):
+4. LAN DAU - can nguoi ngoi may (chi mot lan):
    tmux attach -t rcr-publish
    - Claude Code hoi tin cay thu muc $REPO -> chon Yes. Chua dang nhap thi dang nhap.
    - Thay vong /loop bat dau ("Khong co report chờ." hoac dang publish) la xong.
