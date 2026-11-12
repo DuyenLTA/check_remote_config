@@ -16,6 +16,7 @@ import discord
 
 from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_forum, bot_hop_thu_bug,
                bot_kiem_testvsl, bot_report_may_phu, build_ma_app, usage_log)
+from . import bot_bug_tu_file_luot
 from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import XAM, XANH, nut
 
@@ -89,6 +90,11 @@ def nut_ket_qua(job: dict, kq: dict) -> list[tuple]:
 
 async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
     """Gui ket qua luot da chay. Goi lai duoc nhieu lan (mat mang giua chung): buoc nao da gui thi bo qua."""
+    if not job.get("da_bao"):
+        # Phien Claude chet truoc khi ghi KET_QUA (LOI / HET_GIO) -> lay case FAIL tu file luot de van co menu bug.
+        cuu = bot_bug_tu_file_luot.cuu_ket_qua(job["kq"], out, job["package"], job.get("bat_dau"))
+        if cuu is not job["kq"]:
+            bot.q.cap_nhat(job, kq=cuu)        # sua tai cho: cac buoc sau (da_bao, da_bao_bug) ghi vao dung job
     kq, ten = job["kq"], job.get("ten_may") or "?"
     chu = bot_cong_viec.TRANG_THAI.get(kq["trang_thai"], ("", kq["trang_thai"]))[1]
     dong_dau = f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**\n{chu}"
