@@ -51,7 +51,7 @@ async def xu_ly(bot, it: discord.Interaction) -> None:
     if hanh_dong == "verify":
         await it.response.defer()
         try:
-            tom_tat = await bot_job_verify.xep(bot, c, bot.get_channel(bot.kenh_qa))
+            tom_tat = await bot_job_verify.xep(bot, c, bot.get_channel(bot.kenh_qa), bam_tay=True)
         except Exception as exc:         # noqa: BLE001 - loi Jira ghi len tin goc
             log.exception("verify lai loi")
             tom_tat = f"⛔ Lỗi: {exc}"

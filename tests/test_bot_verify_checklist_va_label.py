@@ -55,12 +55,23 @@ def test_tim_auto_qa_jql_va_marker(fake):
     ra = jr.tim_auto_qa(URL, TOKEN, "AIP920")
     q = urllib.parse.parse_qs(urllib.parse.urlsplit(fake["req"][0].full_url).query)
     assert q["jql"][0].startswith('project = AIP920 AND labels = "auto-qa" AND status = Reviewing')
-    assert q["fields"] == ["summary,description"] and q["validateQuery"] == ["warn"]
+    assert q["fields"] == ["summary,description,status"] and q["validateQuery"] == ["warn"]
     assert q["maxResults"] == [str(jr.MAX_AUTO_QA)]
     assert [i["key"] for i in ra] == ["AIP920-1", "AIP920-2"]               # key sai mau bi loai
     assert ra[0]["link"] == "https://jira.example/browse/AIP920-1"
     assert ra[0]["marker"] == {"case": "EV-07", "loai_ban": "release", "package": "com.a.b"}
     assert ra[1]["marker"] is None
+
+
+def test_tim_auto_qa_chua_xong_va_trang_thai(fake):
+    fake["tra"] = [{"issues": []}, {"issues": [
+        {"key": "AIP920-3", "fields": {"status": {"name": "Backlog", "statusCategory": {"key": "new"}}}},
+        {"key": "AIP920-4", "fields": {"status": {"name": "Closed", "statusCategory": {"key": "done"}}}}]}]
+    jr.tim_auto_qa(URL, TOKEN, "AIP920", chua_xong=True)
+    q = urllib.parse.parse_qs(urllib.parse.urlsplit(fake["req"][0].full_url).query)
+    assert q["jql"][0] == 'project = AIP920 AND labels = "auto-qa" AND statusCategory != Done ORDER BY key'
+    assert jr.trang_thai(URL, TOKEN, ["AIP920-4", "AIP920-3", "x y"]) == {
+        "AIP920-3": {"ten": "Backlog", "xong": False}, "AIP920-4": {"ten": "Closed", "xong": True}}
 
 
 @pytest.mark.parametrize("project", ["aip920", 'AIP920" OR 1=1', "A", "", "AIP920 AND x"])

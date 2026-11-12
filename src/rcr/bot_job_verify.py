@@ -36,8 +36,11 @@ def nut(msg_id: int, *cac: tuple[str, str]) -> discord.ui.View:
     return view
 
 
-async def xep(bot, c: dict, kenh) -> str:
+async def xep(bot, c: dict, kenh, bam_tay: bool = False) -> str:
     """Tim bug bot da log cho app `c['ma']` dang Reviewing -> dang tin + xep job verify tren build `c`.
+    `bam_tay` (QA bam nut Verify): lay ca bug chua Done nam ngoai Reviewing - dev nhieu khi chua keo bug
+    sang Reviewing (bug con o Backlog) ma da day build fix (user chot 12/11/2026). Luong tu dong khi co
+    build moi van chi Reviewing: dev chua bao fix thi khong tu chay lai.
     Tra cau tom tat (de tra loi QA bam nut)."""
     if not jira.bat(bot.jira_url, bot.jira_token):
         return "Bot chưa có JIRA_URL / JIRA_PERSONAL_TOKEN — tính năng verify đang tắt."
@@ -46,29 +49,31 @@ async def xep(bot, c: dict, kenh) -> str:
         return "Lượt verify build này đã trong hàng đợi."
     _DANG_XEP.add(khoa)
     try:
-        return await _xep(bot, c, kenh)
+        return await _xep(bot, c, kenh, bam_tay)
     finally:
         _DANG_XEP.discard(khoa)
 
 
-async def _xep(bot, c: dict, kenh) -> str:
-    uv = await _ung_vien(bot, c["ma"])
+async def _xep(bot, c: dict, kenh, bam_tay: bool = False) -> str:
+    uv = await (_ung_vien_chua_xong(bot, c["ma"]) if bam_tay else _ung_vien(bot, c["ma"]))
     if not uv:
-        return f"{c['ma']}: không có bug nào của bot đang Reviewing."
+        return f"{c['ma']}: không có bug nào của bot " + ("chưa Done." if bam_tay else "đang Reviewing.")
     chay, bo = v.phan_loai(uv, c["loai_ban"], c.get("package", ""))
     job = {**{k: c.get(k, "") for k in TRUONG_BUILD}, "loai_job": "verify", "verify": chay,
            "bo_qua": [{**u, "ly_do": ly} for u, ly in bo]}
     dong_bo = [("bo", u, ly) for u, ly in bo]
     if not chay:
         await bot_forum.gui_goc(bot, job, v.tin_ket_qua(job, dong_bo), kenh.send)
-        return f"{c['ma']}: {len(bo)} bug Reviewing nhưng không case nào chạy lại tự động được."
+        return f"{c['ma']}: {len(bo)} bug nhưng không case nào chạy lại tự động được."
     vm = await bot_forum.gui_goc(bot, job, v.tin_ket_qua(job, [("cho", u, "") for u in chay] + dong_bo), kenh.send)
     job["msg_id"] = vm.id
     job.update(bot_forum.kenh_cua(vm))
     bot.q.nho_tin(job)
     vi_tri = bot.q.them(job)
     await vm.edit(view=nut(vm.id, ("huy", "Huỷ")))    # QA bo luot dang cho (vd dev bao day nham ban)
-    return f"Đã xếp verify {len(chay)} bug Reviewing của {c['ma']} — vị trí {vi_tri} trong hàng đợi."
+    ngoai = [u["key"] for u in chay if not _o_reviewing(u)]
+    them = f" (ngoài Reviewing: {', '.join(ngoai)})" if ngoai else ""
+    return f"Đã xếp verify {len(chay)} bug của {c['ma']}{them} — vị trí {vi_tri} trong hàng đợi."
 
 
 async def _ung_vien(bot, ma: str) -> list[dict]:
@@ -79,6 +84,23 @@ async def _ung_vien(bot, ma: str) -> list[dict]:
     can_hoi = [u["key"] for u in cu if u["key"] not in co]       # key tren Jira da chac chan Reviewing
     con = set(await asyncio.to_thread(jira.dang_reviewing, bot.jira_url, bot.jira_token, can_hoi)) if can_hoi else set()
     return bot_jira_marker.gop(tu_jira, [u for u in cu if u["key"] in co or u["key"] in con])
+
+
+async def _ung_vien_chua_xong(bot, ma: str) -> list[dict]:
+    """Moi bug bot da log cho app `ma` chua Done (Reviewing, Backlog, To Do...), kem `status` hien tai."""
+    tu_jira = await asyncio.to_thread(jira.tim_auto_qa, bot.jira_url, bot.jira_token, ma, chua_xong=True)
+    st = {i["key"]: i.get("status") or "Reviewing" for i in tu_jira}
+    cu = v.ung_vien(bot.q.tin, ma)
+    can_hoi = [u["key"] for u in cu if u["key"] not in st]
+    if can_hoi:
+        tt = await asyncio.to_thread(jira.trang_thai, bot.jira_url, bot.jira_token, can_hoi)
+        st |= {k: t["ten"] for k, t in tt.items() if not t["xong"]}
+    uv = bot_jira_marker.gop(tu_jira, [u for u in cu if u["key"] in st])
+    return [{**u, "status": st[u["key"]]} for u in uv if u["key"] in st]
+
+
+def _o_reviewing(u: dict) -> bool:
+    return str(u.get("status") or "Reviewing").casefold() == "reviewing"
 
 
 def _build_moi_hon(bot, job: dict) -> str:
@@ -99,10 +121,20 @@ def _ly_do_giu(kq: dict, u: dict) -> str:
     return f"verdict {vd}" if vd else "Claude không trả verdict cho case này"
 
 
+async def _con_nguyen_trang_thai(bot, verify: list[dict]) -> set[str]:
+    """Key van o dung trang thai luc xep (khong ai keo trong luc chay)."""
+    rv = [u["key"] for u in verify if _o_reviewing(u)]
+    khac = {u["key"]: u["status"] for u in verify if not _o_reviewing(u)}
+    con = set(await asyncio.to_thread(jira.dang_reviewing, bot.jira_url, bot.jira_token, rv)) if rv else set()
+    if khac:
+        tt = await asyncio.to_thread(jira.trang_thai, bot.jira_url, bot.jira_token, list(khac))
+        con |= {k for k, t in tt.items() if t["ten"] == khac.get(k)}
+    return con
+
+
 async def _doi_trang_thai(bot, job: dict, kq: dict, ten: str) -> list[tuple[str, dict, str]]:
-    keys = [u["key"] for u in job["verify"]]
     try:
-        con = set(await asyncio.to_thread(jira.dang_reviewing, bot.jira_url, bot.jira_token, keys))
+        con = await _con_nguyen_trang_thai(bot, job["verify"])
     except jira.JiraLoi as exc:
         return [("giu", u, f"không đọc được Jira: {exc}") for u in job["verify"]]
     dong = []
@@ -114,15 +146,21 @@ async def _doi_trang_thai(bot, job: dict, kq: dict, ten: str) -> list[tuple[str,
         if kl is None:
             dong.append(("giu", u, _ly_do_giu(kq, u)))
             continue
+        rv = _o_reviewing(u)
+        # Bug ngoai Reviewing (Backlog / To Do) ma FAIL: van mo san, chi comment, khong chuyen trang thai.
+        giu = "" if rv or kl == "PASS" else u["status"]
         try:
-            chu = v.noi_dung_comment(u, kl, job, kq, ten)
+            chu = v.noi_dung_comment(u, kl, job, kq, ten, giu)
             # Lan truoc comment xong nhung chuyen loi -> Verify lai khong comment trung.
             if not await asyncio.to_thread(jira.da_comment, bot.jira_url, bot.jira_token, u["key"],
                                            chu.split("\n", 1)[0]):
                 await asyncio.to_thread(jira.comment, bot.jira_url, bot.jira_token, u["key"], chu)
+            if giu:
+                dong.append(("vanloi", u, f"giữ {giu}"))
+                continue
             await asyncio.to_thread(jira.chuyen, bot.jira_url, bot.jira_token, u["key"],
                                     jira.DICH_PASS if kl == "PASS" else jira.DICH_FAIL)
-            dong.append(("done" if kl == "PASS" else "todo", u, ""))
+            dong.append(("done" if kl == "PASS" else "todo", u, "" if rv else f"từ {u['status']}"))
         except Exception as exc:               # noqa: BLE001 - mot issue loi khong chan issue sau
             log.warning("verify %s: %s", u["key"], exc)
             dong.append(("giu", u, f"Jira lỗi: {exc}"))

@@ -130,15 +130,35 @@ def assignee(url: str, token: str, keys: list[str]) -> dict[str, list[str]]:
     return ra
 
 
-def tim_auto_qa(url: str, token: str, project: str) -> list[dict]:
-    """Bug dang Reviewing mang label `auto-qa` cua project: [{key, link, summary, marker}]; marker la
-    {case, loai_ban, package} doc tu description, None khi thieu / sai mau. Toi da MAX_AUTO_QA issue."""
+def trang_thai(url: str, token: str, keys: list[str]) -> dict[str, dict]:
+    """{key: {"ten": <ten trang thai>, "xong": <statusCategory Done>}}. Key sai mau bi loai; key da xoa /
+    chuyen project khong tra ve."""
+    sach = sorted({k for k in keys if KEY_RE.fullmatch(k)})
+    if not sach:
+        return {}
+    q = urllib.parse.urlencode({"jql": f"key in ({', '.join(sach)})", "fields": "status",
+                                "maxResults": len(sach), "validateQuery": "warn"})
+    d = _goi(url, token, "GET", f"/rest/api/2/search?{q}")
+    ra = {}
+    for i in (d or {}).get("issues", []):
+        st = (i.get("fields") or {}).get("status") or {}
+        ra[i["key"]] = {"ten": str(st.get("name") or ""),
+                        "xong": (st.get("statusCategory") or {}).get("key") == "done"}
+    return ra
+
+
+def tim_auto_qa(url: str, token: str, project: str, chua_xong: bool = False) -> list[dict]:
+    """Bug mang label `auto-qa` cua project: [{key, link, summary, marker, status}]; marker la
+    {case, loai_ban, package} doc tu description, None khi thieu / sai mau. Toi da MAX_AUTO_QA issue.
+    Mac dinh chi bug dang Reviewing; `chua_xong` = moi trang thai chua Done (QA bam Verify tay khi dev
+    chua keo bug sang Reviewing - bug con nam Backlog / To Do)."""
     from .bot_jira_marker import LABEL, doc_marker
 
     if not PROJECT_RE.fullmatch(project or ""):
         raise JiraLoi(f"project key Jira sai mau: {project!r}")
-    jql = f'project = {project} AND labels = "{LABEL}" AND status = Reviewing ORDER BY key'
-    q = urllib.parse.urlencode({"jql": jql, "fields": "summary,description", "maxResults": MAX_AUTO_QA,
+    loc = "statusCategory != Done" if chua_xong else "status = Reviewing"
+    jql = f'project = {project} AND labels = "{LABEL}" AND {loc} ORDER BY key'
+    q = urllib.parse.urlencode({"jql": jql, "fields": "summary,description,status", "maxResults": MAX_AUTO_QA,
                                 "validateQuery": "warn"})
     d = _goi(url, token, "GET", f"/rest/api/2/search?{q}")
     ra = []
@@ -148,7 +168,8 @@ def tim_auto_qa(url: str, token: str, project: str) -> list[dict]:
             continue
         f = i.get("fields") or {}
         ra.append({"key": key, "link": f"{url.rstrip('/')}/browse/{key}", "summary": str(f.get("summary") or ""),
-                   "marker": doc_marker(f.get("description"))})
+                   "marker": doc_marker(f.get("description")),
+                   "status": str((f.get("status") or {}).get("name") or "Reviewing")})
     return ra
 
 

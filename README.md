@@ -517,6 +517,9 @@ Mỗi lượt chạy **một nhóm case**: mã bộ TC (`<tab>#<số>`) chạy b
 bấm **Verify lại** sau. Thiếu marker, khác loại bản (debug/release) hoặc khác package → bỏ qua, báo "cần verify tay".
 Dev kéo Reviewing sau khi báo build → QA bấm **Verify lại** ở tin build / tin kết quả. Thiếu token → tính năng
 tắt, luồng Check giữ nguyên.
+QA **bấm tay** Verify (tin build / tin kết quả / `/check-bug`) → lấy cả bug bot log chưa Done ngoài Reviewing
+(dev chưa kịp kéo, bug còn Backlog / To Do): PASS → Done; FAIL → chỉ comment, giữ nguyên trạng thái, không báo dev.
+Luồng tự động khi có build mới vẫn chỉ lấy Reviewing.
 
 **Báo dev**: bug vừa log Jira và bug verify vẫn FAIL được báo ở **kênh riêng của project** (cùng server với kênh
 build, tên bắt đầu bằng mã app: `aip920-…`), tag các dev trong `DISCORD_DEV_IDS`. Kênh project được tìm ở server của tin build trước, không có thì ở các

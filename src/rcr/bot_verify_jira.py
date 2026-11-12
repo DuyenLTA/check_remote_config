@@ -107,25 +107,31 @@ def _thuc_te(kq: dict, u: dict) -> str:
     return next((c.get("thuc_te", "") for c in kq.get("cases") or [] if c.get("case") == u["case"]), "")
 
 
-def noi_dung_comment(u: dict, kl: str, job: dict, kq: dict, may: str) -> str:
+def noi_dung_comment(u: dict, kl: str, job: dict, kq: dict, may: str, giu: str = "") -> str:
+    """`giu`: ten trang thai bug dang o (ngoai Reviewing) khi FAIL -> chi comment, khong chuyen."""
     dong = [f"[Bot auto verify] {kl} trên build {_cat(job.get('version'), 40)} ({job.get('loai_ban', '')}), "
             f"máy {_cat(may, 60)}, case {u['case']}.",
             f"Expected: {_cat(u['bug'].get('expected'))}",
             f"Thực tế: {_cat(_thuc_te(kq, u))}"]
     if str(kq.get("link") or "").startswith("https://"):   # duong dan file tren may dev khong mo duoc
         dong.append(f"Report: {_cat(kq['link'], 500)}")
-    dong.append("→ Done" if kl == "PASS" else "→ Bug reopen (To Do)")
+    dong.append("→ Done" if kl == "PASS" else f"→ Vẫn lỗi, giữ {giu}" if giu else "→ Bug reopen (To Do)")
     return "\n".join(dong)
 
 
 def tin_ket_qua(job: dict, dong: list[tuple[str, dict, str]]) -> str:
     """dong: [(loai, uv, ghi chu)] voi loai in done|todo|giu|bo -> tin qa-auto <= MAX_TIN ky tu."""
-    icon = {"done": "✅ Done", "todo": "🔁 To Do", "giu": "⚠️ Giữ Reviewing", "bo": "⏭ Bỏ qua", "cho": "⏳ Chờ chạy"}
-    ra = [f"🔁 **Verify bug Reviewing** — **{job.get('ma', '')}** `{_cat(job.get('version'), 40)}`"]
+    icon = {"done": "✅ Done", "todo": "🔁 To Do", "giu": "⚠️ Giữ Reviewing", "bo": "⏭ Bỏ qua", "cho": "⏳ Chờ chạy",
+            "vanloi": "❌ Vẫn lỗi"}
+    ra = [f"🔁 **Verify bug Jira** — **{job.get('ma', '')}** `{_cat(job.get('version'), 40)}`"]
     for loai, u, ghi_chu in dong:
         them = f" — {_cat(ghi_chu, 160)}" if ghi_chu else ""
-        ra.append(f"{icon[loai]} [{u['key']}]({u['link']}) `{u['case'] or '—'}`{them}" if u["link"]
-                  else f"{icon[loai]} {u['key']} `{u['case'] or '—'}`{them}")
+        st = str(u.get("status") or "Reviewing")
+        nhan = f"⚠️ Giữ {st}" if loai == "giu" else icon[loai]
+        if loai == "cho" and st.casefold() != "reviewing":     # bug QA bam Verify tay khi chua keo Reviewing
+            them = f" — đang {_cat(st, 40)}{them}"
+        ra.append(f"{nhan} [{u['key']}]({u['link']}) `{u['case'] or '—'}`{them}" if u["link"]
+                  else f"{nhan} {u['key']} `{u['case'] or '—'}`{them}")
     chu = "\n".join(ra)
     return chu if len(chu) <= MAX_TIN else chu[: MAX_TIN - 1] + "…"
 

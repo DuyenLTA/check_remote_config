@@ -89,7 +89,7 @@ def test_comment_va_tin_cat_ngan():
     assert "PASS trên build 1.6.0 (8)" in cm and "Report: https://claude.ai/artifact/r" in cm and len(cm) < 1000
     dong = [("done", u, "")] + [("bo", {**u, "key": f"AIP920-{i}"}, "y" * 300) for i in range(30)]
     tin = v.tin_ket_qua(job, dong)
-    assert len(tin) <= v.MAX_TIN and tin.startswith("🔁 **Verify bug Reviewing** — **AIP920**")
+    assert len(tin) <= v.MAX_TIN and tin.startswith("🔁 **Verify bug Jira** — **AIP920**")
 
 
 def test_tin_bao_dev_chi_bug_keo_to_do():
