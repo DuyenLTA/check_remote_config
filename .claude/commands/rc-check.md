@@ -158,6 +158,8 @@ còn snapshot `--keep` chưa `--restore`, và **plan tuần**.
 
 Chỉ hỏi khi: log không in bản SDK, sheet ID không có tab của package, hoặc nhiều máy.
 
+**Tab tính năng test từ Home** (user chốt 12/11/2026): rating / widget / daily checkin / IAA / gen ngầm… mỗi case tool tự lái qua FO (splash, ngôn ngữ, onboarding, paywall) **vào tới Home** rồi mới làm theo Action — chỉ tab SDK FO (tên là số phiên bản) mới test ở tutorial. Case nối chuỗi giữ màn của case trước. Vắng event mà tool chưa lái tới chỗ bắn event → đo tay, **không FAIL**.
+
 **Check gì cũng tải lại sheet liên quan trước** (user chốt 12/11/2026, QA sửa sheet liên tục): bộ TC (cả tab SDK,
 tab tính năng, `--tc iaa` / `--tc gen-ngam`), sheet Check thông số KT (ID ads, mục 3 IAA), plan tuần, sheet TC sub,
 tab "Tổng hợp SDK x" — tool tải bản mới nhất **mỗi lệnh** (kể cả `--gop` / `--tiep`), không dùng bản `out/` có sẵn,

@@ -7,6 +7,7 @@ tro toi noi dung khong con nua - `run_case` tra ve baseline dang dung.
 
 from __future__ import annotations
 
+import re
 import time
 from datetime import date
 from pathlib import Path
@@ -134,6 +135,12 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 continue
             goto = "" if args.no_walk else _goto_cua(row.get("label", ""), row.get("feature", ""),
                                                       chosen["precondition"])
+            # Tab tinh nang (rating / widget / daily checkin / IAA / gen ngam...): moi case lai qua FO vao TOI HOME
+            # roi moi lam theo Action - chi tab SDK FO moi test o tutorial (user chot 12/11/2026; AIP892 rating
+            # R01-R02 tool dung o man mo dau, 14 case phai do tay). Case noi chuoi giu nguyen man case truoc.
+            home_mac_dinh = not goto and not args.no_walk and la_tab_tinh_nang(key)
+            if home_mac_dinh:
+                goto = fo_flow.rules().get("home_match", "MainActivity")
             # Ma vi tri ads noi san key cua case nam o man nao. Buoc Action cua
             # TC van bao "Hoan thanh luong FO den Home", nhung doc log o dung
             # man do la du - di tiep chi ton thoi gian.
@@ -216,7 +223,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                     try:
                         kq, baseline = await case_run.run_case(
                             client, baseline, runs, chosen["precondition"],
-                            () if args.no_actions else chosen["actions"], chosen["expects"], goto,
+                            () if args.no_actions else chosen["actions"], chosen["expects"],
+                            "" if home_mac_dinh else goto,
                             keep=False, out_dir=args.out_dir, dex=not args.no_dex_check,
                             log_fn=log_fn, man_can=man_can, user_state=chosen.get("user_state", ""),
                             ngon_ngu=fo_ngon_ngu.tim_theo_chuoi(key, runnable),
@@ -385,6 +393,17 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
     if chuoi:
         await _try_restore(client, baseline, log_fn)     # che do chuoi giu config giua cac case -> tra mot lan cuoi
     return luu(xong=True)
+
+
+# Ten tab SDK FO la so phien ban ("3.6.1", "SDK 3.5.4"); tab khac (rating, widget, daily checkin, Test Cases cua
+# bo IAA / gen ngam...) la tab tinh nang -> test tu Home.
+TAB_SDK_RE = re.compile(r"\d+\.\d+")
+
+
+def la_tab_tinh_nang(key: str) -> bool:
+    """Key case `<tab>#<ma>`: tab co ten khong phai so phien ban SDK. Key khong co tab -> False (khong doan)."""
+    tab, co, _ = key.partition("#")
+    return bool(co and tab.strip()) and not TAB_SDK_RE.search(tab)
 
 
 def _goto_cua(nhan: str, nhom: str, precondition: str) -> str:

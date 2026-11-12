@@ -224,6 +224,13 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
 
     if assert_ui.EVENT_RE.search(text):
         ket = assert_ui.event_da_ban(text, events)
+        if ket and ket["verdict"] == FAIL and ket["reason"].startswith("không thấy event") \
+                and not assert_ads.tapped(drive):
+            # Tool chua lam buoc nao toi man ban event (vd chua gen anh de toi Result) -> vang event la do CHUA
+            # TOI, khong phai app thieu event. FAIL o day la FAIL gia (AIP892 rating R01-02/03/05 12/11/2026).
+            where = assert_ads.where(drive) or "màn mở đầu"
+            return out(NEEDS_HUMAN, f"{ket['reason']} — nhưng tool mới dừng ở {where}, chưa lái tới chỗ bắn "
+                                    "event: đo tay", text)
         if ket:
             return ket
 
@@ -294,6 +301,7 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     if not lines:
         return {"verdict": NOT_VERIFIABLE, "lines": [], "note": "case không có dòng Expected nào"}
     lines = _ha_fail_khi_log_roi(lines, (ads or {}).get("log_roi") or 0)
+    lines = _ha_fail_khi_buoc_dung(lines, drive or {})
 
     measured = [r["verdict"] for r in lines if r["verdict"] in (PASS, FAIL)]
     # Dong cua PO khong tinh vao "can nguoi": tester khong vao duoc AdMob console
@@ -326,6 +334,22 @@ def _ha_fail_khi_log_roi(lines: list[dict], roi: int) -> list[dict]:
             r = {**r, "verdict": NEEDS_HUMAN,
                  "reason": f"máy bỏ {roi} dòng log của app (ratelimit ROM) — chưa kết luận được vắng request: "
                            f"{r.get('reason')}"}
+        ra.append(r)
+    return ra
+
+
+def _ha_fail_khi_buoc_dung(lines: list[dict], drive: dict) -> list[dict]:
+    """Tool dung giua cac buoc Action (buoc khong dich duoc, vd "Gen anh, cho popup.") -> chua toi man cua dong
+    Expected. FAIL dua tren VANG MAT ("khong thay 'Rate' tren man nao da chup", "khong thay event ...") la FAIL
+    gia -> NEEDS_HUMAN (AIP892 rating R03-01 12/11/2026). FAIL vi THAY sai van giu."""
+    if drive.get("status") != "NEEDS_HUMAN":
+        return lines
+    buoc = drive.get("stopped_at")
+    ra = []
+    for r in lines:
+        if r.get("verdict") == FAIL and str(r.get("reason") or "").startswith("không thấy"):
+            r = {**r, "verdict": NEEDS_HUMAN,
+                 "reason": f"tool dừng ở bước {buoc} (chưa làm được thao tác), chưa tới màn cần chấm: {r.get('reason')}"}
         ra.append(r)
     return ra
 

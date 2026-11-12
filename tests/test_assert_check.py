@@ -637,8 +637,15 @@ def test_event_co_ban_va_du_param_thi_PASS():
 
 
 def test_event_khong_ban_thi_FAIL_kem_danh_sach_da_ban():
-    res = a.check("Log event complete_ob3.", {}, NO_DRIVE, OK_CRASH, events=EV)
+    res = a.check("Log event complete_ob3.", {}, {"steps": [], "walked": True}, OK_CRASH, events=EV)
     assert res["verdict"] == a.FAIL and "screen_view" in res["reason"]
+
+
+def test_event_vang_ma_tool_chua_lai_toi_cho_ban_thi_do_tay_khong_FAIL():
+    """AIP892 rating R01-02: tool chua gen anh (khong buoc nao chay) -> vang rating_placement_viewed la do CHUA
+    TOI Result, khong phai app thieu event."""
+    res = a.check('Event rating_placement_viewed, placement_name = "result".', {}, NO_DRIVE, OK_CRASH, events=EV)
+    assert res["verdict"] == a.NEEDS_HUMAN and "chưa lái tới" in res["reason"]
 
 
 def test_event_co_ban_nhung_thieu_param_thi_FAIL():
@@ -859,3 +866,12 @@ def test_log_roi_ha_fail_khong_request_thanh_needs_human():
     assert [r["verdict"] for r in ra] == ["NEEDS_HUMAN", "FAIL", "PASS"]
     assert "203" in ra[0]["reason"]
     assert assert_check._ha_fail_khi_log_roi(lines, 0) == lines
+
+
+def test_tool_dung_giua_buoc_thi_FAIL_vi_vang_thanh_do_tay():
+    """AIP892 rating R03-01: buoc 'Gen anh, cho popup.' khong dich duoc -> chua toi Result; 'khong thay Rate'
+    khong phai bug."""
+    drive = {"steps": [], "walked": True, "status": "NEEDS_HUMAN", "stopped_at": 1}
+    res = a.check_all(['Nhãn button "Rate" (1 < 2).', "Log event complete_ob3."], {}, drive, OK_CRASH, events=EV)
+    assert [r["verdict"] for r in res["lines"]] == [a.NEEDS_HUMAN, a.NEEDS_HUMAN]
+    assert "tool dừng ở bước 1" in res["lines"][1]["reason"]
