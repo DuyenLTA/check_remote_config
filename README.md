@@ -484,7 +484,7 @@ nhận link Google Drive nữa.
   release từ App Tester; kết quả + menu log bug như Check, mã case trong Jira là `sub#<số TC>`.
 - `/rollout <mã app>` — link trang **Rollout** của app trên Confluence + link **Checklist** (sheet riêng của app, lấy
   từ dòng `Checklist: <link>` ở trang version sửa gần nhất). Link checklist mà tên file ghi mã app khác (copy template)
-  thì bỏ. Bot cần `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` trong `~/.config/rcr/bot.env`.
+  thì bỏ. Dùng lại `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` trong `~/.bashrc` (hoặc `bot.env`).
 Bot thiếu scope `applications.commands` ở server nào thì lệnh không hiện ở server đó (log bot ghi rõ), bot vẫn chạy.
 
 **Forum `qa-builds` — mỗi build một bài** (`DISCORD_FORUM_CHANNEL_ID`, để trống thì như cũ): build mới có SDK →
@@ -539,7 +539,8 @@ bot trả riêng cho người gõ hai link của app trên Confluence.
 
 - Code: `src/rcr/confluence_rollout.py` (tra cứu, chỉ stdlib), `src/rcr/bot_lenh_rollout.py` (lệnh slash),
   test `tests/test_confluence_rollout.py`.
-- Cấu hình: `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` (PAT) trong `~/.config/rcr/bot.env` của máy chạy bot chính.
+- Cấu hình: dùng lại `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` (PAT) đang có cho spec SDK — bot tự đọc dòng
+  `export CONFLUENCE_...` trong `~/.bashrc` nếu env / `~/.config/rcr/bot.env` không có, không cần khai thêm.
 - Thử không cần Discord: `PYTHONPATH=src python -c "from rcr import confluence_rollout as c; print(c.tin_tra_loi(c.tim('AIP959')))"`.
 
 ## Test
