@@ -36,6 +36,14 @@ _ADB_INPUT = re.compile(r"adbd service requested '.*raw:input (tap|swipe|keyeven
 # Do 2026-10-24: Piclux BACK tren inter -> click sau 2,2s.
 CUA_SO_CLICK = 5.0
 BUFFER_LOG = "16M"
+# Tag rac (WebView, okhttp, he thong ROM) tat truoc moi lan mo app: ROM vivo gioi han log moi process ("ratelimit:
+# Single process limit 50/s drop N lines") nen log rac dan dap day mat AdEventLogger / FA cua app -> FAIL gia hang
+# loat (AIP918 Linguza 12/11/2026: 21 case phai chay lai). Khong tag nao o day duoc tool doc.
+TAG_RAC = ("okhttp.Http2", "okhttp.TaskRunner", "okhttp.OkHttpClient", "VelocityTracker", "VivoConfigStore",
+           "AdvertisingIdClient", "FragmentManager", "chromium", "cr_media", "cr_ChildProcessConn",
+           "cr_AwAutofillManager", "TrafficStats", "adservices", "CustomTabsClient", "AdrenoGLES-0", "CursorWindow",
+           "nativeloader", "TRuntime.SQLiteEventStore", "TRuntime.JobInfoScheduler", "CompatibilityChangeReporter",
+           "DynamiteModule")
 
 
 async def bat(client, serial: str) -> None:
@@ -46,6 +54,8 @@ async def bat(client, serial: str) -> None:
     # FA-SVC verbose in rat nhieu (dump ca lo upload): buffer mac dinh (~256K) troi sau khoang 1 phut, `logcat -d`
     # cuoi case mat event dau case (Pixel 6 09/11/2026: mat sach request / view luc vao OB1).
     await client.shell(serial, "logcat", "-G", BUFFER_LOG)
+    for tag in TAG_RAC:
+        await client.shell(serial, "setprop", f"log.tag.{tag}", "S")
 
 
 async def doc(client, serial: str) -> list[dict]:

@@ -277,6 +277,7 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
         lines.append({"n": index, "expected": " ".join(line.split()), **row})
     if not lines:
         return {"verdict": NOT_VERIFIABLE, "lines": [], "note": "case không có dòng Expected nào"}
+    lines = _ha_fail_khi_log_roi(lines, (ads or {}).get("log_roi") or 0)
 
     measured = [r["verdict"] for r in lines if r["verdict"] in (PASS, FAIL)]
     # Dong cua PO khong tinh vao "can nguoi": tester khong vao duoc AdMob console
@@ -291,6 +292,26 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     verdict = worst(ke) if ke else worst(r["verdict"] for r in lines)
     return {"verdict": verdict, "lines": lines, "measured": len(measured),
             "pending": pending, "po": po}
+
+
+# FAIL dua tren VANG MAT dong log ("khong co request ...") khong dung duoc khi may da bo dong log cua app.
+KHONG_THAY_LOG_RE = re.compile(r"(không|chưa) có request", re.I)
+
+
+def _ha_fail_khi_log_roi(lines: list[dict], roi: int) -> list[dict]:
+    """ROM vivo gioi han 50 dong log/giay moi tien trinh, bo ca dong `AdEventLogger` luc app khoi dong
+    (V2143 12/11/2026: inter 102 co load+show ma 0 request). Log da roi thi "khong co request" khong chung minh
+    duoc app khong request -> NEEDS_HUMAN de do tay, khong bao bug gia."""
+    if not roi:
+        return lines
+    ra = []
+    for r in lines:
+        if r.get("verdict") == FAIL and KHONG_THAY_LOG_RE.search(str(r.get("reason") or "")):
+            r = {**r, "verdict": NEEDS_HUMAN,
+                 "reason": f"máy bỏ {roi} dòng log của app (ratelimit ROM) — chưa kết luận được vắng request: "
+                           f"{r.get('reason')}"}
+        ra.append(r)
+    return ra
 
 
 def _tbd(drive: dict, crash: dict) -> dict:

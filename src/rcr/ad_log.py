@@ -27,7 +27,7 @@ from . import log_moc
 from .app_sandbox import guard
 
 LOGCAT_TIMEOUT = 30.0
-TAGS = ("AdEventLogger", "BannerAdHelper")
+TAGS = ("AdEventLogger", "BannerAdHelper", "ratelimit")
 
 EVENT_RE = re.compile(
     r"track(?P<event>AdRequest|AdMatchedRequest|AdLoadSuccess|AdLoadFailed|AdShowSuccess|AdShowFailed)"
@@ -40,6 +40,8 @@ MASK_RE = re.compile(r"^\*+(?P<tail>\d{2,})$")
 # "occurred for ad unit *****588 from ad network ..." - moi lan ad tinh tien
 # la mot impression. Dong nay di kem logPaidAdImpression.
 IMPRESSION_RE = re.compile(r"occurred for ad unit\s+(?P<id>[*\w]+)")
+# ROM vivo: "ratelimit: Single process limit 50/s drop 145 lines." - dong log cua app da bi bo, ke ca AdEventLogger.
+ROI_RE = re.compile(r"ratelimit:.*\bdrop\s+(?P<n>\d+)\s+lines")
 
 
 # Ring buffer mac dinh cua Pixel 4 chi 256 KiB: mot luot lai FO kem dump UI
@@ -68,8 +70,12 @@ async def read(client, serial: str, pid: str) -> str:
 
 def parse(log_text: str) -> dict:
     """-> {events: [...], banner_states: [...]} theo dung thu tu xay ra."""
-    events, states, impressions = [], [], []
+    events, states, impressions, roi = [], [], [], 0
     for line in (log_text or "").splitlines():
+        bo = ROI_RE.search(line)
+        if bo:
+            roi += int(bo.group("n"))
+            continue
         seen = IMPRESSION_RE.search(line)
         if seen:
             impressions.append(seen.group("id"))
@@ -88,7 +94,7 @@ def parse(log_text: str) -> dict:
             "type": hit.group("type").lower(),
             "error": (err.group("msg") or err.group("etype")).strip() if err else "",
         })
-    return {"events": events, "banner_states": states, "impressions": impressions}
+    return {"events": events, "banner_states": states, "impressions": impressions, "log_roi": roi}
 
 
 def summary(parsed: dict) -> dict:

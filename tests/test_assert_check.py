@@ -844,3 +844,18 @@ def test_ky_vong_khong_vuot_duoc_cham_nguoc():
     assert a.check(cau, {}, sang, OK_CRASH)["verdict"] == a.FAIL
     # cau cu "Vuot chuyen man giong bam Next" van doi vuot duoc
     assert a.check("Vuốt chuyển màn giống bấm Next.", {}, dung_yen, OK_CRASH)["verdict"] == a.FAIL
+
+
+def test_log_roi_ha_fail_khong_request_thanh_needs_human():
+    # vivo V2143 12/11/2026: ROM bo dong log cua app (ratelimit 50/s) -> "khong co request" khong ket luan duoc.
+    from rcr import ad_log, assert_check
+    log = ("11-12 13:13:09.031 25666 25780 W ratelimit: Single process limit 50/s drop 145 lines.\n"
+           "11-12 13:13:10.006 25666 25666 W ratelimit: Single process limit 50/s drop 58 lines.\n")
+    assert ad_log.parse(log)["log_roi"] == 203
+    lines = [{"n": 1, "verdict": "FAIL", "reason": "không có request native nào"},
+             {"n": 2, "verdict": "FAIL", "reason": "progress lệch 3s"},
+             {"n": 3, "verdict": "PASS", "reason": "ok"}]
+    ra = assert_check._ha_fail_khi_log_roi(lines, 203)
+    assert [r["verdict"] for r in ra] == ["NEEDS_HUMAN", "FAIL", "PASS"]
+    assert "203" in ra[0]["reason"]
+    assert assert_check._ha_fail_khi_log_roi(lines, 0) == lines

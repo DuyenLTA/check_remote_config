@@ -43,7 +43,7 @@ async def _read_ads(client, baseline: RcBaseline, overrides=None) -> dict:
         row["ids"] = {k: list(rc_ids.get(k) or ()) for k in row["rc_keys"]}
     # Vi tri DA BIET ID: log khong co unit nao cua vi tri do = vi tri do khong
     # duoc request, ket luan duoc. Khong biet ID thi im lang khong noi len gi.
-    return {"pid": pid, "units": units, "banner_states": parsed["banner_states"],
+    return {"pid": pid, "units": units, "banner_states": parsed["banner_states"], "log_roi": parsed.get("log_roi", 0),
             "positions": sorted({k[3:].split("#")[0] for k in rc_ids if k.startswith("id_")})}
 
 
