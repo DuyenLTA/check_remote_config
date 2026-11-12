@@ -30,6 +30,9 @@ CHO_THU_LAI = 5.0
 # Dich khi verify xong, theo thu tu uu tien (ten transition hoac trang thai dich).
 DICH_PASS = ("Done", "Closed")
 DICH_FAIL = ("To Do", "Reopened")
+# Trang thai Jira xep nhom Done nhung nghia la "dev bao da fix, cho QA verify" (jira.apero.vn: To Do -> Resolved,
+# AIP918-147 12/11/2026). Verify tay phai lay ca nhom nay, khong coi la xong.
+CHO_QA_VERIFY = ("Resolved",)
 
 
 class JiraLoi(RuntimeError):
@@ -142,8 +145,10 @@ def trang_thai(url: str, token: str, keys: list[str]) -> dict[str, dict]:
     ra = {}
     for i in (d or {}).get("issues", []):
         st = (i.get("fields") or {}).get("status") or {}
-        ra[i["key"]] = {"ten": str(st.get("name") or ""),
-                        "xong": (st.get("statusCategory") or {}).get("key") == "done"}
+        ten = str(st.get("name") or "")
+        ra[i["key"]] = {"ten": ten,
+                        "xong": (st.get("statusCategory") or {}).get("key") == "done"
+                        and ten.casefold() not in {x.casefold() for x in CHO_QA_VERIFY}}
     return ra
 
 
@@ -156,7 +161,8 @@ def tim_auto_qa(url: str, token: str, project: str, chua_xong: bool = False) -> 
 
     if not PROJECT_RE.fullmatch(project or ""):
         raise JiraLoi(f"project key Jira sai mau: {project!r}")
-    loc = "statusCategory != Done" if chua_xong else "status = Reviewing"
+    cho = ", ".join(CHO_QA_VERIFY)
+    loc = f"(statusCategory != Done OR status in ({cho}))" if chua_xong else "status = Reviewing"
     jql = f'project = {project} AND labels = "{LABEL}" AND {loc} ORDER BY key'
     q = urllib.parse.urlencode({"jql": jql, "fields": "summary,description,status", "maxResults": MAX_AUTO_QA,
                                 "validateQuery": "warn"})

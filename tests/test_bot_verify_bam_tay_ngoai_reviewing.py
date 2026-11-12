@@ -43,9 +43,9 @@ def test_bam_tay_khong_co_bug_chua_done(tmp_path, monkeypatch):
     assert "chưa Done" in asyncio.run(bj.xep(_bot(tmp_path), BUILD, _Kenh(), bam_tay=True))
 
 
-def _chay(tmp_path, monkeypatch, kq, tt_sau=TT):
+def _chay(tmp_path, monkeypatch, kq, tt_sau=TT, tt_truoc=TT):
     goi = _jira(monkeypatch, {"AIP920-13"})
-    _tt(monkeypatch, TT)
+    _tt(monkeypatch, tt_truoc)
     bot = _bot(tmp_path)
     asyncio.run(bj.xep(bot, BUILD, _Kenh(), bam_tay=True))
     job = bot.q.jobs[0]
@@ -82,3 +82,11 @@ def test_luot_dung_giu_dung_trang_thai_backlog(tmp_path, monkeypatch):
     goi, msg = _chay(tmp_path, monkeypatch, {"trang_thai": "DUNG", "tom_tat": "x", "cases": []})
     noi = msg.edits[-1]["content"]
     assert goi == [] and "Giữ Backlog" in noi and "Giữ Reviewing" in noi
+
+
+def test_resolved_fail_thi_keo_to_do_nhu_reviewing(tmp_path, monkeypatch):
+    """Resolved = dev bao da fix (AIP918-147): FAIL thi keo ve To Do, khong giu Resolved nhu bug Backlog."""
+    tt = {**TT, "AIP920-14": {"ten": "Resolved", "xong": False}}
+    kq = {"trang_thai": "XONG", "cases": [{"case": "3.6.1#1", "verdict": "PASS"}, {"case": "3.6.1#2", "verdict": "FAIL"}]}
+    goi, msg = _chay(tmp_path, monkeypatch, kq, tt_sau=tt, tt_truoc=tt)
+    assert ("chuyen", "AIP920-14", jira.DICH_FAIL) in goi

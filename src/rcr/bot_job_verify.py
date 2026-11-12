@@ -99,6 +99,10 @@ async def _ung_vien_chua_xong(bot, ma: str) -> list[dict]:
     return [{**u, "status": st[u["key"]]} for u in uv if u["key"] in st]
 
 
+def _dev_bao_fix(u: dict) -> bool:
+    return str(u.get("status") or "").casefold() in {x.casefold() for x in jira.CHO_QA_VERIFY}
+
+
 def _o_reviewing(u: dict) -> bool:
     return str(u.get("status") or "Reviewing").casefold() == "reviewing"
 
@@ -148,7 +152,8 @@ async def _doi_trang_thai(bot, job: dict, kq: dict, ten: str) -> list[tuple[str,
             continue
         rv = _o_reviewing(u)
         # Bug ngoai Reviewing (Backlog / To Do) ma FAIL: van mo san, chi comment, khong chuyen trang thai.
-        giu = "" if rv or kl == "PASS" else u["status"]
+        # Resolved (dev bao da fix) ma FAIL thi keo ve To Do nhu Reviewing.
+        giu = "" if rv or kl == "PASS" or _dev_bao_fix(u) else u["status"]
         try:
             chu = v.noi_dung_comment(u, kl, job, kq, ten, giu)
             # Lan truoc comment xong nhung chuyen loi -> Verify lai khong comment trung.
