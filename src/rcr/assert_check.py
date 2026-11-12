@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 
-from . import (ad_positions, assert_ad_area, assert_ad_screen, assert_bo_cuc, assert_chu, assert_indicator,
+from . import (ad_positions, assert_ad_area, assert_ad_theo_id, assert_ad_screen, assert_bo_cuc, assert_chu, assert_indicator,
                assert_giu_nguyen, assert_khong_co_ad, assert_luong_ad, assert_nut_lfo, assert_resume,
                assert_man_khong, assert_qa_man_tat_hung_202,
                assert_anh_content, assert_mau, assert_ads, assert_splash_media, assert_tag,
@@ -276,9 +276,20 @@ def check_all(expects, ads: dict, drive: dict, crash: dict, rc_keys=(), override
     scope = assert_ads.case_position(expects)
     # Cau phu dinh chung chung noi ve cac vi tri chinh case nay bat/tat.
     vi_tri = assert_ads.vi_tri_cua_case(overrides)
+    # ID ads ghi thang trong case (bo IAA): cham theo dung ID, khong theo ma vi tri.
+    so_case = sorted({s for line in expects for s in assert_ad_theo_id.ids_trong(line)})
+    units = list(((ads or {}).get("units") or {}).values())
     for index, line in enumerate(expects, 1):
-        row = check(line, ads or {}, drive or {}, crash or {}, rc_keys, scope, vi_tri, events,
-                    overrides if isinstance(overrides, dict) else None)
+        row = None
+        if so_case:
+            if assert_ad_theo_id.ids_trong(line):
+                row = assert_ad_theo_id.cham(line, units, drive or {})
+            elif assert_ads.ad_type_in(line) and not ad_positions._position_token(line):
+                row = assert_ad_theo_id.cham_theo_case(
+                    line, units, drive or {}, so_case, bool(assert_ads.NEGATIVE_RE.search(line)))
+        if row is None:
+            row = check(line, ads or {}, drive or {}, crash or {}, rc_keys, scope, vi_tri, events,
+                        overrides if isinstance(overrides, dict) else None)
         lines.append({"n": index, "expected": " ".join(line.split()), **row})
     if not lines:
         return {"verdict": NOT_VERIFIABLE, "lines": [], "note": "case không có dòng Expected nào"}
