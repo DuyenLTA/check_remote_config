@@ -527,6 +527,21 @@ Jira báo lỗi → bot báo ở kênh QA (kèm nội dung để QA chuyển tay
 Lệnh tay: `rcr-cai-build --package <pkg> --version "4.3.0 (40)" --loai debug|release [--serial S]` (cài đúng
 bản từ App Tester), thêm `--chi-kiem` để chỉ xem App Tester đang có những bản nào.
 
+## Bot tra link Rollout + Checklist (`/rollout`)
+
+Lệnh slash trong `rcr-bot` (không phải bot riêng, không cần token Discord khác): gõ `/rollout <mã app>` trên Discord →
+bot trả riêng cho người gõ hai link của app trên Confluence.
+
+| Link | Lấy ở đâu |
+|---|---|
+| Rollout | Trang có mã app + chữ "rollout" trong tên (`AIP924 - Rollout`, `AIP959 - Rollout History`, `AIP885-Rollout`…); nhiều trang thì lấy trang sửa gần nhất |
+| Checklist | Sheet riêng của app, lấy từ dòng `Checklist: <link>` ở trang version sửa gần nhất dưới trang app. Bỏ "Checklist test" (sheet chung); bỏ file mà tên ghi mã app khác (copy template); sheet không mở cho người có link thì vẫn đưa, ghi "chưa xác nhận tên file" |
+
+- Code: `src/rcr/confluence_rollout.py` (tra cứu, chỉ stdlib), `src/rcr/bot_lenh_rollout.py` (lệnh slash),
+  test `tests/test_confluence_rollout.py`.
+- Cấu hình: `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` (PAT) trong `~/.config/rcr/bot.env` của máy chạy bot chính.
+- Thử không cần Discord: `PYTHONPATH=src python -c "from rcr import confluence_rollout as c; print(c.tin_tra_loi(c.tim('AIP959')))"`.
+
 ## Test
 
 ```bash
