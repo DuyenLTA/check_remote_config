@@ -157,11 +157,15 @@ TIMEOUT_VERIFY_SUB = 60 * 60
 # /check tinh_nang: tab SDK rieng (rating / widget / daily checkin) trong bo TC chung. QA chon tab nao chay tab do:
 # khong FO, khong checklist Next-Gen, khong check ID ads, khong chan theo plan tuan (user chot 11/11/2026).
 TAB_TINH_NANG = ("rating", "widget", "daily checkin")
+# Bo TC tinh nang KHONG nam trong sheet chung: rcr-check tu dung tu sheet goc moi lenh (`--tc <nguon>`):
+# iaa = muc "3. ID ads inapp" cua tab app o sheet KT, gen-ngam = sheet checklist gen ngam (user chot 12/11/2026).
+NGUON_TINH_NANG = ("iaa", "gen-ngam")
 PROMPT_TINH_NANG = (
     "/rc-check {package} --serial {serial} {tab_arg}\n\n"
     "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi (lenh /check chon SDK tinh nang), khong co nguoi "
-    "ngoi truoc may. CHI chay bo TC cua tab: {tabs} (bo TC chung mac dinh, moi tab mot lenh "
-    "`rcr-check --tab \"<tab>\" --case all`, tab sau chay khi tab truoc xong). KHONG chay tab FO / base / delta, KHONG "
+    "ngoi truoc may. CHI chay bo TC: {tabs} (moi bo mot lenh: {lenh_bo}; bo sau chay khi bo truoc xong). "
+    "Bo `--tc iaa` / `--tc gen-ngam` rcr-check tu dung tu sheet goc; dong tool khong tu cham duoc thi cham tay theo "
+    "muc 5b, dieu kien khong tao duoc (nho dev gia lap...) thi BLOCKED kem ly do. KHONG chay tab FO / base / delta, KHONG "
     "chay checklist Next-Gen, KHONG truyen --sdk, BO muc 3c (check ID ads). Preflight van chay nhung truyen "
     "--bo-qua-plan (lech plan tuan khong phai ly do dung). Tab khong co case nao chay duoc (app khong co key cua "
     "SDK do / tab trong) -> ghi ro trong tom_tat, khong phai loi. Moi may la may test AdMob, ad_click khong phai ly do "
@@ -184,7 +188,7 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
          next_gen: bool = False, sdk: str = "", sub_version: str = "",
          bo_qua_plan: bool = False, tabs: list[str] | None = None) -> tuple[list[str], str]:
     """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
-    `tabs`: luot /check tinh_nang - chi chay cac tab SDK rieng (gia tri trong TAB_TINH_NANG).
+    `tabs`: luot /check tinh_nang - chi chay cac tab SDK rieng (TAB_TINH_NANG) / bo dung tu sheet goc (NGUON_TINH_NANG).
     Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt.
     `next_gen`: bot da cai ban release vi tin build ghi next-gen -> `--next-gen` de rc-check chay checklist
     Next-Gen thay vi tu chon theo so SDK (chi 3.7.0) - AIP918 tutorial 3.7.1 bi chay nham bo TC, 29/10/2026.
@@ -205,11 +209,13 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
         cmd += ["--add-dir", str(audit)]
     cmd += ["--allowedTools", *TOOLS]
     if tabs and not cases:                           # /check tinh_nang: chi tab SDK rieng
-        sai = [t for t in tabs if t not in TAB_TINH_NANG]
+        sai = [t for t in tabs if t not in TAB_TINH_NANG + NGUON_TINH_NANG]
         if sai:                                      # ten tab di vao prompt -> chi nhan dung danh sach co dinh
             raise ValueError(f"tab tính năng không hợp lệ: {sai!r}")
+        co = [f"--tc {t}" if t in NGUON_TINH_NANG else f'--tab "{t}"' for t in tabs]
         return cmd, PROMPT_TINH_NANG.format(package=package, serial=serial, tabs=", ".join(tabs),
-                                            tab_arg=" ".join(f'--tab "{t}"' for t in tabs))
+                                            tab_arg=" ".join(co),
+                                            lenh_bo=", ".join(f"`rcr-check {c} --case all`" for c in co))
     if sub_version and not cases:                    # /check-sub: ca bo TC sub
         if not VERSION_RE.fullmatch(sub_version):
             raise ValueError(f"version không hợp lệ: {sub_version!r}")

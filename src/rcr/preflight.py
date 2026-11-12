@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from . import (ad_units_sheet, app_sandbox, device_app, fa_log, net_ctl, plan_tuan, rc_snapshot, sdk_probe,
-               tc_catalog, tc_source)
+               tc_catalog, tc_source, tc_tinh_nang_rieng)
 from .cau_hinh_bot import env
 from .adb_parsers import AdbError
 from .models import RcError
@@ -229,6 +229,14 @@ def muc_plan(package: str, sdk_khai: str, sdk_log: str, out_dir, ngay: dt.date |
 
 def _sheets(package: str, tc: str, out_dir) -> list[dict]:
     ra = []
+    if tc_tinh_nang_rieng.la_nguon(tc):           # IAA / gen ngam: dung duoc bo case la sheet goc dung khuon
+        try:
+            _, _, link = tc_tinh_nang_rieng.dung(tc, package, out_dir)
+            ra.append(_muc("Sheet testcase", OK, f"dựng bộ {tc} từ {link}"))
+        except RcError as exc:
+            ra.append(_muc("Sheet testcase", LOI, str(exc), "Bổ sung sheet gốc rồi chạy lại"))
+        ra.append(_sheet_id_ads(package, out_dir))
+        return ra
     try:
         path = tc_source.tai_ve(tc, out_dir)
         if not Path(path).exists():

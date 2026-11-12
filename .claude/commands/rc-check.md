@@ -168,6 +168,20 @@ riêng này không thuộc FO — user không nhắc thì **đừng tự chạy*
 `/check` ô `tinh_nang`, user chốt 11/11/2026): **chọn tab nào chạy tab đó** — không FO, không checklist Next-Gen, không
 `--sdk`, **bỏ 3c**, preflight kèm `--bo-qua-plan`; nhiều tab thì mỗi tab một lệnh rồi `--gop` thành một report.
 
+Hai bộ tính năng **không nằm trong sheet TC chung** (user chốt 12/11/2026) — truyền `--tc <tên>` thay cho link, tool
+tải lại sheet gốc mỗi lệnh (cả `--gop`/`--tiep`) rồi dựng bộ case, phần còn lại chạy như bộ TC thường:
+- `--tc iaa`: mục **"3. ID ads inapp"** của tab app (dòng `Package name`) trong sheet "Check thông số KT" — QA dán kịch bản
+  IAA vào đó. Mỗi vị trí (cặp high + thường) ra 4 case `IAA-<vị trí>-01..04`: bật cả hai / chỉ thường / chỉ high / tắt
+  remote. Expected của case `-01` = **nguyên văn từng dòng cột Ad description** (không thêm câu tự viết) + dòng ID →
+  phần tool không tự chấm được thì chấm tay theo 5b. Mục 3 trống → tool dừng, báo QA dán kịch bản.
+  **Chấm IAA đúng chính xác từng câu cột Ad description** (user chốt 12/11/2026), bằng `logcat -v epoch`, không chấm bằng mắt: load/preload
+  đúng màn + đúng thời điểm (giờ request so với lúc vào màn / bấm nút), show đúng màn, reload đúng chu kỳ (≥ 3 lần liên
+  tiếp, lệch ≤ 1s) và đúng sự kiện (back về Home, chọn lý do, hide app…), giới hạn số lần (1 ad/session, `*_fail_time`),
+  tắt remote → 0 request của vị trí. Mỗi vế của câu mô tả là một kết luận riêng; vế nào không đo được thì không PASS.
+- `--tc gen-ngam`: tab "TC Gen ngầm" (khuôn bộ TC, lượt E2E "Tiếp nối" → luôn `--chuoi`) của sheet
+  `https://docs.google.com/spreadsheets/d/1FORGiI5X_N6HTmYyFdSiXCsAu7q91vTd59BfoGULT8c/edit`. Đổi sheet: `RC_TC_GEN_NGAM`.
+Bot gọi qua `/check` ô `tinh_nang` = `iaa` / `gen ngầm`.
+
 ```
 # a. chi doc baseline
 cd <repo> && <bin>/rcr-check --package <pkg> [--serial <S>]

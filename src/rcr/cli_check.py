@@ -26,7 +26,7 @@ from pathlib import Path
 from . import (
     ad_units, bot_hang_doi, case_run, cham_tay, luot_file, preflight, rc_baseline, rc_dex_keys, run_batch, sdk_probe,
     discord_notify,
-    discord_run_message, tc_select, tc_source,
+    discord_run_message, tc_select, tc_source, tc_tinh_nang_rieng,
 )
 from . import tong_hop_sdk
 from .adb_client import AdbClient
@@ -191,7 +191,15 @@ async def _tren_may(args: argparse.Namespace, client, serial: str, started: floa
             baseline = await rc_dex_keys.bo_sung(client, baseline, runs[0], args.out_dir, _log)
     if args.tc:
         tc_nguon = args.tc
-        if tc_source.la_link(args.tc):
+        if tc_tinh_nang_rieng.la_nguon(args.tc):
+            # Bo TC tinh nang ngoai sheet chung (IAA tu sheet KT, gen ngam tu checklist): tai lai sheet goc
+            # moi lenh roi dung lai file xlsx dung khuon bo TC.
+            _log(f"Dung bo TC {args.tc} tu sheet goc moi nhat...")
+            args.tc, doi, out["tc_link"] = tc_tinh_nang_rieng.dung(args.tc, args.package, args.out_dir)
+            if doi and (args.gop or args.tiep):
+                _log("CANH BAO: sheet TC da doi so voi ban da tai truoc do -> doi chieu lines[].e cua cac case "
+                     "da cham voi ky vong moi")
+        elif tc_source.la_link(args.tc):
             out["tc_link"] = args.tc
             # Moi lenh chay (ca --gop/--tiep) deu tai lai sheet: QA hay sua tab TC giua chung (user chot
             # 05/11/2026). Ban moi khac ban dang dung -> bao de doi chieu ky vong cac case da cham.
@@ -319,7 +327,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--package", required=True, help="package id cua app")
     p.add_argument("--serial", help="serial may (bat buoc khi cam nhieu may)")
-    p.add_argument("--tc", help="file testcase .xlsx, hoac link Google Sheet (tu tai ban moi nhat)")
+    p.add_argument("--tc", help="file testcase .xlsx, link Google Sheet (tu tai ban moi nhat), hoac `iaa` "
+                                 "(muc 3 ID ads inapp o sheet KT) / `gen-ngam` (sheet checklist gen ngam)")
     p.add_argument("--sdk", default="",
                    help="ban SDK FO cua app, vd 3.2.0 - mac dinh tu do tu logcat")
     p.add_argument("--next-gen", action="store_true",
