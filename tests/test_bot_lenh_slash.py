@@ -235,3 +235,8 @@ def test_check_tinh_nang_xep_job_chi_tab_da_chon(tmp_path):
     assert len(bot.q.jobs) == 2
     assert "đã trong hàng đợi" in asyncio.run(s.xep_check_tinh_nang(bot, tin, nguoi, ["rating"]))
     assert s.CHON_TINH_NANG["cả 3"] == ["rating", "widget", "daily checkin"]
+
+
+def test_check_tinh_nang_iaa_gen_ngam_la_lua_chon():
+    assert s.CHON_TINH_NANG["iaa"] == ["iaa"] and s.CHON_TINH_NANG["gen ngầm"] == ["gen-ngam"]
+    assert len(s.CHON_TINH_NANG) <= 25

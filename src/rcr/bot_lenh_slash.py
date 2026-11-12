@@ -37,7 +37,9 @@ MAX_GOI_Y = 25                     # Discord: toi da 25 goi y autocomplete
 SDK_HOP_LE = re.compile(r"^(?:\d+\.\d+\.\d+|next-?gen|revert next-?gen)$", re.I)
 # /check tinh_nang: tab SDK rieng trong bo TC chung (khong thuoc FO) - chi chay khi QA chon (user chot 11/11/2026).
 CHON_TINH_NANG = {"rating": ["rating"], "widget": ["widget"], "daily checkin": ["daily checkin"],
-                  "cả 3": ["rating", "widget", "daily checkin"]}
+                  "cả 3": ["rating", "widget", "daily checkin"],
+                  # Khong la tab sheet chung: rcr-check dung tu muc 3 ID ads inapp (sheet KT) / sheet gen ngam.
+                  "iaa": ["iaa"], "gen ngầm": ["gen-ngam"]}
 ICON_TRANG_THAI = {"reviewing": "⏳", "closed": "✅", "done": "✅", "reopened": "🔁", "to do": "🔁"}
 
 
@@ -56,8 +58,8 @@ def dang_ky(bot) -> None:
     @tree.command(name="check", description="Gửi tin hỏi Check cho một build (chạy lại hoặc build bot chưa thấy)")
     @app_commands.describe(ma_app="Mã app, vd AIP922", version="Version kèm code, vd 3.7.0 (30)",
                            sdk="Chỉ cần khi bot chưa thấy tin build: số SDK (3.6.1, 3.7.0…) hoặc next-gen",
-                           tinh_nang="Chỉ chạy bộ TC SDK tính năng này (rating / widget / daily checkin), "
-                                     "không chạy FO, không check ID ads")
+                           tinh_nang="Chỉ chạy bộ TC tính năng này (rating / widget / daily checkin / iaa / "
+                                     "gen ngầm), không chạy FO, không check ID ads")
     @app_commands.choices(tinh_nang=[app_commands.Choice(name=ten, value=ten) for ten in CHON_TINH_NANG])
     @app_commands.autocomplete(ma_app=goi_y_ma)
     async def check(it: discord.Interaction, ma_app: str, version: str, sdk: str | None = None,
@@ -270,9 +272,9 @@ async def lenh_check_tinh_nang(bot, it: discord.Interaction, ma_app: str, versio
 
 async def xep_check_tinh_nang(bot, tin: dict, nguoi, tabs: list[str]) -> str:
     """Luot chi chay tab SDK tinh nang QA chon: khong FO, khong checklist Next-Gen, khong check ID ads."""
-    ds = ", ".join(tabs)
+    ds = ", ".join(tabs).replace("gen-ngam", "gen ngầm")
     return await _xep_luot_rieng(bot, tin, nguoi, {"loai_job": "tinh_nang", "tabs": list(tabs)}, "⭐",
-                                 f"Check {ds}", f"Chỉ bộ TC SDK {ds} (không FO, không check ID ads), bản release "
+                                 f"Check {ds}", f"Chỉ bộ TC {ds} (không FO, không check ID ads), bản release "
                                  "từ App Tester", "/check")
 
 

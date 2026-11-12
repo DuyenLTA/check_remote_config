@@ -176,3 +176,9 @@ def test_luot_tinh_nang_chi_chay_tab_chon_bo_check_id_ads():
     assert "BO muc 3c" in prompt and "KHONG chay checklist Next-Gen" in prompt and "--bo-qua-plan" in prompt
     with pytest.raises(ValueError):
         c.lenh("pkg.a", "S1", tabs=["rating; rm -rf /"])
+
+
+def test_luot_tinh_nang_iaa_gen_ngam_dung_tu_sheet_goc():
+    _, prompt = c.lenh("pkg.a", "S1", tabs=["iaa", "gen-ngam"])
+    assert prompt.startswith("/rc-check pkg.a --serial S1 --tc iaa --tc gen-ngam\n")
+    assert "`rcr-check --tc iaa --case all`" in prompt and "BLOCKED" in prompt
