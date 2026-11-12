@@ -19,7 +19,7 @@ from pathlib import Path
 
 from . import app_tester_link
 from . import app_tester_screens as s
-from . import device_app, screencap, ui_dump
+from . import device_app, mo_khoa_may, screencap, ui_dump
 from .adb_parsers import AdbError, parse_debuggable
 
 MAX_CUON_DS = 40          # danh sach ~93 app (29/10/2026), moi lan cuon ~5 dong
@@ -44,6 +44,8 @@ async def danh_thuc(client, serial) -> None:
     await client.shell(serial, "input", "keyevent", "KEYCODE_WAKEUP")
     await client.shell(serial, "wm", "dismiss-keyguard")
     await asyncio.sleep(1)
+    # May dat PIN 0000 / pattern chu L (luat user 12/11/2026): tu mo khoa, khong dung cho nguoi.
+    await mo_khoa_may.mo_khoa(client, serial)
 
 
 async def _nodes(client, serial):

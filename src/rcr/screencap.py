@@ -99,6 +99,13 @@ async def capture(client, serial: str, giu_png: bool = False) -> dict:
     if code != 0 or not out:
         return {"thumb": "", "warning": f"khong chup duoc: {(err or '').strip() or 'anh rong'}"}
     note = warning(out)
+    if note:
+        # Anh den: may tat man / khoa giua luot -> bat man + mo khoa roi chup lai mot lan.
+        from . import mo_khoa_may
+        if await mo_khoa_may.can_mo(client, serial) and await mo_khoa_may.mo_khoa(client, serial):
+            out2, _, code2 = await runner("-s", serial, "exec-out", "screencap", "-p", timeout=CAPTURE_TIMEOUT)
+            if code2 == 0 and out2:
+                out, note = out2, warning(out2)
     ra = {"thumb": to_thumb(out), "warning": note}
     if giu_png:
         ra["png"] = out

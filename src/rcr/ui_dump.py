@@ -165,6 +165,10 @@ async def dump(client, serial: str) -> str:
         # (do 24/10/2026, Piclux 2.4.0: 14/22 case BLOCKED vi loi nay).
         if "null root node" not in joined or lan == NULL_ROOT_RETRIES:
             break
+        if lan == 0:
+            # May tat man / bi khoa giua luot cung bao "null root node" -> bat man + mo khoa roi dump lai.
+            from . import mo_khoa_may
+            await mo_khoa_may.mo_khoa(client, serial)
         await asyncio.sleep(NULL_ROOT_WAIT)
     if "ERROR" in joined.upper() or "Exception" in joined:
         raise AdbError(f"uiautomator dump that bai: {joined.strip()}")

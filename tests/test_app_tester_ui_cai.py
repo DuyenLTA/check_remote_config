@@ -287,7 +287,9 @@ def test_mo_app_tester_thi_bat_man_truoc(monkeypatch):
     monkeypatch.setattr(ui.asyncio, "sleep", khong)
     with pytest.raises(DaMo):
         asyncio.run(ui.mo_chi_tiet(Client(), "S1", "pkg.a", Path(".")))
-    assert lenh == [("input", "keyevent", "KEYCODE_WAKEUP"), ("wm", "dismiss-keyguard"), ("launch", ui.s.APP_TESTER)]
+    # Sau WAKEUP + dismiss-keyguard: mot lenh dumpsys kiem man khoa (may da mo -> khong gui phim nao them).
+    assert lenh == [("input", "keyevent", "KEYCODE_WAKEUP"), ("wm", "dismiss-keyguard"),
+                    (ui.mo_khoa_may.LENH_TRANG_THAI,), ("launch", ui.s.APP_TESTER)]
 
 
 def test_dump_null_root_thi_bat_man_doi_roi_chup_lai(monkeypatch):
