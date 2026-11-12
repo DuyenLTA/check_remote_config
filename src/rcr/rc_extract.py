@@ -157,6 +157,14 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
     # `<absent>` la quy uoc "server khong tra key", khong phai cho trong.
     holes = sorted(k for k, v in overrides.items()
                    if rc_guards.PLACEHOLDER_RE.search(v.replace(rc_variants.ABSENT, "")))
+    if holes and len(holes) < len(overrides):
+        # Cho trong kem key cu the khac (`feedback_email = <email ASO cua store>` canh show_rating_placement...):
+        # cho trong mo ta gia tri THAT cua app -> khong patch key do, giu gia tri app dang co, chay phan con lai.
+        # Truoc day chan ca nhom rating R01/R02 (14 case AIP892, 12/11/2026) chi vi o email.
+        ignored = tuple(sorted(set(ignored) | set(holes)))
+        overrides = {k: v for k, v in overrides.items() if k not in holes}
+        from_pre = tuple(k for k in from_pre if k not in holes)
+        holes = []
     if holes:
         return RcCaseData(
             overrides={},
