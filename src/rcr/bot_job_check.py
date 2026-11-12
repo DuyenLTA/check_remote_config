@@ -14,8 +14,8 @@ from pathlib import Path
 
 import discord
 
-from . import (audit_tom_tat, bot_chay_claude, bot_cho_publish, bot_cong_viec, bot_dung_luot, bot_forum, bot_hop_thu_bug,
-               bot_kiem_testvsl, build_ma_app, usage_log)
+from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_forum, bot_hop_thu_bug,
+               bot_kiem_testvsl, bot_report_may_phu, build_ma_app, usage_log)
 from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import XAM, XANH, nut
 
@@ -106,7 +106,9 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
                       attachments=[],
                       view=nut(*nut_ket_qua(job, kq), msg_id=job["msg_id"]))
         if f:   # chua co artifact -> phien publish lam, bot thay link vao tin nay (khong gui HTML)
-            bot_cho_publish.them(out, f, qa.channel.id, qa.id, bot_cong_viec.dau_tin(job))
+            # May phu: gui HTML sang bot chinh (chi bot chinh co phien publish) - bot_report_may_phu.
+            await bot_report_may_phu.them(bot, out, f, qa.channel.id, qa.id, bot_cong_viec.dau_tin(job),
+                                          f"{job.get('ma', '')} {job.get('version', '')}".strip())
         bot.q.cap_nhat(job, da_bao=True)
         await bot_forum.dat_nhan(bot, job, bot_forum.nhan_ket_qua(kq))
     else:

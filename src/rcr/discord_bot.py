@@ -40,7 +40,7 @@ from discord import app_commands
 from . import (audit_tom_tat, bot_bat_tin_lo, bot_canh_may, bot_chay_claude, bot_cho_publish, bot_cong_viec,  # noqa: F401 - test thay
                bot_dung_luot, bot_forum, bot_gui_lai, bot_hang_doi, bot_hoi_dap, bot_hop_thu_bug, bot_jira_rest, bot_job_check, bot_job_verify,
                bot_kenh_project, bot_keo_sprint, bot_lenh_slash, bot_log_jira, bot_may_phu, bot_nhan_build,
-               bot_nut_bam, bot_tien_trinh)
+               bot_nut_bam, bot_report_may_phu, bot_tien_trinh)
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .bot_giao_dien import XAM, XANH, noi_dung  # noqa: F401 - ten cu, test / module khac van dung
@@ -165,6 +165,8 @@ class BuildBot(discord.Client):
                 await bot_may_phu.nhan_o_may_phu(self, *goi, m.channel)
             elif goi[0] == "bug":            # luot chay tay o may phu co bug -> bot chinh dang menu
                 await bot_hop_thu_bug.nhan_tu_may_phu(self, goi[1])
+            elif goi[0] == bot_report_may_phu.LOAI:   # report luot o may phu -> hang cho publish cua may nay
+                await bot_report_may_phu.nhan_o_may_chinh(self, m, goi[1])
             else:
                 bot_may_phu.nhan_o_may_chinh(self, *goi)
         except Exception:                    # noqa: BLE001 - mot tin hong khong duoc giet bot

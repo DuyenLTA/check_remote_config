@@ -16,7 +16,7 @@ from pathlib import Path
 import discord
 
 from . import (bot_chay_claude, bot_cho_publish, bot_cong_viec, bot_dung_luot, bot_forum, bot_jira_marker, bot_kenh_project,
-               bot_kiem_testvsl)
+               bot_kiem_testvsl, bot_report_may_phu)
 from . import bot_jira_rest as jira
 from . import bot_tin_goc as tin_goc
 from . import bot_verify_jira as v
@@ -190,7 +190,8 @@ async def _bao_ket_qua(bot, job: dict, vm, out: Path) -> None:
                      "attachments": []}
     await vm.edit(**noi_dung)
     if f and not job.get("da_bao"):
-        bot_cho_publish.them(out, f, vm.channel.id, vm.id, f"{job.get('ma', '')} {job.get('version', '')}".strip())
+        khoa = f"{job.get('ma', '')} {job.get('version', '')}".strip()
+        await bot_report_may_phu.them(bot, out, f, vm.channel.id, vm.id, khoa, khoa)   # may phu -> bot chinh
     bot.q.cap_nhat(job, da_bao=True)
     if not job.get("da_ping"):
         await tin_goc.ping_xong(bot, vm, f"🔔 Verify **{job['ma']}** `{job['version']}` xong (xem tin gốc).")

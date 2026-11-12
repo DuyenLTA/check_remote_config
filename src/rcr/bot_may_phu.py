@@ -12,6 +12,7 @@ kenh dieu phoi rieng (`DISCORD_DIEU_PHOI_CHANNEL_ID`) bang tin `RCR <loai> <may>
   phu -> chinh  `tra`        nhan job nhung may test vua ban / rut cap -> tra lai hang
   phu -> chinh  `song`       moi SONG giay khi dang chay: msg_id cac job con chay -> bot chinh khong thu hoi
   phu -> chinh  `xong`       chay xong; kem tin build sau luot (danh sach bug de QA tick o bot chinh)
+  phu -> chinh  `report`     report HTML cua luot (file thu hai) -> hang cho publish cua bot chinh (bot_report_may_phu)
   chinh -> phu  `dung`       QA bam Dung luot dang chay o may phu -> may phu giet ca cay tien trinh + don RC
 
 May phu chay job bang dung code cua bot chinh (`_chay_tren`): cung token nen sua / tra loi duoc tin cua bot o kenh
@@ -34,6 +35,7 @@ from . import bot_canh_may, bot_chay_claude, bot_cong_viec, bot_gui_lai, bot_han
 
 log = logging.getLogger("rcr-bot")
 TIEN_TO = "RCR"
+TEN_JSON = "rcr.json"
 # Xin roi ma chua duoc giao: bot chinh van nho yeu cau (hang trong thi cho), ca hai lan lo tin da co
 # `chinh_khoi_dong` moi lan bot chinh ket noi phien moi. Xin lai dinh ky chi la luoi an toan -> thua, tranh spam.
 XIN_LAI = 2 * 3600
@@ -47,17 +49,21 @@ SONG = 5 * 60
 HAN_MAY_PHU = 30 * 60
 
 
-async def gui(kenh, loai: str, du_lieu: dict) -> None:
-    """JSON di bang file dinh kem: job verify / tin co danh sach bug de vuot 2000 ky tu."""
+async def gui(kenh, loai: str, du_lieu: dict, kem: discord.File | None = None) -> None:
+    """JSON di bang file dinh kem: job verify / tin co danh sach bug de vuot 2000 ky tu. `kem`: file thu hai
+    (report HTML cua tin `report`), JSON van dung dau."""
     raw = json.dumps(du_lieu, ensure_ascii=False).encode("utf-8")
-    await kenh.send(f"{TIEN_TO} {loai} {du_lieu.get('may', '')}", file=discord.File(io.BytesIO(raw), "rcr.json"))
+    goi = discord.File(io.BytesIO(raw), TEN_JSON)
+    chu = f"{TIEN_TO} {loai} {du_lieu.get('may', '')}"
+    await (kenh.send(chu, files=[goi, kem]) if kem is not None else kenh.send(chu, file=goi))
 
 
 async def doc(m) -> tuple[str, dict] | None:
     phan = (m.content or "").split()
     if len(phan) < 2 or phan[0] != TIEN_TO or not m.attachments:
         return None
-    return phan[1], json.loads(await m.attachments[0].read())
+    a = next((a for a in m.attachments if getattr(a, "filename", "") == TEN_JSON), m.attachments[0])
+    return phan[1], json.loads(await a.read())
 
 
 # --- bot chinh ---------------------------------------------------------------------------
