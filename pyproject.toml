@@ -17,6 +17,7 @@ dependencies = [
 # CLI cho slash command /rc-check - chay mot luot, khong can mo web UI.
 [project.scripts]
 rcr-check = "rcr.cli_check:main"
+rcr-do-thoi-gian = "rcr.do_thoi_gian:main"
 rcr-artifact = "rcr.cli_artifact:main"
 rcr-notify = "rcr.discord_notify:main"
 rcr-sdk-check = "rcr.cli_sdk_check:main"

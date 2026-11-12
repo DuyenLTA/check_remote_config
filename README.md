@@ -551,3 +551,16 @@ bot trả riêng cho người gõ hai link của app trên Confluence.
 ```
 
 Suite dùng `FakeAdb` với nội dung file **thật** đọc từ máy, nên gác đúng schema thật.
+
+## Đo thời gian từng phần của rc-check (`rcr-do-thoi-gian`)
+
+Lượt chấm chậm bất thường thì đo xem thời gian nằm ở đâu (đọc màn, chờ, Firebase, chụp màn…) trước khi sửa tool.
+Lần đo AIP918 (12/11/2026, vivo): `uiautomator dump` 28%, chờ cố định 18%, Firebase 13%, bấm/vuốt chỉ 1%.
+
+```bash
+# chạy vài case như rcr-check thường, kèm đo — in bảng ở cuối, lưu số đo ra file
+.venv/bin/rcr-do-thoi-gian chay --ra out/do-<app>.json -- --package <pkg> --serial <serial> --tc <link sheet> --case "<key1>,<key2>"
+.venv/bin/rcr-do-thoi-gian bang out/do-<app>.json "uiautomator dump"   # chi tiết một loại theo nơi gọi trong code
+.venv/bin/rcr-do-thoi-gian so-dong out/run-a.luot.json out/run-b.luot.json   # so kết quả từng dòng trước / sau khi sửa
+```
+Chỉ đọc, không đổi cách chấm; lượt đo vẫn đổi Remote Config như lượt thường và tự trả về cuối lượt.
