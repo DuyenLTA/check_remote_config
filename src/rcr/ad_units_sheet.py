@@ -64,18 +64,15 @@ def doc_tab(path, package: str) -> dict[str, str]:
 
 
 def tai(package: str, out_dir, link: str | None = None) -> tuple[dict[str, str], str]:
-    """-> (bang ID, ghi chu). Tai hong thi dung ban da tai lan truoc (neu co)."""
+    """-> (bang ID, ghi chu). Tai hong -> ({}, loi): KHONG lui ve ban da tai lan truoc - QA sua sheet lien tuc,
+    cham theo ban cu la cham sai (user chot 12/11/2026: check gi cung phai cap nhat sheet lien quan truoc)."""
     # Doc env luc goi chu khong luc import: dat bien trong phien dang chay van an.
     link = link or os.environ.get("RC_AD_UNITS_SHEET") or LINK
     try:
         path = tc_source.tai_ve(link, out_dir)
         nguon = "sheet Check thông số KT (bản mới tải)"
     except RcError as exc:
-        sheet_id = tc_source.SHEET_RE.search(link).group(1)
-        cu = Path(out_dir) / f"tc-{sheet_id}.xlsx"
-        if not cu.exists():
-            return {}, f"không tải được sheet Check thông số KT: {exc}"
-        path, nguon = cu, "sheet Check thông số KT (bản tải lần trước — lần này tải hỏng)"
+        return {}, f"không tải được bản mới nhất sheet Check thông số KT: {exc}"
     bang = doc_tab(path, package)
     if not bang:
         return {}, f"sheet Check thông số KT {THIEU_TAB} {package}"
