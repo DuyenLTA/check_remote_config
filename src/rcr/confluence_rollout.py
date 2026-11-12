@@ -5,6 +5,7 @@
 - Checklist: file Google Sheet rieng cua app (vd "AIP893 - Glovy - ... - Checklist"), khong nam o trang Rollout ma
   duoc dan o cac trang version cua app dang `Checklist: <link sheet>`. Lay link sheet dau tien co chu "checklist"
   dung ngay truoc, tren trang sua gan nhat duoi trang app. Bo "Checklist test" (sheet test chung, khong cua app).
+  Mot ma app co the co nhieu trang app trung ma (vd mot trang rong moi tao) -> tim trong moi trang ung vien.
 
 Can CONFLUENCE_BASE_URL + CONFLUENCE_TOKEN (PAT) - doc qua `cau_hinh_bot.env` (env -> bien User Windows -> bot.env),
 khong co thi dung lai dong `export CONFLUENCE_...` trong ~/.bashrc (cung cap ma `spec_sync` dang dung).
@@ -28,6 +29,7 @@ UA = "Mozilla/5.0"
 SO_TRANG_DO = 25                      # so trang con (sua gan nhat) doc body de tim link checklist
 LINK_SHEET = re.compile(r'href="(https://docs\.google\.com/spreadsheets/d/[^"]+)"')
 TRUOC_LINK = 80                       # so ky tu chu (da bo the) truoc link de tim nhan "checklist"
+SO_APP_TOI_DA = 10                    # so trang app ung vien toi da gop vao mot CQL tim checklist
 
 
 class ConfluenceLoi(Exception):
@@ -116,31 +118,59 @@ def chon_checklist(ung_vien: list[tuple[str, dict]], ma: str, doc_ten=ten_sheet)
     return du_phong, bo
 
 
+def cac_trang_app(trang: list[dict], ma: str, ro: dict | None = None) -> list[dict]:
+    """Moi trang app ung vien (mot ma app co the co nhieu trang cung ten, vd mot trang rong + mot trang that):
+    cha cua trang Rollout truoc, roi cac trang co ma app khong nam duoi trang co ma app khac, trang cao trong cay truoc
+    (cung cap thi giu thu tu sua gan nhat)."""
+    co_ma = [p for p in trang if _co_ma(p["title"], ma)]
+    id_co_ma = {p["id"] for p in co_ma}
+    goc = sorted((p for p in co_ma if not any(a["id"] in id_co_ma for a in p.get("ancestors") or [])),
+                 key=lambda p: len(p.get("ancestors") or []))
+    ra, da_co = [], set()
+    for p in ([ro["ancestors"][-1]] if ro and ro.get("ancestors") else []) + goc:
+        if p["id"] not in da_co:
+            da_co.add(p["id"])
+            ra.append(p)
+    return ra[:SO_APP_TOI_DA]
+
+
+def _thuoc_app(p: dict, apps: list[dict]) -> dict | None:
+    """Trang app ung vien chua trang p (chinh no hoac to tien gan nhat)."""
+    to_tien = [p["id"]] + [a["id"] for a in reversed(p.get("ancestors") or [])]
+    return next((a for i in to_tien for a in apps if a["id"] == i), None)
+
+
 def tim(ma_app: str) -> dict:
-    """{"ma", "rollout": {title, url} | None, "checklist": {url, trang, trang_url} | None, "app": title | None}."""
+    """{"ma", "rollout": {title, url} | None, "checklist": {url, trang, trang_url} | None, "app": title | None,
+    "bo": [ten file app khac], "rong": [trang app khong co link checklist]}."""
     ma = ma_app.strip().upper()
     base, token = _cau_hinh()
-    ra: dict = {"ma": ma, "rollout": None, "checklist": None, "app": None}
+    ra: dict = {"ma": ma, "rollout": None, "checklist": None, "app": None, "bo": [], "rong": []}
     d = _get(base, token, "/rest/api/content/search", limit=50, expand="ancestors",
              cql=f'type=page AND title ~ "{ma}" ORDER BY lastmodified DESC')
     trang = d.get("results", [])
     ro = chon_trang_rollout(trang, ma)
     if ro:
         ra["rollout"] = {"title": ro["title"], "url": base + ro["_links"]["webui"]}
-        app = (ro.get("ancestors") or [None])[-1]
-    else:                                 # khong co Rollout: trang app = trang co ma app nam cao nhat trong cay
-        cac = [p for p in trang if _co_ma(p["title"], ma)]
-        app = min(cac, key=lambda p: len(p.get("ancestors") or []), default=None)
-    if not app:
+    apps = cac_trang_app(trang, ma, ro)
+    if not apps:
         return ra
-    ra["app"] = app["title"]
-    con = _get(base, token, "/rest/api/content/search", limit=SO_TRANG_DO, expand="body.storage",
-               cql=f'(ancestor={app["id"]} OR id={app["id"]}) AND type=page AND text ~ "checklist" '
-                   "ORDER BY lastmodified DESC")
-    ung_vien = [(link, {"trang": p["title"], "trang_url": base + p["_links"]["webui"]})
-                for p in con.get("results", [])
-                for link in link_checklist(p.get("body", {}).get("storage", {}).get("value", ""))]
-    ra["checklist"], ra["bo"] = chon_checklist(ung_vien, ma)
+    ra["app"] = apps[0]["title"]
+    pham_vi = " OR ".join(f"ancestor={a['id']} OR id={a['id']}" for a in apps)
+    con = _get(base, token, "/rest/api/content/search", limit=SO_TRANG_DO, expand="body.storage,ancestors",
+               cql=f'({pham_vi}) AND type=page AND text ~ "checklist" ORDER BY lastmodified DESC')
+    ung_vien, co_link = [], set()
+    for p in con.get("results", []):
+        app = _thuoc_app(p, apps)
+        for link in link_checklist(p.get("body", {}).get("storage", {}).get("value", "")):
+            co_link.add(app["id"] if app else None)
+            ung_vien.append((link, {"trang": p["title"], "trang_url": base + p["_links"]["webui"],
+                                    "app": app["title"] if app else None}))
+    ra["checklist"], ra["bo"] = chon_checklist(ung_vien, ma, doc_ten=ten_sheet)
+    if ra["checklist"] and ra["checklist"].get("app"):
+        ra["app"] = ra["checklist"]["app"]
+    if len(apps) > 1:
+        ra["rong"] = [a["title"] for a in apps if a["id"] not in co_link]
     return ra
 
 
@@ -156,4 +186,6 @@ def tin_tra_loi(kq: dict) -> str:
         dong.append("• Checklist: không thấy link checklist trên các trang của app")
     if kq.get("bo"):
         dong.append(f"  Bỏ qua link checklist của app khác: {', '.join(kq['bo'][:3])}")
+    if kq.get("rong"):
+        dong.append(f"  Trang {kq['ma']} không có link checklist: {', '.join(kq['rong'][:3])}")
     return "\n".join(dong)

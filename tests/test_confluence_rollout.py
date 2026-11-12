@@ -73,6 +73,37 @@ def test_thieu_cau_hinh_bao_loi(monkeypatch, tmp_path):
         raise AssertionError("phai bao thieu cau hinh")
 
 
+def _p(id_, title, ancestors=(), body=""):
+    return {"id": id_, "title": title, "_links": {"webui": f"/p/{id_}"},
+            "ancestors": [{"id": a, "title": a} for a in ancestors], "body": {"storage": {"value": body}}}
+
+
+def test_cac_trang_app_giu_ca_hai_trang_trung_ma():
+    trang = [_p("moi", "AIP924 - LingoSpeak", ["VL"]), _p("cu", "AIP924 - LingoSpeak", ["VL"]),
+             _p("v1", "AIP924 Ver 1.0", ["VL", "cu"])]
+    assert [a["id"] for a in c.cac_trang_app(trang, "AIP924")] == ["moi", "cu"]
+
+
+def test_tim_hai_trang_app_trung_ma_trang_moi_rong(monkeypatch):
+    """Trang AIP924 sua gan nhat rong, checklist nam o trang con cua trang AIP924 con lai -> van tim ra."""
+    tim_trang = [_p("moi", "AIP924 - LingoSpeak", ["VL"]), _p("cu", "AIP924 - LingoSpeak", ["VL"])]
+    co_checklist = [_p("v2", "Ver 2.0.0", ["VL", "cu"], f'<p>Checklist: <a href="{SHEET_B}">x</a></p>')]
+
+    def gia_get(base, token, path, **params):
+        if "body.storage" in params["expand"]:
+            assert "id=moi" in params["cql"] and "id=cu" in params["cql"]
+            return {"results": co_checklist}
+        return {"results": tim_trang}
+
+    monkeypatch.setattr(c, "_cau_hinh", lambda: ("https://conf", "t"))
+    monkeypatch.setattr(c, "_get", gia_get)
+    monkeypatch.setattr(c, "ten_sheet", lambda l: "AIP924 - LingoSpeak - Checklist")
+    kq = c.tim("aip924")
+    assert kq["checklist"]["url"] == SHEET_B and kq["checklist"]["trang"] == "Ver 2.0.0"
+    assert kq["app"] == "AIP924 - LingoSpeak" and kq["rong"] == ["AIP924 - LingoSpeak"]
+    assert "không có link checklist" in c.tin_tra_loi(kq)
+
+
 def test_tin_tra_loi_du_hai_link():
     kq = {"ma": "AIP918", "app": "AIP918", "rollout": {"title": "AIP918 - Rollout", "url": "https://r"},
           "checklist": {"url": SHEET_A, "ten": "AIP918 - Checklist", "trang": "Ver 2.1.0", "trang_url": "https://v"},
