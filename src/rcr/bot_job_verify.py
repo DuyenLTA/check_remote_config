@@ -100,7 +100,8 @@ async def _ung_vien_chua_xong(bot, ma: str) -> list[dict]:
 
 
 def _dev_bao_fix(u: dict) -> bool:
-    return str(u.get("status") or "").casefold() in {x.casefold() for x in jira.CHO_QA_VERIFY}
+    """Resolved (dev bao fix, chua keo Reviewing): FAIL thi keo To Do nhu Reviewing."""
+    return str(u.get("status") or "").casefold() == "resolved"
 
 
 def _o_reviewing(u: dict) -> bool:

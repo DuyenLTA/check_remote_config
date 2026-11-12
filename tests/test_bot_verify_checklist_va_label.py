@@ -70,7 +70,7 @@ def test_tim_auto_qa_chua_xong_va_trang_thai(fake):
     jr.tim_auto_qa(URL, TOKEN, "AIP920", chua_xong=True)
     q = urllib.parse.parse_qs(urllib.parse.urlsplit(fake["req"][0].full_url).query)
     assert q["jql"][0] == ('project = AIP920 AND labels = "auto-qa" AND (statusCategory != Done OR status in '
-                           '(Resolved)) ORDER BY key')
+                           '(Resolved, Reviewing)) ORDER BY key')
     assert jr.trang_thai(URL, TOKEN, ["AIP920-4", "AIP920-3", "x y"]) == {
         "AIP920-3": {"ten": "Backlog", "xong": False}, "AIP920-4": {"ten": "Closed", "xong": True}}
 
@@ -80,6 +80,13 @@ def test_resolved_la_dev_bao_fix_chua_xong(fake):
     fake["tra"] = [{"issues": [
         {"key": "AIP918-147", "fields": {"status": {"name": "Resolved", "statusCategory": {"key": "done"}}}}]}]
     assert jr.trang_thai(URL, TOKEN, ["AIP918-147"]) == {"AIP918-147": {"ten": "Resolved", "xong": False}}
+
+
+def test_reviewing_nhom_done_van_chua_xong(fake):
+    """jira.apero.vn xep Reviewing vao nhom Done (AIP918-147 21:03): bam Verify tay van phai lay."""
+    fake["tra"] = [{"issues": [
+        {"key": "AIP918-147", "fields": {"status": {"name": "Reviewing", "statusCategory": {"key": "done"}}}}]}]
+    assert jr.trang_thai(URL, TOKEN, ["AIP918-147"]) == {"AIP918-147": {"ten": "Reviewing", "xong": False}}
 
 
 @pytest.mark.parametrize("project", ["aip920", 'AIP920" OR 1=1', "A", "", "AIP920 AND x"])

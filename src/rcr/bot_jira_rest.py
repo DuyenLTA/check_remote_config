@@ -30,9 +30,10 @@ CHO_THU_LAI = 5.0
 # Dich khi verify xong, theo thu tu uu tien (ten transition hoac trang thai dich).
 DICH_PASS = ("Done", "Closed")
 DICH_FAIL = ("To Do", "Reopened")
-# Trang thai Jira xep nhom Done nhung nghia la "dev bao da fix, cho QA verify" (jira.apero.vn: To Do -> Resolved,
-# AIP918-147 12/11/2026). Verify tay phai lay ca nhom nay, khong coi la xong.
-CHO_QA_VERIFY = ("Resolved",)
+# Trang thai Jira xep nhom Done nhung nghia la "dev bao da fix, cho QA verify": tren jira.apero.vn ca Resolved LAN
+# Reviewing deu thuoc statusCategory Done (do AIP918-147 12/11/2026) -> loc "statusCategory != Done" bo sot ca hai.
+# Verify tay phai lay ca nhom nay, khong coi la xong.
+CHO_QA_VERIFY = ("Resolved", "Reviewing")
 
 
 class JiraLoi(RuntimeError):
