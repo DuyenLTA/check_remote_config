@@ -482,6 +482,9 @@ nhận link Google Drive nữa.
 - `/check-bug <mã app>` — bug bot đã log + trạng thái Jira; có bug Reviewing thì nút **Verify** trên build gần nhất.
 - `/check-sub <mã app> <version>` — chỉ QA được duyệt. Xếp lượt chạy **bộ TC sub Android** (xem mục dưới) trên bản
   release từ App Tester; kết quả + menu log bug như Check, mã case trong Jira là `sub#<số TC>`.
+- `/rollout <mã app>` — link trang **Rollout** của app trên Confluence + link **Checklist** (sheet riêng của app, lấy
+  từ dòng `Checklist: <link>` ở trang version sửa gần nhất). Link checklist mà tên file ghi mã app khác (copy template)
+  thì bỏ. Bot cần `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` trong `~/.config/rcr/bot.env`.
 Bot thiếu scope `applications.commands` ở server nào thì lệnh không hiện ở server đó (log bot ghi rõ), bot vẫn chạy.
 
 **Forum `qa-builds` — mỗi build một bài** (`DISCORD_FORUM_CHANNEL_ID`, để trống thì như cũ): build mới có SDK →

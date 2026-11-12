@@ -44,7 +44,7 @@ def test_dang_ky_du_ba_lenh():
         bot = SimpleNamespace(tree=app_commands.CommandTree(client))
         s.dang_ky(bot)
         return sorted(c.name for c in bot.tree.get_commands())
-    assert asyncio.run(chay()) == ["check", "check-bug", "check-sub", "hang-doi"]
+    assert asyncio.run(chay()) == ["check", "check-bug", "check-sub", "hang-doi", "rollout"]
 
 
 def test_doc_lenh_check():
