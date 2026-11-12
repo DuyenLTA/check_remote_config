@@ -157,3 +157,11 @@ def test_trang_cau_hoi_da_chon_thi_khong_chon_lai():
     da_chon = OB_CAU_HOI.replace('clickable="true" enabled="false"', 'clickable="true" enabled="true"')
     assert fo_flow.dap_an_can_chon(nodes(da_chon)) is None
     assert fo_flow.dap_an_can_chon(nodes(OB3_SKIP)) is None
+
+
+def test_paywall_revenuecat_chi_back_khong_bam_continue():
+    # Paywall RevenueCat: nut X khong co node, chu "Continue" la nut MUA -> luat chi cho roi BACK.
+    luat = fo_flow.rule_for("com.x.revcat.RevenueCatPaywallActivity", fo_flow.rules()["rules"])
+    assert luat and luat["match"] == "RevenueCatPaywallActivity"
+    assert {"key": "KEYCODE_BACK"} in luat["steps"]
+    assert not any("tap" in b or "tap_close" in b or "tap_continue" in b for b in luat["steps"])

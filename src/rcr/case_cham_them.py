@@ -14,7 +14,8 @@ PRIMARY_RE = re.compile(r"m[àa]u\s+(?:primary|ch[ủu]\s*[đd][ạa]o)", re.I)
 # "vao thang Home", "Vao Home binh thuong", "-> Home"
 HOME_RE = re.compile(r"v[àa]o\s+(?:th[ẳa]ng\s+)?home|→\s*home|v[ềe]\s+home", re.I)
 # Man chen giua ma luong user cu / sau Question van di qua truoc khi toi Home.
-CHUA_TOI_HOME = ("AdActivity", "BillingActivity", "Splash")
+# PaywallActivity: paywall RevenueCat (Linguza 11/11/2026) dung sau OB, dong bang BACK roi moi toi Home.
+CHUA_TOI_HOME = ("AdActivity", "BillingActivity", "PaywallActivity", "Splash")
 TOI_THIEU, GAP = 40, 3
 
 

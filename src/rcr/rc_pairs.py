@@ -59,8 +59,11 @@ def clean(val: str) -> str:
     # Gia tri dung o cuoi dong: dong sau la mo ta (`true\n New user`)
     v = val.strip().split("\n", 1)[0].strip()
     # `true; luong FO ...`, `true, tat ca toggle ads` - sau `;`/`,` la mo ta.
-    # Gia tri co dau phay that thi TC phai de trong nhay (`"result, exit_click"`).
-    if v[:1] not in "\"'“":
+    # Gia tri co dau phay that thi TC phai de trong nhay (`"result, exit_click"`)
+    # - TRU danh sach toan token tron (`result, exit_click, app_shortcut, home`):
+    # mo ta luon co khoang trang, con list enum thi khong; cat o day la dat
+    # config chi con phan tu dau, lech han y TC.
+    if v[:1] not in "\"'“" and not _la_danh_sach_token(v):
         v = re.split(r"[;,]", v, maxsplit=1)[0].strip()
     prev = None
     while v != prev:
@@ -86,6 +89,15 @@ def clean(val: str) -> str:
     if v.startswith("“") and v.endswith("”"):
         return v[1:-1]
     return v.lower() if v.lower() in ("true", "false") else v
+
+
+_TOKEN_LIST_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*)+[\s.]*")
+
+
+def _la_danh_sach_token(v: str) -> bool:
+    """`a, b, c` toan identifier, phan tu dau khong phai boolean (`true, x` la mo ta)."""
+    return bool(_TOKEN_LIST_RE.fullmatch(v)) and v.split(",", 1)[0].strip().lower() not in (
+        "true", "false")
 
 
 def _balanced_end(text: str, start: int) -> int:

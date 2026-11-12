@@ -233,6 +233,9 @@ def find_close_native_full(nodes: list[DeviceNode], screen: tuple[int, int],
     return nut
 
 
+THUT_VAO_TOI_THIEU = 20   # px: bien the ngon ngu thut vao hon hang cha it nhat chung nay
+
+
 def language_targets(nodes: list[DeviceNode], language: str, bien_the: str = "") -> list[DeviceNode]:
     """Cac node can bam de chon `language`, theo dung thu tu.
 
@@ -251,8 +254,10 @@ def language_targets(nodes: list[DeviceNode], language: str, bien_the: str = "")
         return [row]
     # Hang bung: bien the la cac hang THUT VAO nam ngay duoi hang cha.
     variants = []
+    # Thut vao THAT (Linguza 11/11/2026: bien the lui 75px; hang checkbox ke ben chi lech 3px - 202 vs 205 - va
+    # bi tinh nham la bien the cua English, case chon "English (US)" dung o LFO1).
     for n in sorted((n for n in rows if n.bounds.top > row.bounds.bottom), key=lambda n: n.bounds.top):
-        if n.bounds.left <= row.bounds.left:
+        if n.bounds.left <= row.bounds.left + THUT_VAO_TOI_THIEU:
             break                     # het nhom bien the cua hang nay
         variants.append(n)
     if variants:

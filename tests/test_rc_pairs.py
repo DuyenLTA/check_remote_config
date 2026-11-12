@@ -22,6 +22,21 @@ def test_chu_thich_default_sau_gia_tri_co_nhay():
                    "show_rating_button_x": "2"}
 
 
+def test_danh_sach_enum_khong_nhay_giu_ca_danh_sach():
+    """Tab TC SDK rating ghi list khong nhay; cat o dau phay la chi con `result`."""
+    got = pairs("show_rating_placement=result, exit_click, app_shortcut, home\n"
+                "show_rating_button_x=2\nrating_threshold=4")
+    assert got == {"show_rating_placement": "result, exit_click, app_shortcut, home",
+                   "show_rating_button_x": "2", "rating_threshold": "4"}
+
+
+def test_true_phay_mo_ta_mot_tu_van_cat():
+    from rcr.rc_pairs import clean
+
+    assert clean("true, abc") == "true"
+    assert clean("true, tat ca toggle ads") == "true"
+
+
 def test_chu_thich_hoac_sau_gia_tri():
     assert pairs("1. splash_ui_config = false (hoặc chuỗi rỗng).") == {"splash_ui_config": "false"}
 

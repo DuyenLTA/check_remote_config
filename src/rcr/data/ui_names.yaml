@@ -72,7 +72,7 @@ bo_cuc:
 chon_item:
   ids: [ivQuestionImage, tvQuestionTitle, itemStyle, rootStyleItem]
   # Nut cta hien SAU khi chon mot o ("FR - Go") - buoc "Bam '<chu cta>'" ma nut chua hien: chon o dau roi bam.
-  cta: [btnNextQuestion]
+  cta: [btnNextQuestion, btnNextOnboardingImage]   # Linguza 2.5.0 (SDK 3.7.2): btnNextOnboardingImage
 
 # Bat tester mode: bam icon o splash 25 lan (sau khi cap quyen thong bao) -> toast "Change to tester ad mode",
 # app in tag FOR_TESTER_CONFIG. Do that AIP886 2.7.0 / AIP936 1.8.0 (SDK VslTemplate4): splashAppIcon.

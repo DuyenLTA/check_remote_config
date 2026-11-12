@@ -71,4 +71,12 @@ rules:
       - tap: {text: Continue with ads}
       - key: KEYCODE_BACK
 
+  # Paywall RevenueCat (vd Linguza): nut X ve bang Compose, khong co node -> chi BACK (do 11/11/2026: BACK
+  # dong paywall, vao MainActivity). KHONG tim chu "Continue": o paywall nay do la nut MUA goi.
+  - match: RevenueCatPaywallActivity
+    repeat_from: 1
+    steps:
+      - wait: 3
+      - key: KEYCODE_BACK
+
 home_match: MainActivity

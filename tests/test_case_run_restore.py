@@ -21,3 +21,18 @@ def test_restore_ban_release_khong_snapshot_thi_go_testvsl(monkeypatch, tmp_path
     monkeypatch.setattr(case_run.rc_patch, "restore", restore)
     ra = asyncio.run(case_run.restore_saved(None, "com.a.b", "S1", tmp_path))
     assert goi == ["p"] and ra["restored"] and ra["written"] == ["firebase:testvsl"]
+
+
+def test_do_gif_xong_tra_id_inter_splash_ve_goc(monkeypatch):
+    ghi = []
+
+    async def patch(client, baseline, overrides):
+        ghi.append(overrides)
+
+    monkeypatch.setattr(case_run.rc_patch, "patch", patch)
+    bl = SimpleNamespace(configs={"id_102_spl_o_inter_high": "ca-app-pub-1/3083132989"})
+    asyncio.run(case_run.tra_id_inter_splash(None, bl, {"a": "1"},
+                                             {"id_102_spl_o_inter_high": "ca-app-pub-1/0000000001"}))
+    assert ghi == [{"a": "1", "id_102_spl_o_inter_high": "ca-app-pub-1/3083132989"}]
+    asyncio.run(case_run.tra_id_inter_splash(None, bl, {"a": "1"}, {}))
+    assert len(ghi) == 1

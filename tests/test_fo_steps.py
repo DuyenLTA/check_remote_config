@@ -10,6 +10,7 @@ Diem phai gac:
 from __future__ import annotations
 
 import pytest
+from pathlib import Path
 
 from rcr import fo_steps, ui_dump
 
@@ -280,3 +281,11 @@ def test_ad_test_khong_co_node_nut_dong_van_nhan_ra_la_ad_test():
 
 def test_ad_that_khong_phai_ad_test():
     assert not fo_steps.la_ad_test(nodes(AD_TEST_KHONG_NUT.replace("Quảng cáo thử nghiệm", "Sponsored")))
+
+
+def test_hang_checkbox_lech_vai_px_khong_phai_bien_the():
+    # Linguza: English (hang bung, left 202) nam tren Hindi (hang checkbox, left 205). Hindi khong phai bien the
+    # cua English -> chua bung thi phai bam bung English, khong tim "English (US)" trong danh sach Hindi.
+    xml = (Path(__file__).parent / "fixtures" / "uidump_lfo1_hang_checkbox_lech_3px.xml").read_text(encoding="utf-8")
+    ra = fo_steps.language_targets(ui_dump.parse_dump(xml), "English", "English (United States)")
+    assert ra and ra[0].text == "English" and ra[1] == "expanded"

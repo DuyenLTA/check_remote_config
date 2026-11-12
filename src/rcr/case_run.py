@@ -283,7 +283,10 @@ async def _lai_cham_tra(client, baseline, overrides, keep, out_dir, steps, expec
                     await client.shell(baseline.serial, *lenh)
                 await device_app.launch(client, baseline.serial, baseline.package)
                 await asyncio.sleep(splash_media.CHO_LAN_DAU)
-            da = await splash_media.quay_lan_mo_lai(client, baseline.serial, baseline.package)
+            try:
+                da = await splash_media.quay_lan_mo_lai(client, baseline.serial, baseline.package)
+            finally:
+                await tra_id_inter_splash(client, baseline, overrides, giu)
             sm = splash_media.phan_tich(nen_splash, da | {"xml": ""}, baseline.package, Path(out_dir) / "media")
             sm["lan_mo_lai"] = True
             sm["giu_splash"] = bool(giu)
@@ -412,6 +415,15 @@ async def _hien_cta_neu_can(client, baseline, drive: dict, expects, mau_can, log
     await asyncio.sleep(1.0)
     await chup(cuoi, await ui_dump.dump(client, baseline.serial))
     drive["steps"] = (drive.get("steps") or []) + chup_man.danh_so(da_chup, len(drive.get("steps") or []) + 1)
+
+
+async def tra_id_inter_splash(client, baseline, overrides: dict, giu: dict) -> None:
+    """Tra ID inter splash (da doi sang slot trong de do GIF) ve gia tri goc ngay sau khi quay.
+
+    Giu slot trong thi case noi tiep / case sau cung luot chay voi inter splash khong bao gio fill
+    (Linguza 11/11/2026: O01/OG01 old user request …/0000000001 thay vi 102-spl-o-inter that)."""
+    if giu:
+        await rc_patch.patch(client, baseline, dict(overrides) | {k: baseline.configs[k] for k in giu})
 
 
 async def _lai_not_toi_home(client, baseline, drive: dict, mau_can, log_fn) -> None:

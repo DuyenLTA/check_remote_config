@@ -119,3 +119,9 @@ def test_ngon_ngu_lan_theo_chuoi_tiep_noi():
              "3.6.1#SDK361-R01-04": {"precondition": "1. Tiếp nối SDK361-R01-03 (cùng lượt, không clear data).",
                                      "actions": ["Đi tiếp qua OB2."]}}
     assert fo_ngon_ngu.tim_theo_chuoi("3.6.1#SDK361-R01-04", cases) == ("Français", "Français")
+
+
+def test_paywall_revenuecat_chua_phai_home_thi_lai_tiep():
+    from rcr import case_cham_them
+    drive = {"final": {"activity": "com.x.revcat.RevenueCatPaywallActivity"}}
+    assert case_cham_them.can_ve_home(["Bấm 'FR - Go' → vào Home."], drive)
