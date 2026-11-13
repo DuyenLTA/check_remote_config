@@ -42,8 +42,13 @@ TC_MAC_DINH = "https://docs.google.com/spreadsheets/d/1sNFXM7oGzx_addpimZL7RYk2r
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / "out"
 
 
+_BAT_DAU = time.monotonic()
+
+
 def _log(msg: str) -> None:
-    print(msg, file=sys.stderr, flush=True)
+    # Moc [+phut:giay] tu luc bat dau lenh: doc log la thay buoc nao ton thoi gian (do de rut ngan luot).
+    t = int(time.monotonic() - _BAT_DAU)
+    print(f"[+{t // 60:02d}:{t % 60:02d}] {msg}", file=sys.stderr, flush=True)
 
 
 async def pick_serial(client, wanted: str | None) -> str:

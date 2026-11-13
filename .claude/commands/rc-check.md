@@ -208,7 +208,9 @@ cd <repo> && <bin>/rcr-check --package <pkg> --set splash_banner_change=false
 - Case định danh **`<tab>#<số>`** hoặc `<tab>#<TC ID>` (`3.5.0#12`, `3.4.0#SDK340-SPL-001`); TC ID không trùng thì truyền
   thẳng (`SDK350-OB3X-013`). Mơ hồ thì tool dừng và liệt kê — **đừng chọn bừa**.
 - Chạy cả tab: lấy danh sách case chạy được từ kiểu (b), truyền hết vào `--case`. ~1 phút/case → (c) luôn
-  `run_in_background`, ghi stdout/stderr vào scratchpad; chỉ báo khi có FAIL, case hỏng, hoặc xong.
+  `run_in_background`, ghi stdout/stderr vào scratchpad; chỉ báo khi có FAIL, case hỏng, hoặc xong. Chờ bằng thông báo
+  xong của lệnh nền hoặc `tail --pid=<pid> -f /dev/null` — **cấm `until … pgrep -f`** (tự khớp chính nó, chờ tới
+  hết timeout: 4 lượt bot mất 32 phút). Dòng stderr có mốc `[+phút:giây]` để thấy bước nào chậm.
 - stdout là **đúng một dòng JSON** (`baseline`, `tc`, `run`); tiến độ ra stderr.
 - **Đừng truyền `--khong-claude`** (dành cho `chay-khong-claude.bat`, lượt không agent).
 - Kết quả ghi đĩa **sau mỗi case** vào file lượt (`out/run-x.html` → `out/run-x.luot.json`). Lượt bị tắt giữa chừng →

@@ -39,3 +39,9 @@ def ly_do_khong_chay_lai(result: dict, dau_truoc: tuple | None) -> str:
     if dau_truoc is not None and dau_van(result) == dau_truoc:
         return "lần này ra y hệt lần trước ở mọi dòng"
     return ""
+
+
+def dong_mo(result: dict) -> list:
+    """[(so dong, verdict, ly do rut gon)] cac dong chua PASS/FAIL cua mot lan chay (ghi vao lich su chay lai)."""
+    return [(l.get("n"), l["verdict"], (l.get("reason") or "")[:160]) for l in _dong(result)
+            if l["verdict"] not in (PASS, FAIL)]

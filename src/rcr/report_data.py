@@ -123,6 +123,7 @@ def case_record(key: str, row: dict, result: dict) -> dict:
         # Moi lan chay lai cua case: FAIL phai lap lai moi duoc bao, lech nhau
         # (PASS/FAIL) thi nguoi doc phai thay - khong duoc an trong verdict cuoi.
         "lich_su_verdict": result.get("lich_su_verdict") or [],
+        "lich_su_dong": result.get("lich_su_dong") or [],
         "khong_on_dinh": bool(result.get("khong_on_dinh")),
         "ad_click": result.get("ad_click", 0),
         # Lan dau bi ad_click (may test AdMob) roi chay lai sach: report van phai thay.

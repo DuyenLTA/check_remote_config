@@ -7,8 +7,9 @@ dong_neu_co / cho_chu / ve_man - chay bang `rating_cong_thuc`), them buoc rieng 
   back: <so lan>           bam BACK
   mo_lai: <regex man goc>  force-stop + mo icon (session moi, "1 ad/session") roi lai FO toi man goc
   dong_ad: <giay>          cho toi <giay> (mac dinh 6) xem ad co hien khong (inter hien tre 1-2s sau khi bam), co thi dong
-  shortcut: <id>           shortcut launcher cua app theo ID (doc nhan that tu `dumpsys shortcut`: "uninstall" tren may
-                           tieng Viet la "Go cai dat" - TRUNG chu lenh go cua launcher). `app: <regex nhan icon>`.
+  shortcut: <regex id>     shortcut launcher cua app theo ID (doc nhan that tu `dumpsys shortcut`: "uninstall" tren may
+                           tieng Viet la "Go cai dat" - TRUNG chu lenh go cua launcher). Icon tim theo ten app doc tu APK
+                           (aapt); `app: <regex>` de ghi de.
                            Bam xong ma thay trinh go cai dat he thong -> BACK huy, bao loi (khong bao gio go that)
   xem_ads_chu: <regex nut> man cung activity (Compose): bam nut xem ad toi khi thay `toi_chu: <regex>`, dong ad giua
                            chung; node co chu ma bounds rong (AIP893 'Watch Ads (0/2)') thi bam `tap_tai: [x, y]` (ty le man);
@@ -16,6 +17,7 @@ dong_neu_co / cho_chu / ve_man - chay bang `rating_cong_thuc`), them buoc rieng 
   ve_chu: <regex>          ve man goc nhan theo CHU (app Compose: moi man chung mot activity, `ve_man` bao xong ngay):
                            lai FO / mo lai app neu can, dong ad, BACK toi khi thay chu. `man: <regex activity>`
   nhap: <chu>              go chu vao o nhap (tim theo `o: <regex chu goi y>`), ban phim dang mo thi an di
+  tap_neu_co: <regex>      bam neu co (nut them cua mot so app cung khuon); man da co chu `khi_thieu: <regex>` thi bo qua
 Duong lai chia DOAN; doan hong (het gio, khong thay nut) thi ghi lai va sang doan sau - mot nut doi chu khong lam
 mat ca luot. Moi doan nen bat dau bang `ve_man` ve Home.
 """
@@ -36,18 +38,19 @@ AD_TRUOC_BUOC = ("tap", "tap_duoi", "cho_chu", "chon_anh")
 
 
 def duong_lai(package: str) -> list[dict] | None:
-    """[{ten, buoc: [...]}] cua app; chua khai -> None."""
-    import yaml
-    data = yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}
-    return data.get(package)
+    """Duong lai da khai cho app (rieng / ghim khuon); app chua khai thi `iaa_khuon.chon` nhan khuon tren may."""
+    from . import iaa_khuon
+    return iaa_khuon.doan_khai_san(package)[1]
 
 
 async def nhan_shortcut(client, serial: str, package: str, sid: str) -> str:
-    """Nhan (shortLabel) cua shortcut `sid` cua app, theo ngon ngu may."""
+    """Nhan (shortLabel) cua shortcut co id khop regex `sid` (vd "(?i)uninstall": app dat id uninstall / UNINSTALL /
+    shortcut_uninstall), theo ngon ngu may."""
     out, _, _ = await client.shell(serial, "dumpsys", "shortcut")
     khoi = re.split(r"ShortcutInfo \{", out or "")
     for k in khoi:
-        if k.startswith(f"id={sid},") and f"packageName={package}" in k:
+        m_id = re.match(r"id=([^,]+),", k)
+        if m_id and re.fullmatch(sid, m_id.group(1)) and f"packageName={package}\n" in k + "\n":
             m = re.search(r"shortLabel=([^,]+), resId", k)
             if m:
                 return m.group(1).strip()
@@ -57,6 +60,13 @@ async def nhan_shortcut(client, serial: str, package: str, sid: str) -> str:
 async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, log: list[str]) -> bool:
     """Nhan giu icon app tren launcher roi bam muc shortcut. Activity cua shortcut thuong khong export ->
     `am start` bi chan (AIP893 13/11/2026), chi launcher mo duoc."""
+    if not nhan_app:
+        from . import iaa_khuon
+        ten = await iaa_khuon.nhan_icon(client, serial, package)
+        if not ten:
+            log.append("không đọc được tên icon từ APK (cần aapt trong Android SDK) — khai `app:` cho bước shortcut")
+            return False
+        nhan_app = f"^{re.escape(ten)}"
     nhan = await nhan_shortcut(client, serial, package, sid)
     if not nhan:
         log.append(f"app không có shortcut id={sid!r} (dumpsys shortcut)")
@@ -67,17 +77,19 @@ async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, 
         await asyncio.sleep(1.0)
     for trang in range(TRANG_LAUNCHER_TOI_DA):
         nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
-        icon = rating_cong_thuc.tim(nodes, nhan_app)
-        if icon:
+        # Launcher co the co nhieu icon cung ten (ban cai khac / app khac trung ten, Pixel 4 13/11/2026: hai icon
+        # "Sorapix: AI Hair Changer") -> thu lan luot; shortcut chi tinh khi man mo ra dung package dang test.
+        icons = [n for n in nodes if rating_cong_thuc._khop(n, nhan_app) and not n.bounds.empty]
+        for icon in icons:
             x, y = icon.bounds.center
             await client.shell(serial, "input", "swipe", str(x), str(y), str(x), str(y), "1500")
             await asyncio.sleep(1.5)
-            nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
-            nut = rating_cong_thuc.tim(nodes, muc)
+            nut = rating_cong_thuc.tim(ui_dump.parse_dump(await ui_dump.dump(client, serial)), muc)
             if not nut:
-                log.append(f"nhấn giữ icon nhưng không thấy mục shortcut {muc!r}")
+                log.append(f"nhấn giữ icon ({x},{y}) không thấy mục shortcut {muc!r}")
                 await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
-                return False
+                await asyncio.sleep(1.0)
+                continue
             await device_app.tap(client, serial, *nut.bounds.center)
             await asyncio.sleep(2.0)
             pkg, act = await device_app.focus(client, serial)
@@ -86,6 +98,11 @@ async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, 
                     await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
                     await asyncio.sleep(1.0)
                 log.append(f"mục {nhan!r} mở trình gỡ cài đặt của hệ thống — đã huỷ, không gỡ")
+                return False
+            if pkg and pkg != package:
+                # Shortcut cua app KHAC trung ten: thoat ra, khong lam gi tren app do (HOME ve trang 1 -> dung tim).
+                log.append(f"icon ({x},{y}) mở app khác ({pkg}) — thoát, không lái app đó")
+                await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
                 return False
             log.append(f"shortcut {nhan}")
             return True
@@ -107,7 +124,20 @@ async def _dong_ad_neu_co(client, serial: str, log: list[str]) -> bool:
 
 async def _ve_chu(client, serial: str, package: str, b: dict, log: list[str]) -> bool:
     het = time.monotonic() + float(b.get("toi_da", 150))
+    back = 0
     while time.monotonic() < het:
+        if back and back % 4 == 0:
+            # Ket (trinh chon anh / man ngoai app nuot BACK): BACK mai chi phi thoi gian -> dua app len lai.
+            # Lan 2 van ket thi force-stop + mo lai (phien moi - ghi vao log de biet doan sau khong cung phien).
+            if back >= 8:
+                await client.shell(serial, "am", "force-stop", package)
+                log.append("mở lại app từ đầu (phiên mới) vì BACK không về được màn gốc")
+            else:
+                log.append("đưa app lên lại (BACK không về được màn gốc)")
+            await client.shell(serial, "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1")
+            await asyncio.sleep(3.0)
+            back += 1
+            continue
         if not await rating_cong_thuc._mot_buoc(client, serial, package,
                                                 {"ve_man": b.get("man", "MainActivity"), "toi_da": 120}, log):
             return False
@@ -116,6 +146,7 @@ async def _ve_chu(client, serial: str, package: str, b: dict, log: list[str]) ->
         if rating_cong_thuc.tim(await rating_cong_thuc._nodes(client, serial, package), b["ve_chu"]):
             return True
         await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        back += 1
         log.append("BACK (chưa thấy chữ màn gốc)")
         await asyncio.sleep(1.5)
     log.append(f"không về được màn có chữ {b['ve_chu']!r}")
@@ -173,6 +204,20 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
             await asyncio.sleep(1.2)
         log.append(f"BACK ×{b['back']}")
         return True
+    if "tap_neu_co" in b:
+        # Buoc phu cua khuon chung: app co them nut (AIP885 tab Video Studio -> the "Image to Video" + nut Generate)
+        # thi bam; man da co chu `khi_thieu` (app khac vao thang man tinh nang) thi bo qua. Khong thay nut = bo qua.
+        await asyncio.sleep(float(b.get("cho_truoc", 2.0)))
+        await _dong_ad_neu_co(client, serial, log)
+        nodes = await rating_cong_thuc._nodes(client, serial, package)
+        if b.get("khi_thieu") and rating_cong_thuc.tim(nodes, b["khi_thieu"]):
+            return True
+        node = rating_cong_thuc.tim(nodes, b["tap_neu_co"])
+        if node:
+            await device_app.tap(client, serial, *node.bounds.center)
+            await asyncio.sleep(rating_cong_thuc.NHIP)
+            log.append(f"bấm {node.text or node.content_desc}")
+        return True
     if "dong_ad" in b:
         het = time.monotonic() + float(b["dong_ad"] if not isinstance(b["dong_ad"], bool) else 6)
         while time.monotonic() < het:
@@ -221,7 +266,7 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
         log.append(f"nhập {b['nhap']!r}")
         return True
     if "shortcut" in b:
-        return await _shortcut(client, serial, package, b.get("app", package), str(b["shortcut"]), log)
+        return await _shortcut(client, serial, package, b.get("app", ""), str(b["shortcut"]), log)
     return await rating_cong_thuc._mot_buoc(client, serial, package, b, log)
 
 
@@ -246,6 +291,10 @@ async def lai(client, serial: str, package: str, doan: list[dict], file_log: Pat
                             break
                     except rating_cong_thuc.HetLuot as exc:
                         nhat_ky.append(f"app báo hết lượt: {exc}")
+                        xong = False
+                        break
+                    except Exception as exc:          # dump UI loi thoang qua (vivo: "No such file") -> hong doan nay
+                        nhat_ky.append(f"lỗi ở bước {b}: {type(exc).__name__}: {str(exc)[:160]}")
                         xong = False
                         break
                 kq.append({"ten": d.get("ten", ""), "xong": xong, "log": nhat_ky})

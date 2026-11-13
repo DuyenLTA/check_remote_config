@@ -1,88 +1,102 @@
-# Duong lai bo IAA (`rcr-iaa chay`) - moi app mot muc theo package, chia DOAN; doan hong thi sang doan sau.
-# Buoc: xem src/rcr/iaa_lai.py (ve_chu / cho / back / mo_lai / dong_ad / shortcut / nhap / xem_ads_chu) va
+# Duong lai bo IAA (`rcr-iaa chay`) theo KHUON (template app) - xem src/rcr/iaa_khuon.py.
+# App chua khai: tool lai toi Home, chon khuon co `nhan_dien` khop chu tren Home -> chay luon, khong phai do duong lai.
+# Buoc: src/rcr/iaa_lai.py (ve_chu / cho / back / mo_lai / dong_ad / shortcut / nhap / xem_ads_chu) va
 # src/rcr/rating_cong_thuc.py (ve_man / dong_neu_co / tap / tap_duoi / cho_man / cho_chu / chon_anh / xem_ads).
-# Lai CUNG duong cho ca 4 bien the: tool cham "0 request" o bien the tat nho log bien the bat cung duong.
-# App moi: do man theo docs/rc-check/iaa-chay-theo-nhom.md muc "Do duong lai cho app moi", khai vao day.
+# Lai CUNG duong cho ca 4 bien the. App lech chu: THEM chu cua app vao regex (A|B), dung tach muc rieng.
 
-# AIP893 AI Photo Video Slideshow 2.6.0 - do 13/11/2026 tren vivo V2143. Moi man nam trong MainActivity (Compose):
-# nhan man bang chu (ve Home bang `ve_chu`). Ve Home thuong co popup Add Widget / Rate us (nut Close). Loading = chu
-# "<so>%". Het luot gen free trong ngay -> 'Daily Free limit Reached': doan reward/loading/result dung (doi hom sau /
-# may khac, KHONG mua sub). Icon launcher 'Glovy - AI Photo Generator' (vivo: trang 9).
-com.aiphotogenerator.aivideomaker.photoslideshow:
-  - ten: Home (preload inter feature/style, banner reload 10s)
-    buoc:
-      - ve_chu: "^Text to Image Generate$"
-        toi_da: 180
-      - dong_neu_co: "^(Close|Close sheet)$"
-      - cho: 35
-  - ten: Image to Image bằng prompt (inter feature, native prompt, reward, loading, result)
-    buoc:
-      - ve_chu: "^Text to Image Generate$"
-      - dong_neu_co: "^(Close|Close sheet)$"
-      - tap: "^Image to Image Generate$"
-      - dong_ad: 6
-      - cho_chu: "^Tap To Upload$"
-      - cho: 3
-      - tap: "^Tap To Upload$"
-      - chon_anh: true
-      - cho: 4
-      - nhap: "a cat in space"
-        o: "^What do you have in mind\\?$"
-      - tap: "^Generate$"
-      - xem_ads_chu: "^(Watch Ads \\(\\d/\\d\\)|Free Generate)$"
-        tap_tai: [0.5, 0.935]
-        toi_chu: "^\\d{1,3}%$"
-        dung_neu: "^Daily Free limit Reached$"
-        toi_da: 180
-      - cho: 25
-  - ten: Text to Image (inter feature, màn nhập prompt preload reward/native loading)
-    buoc:
-      - ve_chu: "^Text to Image Generate$"
-      - dong_neu_co: "^(Close|Close sheet)$"
-      - tap: "^Text to Image Generate$"
-      - dong_ad: 6
-      - cho: 8
-      - back: 1
-  - ten: Image to Video bằng prompt
-    buoc:
-      - ve_chu: "^Text to Image Generate$"
-      - dong_neu_co: "^(Close|Close sheet)$"
-      - tap: "^Image to Video Generate$"
-      - dong_ad: 6
-      - cho_chu: "^Tap To Upload$"
-      - cho: 3
-      - tap: "^Tap To Upload$"
-      - chon_anh: true
-      - cho: 6
-      - back: 1
-  - ten: Style ở Home (inter style 1 lần/session, reward sau Confirm, loading)
-    buoc:
-      - ve_chu: "^Text to Image Generate$"
-      - dong_neu_co: "^(Close|Close sheet)$"
-      - tap_duoi: "^AI Try On Outfits$"
-      - dong_ad: 6
-      - chon_anh: true
-        toi_da: 40
-      - xem_ads_chu: "^(Watch Ads \\(\\d/\\d\\)|Free Generate)$"
-        tap_tai: [0.5, 0.935]
-        toi_chu: "^\\d{1,3}%$"
-        dung_neu: "^Daily Free limit Reached$"
-        toi_da: 180
-      - cho: 25
-  - ten: Style lần 2 cùng session (không được có inter)
-    buoc:
-      - ve_chu: "^Text to Image Generate$"
-      - dong_neu_co: "^(Close|Close sheet)$"
-      - tap_duoi: "^AI Try On Outfits$"
-        thu: 2
-      - dong_ad: 6
-      - cho: 6
-      - back: 2
-  - ten: Luồng Uninstall (shortcut launcher - không gỡ thật)
-    buoc:
-      - shortcut: uninstall                # id shortcut cua app (nhan "Gỡ cài đặt" tren may tieng Viet)
-        app: "^Glovy"
-      - cho: 8
-      - dong_ad: 6
-      - cho: 4
-      - back: 3
+khuon:
+  # App gen anh/video cung template (muc 3 sheet KT: native_loading, native_upload, native_i2i_i2v_prompt,
+  # result_img_vid, reward_img_vid, inter_feature, inter_style, native_reason_uninstall, inter_uninstall).
+  # Do 13/11/2026 tren vivo V2143: AIP893 2.6.0 (Home co nut "Text to Image Generate", hang style "AI Try On Outfits"),
+  # AIP885 (Home "Magic With AI", the "Image to Image" + nut "Generate", hang "Trending", tab "Image/Video Studio").
+  # Moi man trong MainActivity (Compose) -> nhan man bang chu. Ve Home hay co popup Add Widget / Rate us (Close).
+  # Loading = chu "<so>%". Het luot gen free trong ngay -> doan reward/loading/result dung (KHONG mua sub).
+  ai_photo:
+    nhan_dien: "^(Text to Image Generate|Magic With AI)$"
+    doan:
+      - ten: Home (preload inter feature/style, banner reload 10s)
+        buoc:
+          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
+            toi_da: 180
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - cho: 35
+      - ten: Image to Image bằng prompt (inter feature, native upload/prompt, reward, loading, result)
+        buoc:
+          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^(Image to Image Generate|Generate)$"
+          - dong_ad: 6
+          - cho_chu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
+          - cho: 3
+          - tap: "^(Tap To Upload|Upload|Upload Photo|Select Photo|Add Photo)$"   # khong khop nhan "Upload image" (chu, khong bam duoc)
+          - chon_anh: true
+          - cho: 4
+          - nhap: "a cat in space"
+            o: "(What do you have in mind|Describe|[Ee]nter .*prompt|[Tt]ype .*prompt)"
+          - tap: "^Generate$"
+          - xem_ads_chu: "^(Watch Ads.*|Free Generate|Unlock.*)$"
+            tap_tai: [0.5, 0.935]
+            toi_chu: "^\\d{1,3}%$"
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+            toi_da: 180
+          - cho: 25
+      - ten: Text to Image (inter feature, màn nhập prompt preload reward/native loading)
+        buoc:
+          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^(Text to Image Generate|Image Studio)$"
+          - dong_ad: 6
+          - tap_neu_co: "^Generate$"           # AIP885: tab Image Studio -> the Text to Image + nut Generate
+            khi_thieu: "(What do you have in mind|Describe|[Ee]nter .*prompt|[Tt]ype .*prompt)"
+          - dong_ad: 6
+          - cho: 8
+          - back: 1
+      - ten: Image to Video bằng prompt
+        buoc:
+          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^(Image to Video Generate|Video Studio)$"
+          - dong_ad: 6
+          - tap_neu_co: "^Generate$"           # AIP885: tab Video Studio -> the Image to Video + nut Generate
+            khi_thieu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
+          - dong_ad: 6
+          - cho_chu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
+          - cho: 3
+          - tap: "^(Tap To Upload|Upload|Upload Photo|Select Photo|Add Photo)$"   # khong khop nhan "Upload image" (chu, khong bam duoc)
+          - chon_anh: true
+          - cho: 6
+          - back: 1
+      - ten: Style ở Home (inter style 1 lần/session, reward sau Confirm, loading)
+        buoc:
+          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap_duoi: "^(AI Try On Outfits|Trending)$"
+          - dong_ad: 6
+          - chon_anh: true
+            toi_da: 40
+          - xem_ads_chu: "^(Watch Ads.*|Free Generate|Unlock.*)$"
+            tap_tai: [0.5, 0.935]
+            toi_chu: "^\\d{1,3}%$"
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+            toi_da: 180
+          - cho: 25
+      - ten: Style lần 2 cùng session (không được có inter)
+        buoc:
+          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap_duoi: "^(AI Try On Outfits|Trending)$"
+            thu: 2
+          - dong_ad: 6
+          - cho: 6
+          - back: 2
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"     # id: uninstall / UNINSTALL / shortcut_uninstall; nhan "Gỡ cài đặt" tren may VN
+          - cho: 8
+          - dong_ad: 6
+          - cho: 4
+          - back: 3
+
+# Ghim khuon (khong bat buoc - app chua khai tool tu nhan khuon tren Home).
+com.aiphotogenerator.aivideomaker.photoslideshow: {khuon: ai_photo}     # AIP893
+com.ai.aiimage.aivideogenerator: {khuon: ai_photo}                      # AIP885

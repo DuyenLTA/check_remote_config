@@ -13,13 +13,14 @@ dòng ID), `-02` chỉ thường, `-03` chỉ high, `-04` tắt. Tool **không l
 
 1. `rcr-check --package P --serial S --tc iaa --case all --no-actions --report out/run-P-S-iaa-<hhmmss>.html --app-label "<tên> <ver>"`
    — dựng case + file lượt + report khung (tool chỉ đặt / trả config từng case, không lái; chưa đo thời gian lượt này).
-2. App **đã có đường lái** trong `src/rcr/data/iaa_duong_lai.yaml`:
+2. Tự lái — **không cần dò đường lái cho từng app** (đường lái khai theo KHUÔN, `src/rcr/data/iaa_duong_lai.yaml`):
    ```
    <bin>/rcr-iaa chay --package P --serial S --luot out/run-…luot.json
    ```
-   Lần lượt `bat` → `thuong` → `high` → `tat`: đặt config biến thể cho **mọi vị trí** (pm clear), tool **tự lái** đường IAA
-   của app vừa ghi `logcat -v epoch -s FA-SVC:V` (`out/iaa-P-<biến thể>.log`), trả config, cuối cùng tự chấm: dòng ID của
-   `-01`, cả hai dòng `-02`/`-03`/`-04`. In từng đoạn lái `xong`/`HỎNG` + `con_cham_tay`.
+   Tải sheet KT một lần; lần lượt `bat` → `thuong` → `high` → `tat`: đặt config biến thể cho **mọi vị trí** (pm clear),
+   lái FO tới Home, nhận khuôn theo chữ trên Home (khuôn `ai_photo`: AIP885 / AIP893 / AIP922 / AIP959…), tự lái từng
+   đoạn vừa ghi `logcat -v epoch -s FA-SVC:V` (`out/iaa-P-<biến thể>.log`), trả config, cuối cùng tự chấm dòng ID của
+   `-01`, cả hai dòng `-02`/`-03`/`-04`. In từng đoạn `xong`/`HỎNG` (kèm mốc `[+phút:giây]`) + `con_cham_tay`.
 3. Claude chấm tay các dòng mô tả của `-01` từ log lượt `bat` (`out/iaa-P-bat.log`) + ảnh, bằng `rcr-check --cham-tay`
    (mỗi vế câu mô tả một kết luận; không đo được thì không PASS). Đoạn nào `HỎNG` thì đọc lý do, sửa đường lái
    (`rcr-iaa` chạy lại được từng biến thể: `--bien-the-ds bat`).
@@ -28,20 +29,24 @@ dòng ID), `-02` chỉ thường, `-03` chỉ high, `-04` tắt. Tool **không l
 Tool chấm "0 request" là PASS **chỉ khi** lượt `bat` (cùng đường lái) có request của vị trí đó — lượt lái chưa tới màn
 thì không tính. Log chung cả máy: tool lọc theo ID unit đầy đủ của sheet, app khác chạy song song không lẫn vào.
 
-## Dò đường lái cho app mới (một lần / app, ~20 phút)
+## App mới / đoạn HỎNG: sửa khuôn, không dò lại cả đường (vài phút)
 
-Lái tay một lượt theo kịch bản mục 3 (Home → từng tính năng → upload / prompt → Generate → xem ads → loading →
-result → về Home → style → luồng uninstall), mỗi màn `uiautomator dump` lấy **chữ** của nút. Khai vào
-`iaa_duong_lai.yaml` theo **đoạn** (mỗi đoạn bắt đầu `ve_chu: <chữ chỉ có ở Home>`), loại bước ở đầu `src/rcr/iaa_lai.py`:
+App cùng template (mục 3 sheet KT cùng bộ vị trí) chỉ khác **chữ** trên nút. Đoạn nào `HỎNG` thì mở đúng màn đó,
+`uiautomator dump` lấy chữ, **thêm chữ vào regex của bước** (`A|B`), đừng tách mục riêng cho app. Màn nào app có thêm
+một nút (AIP885: tab Video Studio → thẻ "Image to Video" + nút Generate) → `tap_neu_co` + `khi_thieu`. Home không
+khớp khuôn nào → thêm chữ chỉ-có-ở-Home vào `nhan_dien` (hoặc khai khuôn mới). Loại bước ở đầu `src/rcr/iaa_lai.py`:
 - App Compose (mọi màn chung một activity, như AIP893): nhận màn bằng chữ (`ve_chu`, `cho_chu`, `toi_chu`), không bằng
   activity. Màn loading nhận bằng chữ `"<số>%"`.
 - Inter hiện trễ 1–2s sau khi bấm → `dong_ad: 6` sau bước bấm; các bước tap/chờ chữ tự đóng ad (cả app open khi quay
   về app) mỗi ~5s.
 - Nút có chữ mà uiautomator trả bounds rỗng (AIP893 `Watch Ads (0/2)` ở đáy sheet) → `tap_tai: [0.5, 0.935]`.
 - Ô nhập prompt → `nhap: "<chữ>"` + `o: "<chữ gợi ý trong ô>"` (vị trí ô đổi sau khi upload ảnh, đừng tap toạ độ).
-- Luồng uninstall mở bằng shortcut launcher **theo id** (`dumpsys shortcut`, vd `uninstall`): activity không export
-  nên `am start` bị chặn; nhãn trên máy tiếng Việt là "Gỡ cài đặt" — trùng chữ lệnh gỡ của launcher, tool chọn theo
-  id và gặp trình gỡ hệ thống thì BACK huỷ. `app:` = regex tên icon (lấy `aapt dump badging … application-label`).
+- Luồng uninstall mở bằng shortcut launcher **theo id** (regex `(?i).*uninstall.*`, đọc nhãn thật từ `dumpsys
+  shortcut`): activity không export nên `am start` bị chặn; nhãn trên máy tiếng Việt là "Gỡ cài đặt" — trùng chữ lệnh
+  gỡ của launcher, tool chọn theo id và gặp trình gỡ hệ thống thì BACK huỷ. Tên icon tự đọc từ APK (aapt); nhiều icon
+  trùng tên thì thử lần lượt, mở ra app khác thì thoát (không lái app đó).
+- Kẹt ở màn ngoài app (trình chọn ảnh…): `ve_chu` BACK 4 lần không về thì đưa app lên lại, 8 lần thì mở lại app (phiên
+  mới, có ghi trong log đoạn) — không BACK mãi tới hết giờ.
 - Hết lượt gen free trong ngày (`dung_neu`) → đoạn reward/loading/result dừng; **không mua sub** (app Pro = mất ads),
   chờ hôm sau hoặc máy khác.
 

@@ -34,8 +34,8 @@ def doc_vi_tri(package: str, out_dir: Path):
     return tc_iaa_tu_sheet_kt.vi_tri_tu_workbook(goc, package)
 
 
-def dat(args) -> dict:
-    ds = doc_vi_tri(args.package, args.out_dir)
+def dat(args, ds=None) -> dict:
+    ds = ds if ds is not None else doc_vi_tri(args.package, args.out_dir)
     gt = iaa_nhom.gia_tri(ds, args.bien_the)
     lenh = [_rcr_check(), "--package", args.package, "--keep", "--no-actions"]
     if args.serial:
@@ -95,8 +95,8 @@ def ket_qua(ds, logs: dict[str, str]) -> list[tuple[str, int, str, str]]:
     return ra
 
 
-def cham(args) -> dict:
-    ds = doc_vi_tri(args.package, args.out_dir)
+def cham(args, ds=None) -> dict:
+    ds = ds if ds is not None else doc_vi_tri(args.package, args.out_dir)
     kq = ket_qua(ds, _logs(args.log))
     data = luot_file.doc(args.luot, args.package)
     records = data["records"]
@@ -125,31 +125,42 @@ def cham(args) -> dict:
 
 
 def chay(args) -> dict:
-    """4 bien the noi tiep tren MOT may: dat config -> tu lai duong IAA cua app (ghi log FA-SVC) -> tra -> cham."""
+    """4 bien the noi tiep tren MOT may: dat config -> lai FO toi Home + tu lai duong IAA (ghi log FA-SVC) -> tra -> cham."""
     import asyncio
-    from . import iaa_lai
+    import time
+    from . import iaa_khuon, iaa_lai
     from .adb_client import AdbClient
-    doan = iaa_lai.duong_lai(args.package)
-    if not doan:
-        raise RcError(f"Chưa có đường lái IAA cho {args.package} trong src/rcr/data/iaa_duong_lai.yaml — dò màn "
-                      "(docs/rc-check/iaa-chay-theo-nhom.md) rồi khai một lần, các lượt sau tool tự lái.")
     client = AdbClient(None)
-    logs, lai = [], {}
+    bat_dau = time.monotonic()
+
+    def _log(m: str) -> None:
+        t = int(time.monotonic() - bat_dau)
+        print(f"[+{t // 60:02d}:{t % 60:02d}] {m}", file=sys.stderr, flush=True)
+
+    ds = doc_vi_tri(args.package, args.out_dir)      # tai sheet KT MOT lan cho ca luot (4 bien the + cham)
+    logs, lai, nguon = [], {}, ""
     for b in [x.strip() for x in args.bien_the_ds.split(",") if x.strip()]:
         iaa_nhom.so_case(b)
         args.bien_the = b
-        dat(args)
-        file_log = Path(args.out_dir) / f"iaa-{args.package}-{b}.log"
-        print(f"Lái đường IAA biến thể '{b}'...", file=sys.stderr)
+        dat(args, ds)
         try:
-            lai[b] = asyncio.run(iaa_lai.lai(client, args.serial, args.package, doan, file_log,
-                                             lambda m: print(m, file=sys.stderr)))
+            # pm clear (--fresh) dua app ve FO: lai FO toi Home roi moi nhan khuon / lai cac doan (doan nao cung tu Home).
+            nhat_ky: list[str] = []
+            nguon, doan = asyncio.run(iaa_khuon.chon(client, args.serial, args.package, nhat_ky))
+            if not doan:
+                raise RcError(f"{args.package}: Home không khớp khuôn nào trong src/rcr/data/iaa_duong_lai.yaml — thêm "
+                              "chữ của app vào regex khuôn gần nhất (hoặc khai khuôn mới) theo "
+                              "docs/rc-check/iaa-chay-theo-nhom.md.")
+            file_log = Path(args.out_dir) / f"iaa-{args.package}-{b}.log"
+            _log(f"Lái đường IAA biến thể '{b}' ({nguon})...")
+            lai[b] = asyncio.run(iaa_lai.lai(client, args.serial, args.package, doan, file_log, _log))
         finally:
             tra(args)
         logs.append(f"{b}={file_log}")
+        _log(f"xong biến thể '{b}'")
     args.log = logs
-    kq = cham(args) if args.luot else {}
-    return {"lai": lai, "logs": logs, **kq}
+    kq = cham(args, ds) if args.luot else {}
+    return {"duong_lai": nguon, "lai": lai, "logs": logs, "thoi_gian_s": round(time.monotonic() - bat_dau), **kq}
 
 
 def main(argv=None) -> int:

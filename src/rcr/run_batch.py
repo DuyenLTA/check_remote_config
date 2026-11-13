@@ -186,6 +186,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             for dong in tc_lech:
                 log_fn("  CHU Y TC: " + dong)
             lich_su: list[str] = []
+            # Ly do cac dong chua PASS/FAIL cua TUNG lan chay: so lieu de biet loai dong nao chay lai co ich
+            # (ra PASS/FAIL o lan sau) va loai nao chay lai vo ich - rut ngan luot ma khong mat do chinh xac.
+            lich_su_dong: list[list] = []
             click_truoc = 0
             dau_truoc = None
             # Dieu kien may nay khong tao duoc: chay lai van chay duoi trang thai tu nhien.
@@ -237,6 +240,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                     if kq is not None and chay_chuoi.nhan_duoc(kq):
                         result, noi, toi_da = kq, True, 0
                         lich_su.append(kq.get("verdict", ""))
+                        lich_su_dong.append(chay_lai.dong_mo(kq))
                     else:
                         log_fn("    chuỗi: không nhận kết quả nối tiếp ("
                                + ((kq or {}).get("chuoi_khong_chac") or f"verdict {(kq or {}).get('verdict')}")
@@ -270,6 +274,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                         continue
                     v = result.get("verdict")
                     lich_su.append(v)
+                    lich_su_dong.append(chay_lai.dong_mo(result))
                     if result.get("ad_click"):
                         # Moi may QA la may test AdMob (chot 29/10/2026): click khong phai
                         # traffic khong hop le, nhung app roi luong nen ket qua lan nay bo.
@@ -315,6 +320,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 result = ro_gan_nhat
             if result is not None:
                 result["lich_su_verdict"] = lich_su
+                if len(lich_su) > 1:
+                    result["lich_su_dong"] = lich_su_dong
                 if click_truoc and not result.get("ad_click"):
                     # Lan chay lai sach click: giu dau vet de report van ghi ad_click.
                     result["ad_click_lan_truoc"] = click_truoc

@@ -118,7 +118,7 @@ def test_banner_reload_chu_ky_truoc_high_fill_khong_tinh_vao_chu_ky_sau():
 def test_duong_lai_aip893_khai_du_doan_va_buoc_hop_le():
     """Moi buoc trong data/iaa_duong_lai.yaml phai la loai buoc iaa_lai / rating_cong_thuc hieu duoc."""
     from rcr import iaa_lai
-    hop_le = {"ve_chu", "cho", "back", "mo_lai", "dong_ad", "shortcut", "nhap", "xem_ads_chu", "ve_man", "dong_neu_co",
+    hop_le = {"ve_chu", "tap_neu_co", "cho", "back", "mo_lai", "dong_ad", "shortcut", "nhap", "xem_ads_chu", "ve_man", "dong_neu_co",
               "tap", "tap_duoi", "cho_man", "cho_chu", "chon_anh", "xem_ads"}
     doan = iaa_lai.duong_lai("com.aiphotogenerator.aivideomaker.photoslideshow")
     assert doan and all(d.get("ten") and d.get("buoc") for d in doan)

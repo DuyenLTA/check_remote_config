@@ -139,6 +139,12 @@ async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
             return f"dong quang cao con che man ({node.label})"
         if nen_back_ad_test(serial, nodes):
             await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+            # AdActivity con focus ~1s sau BACK: goi lai ngay se BACK them lan nua -> thoat luon man cua app
+            # (AIP885 Pixel 4 13/11/2026: 3 BACK lien tiep roi man prompt). Doi ad dong han (toi da 4s).
+            for _ in range(8):
+                await asyncio.sleep(0.5)
+                if "AdActivity" not in (await device_app.focus(client, serial))[1]:
+                    break
             return "dong quang cao test con che man bang BACK (nut X khong co node)"
         if asyncio.get_running_loop().time() >= het:
             return ""
