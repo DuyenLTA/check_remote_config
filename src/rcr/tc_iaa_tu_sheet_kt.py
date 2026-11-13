@@ -145,6 +145,11 @@ def tao_case(ds: list[ViTri]) -> list[Case]:
 
 def tu_workbook(path, package: str) -> list[Case]:
     """File xlsx sheet KT -> case IAA cua tab co dong `Package name` = package."""
+    return tao_case(vi_tri_tu_workbook(path, package))
+
+
+def vi_tri_tu_workbook(path, package: str) -> list[ViTri]:
+    """File xlsx sheet KT -> cac vi tri in-app (theo thu tu sheet = so IAA-<ii>) cua tab app."""
     import openpyxl
 
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
@@ -158,7 +163,7 @@ def tu_workbook(path, package: str) -> list[Case]:
             if not ds:
                 raise RcError(f"Tab {ws.title} (sheet Check thông số KT) chưa có vị trí nào ở mục "
                               "'3. ID ads inapp' - dán kịch bản IAA của app vào mục đó rồi chạy lại.")
-            return tao_case(ds)
+            return ds
     finally:
         wb.close()
     raise RcError(f"Sheet Check thông số KT không có tab nào ghi Package name = {package}.")

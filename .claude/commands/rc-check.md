@@ -186,6 +186,9 @@ tải lại sheet gốc mỗi lệnh (cả `--gop`/`--tiep`) rồi dựng bộ c
   đúng màn + đúng thời điểm (giờ request so với lúc vào màn / bấm nút), show đúng màn, reload đúng chu kỳ (≥ 3 lần liên
   tiếp, lệch ≤ 1s) và đúng sự kiện (back về Home, chọn lý do, hide app…), giới hạn số lần (1 ad/session, `*_fail_time`),
   tắt remote → 0 request của vị trí. Mỗi vế của câu mô tả là một kết luận riêng; vế nào không đo được thì không PASS.
+  **Không lái từng case**: dựng khung `--case all --no-actions`, rồi `<bin>/rcr-iaa chay` — tool tự lái đường IAA của app
+  (`src/rcr/data/iaa_duong_lai.yaml`) cho 4 biến thể và tự chấm phần đọc được từ log; app chưa có đường lái thì dò
+  một lần theo `docs/rc-check/iaa-chay-theo-nhom.md` (kèm luật `*_fail_time`, bẫy đã gặp) rồi khai vào file.
 - `--tc gen-ngam`: tab "TC Gen ngầm" (khuôn bộ TC, lượt E2E "Tiếp nối" → luôn `--chuoi`) của sheet
   `https://docs.google.com/spreadsheets/d/1FORGiI5X_N6HTmYyFdSiXCsAu7q91vTd59BfoGULT8c/edit`. Đổi sheet: `RC_TC_GEN_NGAM`.
 Bot gọi qua `/check` ô `tinh_nang` = `iaa` / `gen ngầm`.
