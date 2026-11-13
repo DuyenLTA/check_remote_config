@@ -42,3 +42,20 @@
 - **Precondition đòi máy khác** (OPPO, Samsung…): nhắn qa-auto (trả lời dưới tin build) nhờ cắm máy, máy lên tự chạy tiếp.
   Máy mới chưa có đúng bản build → gỡ app rồi cài lại bản release từ App Tester (`rcr-cai-build`), không pull APK từ máy
   cũ, không dùng nút "Mở"/xoá data. Không có máy → case BLOCKED (mục 5d2).
+
+## Tab rating — cách đo đã chốt (AIP892 2.2.0, 13/11/2026: 3/3 PASS theo TC sửa)
+
+Tool chưa lái được nhóm R01/R02 (bước "Gen ảnh, chờ popup" ra `NEEDS_HUMAN`) → đo tay theo đây, app khác dùng lại.
+Bật event FA trước: `setprop debug.firebase.analytics.app <pkg>`, đọc `FA-SVC` "Logging event" trên `logcat -v epoch`;
+xong trả `debug.firebase.analytics.app` về giá trị cũ.
+- **Thứ tự popup ở Home** (session 2 của old user: force-stop, mở bằng icon, qua Question + Billing rồi mới tới Home):
+  so timestamp `widget_view` với `rating_placement_viewed placement_name=home`. TC: Widget → Daily Checkin → Rating,
+  popup không đủ điều kiện (Checkin đã làm trong ngày ở session 1) thì bỏ qua. Mỗi lần dump UI chỉ có một popup = không chồng.
+- **App Shortcut**: nhấn giữ icon trên launcher → "Rate Us"; `ActivityTaskManager START` ra thẳng `VslRatingActivity`
+  (shortcut `vsl_rating_shortcut`, xem `dumpsys shortcut`) + `rating_placement_viewed placement_name=app_shortcut`.
+  4 sao → "Rate on Google Play" mở `market://details?id=<pkg>`; BACK từ Play → `START … FoSplashActivity`.
+- **Feedback** (Submit mở Gmail soạn sẵn tới `feedback_email`): **không gửi vào hộp thư store** — đổi người nhận về tài
+  khoản test trên máy, giữ tiêu đề / nội dung / ảnh, Send, mở Inbox trên máy kiểm mail + ảnh; toast "Feedback sent
+  successfully" và app quay về màn result.
+- **Bẫy bàn phím**: Gboard đang tiếng Việt Telex thì `input text "test"` thành "tét" (cả địa chỉ email) → bấm nút quả địa
+  cầu sang EN trước. Trước khi gửi DEL, dump `focused="true"` để khỏi xoá chữ ở ô khác.
