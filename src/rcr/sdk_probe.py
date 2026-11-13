@@ -37,6 +37,7 @@ NEXTGEN_SDK = {(3, 7, 0), (3, 7, 1)}
 LOGCAT_TIMEOUT = 20.0
 WAIT_AFTER_LAUNCH = 15.0
 POLL_INTERVAL = 1.5
+NOTIFICATION_PERMISSION = "android.permission.POST_NOTIFICATIONS"
 
 
 async def pid_of(client, serial: str, package: str) -> str:
@@ -87,6 +88,10 @@ async def detect(client, serial: str, package: str, relaunch: bool = True) -> di
     # Buffer khong co -> mo lai app cho SDK in ra. Xoa buffer truoc de khong
     # nhat phai ban cua LUOT TRUOC (app vua duoc nang cap thi ban do da cu).
     await client._run("-s", serial, "logcat", "-c", timeout=LOGCAT_TIMEOUT)
+    # Android 13+: app chua co quyen thong bao (vua `pm clear`) thi dialog cua
+    # permissioncontroller che app, app khong len foreground -> restart het gio.
+    # Cap bang `pm grant` (khong tap gi); loi (Android < 13 / app khong khai) bo qua.
+    await client.shell(serial, "pm", "grant", package, NOTIFICATION_PERMISSION)
     await device_app.restart(client, serial, package)
 
     waited = 0.0
