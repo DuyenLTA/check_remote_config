@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-from . import act_compound, act_rating, act_resolver, act_widget, device_app, device_motion, log_moc, net_ctl, quan_sat
+from . import act_checkin, act_compound, act_rating, act_resolver, act_widget, device_app, device_motion, log_moc, net_ctl, quan_sat
 
 # Cho SDK co co hoi retry sau khi mang len lai, truoc khi doc log.
 CHO_SAU_KHI_CO_MANG = 6.0
@@ -140,6 +140,8 @@ async def lam(client, serial: str, action, record: dict, ctx: dict, log_fn=_noop
         await act_widget.lam(client, serial, action, record, ctx)
     elif isinstance(action, act_rating.Rating):
         await act_rating.lam(client, serial, action, record, ctx)
+    elif isinstance(action, act_checkin.Checkin):
+        await act_checkin.lam(client, serial, action, record, ctx)
 
 
 # TC khong ghi so giay o nen: cho toi khi ad resume (AOA / inter / native full) load xong - thanh cong hay khong fill

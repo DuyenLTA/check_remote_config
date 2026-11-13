@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import rc_extract, rc_json_lech, tc_catalog, tc_loader, tc_nhu_case
+from . import rc_extract, rc_json_lech, tc_catalog, tc_json_dang_chay, tc_loader, tc_nhu_case
 from .models import RcError
 
 
@@ -140,6 +140,7 @@ def load_cases(path, baseline, sdk: str = "", tab: str = "") -> tuple[list[dict]
     whitelist = rc_extract.whitelist_of(baseline)
     pairs, notes = read_cases(Path(path), whitelist, sdk, tab)
     pairs = tc_nhu_case.thay_nhu(pairs, whitelist)       # "key = ... (nhu R01)" -> gia tri that cua nhom R01
+    pairs = tc_json_dang_chay.thay(pairs, baseline.configs, baseline.dex_keys)  # "key=JSON dang chay, sua: f=x" -> JSON that da sua field
     rows: list[dict] = []
     runnable: dict[str, dict] = {}
     for tab, case in pairs:
@@ -170,5 +171,6 @@ def load_cases(path, baseline, sdk: str = "", tab: str = "") -> tuple[list[dict]
             **data.summary,
             # Biet som truoc khi chay: ten truong JSON TC dat lech gia tri server.
             "tc_lech": rc_json_lech.lech(data.overrides, baseline.configs),
+            "can_tra_dex": tc_json_dang_chay.key_chua_ro(case, baseline.configs, baseline.dex_keys),
         })
     return rows, runnable, notes

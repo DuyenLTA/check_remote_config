@@ -22,6 +22,8 @@ from dataclasses import replace
 from pathlib import Path
 
 from . import (
+    act_checkin,
+    checkin_may,
     log_moc,
     ad_tach_id,
     act_compound,
@@ -485,9 +487,15 @@ async def run_case(
     if ngon_ngu:
         log_fn(f"  ngôn ngữ của case: {ngon_ngu[1]} (lái qua LFO sẽ chọn ngôn ngữ này)")
     token = fo_ngon_ngu.CHON.set(ngon_ngu)
+    # Tab daily checkin: act_checkin can config cua case (key checkin -> doi cach lam cau chung, mau #hex de do).
+    tk_checkin = act_checkin.CFG.set({k: v for r in runs for k, v in r.items()})
     try:
         # Reset user cu lai luong FO tren may -> may phai sang + mo khoa truoc.
         await mo_khoa_may.mo_khoa(client, baseline.serial)
+        # Case truoc doi ngay may (tab daily checkin) ma chet giua chung -> tra gio truoc khi chay case nay.
+        da_tra = await checkin_may.tra_gio(client, baseline.serial)
+        if da_tra:
+            log_fn(f"  tra gio may ve tu dong (case truoc doi ngay): {da_tra['ngay']}")
         if noi_tiep:                             # che do chuoi: app dang mo tu case truoc, khong reset
             reset = {"mode": "noi tiếp (chuỗi)", "matched": "", "baseline_stale": False}
         elif baseline.firebase:                  # reset lam trong tung luot, SAU khi publish RC (apply_case)
@@ -505,6 +513,9 @@ async def run_case(
                                 log_fn, man_can, precondition, runtime, user_state, noi_tiep, giu)
     finally:
         fo_ngon_ngu.CHON.reset(token)
+        act_checkin.CFG.reset(tk_checkin)
+        if (await checkin_may.tra_gio(client, baseline.serial)):
+            log_fn("    tra gio may ve tu dong (case doi ngay)")
     if unused:
         out["keys_not_used"] = unused
     return out | {"reset": reset}, baseline
