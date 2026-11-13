@@ -67,19 +67,33 @@ function match(d) {
   const hay = [d.n, d.title, d.group, d.cfg, d.actual, d.pre, ...d.expects].join(" ").toLowerCase();
   return String(d.n).toLowerCase() === q || hay.includes(q);
 }
+function demPill(ds) {
+  return Object.keys(TILE).map(s => [s, ds.filter(d => d.status === s).length])
+    .filter(([, n]) => n)
+    .map(([s, n]) => `<span class="pill ${s}">${LABEL[s]} ${n}</span>`).join("");
+}
+// Report gop nhieu tab tinh nang (widget + rating + daily checkin): moi tab mot khoi co tieu de + dem
+// rieng, nhom case nam trong khoi cua tab do - khong tron case cua tab nay vao tab kia.
 function render() {
   const list = document.getElementById("list");
-  const groups = [...new Set(DATA.map(d => d.group))];
+  const tabs = [...new Set(DATA.map(d => d.tab || ""))];
+  const nhieuTab = tabs.length > 1;
   let shown = 0;
-  list.innerHTML = groups.map(g => {
-    const all = DATA.filter(d => d.group === g), rows = all.filter(match);
-    shown += rows.length;
-    if (!rows.length) return "";
-    const counts = Object.keys(TILE).map(s => [s, all.filter(d => d.status === s).length])
-      .filter(([, n]) => n)
-      .map(([s, n]) => `<span class="pill ${s}">${LABEL[s]} ${n}</span>`).join("");
-    return `<section class="group"><div class="ghead"><h2>${esc(g)}</h2>` +
-      `<div class="gcount">${counts}</div></div>` + rows.map(row).join("") + `</section>`;
+  list.innerHTML = tabs.map(t => {
+    const trongTab = DATA.filter(d => (d.tab || "") === t);
+    const groups = [...new Set(trongTab.map(d => d.group))];
+    const than = groups.map(g => {
+      const all = trongTab.filter(d => d.group === g), rows = all.filter(match);
+      shown += rows.length;
+      if (!rows.length) return "";
+      return `<section class="group"><div class="ghead"><h2>${esc(g)}</h2>` +
+        `<div class="gcount">${demPill(all)}</div></div>` + rows.map(row).join("") + `</section>`;
+    }).join("");
+    if (!than || !nhieuTab) return than;
+    const ten = t ? t[0].toUpperCase() + t.slice(1) : "Khác";
+    return `<div class="tabkhoi"><div class="tabhead"><h2>${esc(ten)}</h2>` +
+      `<span class="tabso">${trongTab.length} case</span><div class="gcount">${demPill(trongTab)}</div></div>` +
+      than + `</div>`;
   }).join("") || `<div class="card empty">Không có case nào khớp bộ lọc.</div>`;
   document.getElementById("count").textContent = `${shown} / ${DATA.length} case`;
   list.querySelectorAll(".rowbtn").forEach(b => b.onclick = () => toggle(b.closest(".row")));

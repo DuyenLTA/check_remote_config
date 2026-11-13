@@ -71,6 +71,10 @@ code{background:var(--code);padding:1px 5px;border-radius:4px}
 .linkbtn{font:500 13px "IBM Plex Sans",sans-serif;background:none;border:0;color:var(--accent);cursor:pointer;padding:4px 2px}
 .group{display:flex;flex-direction:column;gap:0;background:var(--paper);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
 .ghead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;padding:12px 16px}
+.tabkhoi{display:flex;flex-direction:column;gap:10px}
+.tabhead{display:flex;gap:10px 14px;flex-wrap:wrap;align-items:baseline;padding:14px 2px 2px;border-bottom:2px solid var(--ink)}
+.tabhead h2{font-size:20px}
+.tabso{color:var(--muted);font-size:13px}
 .gcount{display:flex;gap:6px;flex-wrap:wrap}
 .row{border-top:1px solid var(--rule);scroll-margin-top:72px}
 .rowbtn{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:grid;grid-template-columns:44px 92px 1fr 16px;gap:10px;align-items:start;padding:10px 16px}

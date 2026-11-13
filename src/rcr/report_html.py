@@ -55,7 +55,8 @@ def _thu_tu(d: dict):
     """
     # So va ma case (`SDK350-...`) khong so sanh duoc voi nhau -> tach hai nhom.
     n = d["n"]
-    return (d["group"], (0, n, "") if isinstance(n, int) else (1, 0, str(n)), d["key"])
+    # Gop nhieu tab: case cung tab nam lien nhau, khong tron CHECKIN-R03 canh RATING-R03.
+    return (d.get("tab", ""), d["group"], (0, n, "") if isinstance(n, int) else (1, 0, str(n)), d["key"])
 
 
 def _chips() -> str:
