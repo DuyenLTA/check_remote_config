@@ -37,7 +37,7 @@ from pathlib import Path
 import discord
 from discord import app_commands
 
-from . import (audit_tom_tat, bot_bat_tin_lo, bot_canh_may, bot_chay_claude, bot_cho_publish, bot_cong_viec,  # noqa: F401 - test thay
+from . import (audit_tom_tat, bot_bat_tin_lo, bot_canh_may, bot_chay_claude, bot_cho_publish, bot_cong_viec, bot_don_forum_chu_nhat,  # noqa: F401 - test thay
                bot_dung_luot, bot_forum, bot_gui_lai, bot_hang_doi, bot_hoi_dap, bot_hop_thu_bug, bot_jira_rest, bot_job_check, bot_job_verify,
                bot_kenh_project, bot_keo_sprint, bot_lenh_slash, bot_log_jira, bot_may_phu, bot_nhan_build,
                bot_nut_bam, bot_report_may_phu, bot_tien_trinh)
@@ -102,6 +102,7 @@ class BuildBot(discord.Client):
         asyncio.create_task(self.worker())
         asyncio.create_task(bot_keo_sprint.vong_lap(self))   # bug log luc chua co sprint -> keo vao sprint moi
         asyncio.create_task(bot_cho_publish.vong_lap(self, OUT))   # report chua co artifact -> thay link khi publish
+        asyncio.create_task(bot_don_forum_chu_nhat.vong_lap(self))   # Chu nhat xoa bai build cu o qa-builds
 
     async def on_ready(self):
         """Moi lan ket noi (ca reconnect sau mat mang - session bi huy thi Discord khong gui lai tin cu, 30/10/2026):

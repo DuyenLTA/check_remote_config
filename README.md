@@ -485,6 +485,12 @@ nhận link Google Drive nữa.
 - `/rollout <mã app>` — link trang **Rollout** của app trên Confluence + link **Checklist** (sheet riêng của app, lấy
   từ dòng `Checklist: <link>` ở trang version sửa gần nhất). Link checklist mà tên file ghi mã app khác (copy template)
   thì bỏ. Dùng lại `CONFLUENCE_BASE_URL` + `CONFLUENCE_TOKEN` trong `~/.bashrc` (hoặc `bot.env`).
+- `/xoa-bai [mã app] [version] [cu_hon_ngay]` — chỉ QA được duyệt. Xoá bài build trong Forum `qa-builds` (chỉ bài
+  bot tạo, bỏ qua bài của build còn trong hàng đợi / đang chạy); phải có `ma_app` hoặc `cu_hon_ngay`, `2.6.0` khớp cả
+  `2.6.0 (23)`. Liệt kê bài sẽ xoá kèm nút xác nhận, bấm mới xoá.
+  **Tự dọn mỗi Chủ nhật** từ 23h (giờ máy bot, `bot_don_forum_chu_nhat`): xoá bài bot tạo **không có tin mới quá 7 ngày** (build test trong
+  tuần giữ lại để xem report / log bug), trừ bài đang dùng; mỗi
+  Chủ nhật một lần (ghi `out/bot-don-forum.json`). Bot cần quyền **Manage Threads** trong kênh Forum.
 Bot thiếu scope `applications.commands` ở server nào thì lệnh không hiện ở server đó (log bot ghi rõ), bot vẫn chạy.
 
 **Forum `qa-builds` — mỗi build một bài** (`DISCORD_FORUM_CHANNEL_ID`, để trống thì như cũ): build mới có SDK →
