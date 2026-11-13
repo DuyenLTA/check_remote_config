@@ -113,6 +113,8 @@ def build(rec: dict) -> dict:
         "n": _so_case(rec.get("key", "")),
         "key": rec.get("key", ""),
         "group": rec.get("group") or "Khác",
+        # Report gop nhieu tab tinh nang (widget + rating + daily checkin): JS chia khoi theo tab.
+        "tab": rec.get("tab") or "",
         "title": _tieu_de(rec),
         "status": nhan_cua(rec.get("verdict", "")),
         "verdict": rec.get("verdict", ""),

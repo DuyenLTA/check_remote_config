@@ -176,11 +176,14 @@ def page_data(baseline, tc: dict, records: list[dict], app_label: str = "") -> d
     # Ghi chu kieu "app moi hon delta moi nhat" phai len dau trang: doc so lieu
     # ma khong biet bo TC lech ban la hieu sai ca luot.
     warn = " · ".join(n for n in notes if "moi hon" in n or "Bo qua" in n)
-    tabs = ", ".join(sorted({c.get("tab", "") for c in records if c.get("tab")}))
+    ds_tab = sorted({c.get("tab", "") for c in records if c.get("tab")})
+    tabs = ", ".join(ds_tab)
+    # Report gop nhieu tab tinh nang: ten cac tab len tieu de, khong thi tuong la report rieng mot tab.
+    gop_tab = " · " + ", ".join(t[:1].upper() + t[1:] for t in ds_tab) if len(ds_tab) > 1 else ""
     return {
         # "Piclux 2.8.0 3.5.0" - hai so version dinh nhau, khong ai doc ra cai
         # nao la app cai nao la SDK. Ban SDK phai co nhan di kem.
-        "title": f"Lượt chấm {name}" + (f" · SDK FO {ban}" if ban else ""),
+        "title": f"Lượt chấm {name}" + (f" · SDK FO {ban}" if ban else "") + gop_tab,
         "eyebrow": "Remote Config Case Runner"
                    + (f" · TC SDK {tabs or ban}" if (tabs or ban) else ""),
         "warn": warn,
