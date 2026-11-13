@@ -94,10 +94,25 @@ def ev06(ev) -> dict:
     sf = loc(ev, "ad_show", thanh_cong=False)
     if not sf:
         return kq("EV-06", "ad_show (thất bại)", DO_TAY, "Luồng chạy không có ad_show thất bại — cần dev chỉ nút hiện quảng cáo chưa sẵn sàng")
-    sai = [e for e in sf if _rong(e["params"].get("error_code")) or "error_message" not in e["params"]]
+    # Banner/native show failed di qua AdEventLogger.trackAdShowBannerNativeError cua lib: chi ghi
+    # `native_banner_error` (ERROR_VIEW / ERROR_LIFECYCLE), khong co error_code / error_message theo thiet ke lib
+    # -> Khop kem ghi chu cho dev, khong phai loi app (QA chot 10/11/2026 sau Sai gia o AIP916, lap lai AIP918).
+    lib = [e for e in sf if "native_banner_error" in e["params"]]
+    sai = [e for e in sf if e not in lib
+           and (_rong(e["params"].get("error_code")) or "error_message" not in e["params"])]
     if sai:
         return kq("EV-06", "ad_show (thất bại)", SAI, f"{len(sai)}/{len(sf)} ad_show failed thiếu error_code / error_message", [dong(e) for e in sai])
-    return kq("EV-06", "ad_show (thất bại)", KHOP, f"{len(sf)} ad_show failed đủ error_code + error_message", [dong(e) for e in sf[:6]])
+    ghi = (f"{len(lib)} ad_show failed của banner/native chỉ có native_banner_error, không có error_code / error_message "
+           "— thiết kế lib (trackAdShowBannerNativeError), ghi chú cho dev, không chấm Sai.") if lib else ""
+    if len(lib) == len(sf):
+        # Chi co banner/native cua lib: chua co ad_show failed nao co the mang error_code -> nhanh inter
+        # (Home dung luc khung Loading Ads) chua duoc thu, phai do tay chu khong Khop.
+        return kq("EV-06", "ad_show (thất bại)", DO_TAY,
+                  "Chỉ có ad_show failed banner/native theo lib — còn phải thử nhánh inter (Home lúc khung Loading Ads)",
+                  [dong(e) for e in sf[:6]], ghi_chu=ghi)
+    return kq("EV-06", "ad_show (thất bại)", KHOP,
+              f"{len(sf) - len(lib)} ad_show failed đủ error_code + error_message" + (f"; {len(lib)} banner/native theo lib" if lib else ""),
+              [dong(e) for e in sf[:6]], ghi_chu=ghi)
 
 
 def ev07(ev) -> dict:

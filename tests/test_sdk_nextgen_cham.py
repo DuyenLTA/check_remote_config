@@ -464,3 +464,15 @@ def test_hv09_collapsible_false_khong_phai_collapsible_banner():
     adapter = "BannerAdmobAdapter"
     assert not M.co_collapsible(PROC + "\n" + _app(adapter, "banner loaded ad=185432425 collapsible=false"), PKG)
     assert M.co_collapsible(PROC + "\n" + _app(adapter, "banner loaded ad=1 collapsible=true"), PKG)
+
+
+def test_ev06_banner_native_error_cua_lib_khong_tinh_sai():
+    # Linguza 2.5.0 13/11: banner Home show failed chi co native_banner_error=ERROR_VIEW (thiet ke lib) -> khong Sai;
+    # chua thu nhanh inter nen phai do tay.
+    lib = _ev("ad_show", 5.0, "333", "banner", show_status="failed", native_banner_error="ERROR_VIEW")
+    r = A.ev06(_evs([lib]))
+    assert r["ket"] == "DO_TAY" and "native_banner_error" in r["ghi_chu"]
+    inter_du = _ev("ad_show", 9.0, "111", "interstitial", show_status="failed", error_code="1", error_message="x")
+    assert A.ev06(_evs([lib, inter_du]))["ket"] == "KHOP"
+    inter_thieu = _ev("ad_show", 9.0, "111", "interstitial", show_status="failed")
+    assert A.ev06(_evs([lib, inter_thieu]))["ket"] == "SAI"
