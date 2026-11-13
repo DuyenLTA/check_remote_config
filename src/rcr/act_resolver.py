@@ -34,7 +34,7 @@ import re
 
 from .act_types import (Action, Background, ChonMotNgonNgu, ChonNgonNgu, KillMoLai, ThongBao, GoTo, MoLai, Net, NeedsHuman, NoOp, Rotate, Seq,
                         Swipe, Tap, TapId, Wait, Watch, XemTag)
-from . import act_compound, act_cau_fo, act_widget, net_ctl
+from . import act_compound, act_cau_fo, act_rating, act_widget, net_ctl
 from .act_cau_fo import DI_QUA, MO_LAI_TU_RE, RA_KHOI_OB  # noqa: F401 - case_drive / act_exec dung qua day
 from .act_nodes import find, tap_by_text
 from .ui_dump import DeviceNode
@@ -109,6 +109,10 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     widget = act_widget.resolve(text)
     if widget is not None:
         return widget
+    # Tab rating: gen anh toi result, chon sao, bam Rate / X, thoat app, shortcut (act_rating).
+    rating = act_rating.resolve(text, nodes)
+    if rating is not None:
+        return rating
     ghep = act_compound.resolve(text, nodes, resolve)
     if ghep is not None:
         return ghep

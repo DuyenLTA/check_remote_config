@@ -10,6 +10,7 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 
 | Ngày | Đầu ra sai | Sửa gì | Trước → sau |
 |---|---|---|---|
+| 12/11/2026 | AIP892 tab rating: mọi bước (gen ảnh, chọn sao, bấm Rate/X, thoát app, back, shortcut) ra NEEDS_HUMAN, Claude đo tay cả lượt ~2,5 tiếng | Tự lái + tự chấm tab rating: `act_rating` / `assert_rating` / `rating_may` (đo nút X bằng khung chụp liên tục), công thức gen theo app `data/rating_gen.yaml`, hết lượt gen thì mua sub test bằng `sub_thao_tac.mua` | 9 case đo tay → R03/R05/R06/R07/R08 tự PASS, 50–265s/case |
 | 11/11/2026 | AIP918 Linguza ghi SDK 3.7.2 mà lượt chạy tab TC 3.6.2 (tool tự lấy tab gần nhất), không chấm checklist | Luật 3.7.2 đưa vào code: `tc_catalog.CA_HAI_SDK` chọn đúng tab 3.6.1, preflight in `Nhanh: CA HAI` kể cả khi tin build ghi next-gen | Chấm nhầm tab → tab 3.6.1 + checklist Next-Gen |
 | 09/11/2026 | AIP944 1.3.0 Next-Gen dừng ở dòng 53/54 vì ID ads lệch sheet | Lệch ID không dừng lượt, dòng ads của vị trí lệch chấm theo unit thật trong log (`d1b1674`) | Dừng giữa lượt → chạy hết checklist, câu báo liệt kê vị trí lệch |
 | 09/11/2026 | File workflow có 6 chỗ mâu thuẫn và 6 đường dẫn `data/*.yaml` không tồn tại, agent làm sai mà không ai biết | Tách luồng chính / tài liệu đọc khi cần, thêm `tests/test_workflow_rc_check.py` kiểm đường dẫn, lệnh, độ dài (`ad2c09b`) | 12 lỗi → 0, test chặn lỗi mới |

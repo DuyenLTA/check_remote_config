@@ -1,0 +1,35 @@
+# Cong thuc lai app tu Home toi man result (noi popup Rating hien) - buoc "Gen anh / gen video" cua tab TC rating.
+# Moi app mot muc theo package; `anh` = gen anh, `video` = gen video. App chua co cong thuc -> buoc do NEEDS_HUMAN.
+#
+# Cac loai buoc (chay lan luot, het `toi_da` giay ma chua xong -> dung, ghi loi):
+#   ve_man: <regex>        BACK toi khi activity khop (case noi tiep dang o result / Feedback -> ve Home)
+#   dong_neu_co: <regex>   bam node (text/desc khop) NEU dang hien - vd popup Check-in che Home; khong co thi bo qua
+#   tap: <regex>           bam node co text/desc khop; chua hien thi cho
+#   tap_duoi: <regex>      bam node bam duoc DAU TIEN nam duoi node co text khop (anh mau, the style khong co chu)
+#   cho_man: <regex>       cho activity dang mo khop (vd PhotoSelect)
+#   xem_ads: <regex>       lap: dang o AdActivity -> dong ad (fo_flow.dong_ad_dang_che); thay nut khop -> bam;
+#                          xong khi da roi man hien tai sang man `toi` (vd Processing / Result)
+#   toi: <regex>           dung voi xem_ads: activity coi la da qua buoc xem ads
+#   dung_neu: <regex>      dung voi xem_ads: man hien chu nay (vd het luot gen trong ngay) -> dung, bao ly do
+#   toi_da: <giay>         gioi han cho cua buoc (mac dinh 30)
+#
+# AIP892 BeautyGenie 2.2.0 (do tren Pixel 6 12/11/2026): Home -> the style duoi "QUICK FIXES" -> Select Photo ->
+# anh mau dau tien duoi "Sample" -> Confirm -> "Watch Ads (0/2)" xem 2 reward ad (hoac "Free Generate" khi con luot
+# free tu Check-in) -> Processing ~30s -> ResultActivity, popup Rating hien sau ~1s.
+# Het luot gen free trong ngay -> dialog "Daily Limit Reached" (do 12/11/2026 sau ~4 lan gen): khong gen tiep duoc.
+
+com.aimakeup.aifaceeditor.facemakeup.faceswap:
+  anh:
+    - ve_man: "MainActivity"
+      toi_da: 15
+    - dong_neu_co: "^Close$"
+    - tap_duoi: "^QUICK FIXES$"
+    - cho_man: "PhotoSelect"
+    - tap_duoi: "^Sample$"
+    - tap: "^Confirm$"
+    - xem_ads: "^(Watch Ads \\(\\d/\\d\\)|Free Generate)$"
+      toi: "Processing|Result"
+      dung_neu: "^Daily Limit Reached$"
+      toi_da: 150
+    - cho_man: "ResultActivity"
+      toi_da: 150

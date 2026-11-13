@@ -1,0 +1,10 @@
+{
+ "home_activity": "MainActivity",
+ "duong_vao_paywall": [
+  {
+   "text": "Premium"
+  }
+ ],
+ "ghi_chu": "AIP892: Paywall mo tu nut Premium goc tren Home (do 12/11/2026)",
+ "package": "com.aimakeup.aifaceeditor.facemakeup.faceswap"
+}

@@ -322,6 +322,13 @@ async def drive(client, serial: str, package: str, steps, log_fn=_noop,
         if await act_exec.resume_neu_o_nen(client, serial, package, step, record, ctx):
             continue
         await act_exec.lam(client, serial, action, record, ctx, log_fn)
+        if record.get("dung_lai"):
+            # Thao tac chi biet lam duoc hay khong luc chay (vd app chua co cong thuc gen anh cua tab rating).
+            record["action"] = {"kind": "needs_human", "reason": record["dung_lai"]}
+            log_fn(f"    buoc {index}: DUNG - {record['dung_lai']}")
+            return {"steps": done, "status": "NEEDS_HUMAN", "stopped_at": index,
+                    "blocked_steps": blocked_steps, "khung": ctx["khung"],
+                    "thao_tac": ctx["thao_tac"], "tag_log": tag_log}
     cuoi = await drive_probes._chup_ket(client, serial, package, len(done) + 1,
                            ctx["trang_cu"], ctx["vuot_sau"], dump_cu)
     done.append(cuoi)
