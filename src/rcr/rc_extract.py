@@ -45,6 +45,10 @@ ONOFF_RE = re.compile(r"^(?:on|off|true|false|bật|bat|tắt|tat|enable|disable
 # (nhu R01)" (AIP936 RG10-01 03/11/2026) - dat nguyen chu "JSON co khoi" len RC la chay sai config.
 MO_TA_JSON_RE = re.compile(r"^\s*JSON\b|\(\s*nh(?:ư|u)\s+[A-Z]{1,3}\d", re.I)
 
+# "content_noti_hide_app=giá trị hiện tại" (sheet gen ngam AIP893 13/11/2026): giu gia tri app dang co, KHONG dat.
+# Truoc day tool dat nguyen chu "giá trị hiện tại" len RC -> noi dung push khi thoat app sai.
+GIU_GIA_TRI_RE = re.compile(r"^\s*(?:gi[áa]\s*tr[ịi]\s*hi[ệe]n\s*t[ạa]i|gi[ữu]\s*nguy[êe]n|"
+                            r"nh(?:ư|u)\s*(?:hi[ệe]n\s*t[ạa]i|c[ũu]|b[ảa]n\s*c[ũu])|current(?:\s*value)?|keep)\s*$", re.I)
 
 
 def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
@@ -111,6 +115,8 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
         return RcCaseData(overrides={}, needs_human=why)
 
     found = suy_ra | pre | td  # trung key -> Test Data thang, roi den ten viet ro
+    giu = sorted(k for k, v in found.items() if GIU_GIA_TRI_RE.match(str(v)))
+    found = {k: v for k, v in found.items() if k not in giu}
     mo_ta = sorted(k for k, v in found.items() if MO_TA_JSON_RE.search(str(v)))
     if mo_ta:
         return RcCaseData(
@@ -128,7 +134,7 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
     for v in sorted({str(v) for v in found.values() if len(str(v)) > 8}, key=len, reverse=True):
         van_ban = van_ban.replace(v, " ")
     mentioned = rc_guards.mentioned(van_ban, whitelist)
-    vague = sorted(mentioned - set(found) - set(forced))
+    vague = sorted(mentioned - set(found) - set(forced) - set(giu))
     if vague:
         return RcCaseData(
             overrides={},
@@ -138,7 +144,7 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
             ),
         )
     overrides = {k: v for k, v in found.items() if k in whitelist}
-    ignored = tuple(sorted(k for k in found if k not in whitelist))
+    ignored = tuple(sorted({k for k in found if k not in whitelist} | set(giu)))
 
     cong_tac = rc_guards.cong_tac_ads_chua_map(dong_pre + "\n" + raw, found, ignored, whitelist)
     if cong_tac:

@@ -430,3 +430,11 @@ def test_gia_tri_la_cau_mo_ta_thi_khong_chay():
     wl = {"onboard_config_content_new", "language_code", "enable_all_ads"}
     d = ex("enable_all_ads=true\n onboard_config_content_new = JSON có khối language_code=fr (như R01)", wl)
     assert not d.overrides and "cau mo ta" in d.needs_human
+
+
+def test_gia_tri_hien_tai_thi_giu_nguyen_khong_dat():
+    # Sheet gen ngam AIP893: dat nguyen chu "giá trị hiện tại" len RC lam sai noi dung push khi thoat app.
+    wl = set(WL) | {"content_noti_hide_app", "generating_wait_image_seconds"}
+    r = ex("generating_wait_image_seconds=15\ncontent_noti_hide_app=giá trị hiện tại", wl)
+    assert r.overrides == {"generating_wait_image_seconds": "15"} and not r.needs_human
+    assert "content_noti_hide_app" in r.ignored
