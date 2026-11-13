@@ -218,8 +218,13 @@ def _sua(project: str, sua, dk: str) -> int:
 
 
 def dat(project: str, gia_tri: dict[str, str], dk: str = DIEU_KIEN) -> int:
-    """Publish `gia_tri` theo dieu kien `dk`; tra version RC moi."""
-    return _sua(project, lambda t: gan(t, gia_tri, dk), dk)
+    """Publish `gia_tri` theo dieu kien `dk` (dieu kien chi con DUNG cac key nay); tra version RC moi.
+
+    Che do chuoi giu config giua cac case: chi gan them thi key case truoc con nguyen (AIP893 daily checkin
+    13/11/2026: show_checkin_screen=false cua R03 sot sang R04-R06 -> man Check-in khong hien). Config cua mot
+    case la tron bo -> go key khac cua `dk` trong cung lan publish."""
+    return _sua(project, lambda t: gan(go(t, [k for k in keys_dang_gan(t, dk) if k not in gia_tri], dk),
+                                       gia_tri, dk), dk)
 
 
 def tra(project: str, keys, dk: str = DIEU_KIEN) -> int:

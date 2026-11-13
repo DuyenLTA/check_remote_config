@@ -249,3 +249,12 @@ def test_template_nho_qua_lau_thi_doc_lai_truoc_khi_put(monkeypatch):
     assert goi == ["GET", "PUT", "GET", "PUT"]
     f.dat("proj", {"show_101": "false"})          # ngay sau restore: dung template vua publish
     assert goi == ["GET", "PUT", "GET", "PUT", "PUT"]
+
+
+def test_dat_case_moi_go_key_case_truoc_con_tren_testvsl(monkeypatch):
+    """Che do chuoi giu config giua case: case sau khong dat key cua case truoc thi key do phai bi go."""
+    goi, server = _goi_gia(monkeypatch, _t())
+    f.dat("proj", {"enable_resume": "false", "show_101": "false"})
+    f.dat("proj", {"show_101": "true"})
+    assert f.keys_dang_gan(server["t"]) == ["show_101"]
+    assert server["t"]["parameterGroups"]["ads"]["parameters"]["show_101"]["conditionalValues"]["testvsl"] == {"value": "true"}

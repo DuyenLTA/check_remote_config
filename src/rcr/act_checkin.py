@@ -46,10 +46,11 @@ KILL_RE = re.compile(r"^\s*(?:quay\s+v[ềe]\s+home\s*,\s*)?kill\s+app\s*,\s*m[�
 DOI_NGAY_RE = re.compile(r"ch[ỉi]nh\s+gi[ờo]\s+(?:thi[ếe]t\s+b[ịi]|m[áa]y)\s+sang\s+ng[àa]y\s+h[ôo]m\s+sau", re.I)
 
 CHO_POPUP = 20.0          # Add Widget hien ~8s sau khi vao Home (do AIP893)
-CHO_CHECKIN = 8.0         # man Check-in hien ngay sau khi dong Add Widget
+CHO_CHECKIN = 15.0        # man Check-in hien ngay sau khi dong Add Widget; moi lan nhin ~3,5s tren Pixel 4
 CHO_SHEET = 30.0
 CHO_GEN = 180.0
 NHIP = 0.5
+LAUNCHER_RE = re.compile(r"launcher|nexuslauncher|systemui|permissioncontroller", re.I)
 CHO_DUNG_YEN = 4.0        # toi da doi sheet truot xong (nut X dung yen)
 
 
@@ -138,6 +139,13 @@ async def _lam(client, serial, package, action: Checkin, ctx) -> dict:
         await _ve_home_fo(client, serial, package)
         ket = await _quan_sat(client, serial, package)
         if not ket.get("checkin"):
+            # Buoc nay chi can TOI man Check-in de bam (khong cham "hien sau Add Widget"): hut man (ad de, popup bi
+            # dong truoc khi nhin - Pixel 4 13/11/2026 R04/R05/R06) -> kill, mo lai vao Home, nhin lai mot lan.
+            # Chua check-in thi man hien lai moi lan mo app.
+            await client.shell(serial, "am", "force-stop", package)
+            await _ve_home_fo(client, serial, package)
+            ket = await _quan_sat(client, serial, package)
+        if not ket.get("checkin"):
             return ket | {"dung": "không thấy màn Daily Check-in để bấm Check-in"}
         ket |= await _checkin(client, serial, package)
         return ket | {"sau_dong": await _dong_unlocked(client, serial, package)}
@@ -177,7 +185,20 @@ async def _lam(client, serial, package, action: Checkin, ctx) -> dict:
 
 # ---- nhin man ----
 
+async def _gat_app_de(client, serial: str, package: str) -> None:
+    """Quang cao test tu bi bam (khong qua tool) mo YouTube / Chrome / Play de len Home -> khong thay man Check-in
+    (Pixel 4 13/11/2026: 10 lan/lượt 14 case). App khac (tru trinh chon anh, launcher) dang foreground -> force-stop
+    no roi dua app ve truoc (am start launcher: process con song thi chi dua task len, khong mo lanh)."""
+    pkg, _ = await device_app.focus(client, serial)
+    if not pkg or pkg == package or rating_cong_thuc.TRINH_CHON_RE.search(pkg) or LAUNCHER_RE.search(pkg):
+        return
+    await client.shell(serial, "am", "force-stop", pkg)
+    await device_app.launch(client, serial, package)
+    await asyncio.sleep(1.5)
+
+
 async def _nhin(client, serial: str, package: str) -> dict:
+    await _gat_app_de(client, serial, package)
     xml = await ui_dump.dump(client, serial)
     png, _, _ = await client.run_binary("-s", serial, "exec-out", "screencap -p")
     nodes = ui_dump.app_nodes(ui_dump.parse_dump(xml), package)
@@ -278,7 +299,15 @@ async def _x(client, serial, package) -> dict:
 
 async def _vao_unlock(client, serial, package, ct, thu: int) -> dict:
     log: list[str] = []
-    if not await rating_cong_thuc.chay_ds(client, serial, package, ct["vao_unlock"], log, {"thu": thu}):
+    ok = await rating_cong_thuc.chay_ds(client, serial, package, ct["vao_unlock"], log, {"thu": thu})
+    if not ok:
+        # Bam template doi khi bat inter truoc trinh chon anh; dong ad xong app khong mo trinh chon (Pixel 4
+        # 13/11/2026 R01-04/R01-07) -> BACK thoat man do roi lam lai ca chuoi mot lan (buoc dau ve lai Home).
+        log.append("làm lại từ Home")
+        await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        await asyncio.sleep(1.0)
+        ok = await rating_cong_thuc.chay_ds(client, serial, package, ct["vao_unlock"], log, {"thu": thu})
+    if not ok:
         return {"thu": thu, "log": log, "dung": f"không vào được sheet unlock template: {'; '.join(log[-2:])}"}
     het = time.monotonic() + CHO_SHEET
     sh = None

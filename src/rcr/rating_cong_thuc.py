@@ -75,6 +75,12 @@ async def _chon_anh(client, serial: str, het: float, log: list[str]) -> bool:
     """Trinh chon anh he thong (photopicker / Google Photos): bam anh dau tien roi nut xac nhan neu co."""
     da_bam = False
     while time.monotonic() < het:
+        if not da_bam:
+            # Bam template co the bat inter truoc trinh chon anh (AIP893 Pixel 4 13/11/2026) -> dong ad roi doi tiep.
+            _pkg, act = await device_app.focus(client, serial)
+            if "AdActivity" in (act or ""):
+                log.append(await fo_flow.dong_ad_dang_che(client, serial, cho=45) or "chờ ad hết giờ")
+                continue
         nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
         if not da_bam:
             anh = next((n for n in nodes if ANH_RE.search(n.content_desc or "") and not n.bounds.empty), None)
@@ -125,7 +131,10 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
             # Case noi tiep co the dang o result / Feedback: BACK ve toi man goc (Home) truoc khi gen lai.
             if re.search(buoc["ve_man"], act or ""):
                 return True
-            if _pkg != package:
+            if _pkg and TRINH_CHON_RE.search(_pkg):
+                # Trinh chon anh nam tren task cua app: am start app khong dua app len tren no -> BACK thoat.
+                await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+            elif _pkg != package:
                 await device_app.launch(client, serial, package)
                 await device_app.wait_foreground(client, serial, package)
             elif LUONG_FO_RE.search(act or ""):
