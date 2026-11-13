@@ -38,6 +38,22 @@ def _hop(n) -> list[int]:
     return [b.left, b.top, b.right, b.bottom]
 
 
+def _trong_sheet(nodes, dong) -> list:
+    """Node chu thuoc sheet chua nut X. Home van nam trong cay node sau sheet (Pixel 4, 13/11/2026: 'Image to Video
+    Generate' top 996 nam duoi X top 993 -> bi doc thanh title). Sheet = to tien thap nhat cua X rong gan het man,
+    cao >= 30% man, bat dau duoi dinh man; khong tim thay thi giu cach cu (moi chu duoi X)."""
+    theo_id = {n.node_id: n for n in nodes}
+    rong = max((n.bounds.right for n in nodes), default=0)
+    cao = max((n.bounds.bottom for n in nodes), default=0)
+    p = theo_id.get(dong.parent_id or "")
+    while p is not None:
+        b = p.bounds
+        if rong and b.right - b.left >= 0.9 * rong and b.bottom - b.top >= 0.3 * cao and b.top > 0.1 * cao:
+            return [n for n in _chu(nodes) if n.node_id.startswith(p.node_id + ".")]
+        p = theo_id.get(p.parent_id or "")
+    return [n for n in _chu(nodes) if n.bounds.top >= dong.bounds.top]
+
+
 def doc(nodes) -> dict:
     """{"widget", "checkin": {...}|None, "unlocked": {...}|None, "sheet": {...}|None} tu cay node app."""
     chu = _chu(nodes)
@@ -45,7 +61,8 @@ def doc(nodes) -> dict:
     dong = next((n for n in nodes if (n.content_desc or "") == "Close" and not n.bounds.empty), None)
     ra = {"widget": widget, "checkin": None, "unlocked": None, "sheet": None}
     if dong is not None and not widget:
-        duoi = sorted((n for n in chu if n.bounds.top >= dong.bounds.top), key=lambda n: n.bounds.top)
+        duoi = sorted((n for n in _trong_sheet(nodes, dong) if n.bounds.top >= dong.bounds.top),
+                      key=lambda n: n.bounds.top)
         days = [n for n in duoi if DAY_RE.match(n.text.strip())]
         than = [n for n in duoi if not DAY_RE.match(n.text.strip())]
         if days and len(than) >= 2:

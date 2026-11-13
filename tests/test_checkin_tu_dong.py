@@ -108,3 +108,22 @@ def test_cham_free_generate_gen_va_khong_hien_lai():
 def test_buoc_dung_giua_chung_thi_khong_cham_gia():
     d = _drive({"viec": "vao_unlock", "dung": "app chưa có công thức", "su_kien": []})
     assert assert_checkin.cham("Button Free Generate hiện, enabled.", d, {})["verdict"] == "NEEDS_HUMAN"
+
+
+def test_doc_bo_chu_home_nam_sau_sheet():
+    """Pixel 4: Home van trong cay node sau sheet, 'Image to Video Generate' nam ngay duoi nut X -> khong duoc la title."""
+    xml = f"""<hierarchy><node {P} text="" bounds="[0,0][1080,2280]">
+<node {P} text="" bounds="[0,0][1080,2280]">
+<node {P} text="Image to Video Generate" bounds="[639,996][996,1107]"/>
+<node {P} text="AI Try On Outfits" bounds="[48,1357][408,1415]"/></node>
+<node {P} text="" bounds="[0,940][1080,2280]">
+<node {P} content-desc="Close" text="" bounds="[903,993][1047,1137]"/>
+<node {P} text="QA - Today's Check-In" bounds="[60,1098][1020,1169]"/>
+<node {P} text="QA - Banner check-in" bounds="[114,1344][617,1403]"/>
+<node {P} text="Day 1" bounds="[130,1727][205,1762]"/>
+<node {P} text="Complete your daily check-in" bounds="[60,1882][1020,1980]"/>
+<node {P} text="Check-in" clickable="true" bounds="[445,2108][636,2160]"/></node>
+</node></hierarchy>"""
+    c = checkin_may.doc(parse_dump(xml))["checkin"]
+    assert (c["title"], c["banner"], c["description"], c["cta"]) == (
+        "QA - Today's Check-In", "QA - Banner check-in", "Complete your daily check-in", "Check-in")
