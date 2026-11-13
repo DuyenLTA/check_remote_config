@@ -93,8 +93,12 @@ def cham_mot_tang(ev: list[dict], i: int, bat: str, tat: str, unit_bat: str, uni
     if b["show"]:
         ra.append((2, "PASS", f"ad_show {_duoi(unit_bat)} lúc {_gio(next(e for e in b['ds'] if e['ten'] == 'ad_show' and e['ok']))}"))
     elif b["req"] and not b["load_ok"]:
-        ra.append((2, "PASS", f"request đúng {_duoi(unit_bat)} {b['req']} lần, kho không fill ({b['load_fail']} fail) "
-                              "— request đúng unit là đạt"))
+        # Dong 2 la "Co fill thi ... van hien thi": khong fill = chua co dieu kien de kiem hien thi -> BLOCKED, khong
+        # PASS (user chot 13/11/2026: report IAA AIP893 PASS 7 dong hien thi ma khong ai thay ad). Dong request
+        # (dong 1) van giu luat cu "request dung unit la dat".
+        ra.append((2, "BLOCKED", f"request đúng {_duoi(unit_bat)} {b['req']} lần nhưng kho không fill "
+                                 f"({b['load_fail']} fail) — chưa có ad hiện để kiểm hiển thị, cần fill (lắc máy chọn "
+                                 "ad source / test mode network)"))
     return ra
 
 

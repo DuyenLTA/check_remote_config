@@ -16,13 +16,15 @@ from __future__ import annotations
 
 import re
 
-from .verdict_levels import FAIL, NEEDS_HUMAN, PASS, out
+from .verdict_levels import CONFIG_BLOCKED, FAIL, NEEDS_HUMAN, PASS, out
 
 ID_RE = re.compile(r"ca-app-pub-\d+/(\d+)")
 # Cat ve theo dau cau; "(X, Y)" giu nguyen trong mot ve (dau phay trong ngoac khong cat).
 VE_RE = re.compile(r"[^;.,(]*(?:\([^)]*\)[^;.,(]*)*")
 PHU_DINH_RE = re.compile(r"kh[oô]ng\s+(?:\w+\s+){0,2}?(?:request|g[ọo]i|(?:pre)?load)", re.I)
 DIEU_KIEN_RE = re.compile(r"\bth[ìi]\b", re.I)
+# Dong hoi ad HIEN THI ("Co fill thi Banner van hien thi tai Home") - khong fill thi chua kiem duoc.
+HIEN_THI_RE = re.compile(r"hi[ểe]n\s*th[ịi]|\bhi[ểe]n\b|\bshow\b|xu[ấa]t\s*hi[ệe]n", re.I)
 
 
 def ids_trong(text: str) -> list[str]:
@@ -107,6 +109,10 @@ def cham_theo_case(text: str, units: list[dict], drive: dict, so_case: list[str]
         return out(PASS, f"không request/show unit nào của vị trí ({ten})", actual)
     for loai, nhan in (("shown", "đã show"), ("loaded", "load được"), ("requested", "được request (kho không fill)")):
         co = [u["unit"] for u in cua if u.get(loai)]
+        if co and loai == "requested" and HIEN_THI_RE.search(text):
+            # "Co fill thi ... van hien thi": khong fill = chua kiem duoc hien thi -> BLOCKED (user chot 13/11/2026).
+            return out(CONFIG_BLOCKED, f"unit của vị trí {nhan}: {', '.join(co)} — chưa có ad hiện để kiểm hiển thị, "
+                                       "cần fill (lắc máy chọn ad source / test mode network)", actual)
         if co:
             return out(PASS, f"unit của vị trí {nhan}: {', '.join(co)}", actual)
     if not _da_toi(drive):

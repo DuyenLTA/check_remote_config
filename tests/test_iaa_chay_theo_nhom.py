@@ -91,7 +91,8 @@ def test_cham_ca_bon_bien_the_tu_log():
     kq = {(m, d): (k, ly) for m, d, k, ly in cli_iaa.ket_qua(DS, {"bat": bat, "thuong": thuong, "tat": tat})}
     assert kq[("IAA-01-01", 0)][0] == "PASS" and kq[("IAA-02-01", 0)][0] == "PASS"
     assert kq[("IAA-01-02", 1)][0] == "PASS"
-    assert kq[("IAA-01-02", 2)][0] == "PASS" and "không fill" in kq[("IAA-01-02", 2)][1]
+    # "Co fill thi ... hien thi" ma kho khong fill: chua kiem duoc hien thi -> BLOCKED (luat 13/11/2026)
+    assert kq[("IAA-01-02", 2)][0] == "BLOCKED" and "không fill" in kq[("IAA-01-02", 2)][1]
     assert kq[("IAA-02-02", 1)][0] == "FAIL"
     assert kq[("IAA-01-04", 1)][0] == "PASS" and kq[("IAA-01-04", 2)][0] == "PASS"
     assert kq[("IAA-02-04", 1)][0] == "FAIL"
@@ -173,3 +174,15 @@ def test_fail_time_mot_tang_dem_fail_cua_tang_do():
                                                                    _dong(t + 1, "ad_load", h, "failed"))]),
                               iaa_nhom.ban_do_unit(DS))
     assert iaa_cham_log.cham_fail_time(ev, 2, 2)[0] == "PASS"
+
+
+def test_dong_hien_thi_theo_id_khong_fill_la_blocked():
+    """'Co fill thi Banner van hien thi' chi co request, khong load -> BLOCKED; dong request van PASS."""
+    from rcr import assert_ad_theo_id
+    units = [{"unit": "*****352", "requested": 1, "loaded": 0, "shown": 0}]
+    drive = {"status": "DONE"}
+    hien = assert_ad_theo_id.cham_theo_case("Có fill thì Banner vẫn hiển thị tại Home.", units, drive, ["5660837352"],
+                                           False)
+    assert hien["verdict"] == "BLOCKED"
+    req = assert_ad_theo_id.cham_theo_case("Unit của vị trí được gọi.", units, drive, ["5660837352"], False)
+    assert req["verdict"] == "PASS"
