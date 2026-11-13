@@ -164,6 +164,7 @@ def muc17(text_fo: str) -> dict:
     vao_man = [e for e in tat_ca if e["name"] == "screen_view" and "AdActivity" not in e["params"].get("ga_screen_class", "")]
     shows = [e for e in tat_ca if e["name"] == "ad_show" and fmt(e) == "native" and ok(e)]
     reqs = [e for e in tat_ca if e["name"] == "track_ad_request"]
+    loads_fail = [e for e in tat_ca if e["name"] == "ad_load" and not ok(e)]
     preload, cham = [], []
     for i, v in enumerate(vao_man):
         het = vao_man[i + 1]["ts"] if i + 1 < len(vao_man) else float("inf")
@@ -175,6 +176,10 @@ def muc17(text_fo: str) -> dict:
         req = [r for r in reqs if unit(r) == unit(dau) and r["ts"] < v["ts"] - SHOW_TRUOC_SCREEN_VIEW_S]
         # Request do phai chua duoc dung cho mot lan hien khac (reload dung lai unit cu khong phai preload).
         if not req or any(unit(s) == unit(dau) and req[-1]["ts"] < s["ts"] < dau["ts"] for s in shows):
+            continue
+        # Preload no fill (ad_load failed truoc khi vao man) roi man tu xin lai: ad hien la cua request moi tai man,
+        # khong phai ad preload (Linguza 2.5.0 13/11/2026: OB4 xin 6584955769 no fill, Question xin lai +1.2s, hien +4.4s).
+        if any(unit(f) == unit(dau) and req[-1]["ts"] < f["ts"] < dau["ts"] for f in loads_fail):
             continue
         (preload if dau["ts"] - v["ts"] <= NATIVE_HIEN_NGAY_S else cham).append(
             f"{lop}: request {req[-1]['t'][6:]}, vào {v['t'][6:]}, show {dau['t'][6:]} ({dau['ts'] - v['ts']:+.1f}s) …{unit(dau)}")

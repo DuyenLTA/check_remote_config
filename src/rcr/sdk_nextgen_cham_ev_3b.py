@@ -41,7 +41,10 @@ def loi_chuoi(ev, show: dict) -> list[str]:
     shows = [e for e in cung if e["name"] == "ad_show" and ok(e) and load["ts"] <= e["ts"] < load_sau]
     if len(shows) != 1:
         loi.append(f"ad_show={len(shows)} cho 1 lần load (phải 1)")
-    req = [e for e in cung if e["name"] == "track_ad_request" and load_truoc < e["ts"] <= load["ts"] + 0.5]
+    # Request cua cac lan load FAILED (no fill, banner tu xin lai) truoc `load` thuoc luot cua chung, khong tinh vao luot nay.
+    fail_truoc = [l["ts"] for l in cung if l["name"] == "ad_load" and not ok(l) and load_truoc < l["ts"] < load["ts"]]
+    tu = max([load_truoc] + fail_truoc)
+    req = [e for e in cung if e["name"] == "track_ad_request" and tu < e["ts"] <= load["ts"] + 0.5]
     if len(req) != 1:
         loi.append(f"track_ad_request={len(req)} (phải 1)")
     matched = gan(ev, "track_ad_matched_request", load, CUA_SO_MATCHED_LOAD, 0.5)

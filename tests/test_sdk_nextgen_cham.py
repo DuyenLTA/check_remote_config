@@ -437,3 +437,30 @@ def test_aconfig_feature_flags_do_lop_android16_khong_tinh_la_thieu_lop():
     ])
     ra = loi_thieu_lop(log, "com.abc.app")
     assert len(ra) == 1 and "AdView" in ra[0]
+
+
+def test_preload_native_no_fill_roi_man_xin_lai_khong_tinh_la_preload_cham():
+    # Linguza 2.5.0 (13/11/2026): OB4 xin native Question no fill, Question xin lai, ad ve +4.4s -> khong phai preload cham
+    ds = [_ev("track_ad_request", 1.0, "222", "native"),
+          _ev("ad_load", 3.0, "222", "native", load_status="failed", error_code="3", error_code_name="ERROR_CODE_NO_FILL"),
+          _ev("screen_view", 6.0, "0", "x", ga_screen_class="QuestionActivity"),
+          _ev("track_ad_request", 7.0, "222", "native"),
+          _ev("ad_load", 10.3, "222", "native", load_status="success"),
+          _ev("ad_show", 10.4, "222", "native", show_status="success")]
+    assert B.muc17("\n".join(ds))["ket"] != "SAI"
+
+
+def test_ev20_request_cua_lan_no_fill_truoc_khong_tinh_vao_luot_hien():
+    # Banner Home Linguza 2.5.0: 3 lan request -> no fill, lan 4 request -> load -> show -> paid: du chuoi
+    fail = lambda t: [_ev("track_ad_request", t, "333", "banner"),
+                      _ev("ad_load", t + 1, "333", "banner", load_status="failed", error_code="3", error_code_name="ERROR_CODE_NO_FILL")]
+    ds = fail(1.0) + fail(4.0) + fail(7.0) + _chuoi(t0=10.0, unit="333", fmt="banner")
+    assert C.chuoi("EV-20", "x", _evs(ds), "banner", "ngoai")["ket"] == "KHOP"
+    ds2 = fail(1.0) + _chuoi(t0=10.0, unit="333", fmt="banner") + [_ev("track_ad_request", 10.2, "333", "banner")]
+    assert C.chuoi("EV-20", "x", _evs(ds2), "banner", "ngoai")["ket"] == "SAI"   # trung request trong chinh luot hien van Sai
+
+
+def test_hv09_collapsible_false_khong_phai_collapsible_banner():
+    adapter = "BannerAdmobAdapter"
+    assert not M.co_collapsible(PROC + "\n" + _app(adapter, "banner loaded ad=185432425 collapsible=false"), PKG)
+    assert M.co_collapsible(PROC + "\n" + _app(adapter, "banner loaded ad=1 collapsible=true"), PKG)

@@ -233,6 +233,12 @@ def ht04(text_fo: str) -> dict:
     return kq("HT-04", ten, DO_TAY, "Home → mở lại 2 lần không thấy app open — kiểm RC bật app open resume rồi đo tay")
 
 
+def co_collapsible(text_fo: str, package: str) -> bool:
+    """Log app co banner collapsible. "collapsible=false" (BannerAdmobAdapter: banner loaded ... collapsible=false,
+    Linguza 2.5.0 13/11/2026) la banner thuong, khong tinh."""
+    return any("collapsible" in d.lower() and "collapsible=false" not in d.lower() for d in dong_cua_app(text_fo, package))
+
+
 def tat_ca(bc: dict, ev, logs: dict, package: str) -> list[dict]:
     co = {fmt(e) for e in ev}
     ra = [kt01(bc, logs.get("offline_mat", ""), logs.get("offline_sau", ""), package), kt02(bc, logs.get("cham"), package)]
@@ -253,7 +259,7 @@ def tat_ca(bc: dict, ev, logs: dict, package: str) -> list[dict]:
     ra += [kq("HV-06", "Bấm Back khi đang xem quảng cáo toàn màn hình", KHONG_AP_DUNG, BO_THEO_YEU_CAU),
            kq("HV-07", "Quảng cáo về muộn khi đã rời màn", DO_TAY, "Cần proxy chậm riêng domain ads 6s + rời màn đúng lúc — đo tay"),
            kq("HV-08", "Bấm Home khi inter đang load", DO_TAY, "Cần bấm Home đúng lúc khung Loading Ads — đo tay")]
-    collapsible = any("collapsible" in d.lower() for d in dong_cua_app(logs.get("fo", ""), package))
+    collapsible = co_collapsible(logs.get("fo", ""), package)
     ra.append(kq("HV-09", "Collapsible banner", DO_TAY, "Có collapsible banner — đo tay") if collapsible
               else kq("HV-09", "Collapsible banner", KHONG_AP_DUNG, "Không có collapsible banner trong luồng"))
     ra.append(kq("RG-01", "Chạy lại bộ test case luồng FO", KHONG_AP_DUNG, "Bản SDK này không có bộ TC"))
