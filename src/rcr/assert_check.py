@@ -19,7 +19,7 @@ from . import (ad_positions, assert_ad_area, assert_ad_theo_id, assert_ad_screen
                assert_giu_nguyen, assert_khong_co_ad, assert_luong_ad, assert_nut_lfo, assert_resume,
                assert_man_khong, assert_qa_man_tat_hung_202,
                assert_anh_content, assert_mau, assert_ads, assert_splash_media, assert_tag,
-               assert_rating, assert_timing, assert_trong_luc, assert_ui, assert_widget, ui_names)
+               assert_checkin, assert_rating, assert_timing, assert_trong_luc, assert_ui, assert_widget, ui_names)
 from .verdict_levels import (  # noqa: F401 - tai xuat cho cho goi
     CONFIG_BLOCKED,
     CONFIG_OK,
@@ -94,6 +94,10 @@ def check(line: str, ads: dict, drive: dict, crash: dict, rc_keys=(), scope: str
         return ket
     # Tab rating: popup / sao / nut Rate / X / thoat app / shortcut - cham bang bang chung buoc rating (act_rating).
     ket = assert_rating.cham(text, drive or {})
+    if ket:
+        return ket
+    # Tab daily checkin: man Check-in / Unlocked / sheet unlock / gen free / event - bang chung buoc act_checkin.
+    ket = assert_checkin.cham(text, drive or {}, cfg)
     if ket:
         return ket
 

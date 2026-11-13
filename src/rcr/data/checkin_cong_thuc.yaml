@@ -1,0 +1,28 @@
+# Cong thuc lai app cho tab TC "daily checkin" (act_checkin). Moi app mot muc theo package.
+#
+#   home       : regex ten activity Home cua app.
+#   home_chu   : regex chu chi co tren Home (de biet da ve Home thuc su, khong con sheet / man tien trinh de len).
+#   vao_unlock : cac buoc tu Home toi sheet unlock template (noi co Free Generate / Watch Ads). "{thu}" = template
+#                thu may trong hang (A=1, B=2, C=3).
+#   sheet_xong : regex chu chi hien khi sheet unlock da tai xong (Free Generate co hay khong chi ket luan sau luc nay).
+#   lich_su    : cac buoc mo man History (bang chung gen xong), `moi_tao` = regex nhan thoi gian cua ban moi tao.
+#
+# Kieu buoc dung chung voi data/rating_gen.yaml (rating_cong_thuc): ve_man, dong_neu_co, tap, tap_duoi (+ thu),
+# cho_man, cho_chu, chon_anh (trinh chon anh he thong: bam anh dau tien + Done).
+
+com.aiphotogenerator.aivideomaker.photoslideshow:     # AIP893 - do 13/11/2026 tren Pixel 6, ban 2.6.0
+  home: "MainActivity"
+  home_chu: "^AI Try On Outfits$"
+  vao_unlock:
+    - ve_man: "MainActivity"
+      toi_da: 20
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap_duoi: "^AI Try On Outfits$"
+      thu: "{thu}"
+    - chon_anh: true
+      toi_da: 30
+  sheet_xong: "^Watch Ads"
+  lich_su:
+    - tap: "^History$"
+    - cho_chu: "^History$"
+  moi_tao: "just now|\\d+\\s*(?:second|minute)s?\\s+ago"

@@ -20,6 +20,9 @@ NHIP = 1.0
 DONG_TOI_DA = 4
 LUONG_FO_RE = re.compile(r"Splash|AdActivity|Language|Onboarding|Question|Billing", re.I)
 GOI_SUB = "weekly"      # goi test ngan nhat (chu ky test 5 phut)
+# Trinh chon anh he thong: o anh co desc "Photo taken on ..." (photopicker Android 13+), nut xac nhan Done / Add.
+ANH_RE = re.compile(r"^(?:Photo|Ảnh|Anh)\b.*(?:taken|chụp|chup)", re.I)
+XAC_NHAN_ANH_RE = re.compile(r"^(?:Done|Add|Select|Xong|Thêm|Chọn)$", re.I)
 
 
 def cong_thuc(package: str, loai: str) -> list[dict] | None:
@@ -37,13 +40,18 @@ def tim(nodes, mau: str):
     return next((n for n in nodes if _khop(n, mau) and not n.bounds.empty), None)
 
 
-def tim_duoi(nodes, mau: str):
-    """Node bam duoc dau tien nam duoi node co chu khop (the anh mau, the style khong co chu)."""
+def tim_duoi(nodes, mau: str, thu: int = 1):
+    """Node bam duoc thu `thu` (dem tu trai) o hang dau tien nam duoi node co chu khop (the anh mau / the template
+    khong co chu). The cuoi hang chi lo mot mep van tap duoc: tap vao giua phan dang hien."""
     moc = tim(nodes, mau)
     if moc is None:
         return None
     duoi = [n for n in nodes if n.clickable and not n.bounds.empty and n.bounds.top >= moc.bounds.bottom]
-    return min(duoi, key=lambda n: (n.bounds.top, n.bounds.left), default=None)
+    if not duoi:
+        return None
+    hang = min(n.bounds.top for n in duoi)
+    cung_hang = sorted((n for n in duoi if abs(n.bounds.top - hang) <= 8), key=lambda n: n.bounds.left)
+    return cung_hang[thu - 1] if 0 < thu <= len(cung_hang) else None
 
 
 async def _nodes(client, serial: str, package: str):
@@ -55,8 +63,43 @@ async def _bam(client, serial: str, node) -> None:
     await asyncio.sleep(NHIP)
 
 
+async def _chon_anh(client, serial: str, het: float, log: list[str]) -> bool:
+    """Trinh chon anh he thong (photopicker / Google Photos): bam anh dau tien roi nut xac nhan neu co."""
+    da_bam = False
+    while time.monotonic() < het:
+        nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+        if not da_bam:
+            anh = next((n for n in nodes if ANH_RE.search(n.content_desc or "") and not n.bounds.empty), None)
+            if anh:
+                await _bam(client, serial, anh)
+                log.append("chọn ảnh đầu tiên")
+                da_bam = True
+                continue
+        else:
+            nut = next((n for n in nodes if XAC_NHAN_ANH_RE.match(n.text or "") and not n.bounds.empty), None)
+            if nut:
+                await _bam(client, serial, nut)
+                log.append(f"bấm {nut.text}")
+                return True
+            pkg, _ = await device_app.focus(client, serial)
+            if pkg and "photo" not in pkg and "media" not in pkg and "documentsui" not in pkg:
+                return True                      # trinh chon dong ngay sau khi bam anh (chon 1 anh)
+        await asyncio.sleep(NHIP)
+    log.append("không chọn được ảnh trong trình chọn ảnh")
+    return False
+
+
 async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str]) -> bool:
     het = time.monotonic() + float(buoc.get("toi_da", TOI_DA_MAC_DINH))
+    if "chon_anh" in buoc:
+        return await _chon_anh(client, serial, het, log)
+    if "cho_chu" in buoc:
+        while time.monotonic() < het:
+            if tim(await _nodes(client, serial, package), buoc["cho_chu"]):
+                return True
+            await asyncio.sleep(NHIP)
+        log.append(f"không thấy chữ {buoc['cho_chu']!r}")
+        return False
     if "dong_neu_co" in buoc:
         # Home co the chong nhieu popup (Add Widget, Check-in...): dong toi khi het, toi da DONG_TOI_DA lan.
         for _ in range(DONG_TOI_DA):
@@ -112,7 +155,8 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
             return False
         else:
             nodes = await _nodes(client, serial, package)
-            node = tim(nodes, buoc["tap"]) if "tap" in buoc else tim_duoi(nodes, buoc["tap_duoi"])
+            node = tim(nodes, buoc["tap"]) if "tap" in buoc else tim_duoi(nodes, buoc["tap_duoi"],
+                                                                         int(buoc.get("thu", 1)))
             if node:
                 log.append(f"bấm {node.text or node.content_desc or node.label}")
                 await _bam(client, serial, node)
@@ -142,6 +186,16 @@ async def _mua_sub(client, serial: str, package: str, log: list[str]) -> bool:
         return False
     log.append(f"mua sub {GOI_SUB}: popup {'test' if (kq.get('popup') or {}).get('la_test') else 'không thấy'}")
     await sub_thao_tac.mo_lanh(client, serial, package)
+    return True
+
+
+async def chay_ds(client, serial: str, package: str, ds: list[dict], log: list[str], bien: dict | None = None) -> bool:
+    """Chay mot danh sach buoc cong thuc bat ky (dung chung cho tab daily checkin). `bien`: thay "{ten}" trong gia tri."""
+    for b in ds:
+        if bien:
+            b = {k: (v.format(**bien) if isinstance(v, str) and "{" in v else v) for k, v in b.items()}
+        if not await _mot_buoc(client, serial, package, b, log):
+            return False
     return True
 
 

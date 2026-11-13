@@ -34,7 +34,7 @@ import re
 
 from .act_types import (Action, Background, ChonMotNgonNgu, ChonNgonNgu, KillMoLai, ThongBao, GoTo, MoLai, Net, NeedsHuman, NoOp, Rotate, Seq,
                         Swipe, Tap, TapId, Wait, Watch, XemTag)
-from . import act_compound, act_cau_fo, act_rating, act_widget, net_ctl
+from . import act_checkin, act_compound, act_cau_fo, act_rating, act_widget, net_ctl
 from .act_cau_fo import DI_QUA, MO_LAI_TU_RE, RA_KHOI_OB  # noqa: F401 - case_drive / act_exec dung qua day
 from .act_nodes import find, tap_by_text
 from .ui_dump import DeviceNode
@@ -102,6 +102,11 @@ def resolve(step: str, nodes: list[DeviceNode]) -> Action:
     text = TU_MAN_RE.sub("", text, count=1) or text
     # Thao tac he thong (keo thanh thong bao, kill app) xet TRUOC: cau co "vuot len dong" / "vuot khoi Recent" ma
     # roi vao luat vuot la vuot man hinh app - thao tac sai ma van ra ket qua (AIP936 RG08-03/05 03/11/2026).
+    # Tab daily checkin xet TRUOC thao tac he thong: "Kill app, mo lai, vao Home" o tab nay con phai dong Add Widget
+    # roi nhin man Check-in co hien lai khong (chi khi case dat key checkin - act_checkin.CFG).
+    checkin = act_checkin.resolve(text, nodes)
+    if checkin is not None:
+        return checkin
     he_thong = act_compound.thao_tac_he_thong(text)
     if he_thong is not None:
         return he_thong
