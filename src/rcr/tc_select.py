@@ -55,7 +55,7 @@ def tab_for_version(tabs, sdk: str):
     if not version:
         raise RcError(f"Khong doc duoc ban SDK: {sdk!r}")
     ep = tc_catalog.tab_ca_hai(sdk)
-    if ep:                       # 3.7.2: luat chot tab 3.6.1, khong lay tab gan nhat (3.6.2)
+    if ep:                       # 3.7.2: luat chot tab rieng 3.7.2 (ghim, khong tu do tab)
         return pick_tab(tabs, ep)[0]
     deltas = sorted((t for t in tabs if t.kind == "delta" and t.version), key=lambda t: t.version)
     fit = [t for t in deltas if t.version <= version]

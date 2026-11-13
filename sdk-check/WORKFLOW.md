@@ -1,7 +1,7 @@
 # Nhánh `/rc-check` cho app SDK FO 3.7.0 / 3.7.1 / 3.7.2: chấm checklist SDK Next-Gen
 
 Vào đây từ `.claude/commands/rc-check.md` mục 0b — `--preflight` đọc được app dùng **SDK FO 3.7.0 / 3.7.1** (bộ TC không có
-bản này), hoặc **3.7.2** sau khi đã chạy xong bộ TC tab 3.6.1 (`rc-check.md` mục 0b). Tham số: package, mục cần chấm (`1|2|3|4|all`, mặc định `all`), có thể kèm checklist dán vào. Bản SDK ghi
+bản này), hoặc **3.7.2** sau khi đã chạy xong bộ TC tab 3.7.2 (`rc-check.md` mục 0b). Tham số: package, mục cần chấm (`1|2|3|4|all`, mặc định `all`), có thể kèm checklist dán vào. Bản SDK ghi
 lên header report lấy từ dòng `Bản SDK FO` của preflight.
 
 ## Trước khi chạy: check ID ads + thông số như SDK thường (bắt buộc)

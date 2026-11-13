@@ -270,11 +270,11 @@ def test_snapshot_cua_may_khac_khong_tinh(monkeypatch, tmp_path):
 
 
 def test_preflight_372_bao_ca_hai_ke_ca_tin_build_ghi_next_gen():
-    """3.7.2: bo TC tab 3.6.1 roi checklist Next-Gen, ke ca khi bot truyen --next-gen theo tin build."""
+    """3.7.2: bo TC tab 3.7.2 roi checklist Next-Gen, ke ca khi bot truyen --next-gen theo tin build."""
     for ep in (False, True):
         m = preflight.muc_sdk("3.7.2", ep_nextgen=ep)
-        assert "tab 3.6.1" in m["chi_tiet"] and "checklist Next-Gen" in m["chi_tiet"]
+        assert "tab 3.7.2" in m["chi_tiet"] and "checklist Next-Gen" in m["chi_tiet"]
     assert "Next-Gen" in preflight.muc_sdk("3.7.1")["chi_tiet"]
     dong = []
     preflight.in_bang({"muc": [], "ok": True, "sdk": "3.7.2", "nhanh": "tc"}, dong.append)
-    assert any("CA HAI" in d and "--tab 3.6.1" in d for d in dong)
+    assert any("CA HAI" in d and "--tab 3.7.2" in d for d in dong)
