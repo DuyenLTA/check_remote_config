@@ -7,7 +7,7 @@ that (tin hoi Check, luot verify) van di qua dung duong cua tin build -> chi co 
 - /hang-doi: luot dang chay, luot dang cho, tinh trang may; nut Dung / Huy cho tung luot.
 - /check <ma app> <version> [sdk]: tin hoi Check moi o kenh QA (chi QA duoc duyet). Build bot da thay -> giu
   thong tin build cu; build chua thay -> can `sdk` de chon nhanh (Next-Gen / bo TC) nhu tin build.
-  Kem `tinh_nang` (rating / widget / daily checkin / ca 3) -> xep thang luot `loai_job: "tinh_nang"` chi chay
+  Kem `tinh_nang` (rating / widget / daily checkin / iaa / gen ngam, nhieu cai cach dau phay) -> xep thang luot `loai_job: "tinh_nang"` chi chay
   dung tab do, khong FO, khong check ID ads.
 - /check-bug <ma app>: bug bot da log cho app + trang thai Jira; nut verify bug Reviewing tren build gan nhat.
 - /check-sub <ma app> <version>: xep luot chay bo TC sub Android (`/sub-check`) - job `loai_job: "sub"`, cai ban
@@ -37,10 +37,11 @@ MAX_NUT = 25                       # Discord: toi da 25 nut (5 hang x 5) mot tin
 MAX_GOI_Y = 25                     # Discord: toi da 25 goi y autocomplete
 SDK_HOP_LE = re.compile(r"^(?:\d+\.\d+\.\d+|next-?gen|revert next-?gen)$", re.I)
 # /check tinh_nang: tab SDK rieng trong bo TC chung (khong thuoc FO) - chi chay khi QA chon (user chot 11/11/2026).
+# Chon nhieu = go nhieu ten cach dau phay (goi y tu noi them), khong co lua chon gop kieu "ca 3" (user chot 13/11/2026).
 CHON_TINH_NANG = {"rating": ["rating"], "widget": ["widget"], "daily checkin": ["daily checkin"],
-                  "cả 3": ["rating", "widget", "daily checkin"],
                   # Khong la tab sheet chung: rcr-check dung tu muc 3 ID ads inapp (sheet KT) / sheet gen ngam.
                   "iaa": ["iaa"], "gen ngầm": ["gen-ngam"]}
+MAX_TEN_GOI_Y = 100                # Discord: ten / gia tri goi y autocomplete toi da 100 ky tu
 ICON_TRANG_THAI = {"reviewing": "⏳", "closed": "✅", "done": "✅", "reopened": "🔁", "to do": "🔁"}
 
 
@@ -52,6 +53,9 @@ def dang_ky(bot) -> None:
     async def goi_y_ma(it: discord.Interaction, dang_go: str) -> list[app_commands.Choice[str]]:
         return [app_commands.Choice(name=ma, value=ma) for ma in goi_y_ma_app(bot, dang_go)]
 
+    async def goi_y_tn(it: discord.Interaction, dang_go: str) -> list[app_commands.Choice[str]]:
+        return [app_commands.Choice(name=c, value=c) for c in goi_y_tinh_nang(dang_go)]
+
     @tree.command(name="hang-doi", description="Xem lượt đang chạy, lượt đang chờ và tình trạng máy test")
     async def hang_doi(it: discord.Interaction):
         await xem_hang_doi(bot, it)
@@ -59,14 +63,13 @@ def dang_ky(bot) -> None:
     @tree.command(name="check", description="Gửi tin hỏi Check cho một build (chạy lại hoặc build bot chưa thấy)")
     @app_commands.describe(ma_app="Mã app, vd AIP922", version="Version kèm code, vd 3.7.0 (30)",
                            sdk="Chỉ cần khi bot chưa thấy tin build: số SDK (3.6.1, 3.7.0…) hoặc next-gen",
-                           tinh_nang="Chỉ chạy bộ TC tính năng này (rating / widget / daily checkin / iaa / "
-                                     "gen ngầm), không chạy FO, không check ID ads")
-    @app_commands.choices(tinh_nang=[app_commands.Choice(name=ten, value=ten) for ten in CHON_TINH_NANG])
-    @app_commands.autocomplete(ma_app=goi_y_ma)
+                           tinh_nang="Chỉ chạy bộ TC tính năng (rating / widget / daily checkin / iaa / gen ngầm); "
+                                     "chọn nhiều thì cách nhau dấu phẩy. Không chạy FO, không check ID ads")
+    @app_commands.autocomplete(ma_app=goi_y_ma, tinh_nang=goi_y_tn)
     async def check(it: discord.Interaction, ma_app: str, version: str, sdk: str | None = None,
-                    tinh_nang: app_commands.Choice[str] | None = None):
+                    tinh_nang: str | None = None):
         if tinh_nang:
-            await lenh_check_tinh_nang(bot, it, ma_app, version, tinh_nang.value)
+            await lenh_check_tinh_nang(bot, it, ma_app, version, tinh_nang)
         else:
             await lenh_check(bot, it, ma_app, version, sdk)
 
@@ -96,6 +99,30 @@ async def dong_bo(bot) -> None:
         except discord.HTTPException as exc:
             log.warning("khong dong bo duoc lenh slash vao server %s (thieu scope applications.commands?): %s",
                         g.name, exc)
+
+
+def _tach_tinh_nang(chuoi: str) -> list[str]:
+    return [p.strip().lower() for p in (chuoi or "").split(",")]
+
+
+def goi_y_tinh_nang(dang_go: str) -> list[str]:
+    """Goi y o `tinh_nang`: giu cac ten da go dung, noi them tung ten con lai (loc theo phan dang go do).
+    'rating, wi' -> ['rating, widget']; 'rating, ' -> ['rating', 'rating, widget', ...]."""
+    *truoc, dang = _tach_tinh_nang(dang_go)
+    da = [t for t in dict.fromkeys(truoc) if t in CHON_TINH_NANG]
+    con = [t for t in CHON_TINH_NANG if t not in da and dang in t]
+    goi_y = ([", ".join(da)] if da and not dang else []) + [", ".join(da + [t]) for t in con]
+    return [g for g in goi_y if len(g) <= MAX_TEN_GOI_Y][:MAX_GOI_Y]
+
+
+def doc_tinh_nang(chuoi: str) -> tuple[list[str], str]:
+    """'rating, widget' -> (['rating', 'widget'], ''). Ten la -> ([], loi). Trung ten thi bo trung."""
+    ten = [t for t in dict.fromkeys(_tach_tinh_nang(chuoi)) if t]
+    sai = [t for t in ten if t not in CHON_TINH_NANG]
+    if sai or not ten:
+        return [], (f"Không hiểu tính năng: {', '.join(sai) or '(trống)'}. Chọn trong: "
+                    f"{', '.join(CHON_TINH_NANG)} — nhiều cái thì cách nhau dấu phẩy.")
+    return [tab for t in ten for tab in CHON_TINH_NANG[t]], ""
 
 
 def goi_y_ma_app(bot, dang_go: str) -> list[str]:
@@ -260,13 +287,14 @@ async def lenh_check_tinh_nang(bot, it: discord.Interaction, ma_app: str, versio
     if not bot._duoc_duyet(it.user):
         await it.response.send_message("Chỉ QA được duyệt mới dùng được /check.", ephemeral=True)
         return
-    tin, loi = doc_lenh_check(ma_app, version, None)
+    tabs, loi = doc_tinh_nang(chon)
+    tin, loi = (doc_lenh_check(ma_app, version, None) if tabs else (None, loi))
     if tin is None:
         await it.response.send_message(loi, ephemeral=True)
         return
     await it.response.defer(ephemeral=True, thinking=True)
     try:
-        kq = await xep_check_tinh_nang(bot, tin, it.user, CHON_TINH_NANG[chon])
+        kq = await xep_check_tinh_nang(bot, tin, it.user, tabs)
     except Exception as exc:              # noqa: BLE001 - loi sheet / Discord tra ve cho nguoi go
         log.exception("/check tinh_nang loi")
         kq = f"⛔ Lỗi: {exc}"

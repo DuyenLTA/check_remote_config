@@ -234,9 +234,29 @@ def test_check_tinh_nang_xep_job_chi_tab_da_chon(tmp_path):
     asyncio.run(s.xep_check_tinh_nang(bot, tin, nguoi, s.CHON_TINH_NANG["widget"]))
     assert len(bot.q.jobs) == 2
     assert "đã trong hàng đợi" in asyncio.run(s.xep_check_tinh_nang(bot, tin, nguoi, ["rating"]))
-    assert s.CHON_TINH_NANG["cả 3"] == ["rating", "widget", "daily checkin"]
+    tabs, _ = s.doc_tinh_nang("daily checkin, iaa")
+    asyncio.run(s.xep_check_tinh_nang(bot, tin, nguoi, tabs))
+    assert bot.q.jobs[-1]["tabs"] == ["daily checkin", "iaa"]
 
 
 def test_check_tinh_nang_iaa_gen_ngam_la_lua_chon():
     assert s.CHON_TINH_NANG["iaa"] == ["iaa"] and s.CHON_TINH_NANG["gen ngầm"] == ["gen-ngam"]
+    assert "cả 3" not in s.CHON_TINH_NANG
     assert len(s.CHON_TINH_NANG) <= 25
+
+
+def test_doc_tinh_nang_chon_nhieu_cach_dau_phay():
+    assert s.doc_tinh_nang("rating") == (["rating"], "")
+    assert s.doc_tinh_nang(" Rating , widget,rating, gen ngầm ") == (["rating", "widget", "gen-ngam"], "")
+    tabs, loi = s.doc_tinh_nang("rating, cả 3")
+    assert tabs == [] and "cả 3" in loi
+    assert s.doc_tinh_nang(" , ")[0] == []
+
+
+def test_goi_y_tinh_nang_noi_them_ten_con_lai():
+    assert s.goi_y_tinh_nang("") == list(s.CHON_TINH_NANG)
+    assert s.goi_y_tinh_nang("wi") == ["widget"]
+    assert s.goi_y_tinh_nang("rating, wi") == ["rating, widget"]
+    goi = s.goi_y_tinh_nang("rating, ")
+    assert goi[0] == "rating" and "rating, widget" in goi and "rating, rating" not in goi
+    assert all(len(g) <= 100 for g in s.goi_y_tinh_nang("rating, widget, daily checkin, iaa, "))
