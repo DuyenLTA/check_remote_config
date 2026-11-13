@@ -138,3 +138,38 @@ def test_nhan_shortcut_lay_theo_id_cua_dung_app():
                     " shortLabel=Gỡ cài đặt, resId=0[null]\n", "", 0)
     assert asyncio.run(iaa_lai.nhan_shortcut(May(), "S", "com.aiphotogenerator.x", "uninstall")) == "Gỡ cài đặt"
     assert asyncio.run(iaa_lai.nhan_shortcut(May(), "S", "com.aiphotogenerator.x", "rate")) == ""
+
+
+def _vong_fail(t: float, vi_tri=STYLE) -> list[str]:
+    """Mot luot load fail ca hai tang: high request -> fail -> thuong request -> fail."""
+    h, n = vi_tri.high.id, vi_tri.thuong.id
+    return [_dong(t, "track_ad_request", h), _dong(t + 1, "ad_load", h, "failed"),
+            _dong(t + 1.1, "track_ad_request", n), _dong(t + 2, "ad_load", n, "failed")]
+
+
+def test_fail_time_dem_tu_lan_fail_dau_du_3_lan_thi_thoi_la_pass():
+    """inter_style_fail_time=3: preload fail la lan 1, them 2 lan fail nua roi khong request lai -> PASS."""
+    ev = iaa_cham_log.su_kien(_log(*_vong_fail(1), *_vong_fail(20), *_vong_fail(40)), iaa_nhom.ban_do_unit(DS))
+    ket, ly = iaa_cham_log.cham_fail_time(ev, 2, 3)
+    assert ket == "PASS" and "fail đủ 3 lần" in ly
+
+
+def test_fail_time_con_request_sau_lan_fail_thu_n_la_fail():
+    ev = iaa_cham_log.su_kien(_log(*_vong_fail(1), *_vong_fail(20), *_vong_fail(40), *_vong_fail(60)),
+                              iaa_nhom.ban_do_unit(DS))
+    ket, ly = iaa_cham_log.cham_fail_time(ev, 2, 3)
+    assert ket == "FAIL" and "vẫn request lại 2 lần" in ly
+
+
+def test_fail_time_chua_du_n_lan_fail_thi_chua_ket_luan():
+    ev = iaa_cham_log.su_kien(_log(*_vong_fail(1), *_vong_fail(20)), iaa_nhom.ban_do_unit(DS))
+    assert iaa_cham_log.cham_fail_time(ev, 2, 3) is None
+    assert iaa_cham_log.cham_fail_time(ev, 2, 0) is None
+
+
+def test_fail_time_mot_tang_dem_fail_cua_tang_do():
+    h = STYLE.high.id
+    ev = iaa_cham_log.su_kien(_log(*[d for t in (1, 20) for d in (_dong(t, "track_ad_request", h),
+                                                                   _dong(t + 1, "ad_load", h, "failed"))]),
+                              iaa_nhom.ban_do_unit(DS))
+    assert iaa_cham_log.cham_fail_time(ev, 2, 2)[0] == "PASS"

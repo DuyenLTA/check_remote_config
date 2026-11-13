@@ -111,6 +111,25 @@ def cham_tat(ev: list[dict], i: int, units: list[str], da_toi: bool) -> list[tup
     return [(1, "PASS", ly), (2, "PASS", ly)]
 
 
+def cham_fail_time(ev: list[dict], i: int, n: int) -> tuple[str, str] | None:
+    """Dong `*_fail_time=n` cua vi tri i: dem lan `ad_load` FAIL tu lan fail DAU TIEN (preload fail cung tinh, QA chot
+    13/11/2026); fail du n lan thi khong duoc request lai nua. None = chua du n lan fail (chua ep du / log het som).
+    Vi tri co ca high + thuong: mot luot load = high fail -> goi thuong, luot fail khi tang thuong fail -> chi dem
+    fail cua tang thuong (khong dem doi). Chi bat mot tang thi dem fail cua tang do."""
+    ds = [e for e in ev if e["vi_tri"] == i]
+    cuoi = "thuong" if any(e["tang"] == "thuong" for e in ds) else "high"
+    fail = [k for k, e in enumerate(ds) if e["ten"] == "ad_load" and not e["ok"] and e["tang"] == cuoi]
+    if n < 1 or len(fail) < n:
+        return None
+    thu_n = ds[fail[n - 1]]
+    sau = [e for e in ds[fail[n - 1] + 1:] if e["ten"] == "track_ad_request"]
+    lan = ", ".join(_gio(ds[k]) for k in fail[:n])
+    if sau:
+        return ("FAIL", f"fail lần thứ {n} lúc {_gio(thu_n)} (các lần fail: {lan}) mà vẫn request lại "
+                        f"{len(sau)} lần, lần đầu lúc {_gio(sau[0])}")
+    return ("PASS", f"fail đủ {n} lần ({lan}), sau lần fail thứ {n} không còn request nào của vị trí")
+
+
 def cham_thu_tu(ev: list[dict], i: int, unit_high: str, unit_thuong: str) -> tuple[str, str] | None:
     """Dong cuoi `-01`: high request truoc; moi request thuong phai sau mot lan high load FAIL. None = chua toi."""
     ds = [e for e in ev if e["vi_tri"] == i]

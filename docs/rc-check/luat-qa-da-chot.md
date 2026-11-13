@@ -47,5 +47,7 @@ User thêm/sửa tab "Tổng hợp SDK x" bất cứ lúc nào: mỗi lượt to
 
 ## IAA (13/11/2026, AIP893)
 
-- **`*_fail_time=N` (vd `inter_style_fail_time`) đếm từ lần fail ĐẦU TIÊN** — lần preload fail cũng tính. N = tổng số lần
-  load (preload + gọi lại), không phải N lần gọi lại sau preload. `=3` → 3 lần load rồi thôi là PASS.
+- **`*_fail_time=N` (vd `inter_style_fail_time`) đếm số lần load FAIL, tính từ lần fail ĐẦU TIÊN** — lần preload fail
+  cũng tính. Fail đủ N lần thì vị trí đó **không reload nữa**: `=3` → fail lần 1, 2, 3 rồi không còn request nào của vị
+  trí là PASS; còn request sau lần fail thứ N là FAIL. Không phải N lần gọi lại sau preload. Chấm từ log bằng
+  `iaa_cham_log.cham_fail_time`.

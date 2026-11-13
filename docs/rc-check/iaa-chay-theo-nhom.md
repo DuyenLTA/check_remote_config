@@ -50,8 +50,9 @@ result → về Home → style → luồng uninstall), mỗi màn `uiautomator d
 - Private DNS `dns.adguard-dns.com` chặn domain quảng cáo, Firebase / API vẫn chạy (lỗi errorCode 0). Đổi wifi để bỏ
   cache DNS; xong **luôn** `settings delete global private_dns_mode` + `private_dns_specifier`, chờ ping thông.
   "Máy test luôn fill" không phải lý do BLOCKED.
-- **`*_fail_time=N` đếm từ lần fail đầu tiên** (preload cũng tính): N = tổng số lần load. `=3` → 3 lần load rồi thôi là
-  PASS (QA chốt 13/11, `luat-qa-da-chot.md`). Đếm theo vòng: bấm vị trí (fail → đi tiếp) → về Home → load lại.
+- **`*_fail_time=N` đếm số lần load fail từ lần fail đầu tiên** (preload fail cũng tính); fail đủ N lần thì không reload
+  nữa. `=3` → 3 lần fail rồi hết request của vị trí là PASS (QA chốt 13/11, `luat-qa-da-chot.md`). Đếm theo vòng: bấm vị
+  trí (fail → đi tiếp) → về Home → load lại. Chấm: `iaa_cham_log.cham_fail_time(su_kien(log, units), i, n)`.
 - "Chỉ show 1 ad/session": session mới = mở lại app qua splash (force-stop + mở icon).
 
 ## Bẫy đã gặp (đừng kẹt lại)
