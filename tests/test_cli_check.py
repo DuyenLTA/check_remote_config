@@ -314,6 +314,33 @@ def test_app_khong_chay_thi_mo_lai_chu_khong_doc_buffer_chung(adb_ui, monkeypatc
     assert "mo lai app" in out["source"]
 
 
+def test_mo_lai_de_do_sdk_cap_quyen_thong_bao_truoc(adb_ui, monkeypatch):
+    """App vua `pm clear` (Android 13+): dialog quyen thong bao che app, app khong
+    len foreground -> phai `pm grant` truoc khi mo lai (khong tap Allow)."""
+    order = []
+    real_shell = adb_ui.shell
+    real_run = adb_ui._run
+
+    async def run(*args, timeout=None):
+        if "logcat" in args:
+            return (LOG_VERSION if "-d" in args else ""), "", 0
+        return await real_run(*args, timeout=timeout)
+
+    async def shell(serial, *args, timeout=None):
+        if args and args[0] == "pidof":
+            return ("22131\n" if "start" in order else "", "", 0)
+        if args[:2] == ("pm", "grant"):
+            order.append("grant:" + args[-1])
+        if args[:2] == ("am", "start"):
+            order.append("start")
+        return await real_shell(serial, *args, timeout=timeout)
+
+    monkeypatch.setattr(adb_ui, "_run", run)
+    monkeypatch.setattr(adb_ui, "shell", shell)
+    asyncio.run(sdk_probe.detect(adb_ui, SERIAL, PKG))
+    assert order[:2] == ["grant:android.permission.POST_NOTIFICATIONS", "start"]
+
+
 def test_lay_dong_moi_nhat_khong_phai_dong_dau():
     """App vua nang cap thi dong cu van con trong buffer."""
     two = LOG_VERSION.replace("3.5.4-alpha02", "3.4.0") + LOG_VERSION

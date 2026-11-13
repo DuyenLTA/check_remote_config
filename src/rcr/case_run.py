@@ -363,7 +363,8 @@ async def _lai_cham_tra(client, baseline, overrides, keep, out_dir, steps, expec
                 log_fn("    config bi app fetch de giua luot ("
                        + ", ".join(f"{m.key}={m.got!r}" for m in cuoi.mismatches[:4])
                        + ") -> BLOCKED, chay lai")
-    if mat_mang:
+    if mat_mang or net_ctl.buoc_da_tat_mang((out.get("drive") or {}).get("steps") or []):
+        # Ca khi buoc Action tu tat mang ("Tat wifi + 4G") giua case.
         # May phai duoc tra ve co mang du buoc nao trong case da bat lai: luot
         # sau chay tren may mat mang la hong het ma khong ai biet vi sao.
         out["net_cuoi"] = await net_ctl.bat(client, baseline.serial)

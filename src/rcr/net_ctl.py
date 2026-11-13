@@ -71,6 +71,15 @@ async def thong(client, serial: str) -> bool:
     return "THONG" in out
 
 
+def buoc_da_tat_mang(buoc: list) -> bool:
+    """Co buoc Action nao trong case da tat mang (record `net` mang = tat).
+
+    Buoc "Tat wifi + 4G" nam giua case, khong o precondition: khong tra mang
+    cuoi case thi moi case sau trong luot chay offline (gen ngam 13/11/2026).
+    """
+    return any(isinstance(b, dict) and (b.get("net") or {}).get("mang") == "tat" for b in buoc)
+
+
 async def tat(client, serial: str) -> dict:
     """Ngat wifi + data. Tra trang thai do duoc sau khi ngat."""
     guard(serial)
