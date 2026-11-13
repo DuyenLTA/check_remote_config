@@ -43,6 +43,7 @@ from . import (
     case_drive,
     device_app,
     mau_chu,
+    mo_khoa_may,
     device_reset,
     dex_check,
     net_ctl,
@@ -84,6 +85,9 @@ async def apply_case(
     Lai buoc TRUOC khi restore: restore xong la config da ve cu, luc do bam gi
     tren app cung khong con dinh dang gi toi case nua.
     """
+    # May tat man / khoa giua luot (luat user 12/11/2026): tu bat man + mo khoa truoc khi lai app.
+    if not await mo_khoa_may.mo_khoa(client, baseline.serial):
+        log_fn("  CANH BAO: khong mo khoa duoc may (PIN 0000 / pattern L) - van chay, lai UI co the hong")
     snapshot = rc_snapshot.save(baseline, out_dir) if keep and not baseline.firebase and not noi_tiep else None
     if noi_tiep:
         return await _noi_tiep(client, baseline, overrides, out_dir, steps, expects, goto, log_fn, man_can,
@@ -481,6 +485,8 @@ async def run_case(
         log_fn(f"  ngôn ngữ của case: {ngon_ngu[1]} (lái qua LFO sẽ chọn ngôn ngữ này)")
     token = fo_ngon_ngu.CHON.set(ngon_ngu)
     try:
+        # Reset user cu lai luong FO tren may -> may phai sang + mo khoa truoc.
+        await mo_khoa_may.mo_khoa(client, baseline.serial)
         if noi_tiep:                             # che do chuoi: app dang mo tu case truoc, khong reset
             reset = {"mode": "noi tiếp (chuỗi)", "matched": "", "baseline_stale": False}
         elif baseline.firebase:                  # reset lam trong tung luot, SAU khi publish RC (apply_case)

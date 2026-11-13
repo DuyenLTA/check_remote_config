@@ -151,6 +151,14 @@ def test_gia_tri_con_la_cho_trong_bi_chan():
     assert "template_id" in d.needs_human
 
 
+def test_cho_trong_kem_key_cu_the_thi_giu_gia_tri_app():
+    """AIP892 rating R01: `feedback_email = <email ASO cua store>` la email that cua app -> khong patch, chay tiep."""
+    d = ex("show_rating_button_x = 2, feedback_email = <email ASO của store>",
+           frozenset({"show_rating_button_x", "feedback_email"}))
+    assert d.runnable and d.overrides == {"show_rating_button_x": "2"}
+    assert "feedback_email" in d.ignored
+
+
 def test_test_data_rong():
     for raw in ("", "   ", "N/A", "n/a", "-"):
         d = extract(case(raw), WL)
