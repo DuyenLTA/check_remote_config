@@ -44,3 +44,8 @@ User thêm/sửa tab "Tổng hợp SDK x" bất cứ lúc nào: mỗi lượt to
   preload/load ở vị trí cũ như luồng đủ, chỉ không show. Câu TC "không có loadAd <ad màn tắt>" bỏ; có request là đúng,
   thiếu request ở điểm preload của luồng đủ là FAIL (so với lượt luồng đủ cùng máy). Màn khác giữ logic thường (305 vẫn
   preload như khi có OB4).
+
+## IAA (13/11/2026, AIP893)
+
+- **`*_fail_time=N` (vd `inter_style_fail_time`) đếm từ lần fail ĐẦU TIÊN** — lần preload fail cũng tính. N = tổng số lần
+  load (preload + gọi lại), không phải N lần gọi lại sau preload. `=3` → 3 lần load rồi thôi là PASS.
