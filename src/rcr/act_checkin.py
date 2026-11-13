@@ -50,6 +50,7 @@ CHO_CHECKIN = 8.0         # man Check-in hien ngay sau khi dong Add Widget
 CHO_SHEET = 30.0
 CHO_GEN = 180.0
 NHIP = 0.5
+CHO_DUNG_YEN = 4.0        # toi da doi sheet truot xong (nut X dung yen)
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,12 +194,29 @@ def _bo_nodes(man: dict) -> dict:
     return {k: v for k, v in man.items() if k != "_nodes"}
 
 
+def _vi_tri_x(man: dict):
+    x = next((n for n in man.get("_nodes") or [] if (n.content_desc or "") == "Close" and not n.bounds.empty), None)
+    return None if x is None else (x.bounds.left, x.bounds.top)
+
+
 async def _cho(client, serial, package, dk, giay: float) -> dict:
+    """Doi toi khi `dk` dung, roi doi sheet dung yen (nut X 2 lan nhin cung cho): sheet Check-in / Unlocked truot tu
+    duoi len, chup giua chung thi chu bi cat o mep man, dem mau sai (Pixel 4 13/11/2026: Unlocked FAIL gia)."""
     het = time.monotonic() + giay
     man = await _nhin(client, serial, package)
     while not dk(man) and time.monotonic() < het:
         await asyncio.sleep(NHIP)
         man = await _nhin(client, serial, package)
+    het_dung = time.monotonic() + CHO_DUNG_YEN
+    while dk(man) and _vi_tri_x(man) is not None and time.monotonic() < het_dung:
+        await asyncio.sleep(NHIP)
+        sau = await _nhin(client, serial, package)
+        if not dk(sau):
+            break
+        on_dinh = _vi_tri_x(sau) == _vi_tri_x(man)
+        man = sau
+        if on_dinh:
+            break
     return man
 
 

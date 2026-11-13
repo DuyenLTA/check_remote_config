@@ -11,6 +11,7 @@ Mau chu do bang `mau_chu.do` (dem pixel dung mau trong khung chu so voi dai doi 
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import datetime
 import re
 import time
@@ -93,7 +94,14 @@ def sheet(nodes, xong_re: str) -> dict | None:
 def mau(nodes, png: bytes, cfg: dict) -> list[dict]:
     """So pixel dung tung mau #hex co trong config cua case, tai moi khung chu (mau_chu.do)."""
     hexes = sorted({h.upper() for v in (cfg or {}).values() for h in HEX_RE.findall(str(v))})
-    return mau_chu.do(nodes, png, hexes) if hexes else []
+    if not hexes:
+        return []
+    # Chu sat day cua so app bi dump cat bounds (Pixel 4 13/11/2026: description man Unlocked 2 dong, bounds dung o
+    # y=2148, dong 2 ve xuong toi ~2190) -> dong bi cat roi vao dai doi chung, dem mau FAIL gia. Keo khung toi het anh.
+    day = max((n.bounds.bottom for n in nodes if not n.bounds.empty), default=0)
+    nodes = [dataclasses.replace(n, bounds=ui_dump.Bounds(n.bounds.left, n.bounds.top, n.bounds.right, 10 ** 5))
+             if (n.text or "").strip() and not n.bounds.empty and n.bounds.bottom == day else n for n in nodes]
+    return mau_chu.do(nodes, png, hexes)
 
 
 def parse_su_kien(log: str) -> list[dict]:

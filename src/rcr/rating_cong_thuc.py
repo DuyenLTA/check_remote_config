@@ -23,6 +23,8 @@ GOI_SUB = "weekly"      # goi test ngan nhat (chu ky test 5 phut)
 # Trinh chon anh he thong: o anh co desc "Photo taken on ..." (photopicker Android 13+), nut xac nhan Done / Add.
 ANH_RE = re.compile(r"^(?:Photo|Ảnh|Anh)\b.*(?:taken|chụp|chup)", re.I)
 XAC_NHAN_ANH_RE = re.compile(r"^(?:Done|Add|Select|Xong|Thêm|Chọn)$", re.I)
+TRINH_CHON_RE = re.compile(r"(?:providers\.media|photopicker|documentsui|com\.google\.android\.apps\.photos"
+                           r"|gallery|android\.media)", re.I)
 
 
 def cong_thuc(package: str, loai: str) -> list[dict] | None:
@@ -46,11 +48,17 @@ def tim_duoi(nodes, mau: str, thu: int = 1):
     moc = tim(nodes, mau)
     if moc is None:
         return None
-    duoi = [n for n in nodes if n.clickable and not n.bounds.empty and n.bounds.top >= moc.bounds.bottom]
+    # The anh co content-desc nhung KHONG clickable (Pixel 4, AIP893 13/11/2026: 'Vertical 9:16 ...'): chi tinh
+    # clickable thi hang dau tien thanh View quang cao ben duoi -> bam nham ad.
+    duoi = [n for n in nodes if (n.clickable or (n.content_desc and not n.text)) and not n.bounds.empty
+            and n.bounds.top >= moc.bounds.bottom]
     if not duoi:
         return None
     hang = min(n.bounds.top for n in duoi)
-    cung_hang = sorted((n for n in duoi if abs(n.bounds.top - hang) <= 8), key=lambda n: n.bounds.left)
+    cung_hang: list = []
+    for n in sorted((n for n in duoi if abs(n.bounds.top - hang) <= 8), key=lambda n: (n.bounds.left, not n.clickable)):
+        if not cung_hang or abs(n.bounds.left - cung_hang[-1].bounds.left) > 8:   # the + anh trong the: 1 o
+            cung_hang.append(n)
     return cung_hang[thu - 1] if 0 < thu <= len(cung_hang) else None
 
 
@@ -82,7 +90,8 @@ async def _chon_anh(client, serial: str, het: float, log: list[str]) -> bool:
                 log.append(f"bấm {nut.text}")
                 return True
             pkg, _ = await device_app.focus(client, serial)
-            if pkg and "photo" not in pkg and "media" not in pkg and "documentsui" not in pkg:
+            # So theo package trinh chon anh, khong so chu "photo": app AIP893 ten com.aiphotogenerator... (13/11/2026).
+            if pkg and not TRINH_CHON_RE.search(pkg):
                 return True                      # trinh chon dong ngay sau khi bam anh (chon 1 anh)
         await asyncio.sleep(NHIP)
     log.append("không chọn được ảnh trong trình chọn ảnh")

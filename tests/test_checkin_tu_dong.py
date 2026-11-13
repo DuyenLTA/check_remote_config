@@ -127,3 +127,13 @@ def test_doc_bo_chu_home_nam_sau_sheet():
     c = checkin_may.doc(parse_dump(xml))["checkin"]
     assert (c["title"], c["banner"], c["description"], c["cta"]) == (
         "QA - Today's Check-In", "QA - Banner check-in", "Complete your daily check-in", "Check-in")
+
+
+def test_tim_duoi_the_anh_khong_clickable():
+    """Pixel 4: the template chi co content-desc, khong clickable; ad ben duoi clickable -> van chon the template."""
+    xml = f"""<hierarchy><node {P} text="AI Try On Outfits" bounds="[48,1357][408,1415]"/>
+<node {P} content-desc="Vertical 9:16 a" text="" bounds="[48,1439][348,1871]"/>
+<node {P} content-desc="Vertical 9:16 b" text="" bounds="[384,1439][684,1871]"/>
+<node {P} clickable="true" text="" bounds="[0,1900][1080,2100]"/></hierarchy>"""
+    n = parse_dump(xml)
+    assert rating_cong_thuc.tim_duoi(n, "^AI Try On Outfits$", 2).content_desc == "Vertical 9:16 b"
