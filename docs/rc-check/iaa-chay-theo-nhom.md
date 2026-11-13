@@ -41,6 +41,8 @@ khớp khuôn nào → thêm chữ chỉ-có-ở-Home vào `nhan_dien` (hoặc k
   về app) mỗi ~5s.
 - Nút có chữ mà uiautomator trả bounds rỗng (AIP893 `Watch Ads (0/2)` ở đáy sheet) → `tap_tai: [0.5, 0.935]`.
 - Ô nhập prompt → `nhap: "<chữ>"` + `o: "<chữ gợi ý trong ô>"` (vị trí ô đổi sau khi upload ảnh, đừng tap toạ độ).
+- App có thông báo thì popup launcher đẩy mục shortcut ra ngoài → tool tạm ẩn (snooze 10 phút) thông báo của app rồi nhấn
+  giữ lại. Tên icon cache ở `out/iaa-ten-icon.json` (mỗi versionCode pull APK một lần, vào `out/` không vào `/tmp`).
 - Luồng uninstall mở bằng shortcut launcher **theo id** (regex `(?i).*uninstall.*`, đọc nhãn thật từ `dumpsys
   shortcut`): activity không export nên `am start` bị chặn; nhãn trên máy tiếng Việt là "Gỡ cài đặt" — trùng chữ lệnh
   gỡ của launcher, tool chọn theo id và gặp trình gỡ hệ thống thì BACK huỷ. Tên icon tự đọc từ APK (aapt); nhiều icon

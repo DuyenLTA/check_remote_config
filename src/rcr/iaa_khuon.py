@@ -81,18 +81,39 @@ def _aapt() -> str:
     return ""
 
 
+CACHE_ICON = Path(__file__).resolve().parents[2] / "out" / "iaa-ten-icon.json"
+
+
 async def nhan_icon(client, serial: str, package: str) -> str:
-    """Ten app tren launcher (application-label trong APK) - de tim icon khi nhan giu mo shortcut."""
+    """Ten app tren launcher (application-label trong APK) - de tim icon khi nhan giu mo shortcut.
+
+    Cache theo package + versionCode (out/iaa-ten-icon.json): moi ban app chi pull APK (~100 MB) mot lan. Pull vao
+    out/ tren o dia, khong vao /tmp (tmpfs may bot day -> "Disk quota exceeded", 13/11/2026)."""
+    import json
+    vc_out, _, _ = await client.shell(serial, "dumpsys", "package", package)
+    m = re.search(r"versionCode=(\d+)", vc_out or "")
+    khoa = f"{package}@{m.group(1) if m else '?'}"
+    try:
+        cache = json.loads(CACHE_ICON.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        cache = {}
+    if cache.get(khoa):
+        return cache[khoa]
     out, _, _ = await client.shell(serial, "pm", "path", package)
     duong = next((d.split(":", 1)[1].strip() for d in (out or "").splitlines() if d.startswith("package:")), "")
     aapt = _aapt()
     if not duong or not aapt:
         return ""
-    with tempfile.TemporaryDirectory() as tmp:
+    CACHE_ICON.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=CACHE_ICON.parent) as tmp:
         apk = Path(tmp) / "base.apk"
-        await client._run("-s", serial, "pull", duong, str(apk), timeout=120)
+        await client._run("-s", serial, "pull", duong, str(apk), timeout=180)
         if not apk.is_file():
             return ""
         kq = subprocess.run([aapt, "dump", "badging", str(apk)], capture_output=True, text=True, errors="replace")
     m = re.search(r"^application-label:'([^']+)'", kq.stdout or "", re.M)
-    return m.group(1) if m else ""
+    ten = m.group(1) if m else ""
+    if ten:
+        cache[khoa] = ten
+        CACHE_ICON.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+    return ten

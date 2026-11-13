@@ -15,9 +15,11 @@ dong_neu_co / cho_chu / ve_man - chay bang `rating_cong_thuc`), them buoc rieng 
                            chung; node co chu ma bounds rong (AIP893 'Watch Ads (0/2)') thi bam `tap_tai: [x, y]` (ty le man);
                            `dung_neu: <regex>` (vd "Daily Free limit Reached") -> dung doan, bao het luot (khong mua sub)
   ve_chu: <regex>          ve man goc nhan theo CHU (app Compose: moi man chung mot activity, `ve_man` bao xong ngay):
-                           lai FO / mo lai app neu can, dong ad, BACK toi khi thay chu. `man: <regex activity>`
+                           lai FO / mo lai app neu can, dong ad, BACK toi khi thay chu. `man: <regex activity>`,
+                           `tab: <regex>` = tab duoi ve man goc (bam truoc khi BACK)
   nhap: <chu>              go chu vao o nhap (tim theo `o: <regex chu goi y>`), ban phim dang mo thi an di
-  tap_neu_co: <regex>      bam neu co (nut them cua mot so app cung khuon); man da co chu `khi_thieu: <regex>` thi bo qua
+  tap_neu_co: <regex>      bam neu co (nut them cua mot so app cung khuon), `thu: n` = nut thu n cung chu; man da co chu
+                           `khi_thieu: <regex>` thi bo qua
 Duong lai chia DOAN; doan hong (het gio, khong thay nut) thi ghi lai va sang doan sau - mot nut doi chu khong lam
 mat ca luot. Moi doan nen bat dau bang `ve_man` ve Home.
 """
@@ -26,6 +28,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import shlex
 import time
 from pathlib import Path
 
@@ -82,9 +85,22 @@ async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, 
         icons = [n for n in nodes if rating_cong_thuc._khop(n, nhan_app) and not n.bounds.empty]
         for icon in icons:
             x, y = icon.bounds.center
-            await client.shell(serial, "input", "swipe", str(x), str(y), str(x), str(y), "1500")
-            await asyncio.sleep(1.5)
-            nut = rating_cong_thuc.tim(ui_dump.parse_dump(await ui_dump.dump(client, serial)), muc)
+            nut = None
+            for _lan in range(2):               # nhan giu luc launcher con truot trang thi khong ra popup -> thu lai
+                await client.shell(serial, "input", "swipe", str(x), str(y), str(x), str(y), "1500")
+                for _ in range(4):              # popup shortcut hien cham (Pixel 4: >1,5s) -> do lai toi ~4s
+                    await asyncio.sleep(1.0)
+                    nut = rating_cong_thuc.tim(ui_dump.parse_dump(await ui_dump.dump(client, serial)), muc)
+                    if nut:
+                        break
+                if nut:
+                    break
+                await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+                await asyncio.sleep(1.0)
+                # Popup chi co vai cho: app dang co thong bao thi muc shortcut bi day ra ngoai (Pixel 4 AIP885
+                # 13/11/2026: "Your photo is almost here" -> chi con Rate Us / Create an Image). Xoa thong bao roi thu lai.
+                log.append(f"popup icon ({x},{y}) chưa có mục {nhan!r} — tạm ẩn thông báo của app rồi nhấn giữ lại")
+                await _xoa_thong_bao(client, serial, package)
             if not nut:
                 log.append(f"nhấn giữ icon ({x},{y}) không thấy mục shortcut {muc!r}")
                 await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
@@ -107,9 +123,19 @@ async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, 
             log.append(f"shortcut {nhan}")
             return True
         await client.shell(serial, "input", "swipe", "900", "1200", "150", "1200", "300")   # sang trang launcher
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(1.5)                                                             # cho truot xong
         log.append(f"chưa thấy icon ở trang {trang + 1}")
     return False
+
+
+async def _xoa_thong_bao(client, serial: str, package: str) -> None:
+    """Tam an (snooze 10 phut) thong bao cua app: khong bam gi trong app, khong dung toi thong bao app khac."""
+    out, _, _ = await client.shell(serial, "cmd", "notification", "list")
+    for key in (k.strip() for k in (out or "").splitlines()):
+        if f"|{package}|" in key:
+            # key co "|" -> phai quote, khong thi shell may coi la pipe
+            await client.shell(serial, "cmd", "notification", "snooze", "--for", "600000", shlex.quote(key))
+    await asyncio.sleep(1.0)
 
 
 async def _dong_ad_neu_co(client, serial: str, log: list[str]) -> bool:
@@ -143,8 +169,18 @@ async def _ve_chu(client, serial: str, package: str, b: dict, log: list[str]) ->
             return False
         if await _dong_ad_neu_co(client, serial, log):
             continue
-        if rating_cong_thuc.tim(await rating_cong_thuc._nodes(client, serial, package), b["ve_chu"]):
+        nodes = await rating_cong_thuc._nodes(client, serial, package)
+        if rating_cong_thuc.tim(nodes, b["ve_chu"]):
             return True
+        # App co thanh tab duoi (AIP885: Home / Image Studio / Video Studio): BACK o tab khac khong ve tab Home
+        # ma thoat app -> bam tab truoc (`tab: <regex>`), chi BACK khi khong co tab.
+        tab = rating_cong_thuc.tim(nodes, b["tab"]) if b.get("tab") else None
+        if tab and not back % 2:
+            await device_app.tap(client, serial, *tab.bounds.center)
+            log.append(f"bấm tab {tab.text or tab.content_desc}")
+            back += 1
+            await asyncio.sleep(1.5)
+            continue
         await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
         back += 1
         log.append("BACK (chưa thấy chữ màn gốc)")
@@ -212,7 +248,9 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
         nodes = await rating_cong_thuc._nodes(client, serial, package)
         if b.get("khi_thieu") and rating_cong_thuc.tim(nodes, b["khi_thieu"]):
             return True
-        node = rating_cong_thuc.tim(nodes, b["tap_neu_co"])
+        khop = [n for n in nodes if rating_cong_thuc._khop(n, b["tap_neu_co"]) and not n.bounds.empty]
+        thu = int(b.get("thu", 1))                # nut thu may (tren xuong) khi man co nhieu nut cung chu
+        node = khop[thu - 1] if 0 < thu <= len(khop) else None
         if node:
             await device_app.tap(client, serial, *node.bounds.center)
             await asyncio.sleep(rating_cong_thuc.NHIP)
