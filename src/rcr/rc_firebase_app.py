@@ -122,6 +122,24 @@ def kiem_dieu_kien_test(info: dict) -> str:
     return bt
 
 
+# Loi tren CHINH may bot (o dia, adb) - khong phai do dieu kien testvsl: bot_kiem_testvsl khong nho QA sua condition.
+MAY_BOT = "[máy bot]"
+HET_CHO_RE = re.compile(r"quota exceeded|no space left|ENOSPC", re.I)
+APK_CU_GIAY = 30 * 60
+
+
+def _don_apk_cu() -> None:
+    """Xoa APK tam `rcr_fb_*.apk` con sot (luot chet giua chung khong toi `finally`): tich lai lam day /tmp - Ubuntu
+    13/11/2026 bao `Disk quota exceeded` khi keo APK AIP892, bot bao nham la thieu dieu kien testvsl."""
+    han = time.time() - APK_CU_GIAY
+    for f in Path(tempfile.gettempdir()).glob("rcr_fb_*.apk"):
+        try:
+            if f.stat().st_mtime < han:
+                f.unlink()
+        except OSError:
+            pass
+
+
 async def thong_tin_tren_may(client, serial: str, package: str) -> dict:
     """Keo APK dang cai tren may -> `thong_tin_apk` (Firebase project, app id, version)."""
     from .dex_check import PUSH_TIMEOUT, apk_paths
@@ -129,13 +147,17 @@ async def thong_tin_tren_may(client, serial: str, package: str) -> dict:
     duong = await apk_paths(client, serial, package)
     if not duong:
         raise RcError(f"máy chưa cài {package}")
+    _don_apk_cu()
     fd, ten = tempfile.mkstemp(prefix="rcr_fb_", suffix=".apk")
     os.close(fd)
     local = Path(ten)
     try:
         out, err, code = await client._run("-s", serial, "pull", duong[0], str(local), timeout=PUSH_TIMEOUT * 4)
         if code != 0:
-            raise AdbError(f"Khong keo duoc {duong[0]}: {(err or out).strip()}")
+            loi = (err or out).strip()
+            if HET_CHO_RE.search(loi):
+                raise AdbError(f"{MAY_BOT} ổ tạm `{local.parent}` hết chỗ / vượt quota khi kéo APK ({loi[:160]})")
+            raise AdbError(f"Khong keo duoc {duong[0]}: {loi}")
         info = thong_tin_apk(local)
         # Nho app id cho App Tester: lan cai build sau mo thang trang app bang deep link, khong cuon tim.
         from . import app_tester_link

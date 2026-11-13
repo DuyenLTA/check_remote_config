@@ -29,6 +29,13 @@ async def loi_testvsl(serial: str, package: str) -> str | None:
         return rc_firebase.CHUA_DANG_NHAP
     try:
         info = await rc_firebase_app.thong_tin_tren_may(AdbClient(), serial, package)
+    except AdbError as exc:
+        # Keo APK hong (o dia may bot day, adb mat may): loi cua may bot, chua toi buoc doc condition.
+        s = str(exc)
+        return s if s.startswith(rc_firebase_app.MAY_BOT) else f"{rc_firebase_app.MAY_BOT} {s}"
+    except RcError as exc:
+        return str(exc)
+    try:
         await asyncio.to_thread(rc_firebase_app.kiem_dieu_kien_test, info)
     except (RcError, AdbError) as exc:
         return str(exc)
@@ -39,6 +46,10 @@ def tin_nhac(job: dict, loi: str, duyet) -> str:
     """Tag nguoi bam Check (luot verify tu xep thi tag cac QA duoc duyet)."""
     ai = [job["nguoi_duyet"]] if job.get("nguoi_duyet") else sorted(duyet or [])
     tag = " ".join(f"<@{i}>" for i in ai)
+    if loi.startswith(rc_firebase_app.MAY_BOT):               # o dia / adb may bot hong: condition khong lien quan
+        return (f"⛔ {tag} **{job.get('ma', '')}** `{job.get('version', '')}` — chưa chạy được bản release: {loi}\n"
+                f"Lỗi trên **máy bot** (chưa tới bước đọc điều kiện `{rc_firebase.DIEU_KIEN}`, condition không cần sửa). "
+                f"Người quản máy bot dọn ổ / kiểm adb rồi bấm **Chạy lại** (lượt verify: **Verify lại**) ở tin của lượt.")
     if any(x in loi for x in rc_firebase.LOI_DANG_NHAP):       # loi dang nhap tren may bot, khong phai thieu testvsl -> khong nho tao condition
         return (f"⛔ {tag} **{job.get('ma', '')}** `{job.get('version', '')}` — chưa chạy được bản release: {loi}\n"
                 f"Người quản máy bot chạy `firebase login` (hết hạn: `firebase login --reauth`) trên máy chạy lượt, xong bấm **Chạy lại** "
