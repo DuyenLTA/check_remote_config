@@ -53,9 +53,14 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
                                      out, None, False, "", job["version"])
         bot.q.cap_nhat(job, kq=kq, ten_may=ten, bat_dau=bat_dau)
         return True
-    tinh_nang = job.get("loai_job") == "tinh_nang"   # /check tinh_nang: chi tab SDK rieng, van doi RC qua testvsl
+    # /check tinh_nang hoac tin build chi ghi tinh nang: chi bo tinh nang, van doi RC qua testvsl.
+    # Tin build ghi ca SDK lan tinh nang: chay SDK roi lan luot tung tinh nang, gop mot report (user chot 14/11/2026).
+    tinh_nang = build_ma_app.chi_tinh_nang(job)
+    them_tn = [] if tinh_nang else build_ma_app.tabs_tinh_nang(job)
     next_gen = False if tinh_nang else build_ma_app.la_next_gen(job)
-    if bot_kiem_testvsl.doi_rc_firebase(job, next_gen):
+    # Checklist Next-Gen khong doi RC, nhung bo tinh nang chay sau no thi co -> van can testvsl.
+    chi_checklist = next_gen and not them_tn
+    if bot_kiem_testvsl.doi_rc_firebase(job, chi_checklist):
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
         if loi:                          # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Firebase
             await bot_forum.dat_nhan(bot, job, bot_forum.CAN_XEM)
@@ -65,11 +70,12 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     await qa.edit(content=f"{dau}\n📲 Đã cài{ghi}. Đang chạy /rc-check…")
     timeout = bot_chay_claude.TIMEOUT_NEXT_GEN if next_gen else bot_chay_claude.TIMEOUT_BO_TC
     bat_dau = time.time()
-    bot_dung_luot.danh_dau_pha_rc(job, next_gen)       # Dung tu day -> phai don RC testvsl
+    bot_dung_luot.danh_dau_pha_rc(job, chi_checklist)  # Dung tu day -> phai don RC testvsl
     # Tin build ghi next-gen -> ep rc-check nhanh checklist; con lai bo TC (ban release doi RC qua Firebase).
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, timeout, out,
                                  None, next_gen, "" if tinh_nang else job.get("tutorial") or "", "",
-                                 bool(job.get("bo_qua_plan")), job.get("tabs") if tinh_nang else None)
+                                 bool(job.get("bo_qua_plan")),
+                                 build_ma_app.tabs_tinh_nang(job) if tinh_nang else None, them_tn)
     bot.q.cap_nhat(job, kq=kq, ten_may=ten, bat_dau=bat_dau)
     return True
 
@@ -103,7 +109,7 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
         # Tom tat ID ads doc bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.
         # Trang audit day du nam trong tab cua chinh report -> chi dinh kem mot file report.
         # Luot sub / tab tinh nang khong check ID ads -> khong co dong audit.
-        audit = "" if job.get("loai_job") in ("sub", "tinh_nang") else audit_tom_tat.dong_tin(
+        audit = "" if job.get("loai_job") == "sub" or build_ma_app.chi_tinh_nang(job) else audit_tom_tat.dong_tin(
             audit_tom_tat.tim(job["package"], tu_luc=job.get("bat_dau") or 0))
         # Ket qua + file report + nut Verify nam ngay tren tin goc (khong tra loi tin moi).
         await qa.edit(content=dong_dau,

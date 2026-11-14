@@ -9,7 +9,7 @@ from pathlib import Path
 
 import discord
 
-from . import bot_kenh_project
+from . import bot_kenh_project, build_ma_app
 from .bot_giao_dien import noi_dung
 
 
@@ -49,11 +49,12 @@ async def dev_day_lai(bot, tin: dict, link_tin: str, kenh, out: Path) -> None:
         return
     check = [t for t in nb.tin_da_hoi(bot, tin) if t.get("loai_job") in (None, "check")]
     if not check:
-        if tin.get("sdk"):
+        if build_ma_app.co_viec(tin):
             await nb.hoi_build_moi(bot, tin, link_tin, kenh, out)    # hoi Check + xep verify
             return
     else:
-        doi = {k: tin[k] for k in ("next_gen", "tutorial", "sdk") if k in tin} if tin.get("sdk") else None
+        doi = ({k: tin[k] for k in ("next_gen", "tutorial", "sdk", "tinh_nang") if k in tin}
+               if build_ma_app.co_viec(tin) else None)
         kq = await nb.hoi_lai_build(bot, tin, link_tin, kenh.send, doi)
         if kq.startswith("Build"):       # dang cho / dang chay: khong tao luot trung, bao tren tin goc cua luot do
             dang = next((t for t in check if bot.q.vi_tri(t["msg_id"]) is not None),

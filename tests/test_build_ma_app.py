@@ -24,7 +24,7 @@ TIN_NEXT_GEN = ("Bản build ADA895-AI-Photoshoot v3.0.0 (22) đã được hoà
 def test_tin_revert_next_gen_can_ban_debug():
     tin = b.tach(TIN_REVERT)
     assert tin == {"ma": "AIP882", "ten": "AI-Video", "version": "4.3.0 (40)",
-                   "next_gen": False, "tutorial": "3.6.1", "sdk": True}
+                   "next_gen": False, "tutorial": "3.6.1", "sdk": True, "tinh_nang": []}
     assert _nhanh(tin) == "debug"
 
 
@@ -60,7 +60,7 @@ TIN_MAU_MOI = ("**AIP922 v3.7.0 (30)** đã lên QA\n"
 def test_tin_mau_moi_da_len_qa():
     tin = b.tach(TIN_MAU_MOI)
     assert tin == {"ma": "AIP922", "ten": "", "version": "3.7.0 (30)", "next_gen": None, "tutorial": "3.7.0",
-                   "sdk": True}
+                   "sdk": True, "tinh_nang": []}
     assert _nhanh(tin) == "release"
 
 
@@ -169,3 +169,34 @@ def test_luon_cai_ban_release_ke_ca_build_khong_next_gen():
     """User chot 31/10/2026: bo TC doi RC qua Firebase testvsl, khong bat dev build them ban debug."""
     tin = b.tach("Bản build AIP886 v2.7.0 (20) đã được hoàn thiện. apply tutorial 3.6.1")
     assert b.loai_ban(tin) == "release" and not b.la_next_gen(tin)
+
+
+# Tin that 14/11/2026 (AIP893, kenh project khong ghi ma): build ghi ca SDK lan tinh nang -> check het.
+TIN_SDK_VA_TINH_NANG = (
+    "v2.6.0 (16) đã lên QA\n:package: Drive: https://drive.google.com/drive/folders/1J8Mn9V\n"
+    ":fire: Firebase: https://console.firebase.google.com/project/aip999/releases/7clv → 3 tester\n"
+    "sdk 3.5.4 - Apply IAA - SDK Widget - SDK Rating - SDK Daily Checkin - Luồng gen ngầm - Uninstall")
+
+
+def test_tin_build_ghi_tinh_nang_lay_het_theo_thu_tu_uninstall_vao_iaa():
+    tin = b.tach(TIN_SDK_VA_TINH_NANG, "AIP893")
+    assert tin["tutorial"] == "3.5.4" and tin["sdk"]
+    assert tin["tinh_nang"] == ["iaa", "widget", "rating", "daily checkin", "gen-ngam"]
+    assert b.co_viec(tin) and not b.chi_tinh_nang(tin) and b.tabs_tinh_nang(tin) == tin["tinh_nang"]
+
+
+def test_tin_chi_ghi_tinh_nang_khong_sdk_van_hoi_check():
+    tin = b.tach("AIP893 v2.6.1 (17) đã lên QA\n- Uninstall\n- SDK Rating", "")
+    assert tin["sdk"] is False and tin["tinh_nang"] == ["iaa", "rating"]
+    assert b.co_viec(tin) and b.chi_tinh_nang(tin)
+
+
+@pytest.mark.parametrize("ghi_chu", ["- fix widget không hiện ảnh", "- rating 5 sao mở store", "- New: AI Hairstyle"])
+def test_tinh_nang_app_khong_phai_sdk_tinh_nang(ghi_chu):
+    # Widget / Rating khong co chu SDK dung truoc la tinh nang cua app -> khong chay bo SDK do.
+    assert b.tach(f"AIP922 v3.7.0 (30) đã lên QA\n{ghi_chu}")["tinh_nang"] == []
+
+
+def test_luot_tinh_nang_qa_chon_lay_tabs():
+    job = {"loai_job": "tinh_nang", "tabs": ["widget"], "sdk": True, "tinh_nang": ["iaa"]}
+    assert b.chi_tinh_nang(job) and b.tabs_tinh_nang(job) == ["widget"]

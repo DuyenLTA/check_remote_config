@@ -155,3 +155,10 @@ def test_tin_bao_dev_khong_gui_khi_khong_co_issue():
     assert v.tin_bao_dev(CASE, {"issues": [{"case": "a", "key": "", "link": ""}]}, []) is None
 
 
+
+
+def test_tin_hoi_build_ghi_tinh_nang_bao_truoc_se_chay_gi():
+    t = v.tin_hoi({**CASE, "sdk": True, "tutorial": "3.5.4", "tinh_nang": ["iaa", "gen-ngam"]})
+    assert "chạy lần lượt tính năng: iaa, gen ngầm — gộp một report" in t
+    t = v.tin_hoi({**CASE, "sdk": False, "tinh_nang": ["rating"]})
+    assert "chỉ tính năng (rating)" in t and "lần lượt" not in t

@@ -63,7 +63,7 @@ PROMPT = (
     "do dung: ghi vi tri lech vao cau bao roi CHAY NOT checklist / bo TC, cham dong ads vi tri lech theo unit that "
     "trong log (rc-check.md muc 3c). Moi may deu la may test AdMob "
     "(rc-check.md muc 0c): ad_click KHONG phai ly do dung - ghi vao report, chay lai case bi ad_click roi chay tiep. "
-    "Khong commit/push.\n"
+    "Khong commit/push.\n{tinh_nang}"
     "Truoc khi chay bo TC: trong out/ co file *.luot.json cung package + serial nay, \"xong\": false, "
     "`cap_nhat` trong 12 gio -> luot truoc bi tat giua chung (may tinh khoi dong lai): "
     "CHAY TIEP bang `rcr-check --tiep <file>`, KHONG chay lai tu dau cac case da co ket qua.\n"
@@ -188,9 +188,36 @@ PROMPT_TINH_NANG = (
 )
 
 
+# Tin build ghi ca SDK lan tinh nang ("sdk 3.5.4 - Apply IAA - SDK Widget - ..."): check het tinh nang da dong goi,
+# khong chi SDK - chay lan luot trong CUNG luot, gop mot report (user chot 14/11/2026).
+NHAC_TINH_NANG = (
+    "Tin build con ghi tinh nang: {tabs}. Xong HET phan SDK (bo TC + vong chay lai; checklist Next-Gen neu co) thi "
+    "chay LAN LUOT tung bo tinh nang trong CUNG luot nay, moi bo mot lenh: {lenh_bo} (bo sau chay khi bo truoc "
+    "\"xong\": true). Bo tinh nang KHONG check ID ads lai, KHONG truyen --sdk, moi case tool tu lai vao Home. Dong tool "
+    "khong tu cham duoc thi cham tay theo muc 5b; dieu kien khong tao duoc thi BLOCKED kem ly do; bo khong co case chay "
+    "duoc (app khong co key / sheet trong) thi ghi ro trong tom_tat, khong phai loi. Bi cat giua chung thi `--tiep`.\n"
+    "Cuoi luot dung MOT report gop: `rcr-check --package {package} --gop <file luot bo TC SDK> --gop <file luot tung bo "
+    "tinh nang>...` (khong can may) -> `link` = report gop. Nhanh chi checklist Next-Gen (khong co file luot bo TC): gop "
+    "cac bo tinh nang, `link` = report gop do, link report checklist ghi trong `tom_tat`. Gop khong duoc thi `link` = "
+    "report bo TC SDK, duong dan report con lai ghi trong `tom_tat`. `tom_tat` ghi so PASS/FAIL tung phan (SDK, tung "
+    "tinh nang); `bugs` gom ca SDK lan tinh nang, case tinh nang ghi `<bo>#<ma case>`.\n"
+)
+
+
+def _lenh_tinh_nang(tabs: list[str]) -> tuple[list[str], str]:
+    """Tham so rcr-check cua tung bo tinh nang -> (['--tc iaa', '--tab "rating"'], chuoi lenh cho prompt).
+    Ten bo di vao prompt -> chi nhan dung danh sach co dinh."""
+    sai = [t for t in tabs if t not in TAB_TINH_NANG + NGUON_TINH_NANG]
+    if sai:
+        raise ValueError(f"tab tính năng không hợp lệ: {sai!r}")
+    co = [f"--tc {t}" if t in NGUON_TINH_NANG else f'--tab "{t}"' for t in tabs]
+    return co, ", ".join(f"`rcr-check {c} --case all`" for c in co)
+
+
 def lenh(package: str, serial: str, cases: list[str] | None = None,
          next_gen: bool = False, sdk: str = "", sub_version: str = "",
-         bo_qua_plan: bool = False, tabs: list[str] | None = None) -> tuple[list[str], str]:
+         bo_qua_plan: bool = False, tabs: list[str] | None = None,
+         them_tinh_nang: list[str] | None = None) -> tuple[list[str], str]:
     """(lenh, prompt dua vao stdin). Nhieu may cam cung luc -> luon chi dinh serial.
     `tabs`: luot /check tinh_nang - chi chay cac tab SDK rieng (TAB_TINH_NANG) / bo dung tu sheet goc (NGUON_TINH_NANG).
     Co `cases` -> prompt verify; case lay tu state nen van kiem mau truoc khi vao prompt.
@@ -213,22 +240,22 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
         cmd += ["--add-dir", str(audit)]
     cmd += ["--allowedTools", *TOOLS]
     if tabs and not cases:                           # /check tinh_nang: chi tab SDK rieng
-        sai = [t for t in tabs if t not in TAB_TINH_NANG + NGUON_TINH_NANG]
-        if sai:                                      # ten tab di vao prompt -> chi nhan dung danh sach co dinh
-            raise ValueError(f"tab tính năng không hợp lệ: {sai!r}")
-        co = [f"--tc {t}" if t in NGUON_TINH_NANG else f'--tab "{t}"' for t in tabs]
+        co, lenh_bo = _lenh_tinh_nang(tabs)
         return cmd, PROMPT_TINH_NANG.format(package=package, serial=serial, tabs=", ".join(tabs),
-                                            tab_arg=" ".join(co),
-                                            lenh_bo=", ".join(f"`rcr-check {c} --case all`" for c in co))
+                                            tab_arg=" ".join(co), lenh_bo=lenh_bo)
     if sub_version and not cases:                    # /check-sub: ca bo TC sub
         if not VERSION_RE.fullmatch(sub_version):
             raise ValueError(f"version không hợp lệ: {sub_version!r}")
         return cmd, PROMPT_SUB.format(package=package, serial=serial, version=sub_version)
     if not cases:
         # --bo-qua-plan: QA bam "Chạy bỏ qua plan" sau luot dung vi build khac plan tuan.
+        tn = ""
+        if them_tinh_nang:
+            tn = NHAC_TINH_NANG.format(package=package, tabs=", ".join(them_tinh_nang),
+                                       lenh_bo=_lenh_tinh_nang(them_tinh_nang)[1])
         return cmd, PROMPT.format(package=package, serial=serial, next_gen=" --next-gen" if next_gen else "",
                                   sdk=(f" --sdk {sdk}" if sdk else "") + (" --bo-qua-plan" if bo_qua_plan else ""),
-                                  nhac=NHAC_NEXT_GEN if next_gen else "")
+                                  nhac=NHAC_NEXT_GEN if next_gen else "", tinh_nang=tn)
     loai = {c: loai_case(c) for c in cases}
     sai = [c for c, lo in loai.items() if lo is None]
     if sai:
@@ -302,12 +329,14 @@ def moi_truong() -> dict[str, str]:
 
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
          cases: list[str] | None = None, next_gen: bool = False, sdk: str = "", sub_version: str = "",
-         bo_qua_plan: bool = False, tabs: list[str] | None = None) -> dict:
-    """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO."""
+         bo_qua_plan: bool = False, tabs: list[str] | None = None,
+         them_tinh_nang: list[str] | None = None) -> dict:
+    """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO.
+    `them_tinh_nang`: bo tinh nang chay sau phan SDK trong cung luot (tin build ghi ca hai)."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
-        cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan, tabs)
+        cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan, tabs, them_tinh_nang)
         # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
         p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo,
                                 encoding="utf-8", errors="replace", env=moi_truong())

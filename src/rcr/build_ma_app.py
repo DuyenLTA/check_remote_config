@@ -38,6 +38,17 @@ MENTION_RE = re.compile(r"<[@#][!&]?\d+>")
 MARKDOWN_RE = re.compile(r"\*\*|__|~~|\|\||`|\*")
 # Tutorial 3.7.0 = Next-Gen (user chot 2026-10-27), them 3.7.1 (2026-10-29) - cham duoc tren ban release.
 NEXT_GEN_TUTORIAL = ("3.7.0", "3.7.1")
+# Tinh nang dev ghi trong tin build ("sdk 3.5.4 - Apply IAA - SDK Widget - SDK Rating - SDK Daily Checkin - Luong gen
+# ngam - Uninstall") -> bot check het tinh nang da dong goi, khong chi SDK (user chot 14/11/2026). Gia tri = ten bo
+# cua bot_chay_claude (tab sheet chung / `--tc`). Widget / Rating / Daily Checkin phai co chu "SDK" dung truoc: ghi chu
+# "fix widget", "rating 5 sao" la tinh nang app, khong phai SDK. Uninstall nam trong bo IAA.
+TINH_NANG_RE = (
+    ("iaa", re.compile(r"(?<![a-z])iaa(?![a-z])|uninstall", re.I)),
+    ("widget", re.compile(r"sdk[\s_-]*widget", re.I)),
+    ("rating", re.compile(r"sdk[\s_-]*rating", re.I)),
+    ("daily checkin", re.compile(r"sdk[\s_-]*(?:daily[\s_-]*)?check[\s_-]?in", re.I)),
+    ("gen-ngam", re.compile(r"gen[\s_-]*ng(?:ầ|â|a)m", re.I)),
+)
 
 
 def _sach(text: str) -> str:
@@ -71,11 +82,12 @@ def co_ma_app(text: str) -> bool:
 
 
 def tach(text: str, ma_kenh: str = "") -> dict | None:
-    """{ma, ten, version, next_gen, tutorial, sdk} hoac None khi thieu ma app hoac version (code).
+    """{ma, ten, version, next_gen, tutorial, sdk, tinh_nang} hoac None khi thieu ma app hoac version (code).
 
     `next_gen`: False khi "revert next-gen", True khi nhac next-gen, None khi khong nhac.
     `tutorial`: so SDK dung sau chu tutorial / sdk / apply, "" khi tin khong nhac.
-    `sdk`: build co apply SDK khong (co so SDK hoac nhac next-gen) - False thi bot bo qua.
+    `sdk`: build co apply SDK FO khong (co so SDK hoac nhac next-gen).
+    `tinh_nang`: bo tinh nang ghi trong tin (TINH_NANG_RE). Khong SDK, khong tinh nang -> bot khong hoi Check.
     `ma_kenh`: ma app suy tu ten kenh project (`aip922-...`) - dung khi tin trong kenh do khong ghi ma.
     """
     text = _sach(text)
@@ -100,7 +112,29 @@ def tach(text: str, ma_kenh: str = "") -> dict | None:
         "next_gen": next_gen,
         "tutorial": tut.group(1) if tut else "",
         "sdk": bool(tut) or next_gen is not None,
+        "tinh_nang": tinh_nang(ghi_chu),
     }
+
+
+def tinh_nang(text: str) -> list[str]:
+    """Bo tinh nang ghi trong tin build, theo thu tu xuat hien (bot chay lan luot theo thu tu nay), khong trung."""
+    gap = sorted((m.start(), ten) for ten, r in TINH_NANG_RE for m in [r.search(text or "")] if m)
+    return list(dict.fromkeys(ten for _, ten in gap))
+
+
+def co_viec(tin: dict) -> bool:
+    """Build bot can hoi Check: co apply SDK FO hoac co tinh nang da dong goi."""
+    return bool(tin.get("sdk") or tin.get("tinh_nang"))
+
+
+def chi_tinh_nang(job: dict) -> bool:
+    """Luot chi chay bo tinh nang: /check tinh_nang, hoac tin build ghi tinh nang ma khong ghi SDK FO."""
+    return job.get("loai_job") == "tinh_nang" or (job.get("sdk") is False and bool(job.get("tinh_nang")))
+
+
+def tabs_tinh_nang(job: dict) -> list[str]:
+    """Bo tinh nang cua luot: QA chon (/check tinh_nang) hoac doc tu tin build."""
+    return list(job.get("tabs") if job.get("loai_job") == "tinh_nang" else job.get("tinh_nang") or [])
 
 
 def la_next_gen(tin: dict) -> bool:

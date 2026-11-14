@@ -18,7 +18,7 @@ log = logging.getLogger("rcr-bot")
 XANH, XAM = discord.ButtonStyle.success, discord.ButtonStyle.secondary
 NUT_HOI = (("check", "Check", XANH), ("bo", "Bỏ qua", XAM), ("verify", "Verify bug Jira", XAM))
 # QA gui lai tin build: tin hoi moi chi mang thong tin build, khong mang ket qua / bug / Jira cua luot cu.
-GIU_KHI_HOI_LAI = ("ma", "ten", "version", "next_gen", "tutorial", "sdk", "package", "loai_ban")
+GIU_KHI_HOI_LAI = ("ma", "ten", "version", "next_gen", "tutorial", "sdk", "tinh_nang", "package", "loai_ban")
 NUT_BUG = (("jira", "Log Jira", XANH), ("khongbug", "Không có bug thật", XAM))
 NUT_HUY = (("huy", "Huỷ", XAM),)            # job dang cho trong hang doi
 

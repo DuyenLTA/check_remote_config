@@ -84,11 +84,17 @@ def dau_tin(c: dict) -> str:
 def tin_hoi(c: dict) -> str:
     """Tin o kenh QA khi thay build moi: hoi co chay khong."""
     goc = f"\n[Tin build]({c['link_tin']})" if c.get("link_tin") else ""
-    if build_ma_app.la_next_gen(c):
+    tn = ", ".join(build_ma_app.tabs_tinh_nang(c)).replace("gen-ngam", "gen ngầm")
+    chi_tn = build_ma_app.chi_tinh_nang(c)
+    if chi_tn:
+        ghi = f"chỉ tính năng ({tn}) → tải bản release, đổi RC qua điều kiện `testvsl` trên Firebase"
+    elif build_ma_app.la_next_gen(c):
         ghi = "next-gen → tải bản release, chấm checklist Next-Gen"
     else:
         ghi = "tải bản release, đổi RC qua điều kiện `testvsl` trên Firebase"
-    return f"{dau_tin(c)}\n{ghi} từ App Tester rồi chạy /rc-check. Chạy không?{goc}"
+    # Tin build ghi ca SDK lan tinh nang: QA thay truoc bot se chay nhung gi (user chot 14/11/2026).
+    them = f"\nSDK xong thì chạy lần lượt tính năng: {tn} — gộp một report." if tn and not chi_tn else ""
+    return f"{dau_tin(c)}\n{ghi} từ App Tester rồi chạy /rc-check. Chạy không?{them}{goc}"
 
 
 def file_report(kq: dict, out_dir: Path) -> Path | None:

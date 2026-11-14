@@ -79,7 +79,7 @@ async def hoi_build_moi(bot, tin: dict, link_tin: str, kenh, out: Path) -> str:
     Dung chung cho tin bao build va lenh /check. Tra cau tom tat cho nguoi go lenh."""
     pkg = await asyncio.to_thread(bot_cong_viec.package_cua, tin["ma"], out)
     goc = f" — {link_tin}" if link_tin else ""
-    if not tin["sdk"]:
+    if not build_ma_app.co_viec(tin):
         # Build chuc nang / fix bug, khong apply SDK: khong hoi Check (chua co workflow, user chot 28/10/2026)
         # nhung VAN verify bug dev da keo Reviewing - build fix bug thuong khong ghi SDK (user chot 28/10/2026).
         if not bot.q.bao_lan_dau(f"{tin['ma']}|{tin['version']}"):   # quet lai tin lo sau restart: da bao roi

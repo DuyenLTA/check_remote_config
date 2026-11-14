@@ -176,6 +176,13 @@ riêng này không thuộc FO — user không nhắc thì **đừng tự chạy*
 `/check` ô `tinh_nang`, user chốt 11/11/2026): **chọn tab nào chạy tab đó** — không FO, không checklist Next-Gen, không
 `--sdk`, **bỏ 3c**, preflight kèm `--bo-qua-plan`; nhiều tab thì mỗi tab một lệnh rồi `--gop` thành một report.
 
+**Tin build ghi cả SDK lẫn tính năng** (user chốt 14/11/2026, vd `sdk 3.5.4 - Apply IAA - SDK Widget - SDK Rating - SDK
+Daily Checkin - Luồng gen ngầm - Uninstall`): check **hết** tính năng đã đóng gói, không chỉ SDK. Bot tách tính năng từ
+tin (`build_ma_app.TINH_NANG_RE`: Widget / Rating / Daily Checkin phải có chữ "SDK" đứng trước; Uninstall thuộc bộ IAA)
+và ghi vào prompt: chạy xong phần SDK (bộ TC + vòng chạy lại, checklist Next-Gen nếu có) rồi **lần lượt** từng bộ tính
+năng trong cùng lượt (không check ID ads lại, không `--sdk`), cuối cùng `--gop` file lượt bộ TC SDK + từng bộ tính năng
+thành **một report**. Tin chỉ ghi tính năng, không ghi SDK → lượt chỉ tính năng như `/check tinh_nang`.
+
 Hai bộ tính năng **không nằm trong sheet TC chung** (user chốt 12/11/2026) — truyền `--tc <tên>` thay cho link, tool
 tải lại sheet gốc mỗi lệnh (cả `--gop`/`--tiep`) rồi dựng bộ case, phần còn lại chạy như bộ TC thường:
 - `--tc iaa`: mục **"3. ID ads inapp"** của tab app (dòng `Package name`) trong sheet "Check thông số KT" — QA dán kịch bản
