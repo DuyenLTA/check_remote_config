@@ -346,6 +346,11 @@ def _ha_fail_khi_log_roi(lines: list[dict], roi: int) -> list[dict]:
     return ra
 
 
+# FAIL vi VANG MAT (khong thay / khong hien / khong co request): tool chua toi man thi vang la do chua toi, khong
+# phai app sai. AIP921 rating R01-06 16/11/2026: "popup không hiện ở Launcher" khi buoc gen truoc do chua lam duoc.
+VANG_MAT_RE = re.compile(r"(?<!\w)(không|chưa) (thấy|hiện|có request|có event|bắn)", re.I)
+
+
 def _ha_fail_khi_buoc_dung(lines: list[dict], drive: dict) -> list[dict]:
     """Tool dung giua cac buoc Action (buoc khong dich duoc, vd "Gen anh, cho popup.") -> chua toi man cua dong
     Expected. FAIL dua tren VANG MAT ("khong thay 'Rate' tren man nao da chup", "khong thay event ...") la FAIL
@@ -355,7 +360,7 @@ def _ha_fail_khi_buoc_dung(lines: list[dict], drive: dict) -> list[dict]:
     buoc = drive.get("stopped_at")
     ra = []
     for r in lines:
-        if r.get("verdict") == FAIL and str(r.get("reason") or "").startswith("không thấy"):
+        if r.get("verdict") == FAIL and VANG_MAT_RE.search(str(r.get("reason") or "")):
             r = {**r, "verdict": NEEDS_HUMAN,
                  "reason": f"tool dừng ở bước {buoc} (chưa làm được thao tác), chưa tới màn cần chấm: {r.get('reason')}"}
         ra.append(r)

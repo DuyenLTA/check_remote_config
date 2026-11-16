@@ -195,6 +195,12 @@ def test_luot_check_tin_build_co_tinh_nang_chay_sdk_roi_tung_tinh_nang_gop_mot_r
         c.lenh("pkg.a", "S1", sdk="3.5.4", them_tinh_nang=["widget; rm -rf /"])
 
 
+def test_app_moi_do_xong_phai_luu_cong_thuc_vao_data():
+    for kw in ({"tabs": ["rating"]}, {"sdk": "3.5.4"}):
+        _, p = c.lenh("pkg.a", "S1", **kw)
+        assert "rating_gen.yaml" in p and "iaa_duong_lai.yaml" in p and "tom_tat" in p
+
+
 def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
     # Luot chi tinh nang co IAA -> nhac policy-check dung package + serial, rule FAIL vao bugs dang policy#
     _, p = c.lenh("pkg.a", "S1", tabs=["iaa", "widget"])

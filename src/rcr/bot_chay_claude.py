@@ -62,6 +62,14 @@ NHAC_AUDIT = (
     "Repo audit da duoc --add-dir: chep script workflow bang `cat <repo audit>/.claude/workflows/audit-fanout.mjs > out/scratch-<ngay>/audit-fanout.mjs` (lenh `cp` tu duong dan .claude bi -p chan) roi goi Workflow. "
     "Workflow audit chay nen: CHO thong bao no xong roi moi chay case trong CUNG luot nay; KHONG ScheduleWakeup.\n"
 )
+# App moi lan dau chay ra hang loat do tay vi tool chua co cong thuc lai cua app (AIP921 16/11/2026: IAA 17 FAIL gia,
+# rating dung o buoc gen). Do xong phai luu cong thuc vao data/ de lan sau cung app tool tu chay (user chot 16/11/2026).
+NHAC_LUU_CONG_THUC = (
+    "App tool chua co cong thuc / khuon lai (bao 'chua co cong thuc', 'khong khop khuon nao', tool dung o buoc lai): "
+    "do tay xong PHAI khai cong thuc cua app vao dung file src/rcr/data/ (iaa_duong_lai.yaml, rating_gen.yaml, "
+    "checkin_cong_thuc.yaml, gen_ngam_cong_thuc.yaml, fo_flow.yaml), sua code lai thi kem test, roi chay lai DUNG cac "
+    "case do bang cong thuc moi de chung minh. Ghi ten file da sua vao `tom_tat` (khong commit - user commit).\n"
+)
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.
 PROMPT = (
@@ -86,7 +94,7 @@ PROMPT = (
     "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case. KHONG tu viet vong lap sleep doc "
     "journal.jsonl / file output de cho: thong bao xong chi toi khi lenh Bash dang chay ket thuc, vong lap do giu may "
     "dung im toi het han (AIP872 04/11/2026 mat ~7 phut). Trong luc cho thi lam viec khong can may (doc TC, preflight).\n"
-    + NHAC_AUDIT +
+    + NHAC_AUDIT + NHAC_LUU_CONG_THUC +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Sua tool giua luot: chi chay test cua file vua sua (pytest tests/test_<file>.py), KHONG chay ca bo test - "
     "may dung im trong luc cho.\n"
@@ -186,7 +194,7 @@ PROMPT_TINH_NANG = (
     "{policy}"
     "Nhieu tab: dung MOT report gop bang `--gop` cac file luot (khong can may); gop khong duoc thi `link` = report tab "
     "dau, duong dan report tab con lai ghi trong `tom_tat`.\n"
-    + NHAC_AUDIT +
+    + NHAC_AUDIT + NHAC_LUU_CONG_THUC +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<duong dan TUYET DOI file report .html>", '

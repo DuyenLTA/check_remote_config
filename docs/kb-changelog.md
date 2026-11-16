@@ -10,6 +10,7 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 
 | Ngày | Đầu ra sai | Sửa gì | Trước → sau |
 |---|---|---|---|
+| 16/11/2026 | AIP921 rating R01-06 FAIL "popup không hiện ở Launcher" trong khi tool dừng ở bước gen (chưa tới chỗ popup) | `assert_check._ha_fail_khi_buoc_dung` hạ mọi FAIL vì vắng mặt (`VANG_MAT_RE`: không thấy / không hiện / không có request / không có event) khi tool dừng giữa bước | FAIL giả → đo tay |
 | 13/11/2026 | AIP918 Linguza 3.7.2 chấm theo tab 3.6.1 nên R01-01 FAIL giả "kỳ vọng 3.6.1" | QA tạo tab "TC SDK 3.7.2"; `tc_catalog.CA_HAI_SDK` ghim tab 3.7.2 | Tab 3.6.1 + checklist → tab 3.7.2 + checklist |
 | 13/11/2026 | Tab daily checkin AIP893 2.6.0: (1) Test Data mới "key=JSON đang chạy trên Firebase, sửa: f=x" bị đọc thành giá trị "JSON đang chạy…" + key rác → case dừng; (2) R05-01 FAIL / R01-04 BLOCKED vì sheet sửa sau lượt; (3) mọi bước checkin phải đo tay, câu "Mở app vào Home, bấm Check-in, đóng Unlocked" bị dịch thành chỉ lái vào Home | `tc_json_dang_chay` (lấy JSON đang chạy, key chưa khai trên server thì chỉ gồm field TC sửa); `act_checkin` + `checkin_may` + `assert_checkin` + `data/checkin_cong_thuc.yaml` (đóng Add Widget, Check-in, Unlocked, sheet unlock, gen free + History, kill/mở lại, đổi ngày máy qua Date & time và luôn trả giờ cuối case) | 14 case đo tay → tự lái + tự chấm; R01-01/02 BLOCKED → PASS |
 | 12/11/2026 | AIP892 tab rating: mọi bước (gen ảnh, chọn sao, bấm Rate/X, thoát app, back, shortcut) ra NEEDS_HUMAN, Claude đo tay cả lượt ~2,5 tiếng | Tự lái + tự chấm tab rating: `act_rating` / `assert_rating` / `rating_may` (đo nút X bằng khung chụp liên tục), công thức gen theo app `data/rating_gen.yaml`, hết lượt gen thì mua sub test bằng `sub_thao_tac.mua` | 9 case đo tay → R03/R05/R06/R07/R08 tự PASS, 50–265s/case |
@@ -43,6 +44,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 16/11/2026 | App mới tool chưa có công thức lái: phiên bot đo tay xong phải khai công thức vào `src/rcr/data/` (iaa_duong_lai / rating_gen / checkin / gen_ngam / fo_flow), chạy lại đúng case để chứng minh, ghi file đã sửa vào tóm tắt | `src/rcr/bot_chay_claude.py` NHAC_LUU_CONG_THUC | — |
 | 16/11/2026 | Policy kèm lượt IAA chỉ check **ads** (`/policy-check --chi-ads`: không mua sub, bỏ rule tab Sub_VN) | `rc-check.md` 7a, `src/rcr/bot_chay_claude.py` NHAC_POLICY, repo audit `policy_check_runner.py` | — |
 | 16/11/2026 | Lượt có bộ IAA (chỉ tính năng hay SDK kèm tính năng) bắt buộc chạy thêm `/policy-check` làm bước cuối, rule FAIL vào menu bug dạng `policy#<mã rule>`; lượt không có IAA vẫn theo luật 11/11 (policy tách riêng) | `rc-check.md` 7a, `src/rcr/bot_chay_claude.py` NHAC_POLICY | — |
 | 16/11/2026 | Mọi lượt chạy app phải check ID ads (audit-fanout) trước, kể cả lượt chỉ chạy tính năng (`/check tinh_nang`); bỏ luật 11/11 "tab tính năng không check ID ads" | `rc-check.md` 3c + 4, `src/rcr/bot_chay_claude.py` PROMPT_TINH_NANG, `src/rcr/bot_job_check.py` | — |

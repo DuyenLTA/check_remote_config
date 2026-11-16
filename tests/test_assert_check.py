@@ -875,3 +875,16 @@ def test_tool_dung_giua_buoc_thi_FAIL_vi_vang_thanh_do_tay():
     res = a.check_all(['Nhãn button "Rate" (1 < 2).', "Log event complete_ob3."], {}, drive, OK_CRASH, events=EV)
     assert [r["verdict"] for r in res["lines"]] == [a.NEEDS_HUMAN, a.NEEDS_HUMAN]
     assert "tool dừng ở bước 1" in res["lines"][1]["reason"]
+
+
+def test_tool_dung_giua_buoc_thi_FAIL_vi_khong_hien_cung_thanh_do_tay():
+    """AIP921 rating R01-06: buoc gen chua lam duoc -> 'popup không hiện ở Launcher' la FAIL gia; FAIL vi THAY sai giu."""
+    drive = {"steps": [], "walked": True, "status": "NEEDS_HUMAN", "stopped_at": 2}
+    lines = [{"verdict": a.FAIL, "reason": "BACK → Launcher; popup không hiện ở Launcher; event rating_placement"},
+             {"verdict": a.FAIL, "reason": "không có request unit …6168881464"},
+             {"verdict": a.FAIL, "reason": "vẫn request tầng đang tắt — …7868800934"}]
+    ra = a._ha_fail_khi_buoc_dung(lines, drive)
+    assert [r["verdict"] for r in ra] == [a.NEEDS_HUMAN, a.NEEDS_HUMAN, a.FAIL]
+    assert "tool dừng ở bước 2" in ra[0]["reason"]
+    # Tool lai xong (khong dung giua buoc) -> giu nguyen FAIL
+    assert a._ha_fail_khi_buoc_dung(lines, {"status": "DONE"}) == lines
