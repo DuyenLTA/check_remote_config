@@ -195,5 +195,18 @@ def test_luot_check_tin_build_co_tinh_nang_chay_sdk_roi_tung_tinh_nang_gop_mot_r
         c.lenh("pkg.a", "S1", sdk="3.5.4", them_tinh_nang=["widget; rm -rf /"])
 
 
+def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
+    # Luot chi tinh nang co IAA -> nhac policy-check dung package + serial, rule FAIL vao bugs dang policy#
+    _, p = c.lenh("pkg.a", "S1", tabs=["iaa", "widget"])
+    assert "policy-check.md" in p and "pkg.a --serial S1" in p and "policy#<ma rule>" in p
+    # SDK kem tinh nang co IAA -> cung nhac
+    _, p = c.lenh("pkg.a", "S1", sdk="3.5.4", them_tinh_nang=["iaa", "rating"])
+    assert "policy-check.md" in p
+    # Khong co IAA -> khong chay policy (luat 11/11 tach rieng van giu)
+    for kw in ({"tabs": ["widget", "rating"]}, {"sdk": "3.5.4", "them_tinh_nang": ["widget"]}, {"sdk": "3.5.4"}):
+        _, p = c.lenh("pkg.a", "S1", **kw)
+        assert "policy-check.md" not in p
+
+
 def test_luot_check_khong_tinh_nang_khong_them_doan_tinh_nang():
     assert "Tin build con ghi tinh nang" not in c.lenh("pkg.a", "S1", sdk="3.5.4")[1]
