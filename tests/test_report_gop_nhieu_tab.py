@@ -31,3 +31,13 @@ def test_gop_nhieu_tab_ten_tab_len_tieu_de_va_xep_theo_tab():
 def test_mot_tab_giu_tieu_de_cu():
     data = _data([_rec("widget", "WIDGET-R01-01", "R01")])
     assert data["title"] == "Lượt chấm AI Photo 2.6.0"
+
+
+def test_bo_tu_sheet_goc_khong_co_tab_duoc_gan_ten_bo_khi_gop():
+    """AIP921: case IAA (tab rỗng) phải mang tab 'iaa' để report gộp ghi đủ IAA, Rating, Widget."""
+    from rcr import luot_file
+    d = {"tc_nguon": "iaa", "records": [{"key": "IAA-01-01", "tab": ""}], "tc": {"cases": [{"key": "IAA-01-01", "tab": ""}]}}
+    ra = luot_file._gan_tab_nguon(d)
+    assert ra["records"][0]["tab"] == "iaa" and ra["tc"]["cases"][0]["tab"] == "iaa"
+    khac = {"tc_nguon": "https://docs.google.com/x", "records": [{"key": "rating#R01", "tab": "rating"}]}
+    assert luot_file._gan_tab_nguon(khac) == khac

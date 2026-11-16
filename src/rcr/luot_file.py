@@ -147,9 +147,22 @@ def loc_theo_tc(records: list[dict], rows: list[dict]) -> tuple[list[dict], list
     return giu, da_xoa, doi
 
 
+def _gan_tab_nguon(data: dict) -> dict:
+    """Bo dung tu sheet goc (`--tc iaa` / `--tc gen-ngam`) khong co tab: gan ten bo lam tab cho case va TC, de report
+    gop liet ke bo do (AIP921 16/11/2026: report gop IAA + widget + rating chi ghi "Rating, Widget")."""
+    nguon = str(data.get("tc_nguon") or "").strip().lower()
+    if nguon not in ("iaa", "gen-ngam"):
+        return data
+    tc = data.get("tc") or {}
+    return {**data,
+            "records": [r if r.get("tab") else {**r, "tab": nguon} for r in data.get("records") or []],
+            "tc": {**tc, "cases": [c if c.get("tab") else {**c, "tab": nguon} for c in tc.get("cases") or ()]}
+            if tc else tc}
+
+
 def doc_nhieu(paths: list[str], package: str) -> tuple[dict, list[dict]]:
     """-> (meta cua file CUOI, record da gop). File sau thang file truoc."""
-    datas = [doc(p, package) for p in paths]
+    datas = [_gan_tab_nguon(doc(p, package)) for p in paths]
     return {**datas[-1], "tc": _gop_tc(d.get("tc") or {} for d in datas)}, gop(*(d["records"] for d in datas))
 
 
