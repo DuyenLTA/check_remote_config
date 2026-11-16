@@ -44,8 +44,10 @@ from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
 
 
-# Case ra ket qua lo lung (khong PASS/FAIL) -> chay lai toi da bay nhieu lan.
-LAN_CHAY_LAI = 3
+# Case ra ket qua lo lung (khong PASS/FAIL) -> chay toi da bay nhieu lan (tinh ca lan dau): 2 = chay lai MOT lan.
+# User chot 16/11/2026 "chay them 1 lan la duoc roi": so do 10 ngay, lan chay thu 3 ton ~2,7 gio cho 49 case, chi
+# 9 case doi ket qua.
+LAN_CHAY_LAI = 2
 
 
 def _noop(_msg: str) -> None:
