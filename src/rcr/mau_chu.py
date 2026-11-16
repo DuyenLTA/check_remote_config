@@ -25,14 +25,20 @@ def _rgb(hex_: str) -> tuple[int, int, int]:
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
-def _dem(img, box, dich) -> int:
+# Chu ve co alpha (Compose: text mau #FF0000 tren sheet toi ra (236,0,0), BeautyGenie checkin Pixel 4 16/11/2026) ->
+# lech ~20/kenh, GAN dem 0 o ca khung chu lan doi chung. Khi do chat ra 0/0 thi do lai voi nguong nay; van phai hon han
+# dai doi chung moi tinh dung mau (nen trung mau tinh co thi hai ben ngang nhau).
+GAN_ALPHA = 24
+
+
+def _dem(img, box, dich, gan: int = GAN) -> int:
     if box[3] <= box[1] or box[2] <= box[0]:
         return 0
     r0, g0, b0 = dich
     vung = img.crop(box)
     diem = getattr(vung, "get_flattened_data", vung.getdata)()
     return sum(1 for r, g, b in diem
-               if abs(r - r0) <= GAN and abs(g - g0) <= GAN and abs(b - b0) <= GAN)
+               if abs(r - r0) <= gan and abs(g - g0) <= gan and abs(b - b0) <= gan)
 
 
 def _dai_doi_chung(b, cao_anh: int, chu_khac: list) -> tuple:
@@ -116,6 +122,17 @@ async def _chu_moi(client, serial: str, package: str, activity: str, da_co: set,
     return [m for m in do(nodes, png, dich) if m["text"] not in da_co]
 
 
+def _dem_hai_ben(img, khung, doi, dich) -> list[int]:
+    """[pixel dung mau trong khung chu, o dai doi chung]; chat ra 0/0 thi dem lai voi GAN_ALPHA (chu co alpha)."""
+    trong, ngoai = _dem(img, khung, dich), _dem(img, doi, dich)
+    if trong == 0 and ngoai == 0:
+        t2, n2 = _dem(img, khung, dich, GAN_ALPHA), _dem(img, doi, dich, GAN_ALPHA)
+        # Chi nhan khi nguong rong tach ro chu khoi nen; khong thi giu 0/0 (mau sai van ra FAIL nhu cu).
+        if t2 > 3 * n2 and t2 >= 50:
+            return [t2, n2]
+    return [trong, ngoai]
+
+
 def do(nodes, png: bytes, dich: list[str]) -> list[dict]:
     """-> [{text, bounds, dem: {hex: [trong_khung, doi_chung]}}] cho moi node co chu."""
     if not png or not dich:
@@ -133,7 +150,7 @@ def do(nodes, png: bytes, dich: list[str]) -> list[dict]:
         khung = (max(0, b.left), max(0, b.top), min(img.width, b.right), min(img.height, b.bottom))
         doi = _dai_doi_chung(b, img.height, [o.bounds for o in co_chu if o is not n])
         ra.append({"text": n.text, "id": n.resource_id, "bounds": list(khung),
-                   "dem": {h.upper(): [_dem(img, khung, _rgb(h)), _dem(img, doi, _rgb(h))] for h in dich}})
+                   "dem": {h.upper(): _dem_hai_ben(img, khung, doi, _rgb(h)) for h in dich}})
     return ra + _cham_active(nodes, img, dich) + _nen_chu(nodes, img, dich)
 
 

@@ -19,6 +19,7 @@ import sys
 import time
 from pathlib import Path
 
+from . import bot_hang_doi
 from . import luot_file
 from .gen_ngam_cham import So, ghi_luot
 from .models import RcError
@@ -162,6 +163,10 @@ def cham(a) -> dict:
                     lambda m: print(m, file=sys.stderr))
 
 
+# Thu muc file khoa may: chung voi rcr-check (cli_check.DEFAULT_OUT) va bot.
+KHOA_DIR = Path(__file__).resolve().parents[2] / "out"
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="rcr-gen-ngam", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -181,7 +186,12 @@ def main(argv=None) -> int:
             raise RcError("chay cần --serial (lái máy thật)")
         if a.lenh == "cham" and not a.luot:
             raise RcError("cham cần --luot")
-        ra = chay(a) if a.lenh == "chay" else cham(a)
+        with bot_hang_doi.giu_may_ca_job(KHOA_DIR, a.serial if a.lenh == "chay" else ""):
+            ra = chay(a) if a.lenh == "chay" else cham(a)
+    except BlockingIOError:
+        print(f"LOI: máy {a.serial} đang có lượt khác (bot hoặc rc-check khác) - chờ lượt đó xong rồi chạy lại",
+              file=sys.stderr)
+        return 1
     except (RcError, subprocess.CalledProcessError) as exc:
         print(f"LOI: {exc}", file=sys.stderr)
         return 1

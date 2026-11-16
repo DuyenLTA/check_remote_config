@@ -10,6 +10,14 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 
 | Ngày | Đầu ra sai | Sửa gì | Trước → sau |
 |---|---|---|---|
+| 16/11/2026 | Khoá máy theo CẢ job: bot / rcr-iaa / rcr-gen-ngam giữ khoá suốt lệnh, lệnh con biết cha giữ qua env `RCR_GIU_MAY`; máy bận thì báo bận, không chạy chồng | `bot_hang_doi.giu_may_ca_job`, `bot_chay_claude._khoa_job` | — |
+| 16/11/2026 | Bộ case có "Tiếp nối" → tự bật `--chuoi` (quên cờ là pm clear giữa chuỗi, kết quả sai) | `run_batch.tu_bat_chuoi` | — |
+| 16/11/2026 | Máy không chụp được màn Result (could not get idle state, Android 12) → bỏ các case sau cần gen, báo chạy máy Android 13+ | `bo_case_thieu_cong_thuc.KHONG_DUMP` | — |
+| 16/11/2026 | Precondition "App bật màn Add widget" mà Test Data thiếu key → tự đặt `widget_screen_placement=true` | `data/precondition_config.yaml` | — |
+| 16/11/2026 | Đo màu chữ có alpha (#FF0000 vẽ ra 236,0,0): chặt ra 0/0 thì đo lại ngưỡng 24, vẫn phải tách hẳn đối chứng | `mau_chu._dem_hai_ben` | — |
+| 16/11/2026 | Bước "(không kill app)" không còn bị lái thành force-stop | `act_compound.KHONG_KILL_RE` | — |
+| 16/11/2026 | Checkin AIP892 (khuôn beauty) + về Home chờ 60s (inter che) | `data/checkin_cong_thuc.yaml` | — |
+| 16/11/2026 | Bot phải chấm hết dòng NEEDS_HUMAN / NOT_VERIFIABLE (mở ảnh của chính case) trước KET_QUA | `bot_chay_claude.NHAC_CHAM_HET` | — |
 | 16/11/2026 | AIP921 lượt IAA + widget + rating mất ~6 giờ 40: rating chạy 23 case 34 phút ra 18 NEEDS_HUMAN cùng lý do "chưa có công thức gen"; khuôn IAA mới hỏng 2 lần, mỗi lần chạy cả 4 biến thể (~20 phút/biến thể) | `bo_case_thieu_cong_thuc`: case đầu báo thiếu công thức gen thì bỏ các case sau cần gen cùng loại (và case tiếp nối); `rcr-iaa chay` dừng khi biến thể đầu hỏng đoạn (`--chay-du` để chạy đủ) | rating 34 phút → vài phút; khuôn hỏng mất 20 phút thay vì 80 |
 | 16/11/2026 | Công thức tính năng đã đóng gói dùng chung giữa các app cùng khuôn: gen ngầm `khuon_chung`, rating / checkin `khuon` + `nhan_dien` chữ Home; app mới không cần khai riêng, chữ lệch thì thêm vào regex khuôn | `src/rcr/cong_thuc_khuon.py`, `gen_ngam_may.cong_thuc` | — |
 | 16/11/2026 | AIP921 rating R01-06 FAIL "popup không hiện ở Launcher" trong khi tool dừng ở bước gen (chưa tới chỗ popup) | `assert_check._ha_fail_khi_buoc_dung` hạ mọi FAIL vì vắng mặt (`VANG_MAT_RE`: không thấy / không hiện / không có request / không có event) khi tool dừng giữa bước | FAIL giả → đo tay |

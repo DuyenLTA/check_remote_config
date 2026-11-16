@@ -44,9 +44,41 @@ def _mo_khoa_file(fd: int) -> None:
         fcntl.flock(fd, fcntl.LOCK_UN)
 
 
+# Tien trinh cha (job bot / rcr-iaa / rcr-gen-ngam) da giu khoa may nay cho CA job -> tien trinh con (rcr-check goi
+# ben trong) khong khoa lai (khoa lai se tu chan chinh minh). Khoa tung lenh thi giua hai lenh may trong nhu ranh, luot
+# khac chen vao (16/11/2026: bot AIP893 va luot AIP892 suyt dung chung Pixel 6).
+ENV_CHA_GIU = "RCR_GIU_MAY"
+
+
+def _cha_da_giu(path: Path) -> bool:
+    serial = os.environ.get(ENV_CHA_GIU, "")
+    return bool(serial) and Path(path).name == f".may-{serial}.lock"
+
+
+@contextmanager
+def giu_may_ca_job(out_dir: Path, serial: str):
+    """Giu khoa may cho ca mot lenh nhieu buoc (rcr-iaa / rcr-gen-ngam) va bao tien trinh con qua env."""
+    if not serial or os.environ.get(ENV_CHA_GIU) == serial:
+        yield
+        return
+    with giu_may(khoa_may(out_dir, serial)):
+        cu = os.environ.get(ENV_CHA_GIU)
+        os.environ[ENV_CHA_GIU] = serial
+        try:
+            yield
+        finally:
+            if cu is None:
+                os.environ.pop(ENV_CHA_GIU, None)
+            else:
+                os.environ[ENV_CHA_GIU] = cu
+
+
 @contextmanager
 def giu_may(path: Path):
     """Giu khoa may trong khoi `with`; may dang co luot khac -> BlockingIOError, khong cho."""
+    if _cha_da_giu(path):
+        yield
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(path, os.O_RDWR | os.O_CREAT)
     try:

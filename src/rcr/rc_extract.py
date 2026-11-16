@@ -115,6 +115,8 @@ def extract(case: Case, whitelist: set[str] | frozenset[str]) -> RcCaseData:
         return RcCaseData(overrides={}, needs_human=why)
 
     found = suy_ra | pre | td  # trung key -> Test Data thang, roi den ten viet ro
+    from . import precondition_config
+    found = precondition_config.them(case.precondition, whitelist, found) | found
     giu = sorted(k for k, v in found.items() if GIU_GIA_TRI_RE.match(str(v)))
     found = {k: v for k, v in found.items() if k not in giu}
     mo_ta = sorted(k for k, v in found.items() if MO_TA_JSON_RE.search(str(v)))

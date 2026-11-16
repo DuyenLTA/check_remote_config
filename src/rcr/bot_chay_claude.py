@@ -14,6 +14,7 @@ sach tool. Spike 2026-10-27: voi danh sach nay `-p` khong hoi quyen, khong treo.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -64,6 +65,18 @@ NHAC_AUDIT = (
 )
 # App moi lan dau chay ra hang loat do tay vi tool chua co cong thuc lai cua app (AIP921 16/11/2026: IAA 17 FAIL gia,
 # rating dung o buoc gen). Do xong phai luu cong thuc vao data/ de lan sau cung app tool tu chay (user chot 16/11/2026).
+# AIP892 16/11/2026: phien bot ket thuc de lai ~50 dong NEEDS_HUMAN / NOT_VERIFIABLE (dong "phai nhin mat", case dung
+# giua chung) va chi bao 2 bug -> QA phai chay lai ca buoi toi. Bot phai tu cham het truoc khi ket thuc (user chot).
+NHAC_CHAM_HET = (
+    "TRUOC dong KET_QUA: doc lai file luot cuoi cung cua MOI bo; KHONG duoc con dong NEEDS_HUMAN / NOT_VERIFIABLE. "
+    "Dong 'phai nhin mat' (design/mau/popup hien hay khong) -> mo anh `shot` trong `steps` cua CHINH case do (va log "
+    "event cung luot) roi cham bang `rcr-check --cham-tay <file luot> --case <key> --dong <so> --ket PASS|FAIL "
+    "--ly-do '<so do>'`; dong do tool lai hut / case noi tiep bi dut -> chay lai dung case do (`--gop`) hoac do tay "
+    "tren may; FAIL phai lap >=2 lan cung dieu kien. Case can man ma may nay khong chup duoc (vd Result tren Android "
+    "< 13) -> ghi ro trong tom_tat can may nao, khong bo trong. `tom_tat` ghi so dong da cham tay.\n"
+)
+
+
 NHAC_LUU_CONG_THUC = (
     "App tool chua co cong thuc / khuon lai (bao 'chua co cong thuc', 'khong khop khuon nao', tool dung o buoc lai): "
     "do tay xong PHAI khai cong thuc cua app vao dung file src/rcr/data/ (iaa_duong_lai.yaml, rating_gen.yaml, "
@@ -105,7 +118,7 @@ PROMPT = (
     "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case. KHONG tu viet vong lap sleep doc "
     "journal.jsonl / file output de cho: thong bao xong chi toi khi lenh Bash dang chay ket thuc, vong lap do giu may "
     "dung im toi het han (AIP872 04/11/2026 mat ~7 phut). Trong luc cho thi lam viec khong can may (doc TC, preflight).\n"
-    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_RATING_KHONG_GEN +
+    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_CHAM_HET + NHAC_RATING_KHONG_GEN +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Sua tool giua luot: chi chay test cua file vua sua (pytest tests/test_<file>.py), KHONG chay ca bo test - "
     "may dung im trong luc cho.\n"
@@ -205,7 +218,7 @@ PROMPT_TINH_NANG = (
     "{policy}"
     "Nhieu tab: dung MOT report gop bang `--gop` cac file luot (khong can may); gop khong duoc thi `link` = report tab "
     "dau, duong dan report tab con lai ghi trong `tom_tat`.\n"
-    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_RATING_KHONG_GEN +
+    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_CHAM_HET + NHAC_RATING_KHONG_GEN +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<duong dan TUYET DOI file report .html>", '
@@ -380,6 +393,22 @@ def moi_truong() -> dict[str, str]:
     return {**os.environ, "DISCORD_NOTIFY": "0", "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"}
 
 
+@contextlib.contextmanager
+def _khoa_job(repo: Path, serial: str):
+    """Giu khoa may cho ca luot bot -> env cho tien trinh con; khoa dang bi giu thi {} (lenh con tu khoa nhu cu)."""
+    from . import bot_hang_doi
+    cm = bot_hang_doi.giu_may(bot_hang_doi.khoa_may(Path(repo) / "out", serial))
+    try:
+        cm.__enter__()
+    except BlockingIOError:
+        yield {}
+        return
+    try:
+        yield {bot_hang_doi.ENV_CHA_GIU: serial}
+    finally:
+        cm.__exit__(None, None, None)
+
+
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
          cases: list[str] | None = None, next_gen: bool = False, sdk: str = "", sub_version: str = "",
          bo_qua_plan: bool = False, tabs: list[str] | None = None,
@@ -391,8 +420,11 @@ def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
     try:
         cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan, tabs, them_tinh_nang)
         # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
-        p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo,
-                                encoding="utf-8", errors="replace", env=moi_truong())
+        # Giu khoa may CA job (khong chi tung lenh rcr-check): giua hai lenh may khong con trong nhu ranh cho luot khac
+        # chen vao. Lenh con biet cha da giu qua env RCR_GIU_MAY. May dang bi luot tay giu -> chay nhu cu (khoa tung lenh).
+        with _khoa_job(repo, serial) as env_khoa:
+            p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo,
+                                    encoding="utf-8", errors="replace", env=moi_truong() | env_khoa)
     except bot_tien_trinh.BiDung as exc:
         log.write_text(f"DA DUNG: {exc}", encoding="utf-8")
         raise

@@ -15,7 +15,7 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo    # AIP893 - do 13/
   home_chu: "^AI Try On Outfits$"
   vao_unlock:
     - ve_man: "MainActivity"
-      toi_da: 20
+      toi_da: 60                 # ve Home hay gap inter (AdActivity) phai cho dong duoc (~15-30s); 20s qua ngan (16/11/2026)
     - dong_neu_co: "^(Close|Close sheet)$"
     - tap_duoi: "^AI Try On Outfits$"
       thu: "{thu}"
@@ -27,8 +27,31 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo    # AIP893 - do 13/
     - cho_chu: "^History$"
   moi_tao: "just now|\\d+\\s*(?:second|minute)s?\\s+ago"
 
+# AIP892 BeautyGenie 2.2.0 (16): Home co hang style duoi "QUICK FIXES" -> PhotoSelect -> anh "Sample" -> Confirm -> sheet
+# "Watch Ads (0/2)" / "Free Generate" (cung duong gen anh cua rating_gen.yaml, khai 16/11/2026). History: o moi co nhan "New".
+com.aimakeup.aifaceeditor.facemakeup.faceswap: &beauty
+  home: "MainActivity"
+  home_chu: "^QUICK FIXES$"
+  vao_unlock:
+    - ve_man: "MainActivity"
+      toi_da: 60                 # ve Home hay gap inter (AdActivity) phai cho dong duoc (~15-30s); 20s qua ngan (16/11/2026)
+    - dong_neu_co: "^Close$"
+    - tap_duoi: "^QUICK FIXES$"
+      thu: "{thu}"
+    - cho_man: "PhotoSelect"
+    - tap_duoi: "^Sample$"
+    - tap: "^Confirm$"
+  sheet_xong: "^(Watch Ads|Free Generate)"
+  lich_su:
+    - tap: "^History$"
+    - cho_man: "HistoryActivity"
+  moi_tao: "^New$"
+
 # KHUON: app chua co muc rieng -> chon khuon co `nhan_dien` khop chu tren Home (src/rcr/cong_thuc_khuon.py).
 khuon:
+  beauty:
+    nhan_dien: "^QUICK FIXES$"
+    <<: *beauty
   ai_photo:
     nhan_dien: "^(Text to Image Generate|Magic With AI)$"
     <<: *ai_photo

@@ -1,0 +1,6 @@
+# Cau Precondition tu nhien -> config phai dat ma Test Data hay quen ghi (user 16/11/2026: tool tu dat cho du dieu
+# kien, khong de BLOCKED). Chi dat khi key co trong whitelist cua app VA Test Data / Precondition chua ghi key do.
+#   mau : regex (khong phan biet hoa thuong) so voi tung dong Precondition
+#   dat : {key: gia tri}
+- mau: "b[ậa]t\\s+(?:m[àa]n\\s+|popup\\s+)?add\\s*widget|add\\s*widget\\s+(?:hi[ệe]n|b[ậa]t)"
+  dat: {widget_screen_placement: "true"}

@@ -83,6 +83,13 @@ def ghi_report(baseline, tc_info, records, app_label, report: str, log_fn=_noop)
     log_fn(f"Report: {path} ({len(page) // 1024}KB)")
 
 
+def tu_bat_chuoi(runnable: dict, case_arg: str) -> bool:
+    """Co case duoc chon ma precondition ghi 'Tiep noi <case khac>' -> can chay theo chuoi."""
+    chon = {k.strip() for k in (case_arg or "").split(",") if k.strip()}
+    return any(fo_ngon_ngu.TIEP_NOI_RE.search(c.get("precondition", "") or "")
+               for k, c in runnable.items() if not chon or "all" in chon or k in chon or k.split("#")[-1] in chon)
+
+
 async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noop,
                     goc=(), bo_qua=frozenset(), luot=None) -> list[dict]:
     """Chay lan luot cac case nguoi dung chi dinh (`--case a,b,c`).
@@ -116,6 +123,11 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         return tat_ca
 
     chuoi = bool(getattr(args, "chuoi", False))
+    if not chuoi and not getattr(args, "khong_chuoi", False) and tu_bat_chuoi(runnable, args.case):
+        # Quen --chuoi thi case "Tiep noi ... (khong clear data)" bi pm clear, ket qua ca chuoi sai (AIP892 checkin /
+        # rating 16/11/2026, mat ~35 phut) -> bo TC co case Tiep noi thi tu bat.
+        chuoi = True
+        log_fn("Bộ case có case 'Tiếp nối' -> tự bật chế độ chuỗi (--chuoi)")
     gen_thieu: set[str] = set()   # loai gen (anh/video) case truoc bao chua co cong thuc -> bo case sau can no
     bo_thieu: set[str] = set()    # key case da bo vi thieu cong thuc (case 'Tiep noi' chung cung bo)
     truoc_chuoi = None        # case vua chay (che do --chuoi): case sau "Tiep noi" no thi chay tiep tren app

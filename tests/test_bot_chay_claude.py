@@ -223,3 +223,10 @@ def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
 
 def test_luot_check_khong_tinh_nang_khong_them_doan_tinh_nang():
     assert "Tin build con ghi tinh nang" not in c.lenh("pkg.a", "S1", sdk="3.5.4")[1]
+
+
+def test_prompt_bat_bot_tu_cham_het_dong_nhin_mat_truoc_khi_ket_thuc():
+    """AIP892 16/11/2026: bot de lai ~50 dong NEEDS_HUMAN -> prompt bat cham het truoc KET_QUA."""
+    from rcr import bot_chay_claude as b
+    _, prompt = b.lenh("com.x", "S", tabs=["rating"])
+    assert "KHONG duoc con dong NEEDS_HUMAN" in prompt and "--cham-tay" in prompt

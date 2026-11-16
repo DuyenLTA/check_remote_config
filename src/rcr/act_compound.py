@@ -37,6 +37,7 @@ O_MAN_CHO_RE = re.compile(r"^\s*[ởo]\s+[^,]{1,30}?,?\s*(?=(?:chờ|cho|đợi|
 THONG_BAO_RE = re.compile(r"(?:kéo|keo|vuốt|vuot|mở|mo)\b.{0,25}(?:notification|thanh\s+th[oô]ng\s+b[aá]o|status\s*bar)", re.I)
 # "Vuot app khoi Recent (kill), mo lai tu launcher", "Kill app", "Tat han app".
 KILL_RE = re.compile(r"\bkill\b|khỏi\s+recent|khoi\s+recent|force[\s-]*stop|tắt\s+hẳn\s+app|tat\s+han\s+app", re.I)
+KHONG_KILL_RE = re.compile(r"(?:không|khong|chưa|chua|ko)\s+(?:kill|force[\s-]*stop|tắt\s+hẳn|tat\s+han)\s*(?:app)?", re.I)
 MO_LAI_KILL_RE = re.compile(r"m[ởo]\s+l[ạa]i|launcher|relaunch|reopen", re.I)
 CHO_THONG_BAO = 3.0
 HOME_RE = re.compile(r"\bnh[ấa]n\s+home\b|\bb[ấa]m\s+home\b|\bbackground\b", re.I)
@@ -171,7 +172,9 @@ def thao_tac_he_thong(text: str):
                               + (" (khác dòng đầu)" if khac else ""))
     if THONG_BAO_RE.search(text):
         return ThongBao(CHO_THONG_BAO, "kéo thanh thông báo xuống, giữ 3s rồi đóng (không tap thông báo)")
-    if KILL_RE.search(text):
+    # "(khong kill app)" la dieu kien, khong phai thao tac (AIP892 RATING-R01-08 16/11/2026: "Sang man khac roi quay
+    # lai Home (khong kill app)" bi lai thanh force-stop -> do sai case "1 lan/session").
+    if KILL_RE.search(KHONG_KILL_RE.sub("", text)):
         mo = bool(MO_LAI_KILL_RE.search(text))
         return KillMoLai(mo, "tắt hẳn app (force-stop, như vuốt khỏi Recent)" + (" rồi mở lại từ launcher" if mo else ""))
     return None

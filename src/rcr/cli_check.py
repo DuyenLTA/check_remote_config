@@ -385,6 +385,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--chuoi", action="store_true",
                    help="case 'Tiep noi' cung config chay tiep tren app dang mo (khong dat lai config / mo lai "
                         "app); case khong PASS tron ven thi tu chay rieng tu dau")
+    p.add_argument("--khong-chuoi", action="store_true",
+                   help="tat che do chuoi tu bat (bo case co 'Tiep noi' mac dinh chay chuoi): moi case chay rieng")
     p.add_argument("--tai-lai-tc", action="store_true",
                    help="(giu cho tuong thich) moi lenh chay deu tai lai sheet TC")
     p.add_argument("--gop", action="append", metavar="FILE_LUOT",

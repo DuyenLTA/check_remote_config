@@ -66,7 +66,7 @@ def _run(monkeypatch, ket_qua, chuoi=True):
     runnable = {"a": _case("1. Clear data."), "b": _case("1. Tiếp nối SDK361-T-a (cùng lượt)"),
                 "c": _case("1. Tiếp nối SDK361-T-b (cùng lượt)")}
     args = types.SimpleNamespace(case="a,b,c", no_actions=True, no_walk=True, full_walk=False, keep=False,
-                                 out_dir=".", no_dex_check=True, report="", app_label="", tab="", sdk="", chuoi=chuoi)
+                                 out_dir=".", no_dex_check=True, report="", app_label="", tab="", sdk="", chuoi=chuoi, khong_chuoi=not chuoi)
 
     class Base:
         serial, package, configs, mirrored_keys = "S", "com.ai.app", {"k": "v"}, frozenset()

@@ -14,6 +14,10 @@ import re
 from . import act_rating, fo_ngon_ngu
 
 THIEU_RE = re.compile(r"app chưa có công thức gen (anh|ảnh|video)", re.I)
+# Android 12 khong dump duoc man Result co animation lap (BeautyGenie 2.2.0 Pixel 4 16/11/2026: 23 lan "could not get
+# idle state", ~60 phut NEEDS_HUMAN) -> case sau can gen cung dung y het: bo, bao chay tren may Android 13+.
+KHONG_DUMP_RE = re.compile(r"bước rating gen: AdbError: uiautomator dump that bai: ERROR: could not get idle state")
+KHONG_DUMP = "khong_dump"
 
 
 def _loai(chu: str) -> str:
@@ -24,7 +28,11 @@ def loai_thieu(result: dict | None) -> set[str]:
     """Loai gen (anh / video) ma ket qua case bao chua co cong thuc."""
     if not result:
         return set()
-    return {_loai(m.group(1)) for m in THIEU_RE.finditer(json.dumps(result, ensure_ascii=False))}
+    chu = json.dumps(result, ensure_ascii=False)
+    ra = {_loai(m.group(1)) for m in THIEU_RE.finditer(chu)}
+    if KHONG_DUMP_RE.search(chu):
+        ra.add(KHONG_DUMP)
+    return ra
 
 
 def loai_can(actions) -> set[str]:
@@ -39,13 +47,16 @@ def loai_can(actions) -> set[str]:
 
 def ly_do_bo(chosen: dict, thieu: set[str], bo_truoc: set[str]) -> str:
     """'' neu case van chay; khong thi ly do bo qua (case can gen loai chua co cong thuc, hoac noi tiep case da bo)."""
+    if KHONG_DUMP in thieu and loai_can(chosen.get("actions")):
+        return ("máy này (Android < 13) không chụp được màn Result của app (could not get idle state, case trước đã "
+                "gặp) — không chạy; chạy case này trên máy Android 13+")
     can = loai_can(chosen.get("actions")) & thieu
     if can:
         return (f"app chưa có công thức gen {', '.join(sorted(can))} trong data/rating_gen.yaml (case trước đã báo) — "
                 "không chạy; khai công thức rồi chạy lại / đo tay")
     m = fo_ngon_ngu.TIEP_NOI_RE.search(chosen.get("precondition") or "")
     if m and any(k.endswith(m.group(1)) for k in bo_truoc):
-        return f"tiếp nối {m.group(1)} — case đó đã bỏ qua vì app chưa có công thức gen"
+        return f"tiếp nối {m.group(1)} — case đó đã bỏ qua (chưa có công thức gen / máy không chụp được màn Result)"
     return ""
 
 

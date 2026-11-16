@@ -30,3 +30,14 @@ def test_record_bo_qua_giu_du_dong_expected_cho_do_tay():
                           {"expects": ["Popup hiện", "X sau 2s"]}, "app chưa có công thức gen anh")
     assert rec["verdict"] == "NEEDS_HUMAN" and len(rec["lines"]) == 2
     assert rec["actual"].startswith("không chạy")
+
+
+def test_khong_dump_duoc_man_result_thi_bo_case_sau_can_gen():
+    """Pixel 4 Android 12 16/11/2026: man Result BeautyGenie 'could not get idle state' -> case sau can gen bo luon."""
+    from rcr import bo_case_thieu_cong_thuc as t
+    kq = {"runs": [{"assert": {"lines": [{"reason": "tool dừng ở bước rating: lỗi khi làm bước rating gen: AdbError: "
+                                                    "uiautomator dump that bai: ERROR: could not get idle state."}]}}]}
+    thieu = t.loai_thieu(kq)
+    assert t.KHONG_DUMP in thieu
+    assert "Android 13+" in t.ly_do_bo({"actions": ["Gen ảnh thành công."], "precondition": ""}, thieu, set())
+    assert t.ly_do_bo({"actions": ["Bấm X."], "precondition": ""}, thieu, set()) == ""

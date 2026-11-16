@@ -18,6 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from . import bot_hang_doi
 from . import cham_tay, iaa_cham_log, iaa_nhom, luot_file, run_batch, tc_iaa_tu_sheet_kt, tc_source, tc_tinh_nang_rieng
 from .models import RcError
 from .verdict_levels import FAIL, PASS
@@ -196,6 +197,10 @@ def chay(args) -> dict:
     return {"duong_lai": nguon, "lai": lai, "logs": logs, "thoi_gian_s": round(time.monotonic() - bat_dau), **kq}
 
 
+# Thu muc file khoa may: chung voi rcr-check (cli_check.DEFAULT_OUT) va bot.
+KHOA_DIR = Path(__file__).resolve().parents[2] / "out"
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="rcr-iaa", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("lenh", choices=("dat", "tra", "cham", "chay"))
@@ -218,7 +223,13 @@ def main(argv=None) -> int:
             raise RcError("cham cần --luot và ít nhất một --log <biến thể>=<file>")
         if a.lenh == "chay" and not a.serial:
             raise RcError("chay cần --serial (lái máy thật)")
-        ra = {"dat": dat, "tra": tra, "cham": cham, "chay": chay}[a.lenh](a)
+        # Giu khoa may suot lenh (cung khoa voi rcr-check / bot); rcr-check goi ben trong biet cha da giu qua env.
+        with bot_hang_doi.giu_may_ca_job(KHOA_DIR, a.serial if a.lenh != "cham" else ""):
+            ra = {"dat": dat, "tra": tra, "cham": cham, "chay": chay}[a.lenh](a)
+    except BlockingIOError:
+        print(f"LOI: máy {a.serial} đang có lượt khác (bot hoặc rc-check khác) - chờ lượt đó xong rồi chạy lại",
+              file=sys.stderr)
+        return 1
     except (RcError, subprocess.CalledProcessError) as exc:
         print(f"LOI: {exc}", file=sys.stderr)
         return 1
