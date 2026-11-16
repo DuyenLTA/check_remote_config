@@ -109,7 +109,7 @@ async def _shortcut_lam(client, serial: str, package: str, nhan_app: str, sid: s
         nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
         # Launcher co the co nhieu icon cung ten (ban cai khac / app khac trung ten, Pixel 4 13/11/2026: hai icon
         # "Sorapix: AI Hair Changer") -> thu lan luot; shortcut chi tinh khi man mo ra dung package dang test.
-        icons = [n for n in nodes if rating_cong_thuc._khop(n, nhan_app) and not n.bounds.empty]
+        icons = _icon_app(nodes, nhan_app)
         for icon in icons:
             kq = await _thu_icon(client, serial, package, icon, cac_nhan, muc, log)
             if kq is not None:
@@ -118,6 +118,22 @@ async def _shortcut_lam(client, serial: str, package: str, nhan_app: str, sid: s
         await asyncio.sleep(1.5)                                                             # cho truot xong
         log.append(f"chưa thấy icon ở trang {trang + 1}")
     return False
+
+
+def _icon_app(nodes, nhan_app: str) -> list:
+    """Icon app tren launcher (TextView ten app), BO widget: widget cua app cung mang ten app nhung nhan giu
+    khong ra muc shortcut (Pixel 6 AIP893 16/11/2026 nhan giu widget o (413,412) -> hong doan Uninstall)."""
+    theo_id = {n.node_id: n for n in nodes}
+
+    def trong_widget(n) -> bool:
+        while n is not None:
+            # class "android.widget.*" cung co chu widget -> chi xet AppWidgetHostView va resource-id
+            if "AppWidget" in n.cls or re.search(r"widget", n.resource_id, re.I):
+                return True
+            n = theo_id.get(n.parent_id)
+        return False
+    return [n for n in nodes if rating_cong_thuc._khop(n, nhan_app) and not n.bounds.empty
+            and n.cls.endswith("TextView") and not trong_widget(n)]
 
 
 async def _shortcut_ngan_keo(client, serial, package, nhan_app, cac_nhan, muc, log) -> bool | None:
@@ -138,7 +154,7 @@ async def _shortcut_ngan_keo(client, serial, package, nhan_app, cac_nhan, muc, l
     await client.shell(serial, "input", "text", shlex.quote(ten.split(":")[0].strip().replace(" ", "%s")))
     await asyncio.sleep(2.0)
     nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
-    icons = [n for n in nodes if rating_cong_thuc._khop(n, nhan_app) and not n.bounds.empty]
+    icons = _icon_app(nodes, nhan_app)
     for icon in icons:
         kq = await _thu_icon(client, serial, package, icon, cac_nhan, muc, log)
         if kq is not None:

@@ -237,3 +237,22 @@ def test_dong_hien_thi_theo_id_khong_fill_la_blocked():
     assert hien["verdict"] == "BLOCKED"
     req = assert_ad_theo_id.cham_theo_case("Unit của vị trí được gọi.", units, drive, ["5660837352"], False)
     assert req["verdict"] == "PASS"
+
+
+def test_shortcut_chi_nhan_giu_icon_app_khong_nhan_giu_widget():
+    """Pixel 6 AIP893 16/11/2026: widget cua app mang dung ten app -> tool nhan giu widget, popup khong co Uninstall."""
+    from rcr import iaa_lai
+    from rcr.ui_dump import Bounds, DeviceNode
+    L = "com.google.android.apps.nexuslauncher"
+    ten = "Synza: AI Photo Generator"
+
+    def n(i, cls, text="", desc="", b=(0, 0, 10, 10), cha=None):
+        return DeviceNode(i, "", cls, text, desc, Bounds(*b), True, True, True, L, cha, 0)
+    nodes = [
+        n("0", "android.widget.FrameLayout", desc=ten, b=(40, 200, 1040, 620)),                 # widget cua app
+        n("1", "android.appwidget.AppWidgetHostView", b=(40, 700, 1040, 900)),
+        n("1.0", "android.widget.TextView", text=ten, b=(60, 720, 600, 780), cha="1"),          # chu trong widget
+        n("2", "android.widget.TextView", text=ten, desc=f"{ten}, has 1 notification", b=(441, 107, 640, 416)),
+    ]
+    import re
+    assert [x.node_id for x in iaa_lai._icon_app(nodes, f"^{re.escape(ten)}$")] == ["2"]
