@@ -193,7 +193,7 @@ tải lại sheet gốc mỗi lệnh (cả `--gop`/`--tiep`) rồi dựng bộ c
   đúng màn + đúng thời điểm (giờ request so với lúc vào màn / bấm nút), show đúng màn, reload đúng chu kỳ (≥ 3 lần liên
   tiếp, lệch ≤ 1s) và đúng sự kiện (back về Home, chọn lý do, hide app…), giới hạn số lần (1 ad/session, `*_fail_time`),
   tắt remote → 0 request của vị trí. Mỗi vế của câu mô tả là một kết luận riêng; vế nào không đo được thì không PASS.
-  **Không lái từng case**: dựng khung `--case all --no-actions`, rồi `<bin>/rcr-iaa chay` — tool tự lái đường IAA của app
+  **Không lái từng case**: dựng khung `--case all --khung` (vài giây; `--no-actions` vẫn đặt config + clear data + lái FO từng case, 20+ phút), rồi `<bin>/rcr-iaa chay` — tool tự lái đường IAA của app
   (`src/rcr/data/iaa_duong_lai.yaml`) cho 4 biến thể và tự chấm phần đọc được từ log; app chưa có đường lái thì dò
   một lần theo `docs/rc-check/iaa-chay-theo-nhom.md` (kèm luật `*_fail_time`, bẫy đã gặp) rồi khai vào file.
 - `--tc gen-ngam`: tab "TC Gen ngầm" của sheet
@@ -237,7 +237,7 @@ cd <repo> && <bin>/rcr-check --package <pkg> --set splash_banner_change=false
 | `--chuoi` | **luôn truyền khi chạy cả bộ TC**: case "Tiếp nối…" chạy tiếp trên app đang mở; FAIL / lệch log thì tự chạy riêng từ đầu |
 | `--fresh` | ép app về trạng thái chưa từng mở |
 | `--sdk X.Y.Z` | khai thẳng bản SDK FO (máy không ra log, workbook một sheet, hoặc bot truyền theo tin build) |
-| `--full-walk` / `--no-walk` / `--no-actions` | đi hết luồng FO / không lái FO / chỉ đặt config. Mặc định dừng ở màn sâu nhất case đụng tới |
+| `--full-walk` / `--no-walk` / `--no-actions` / `--khung` | đi hết luồng FO / không lái FO / chỉ đặt config / chỉ dựng khung file lượt (không đụng máy, cho rcr-iaa / rcr-gen-ngam). Mặc định dừng ở màn sâu nhất case đụng tới |
 | `--no-dex-check` | bỏ soi key trong DEX — có thể ra PASS giả, chỉ dùng khi biết chắc app đọc key |
 | `--adb <path>` / `--out-dir <dir>` | adb ngoài PATH / nơi lưu snapshot (mặc định `<repo>/out`) |
 

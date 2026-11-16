@@ -58,3 +58,14 @@ def record_blocked(key: str, row: dict, chosen: dict, thieu: list[str]) -> dict:
            "drive": {"status": "—", "steps": []}}
     rec = report_data.case_record(key, row, {"verdict": "BLOCKED", "precondition_thieu": thieu, "runs": [run]})
     return rec | {"actual": f"không chạy — {ly_do}"}
+
+
+def record_khung(key: str, row: dict, chosen: dict) -> dict:
+    """Case chua chay (khung cho bo tu lai theo nhom): moi dong Expected NEEDS_HUMAN, cho tool lai + cham sau."""
+    from . import report_data
+    run = {"assert": {"lines": [{"verdict": "NEEDS_HUMAN", "expected": " ".join((e or "").split()),
+                                 "reason": "chờ tool lái theo nhóm chấm"} for e in chosen.get("expects") or ()],
+                      "pending": len(chosen.get("expects") or ()), "po": 0},
+           "drive": {"status": "—", "steps": []}}
+    rec = report_data.case_record(key, row, {"verdict": "NEEDS_HUMAN", "runs": [run]})
+    return rec | {"actual": "khung lượt — chờ tool lái theo nhóm"}

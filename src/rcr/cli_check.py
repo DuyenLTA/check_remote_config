@@ -112,7 +112,7 @@ def dung_lai_report(args: argparse.Namespace) -> dict:
 
 
 # Co doi cach chay case - luot tiep phai giong luot dau, khong thi mot report tron hai kieu.
-CO_GIU_KHI_TIEP = ("no_walk", "full_walk", "no_actions", "fresh", "no_dex_check", "keep")
+CO_GIU_KHI_TIEP = ("no_walk", "full_walk", "no_actions", "khung", "fresh", "no_dex_check", "keep")
 
 
 def nap_tiep(args: argparse.Namespace) -> list[dict]:
@@ -360,6 +360,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="di het luong FO nhu TC ghi, ke ca khi key cua case nam o man som hon")
     p.add_argument("--no-actions", action="store_true",
                    help="chi dat config, khong lai app qua cac buoc Action cua case")
+    p.add_argument("--khung", action="store_true",
+                   help="chi dung khung file luot tu bo TC (khong dat config / clear data / lai FO) cho rcr-iaa, "
+                        "rcr-gen-ngam lai + cham theo nhom - vai giay thay vi vai chuc phut")
     p.add_argument("--fresh", action="store_true",
                    help="ep app ve trang thai chua tung mo (reset mem, hoac pm clear)")
     p.add_argument("--no-dex-check", action="store_true",

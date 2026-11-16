@@ -12,7 +12,7 @@
 ```
 
 Mỗi lần `chay` / `cham` tool **tải lại sheet TC** trước (QA hay sửa giữa các lượt), case đổi chữ thì cập nhật file lượt và in ra. Không `--luot` thì tool dựng khung 37 case thẳng từ sheet TC (vài giây, meta chép từ lượt gen ngầm gần nhất của app).
-`rcr-check --tc gen-ngam --no-actions` vẫn đặt config + clear data + lái FO từng case (6+ phút) — đừng dùng để dựng khung.
+`rcr-check --tc gen-ngam --no-actions` vẫn đặt config + clear data + lái FO từng case (6+ phút) — dựng khung bằng `--khung`.
 Số đo lưu ở `out/gen-ngam-<pkg>-so.json`, video màn chờ ở `out/gen-ngam-video/`.
 
 ## Nhóm config (mỗi nhóm một lần đặt config + clear data + lái FO)

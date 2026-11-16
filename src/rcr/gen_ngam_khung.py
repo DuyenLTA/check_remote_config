@@ -41,7 +41,7 @@ def luot_mau(out_dir: Path, package: str) -> dict:
         if d.get("baseline_tom") and str(d.get("tc_nguon", "")).lower() == "gen-ngam":
             return d
     raise RcError(f"chưa có lượt gen ngầm nào của {package} để chép meta — chạy một lần "
-                  "`rcr-check --tc gen-ngam --case all --no-actions --no-walk`")
+                  "`rcr-check --tc gen-ngam --case all --khung`")
 
 
 def dung(package: str, serial: str, out_dir: Path, app_label: str = "") -> Path:

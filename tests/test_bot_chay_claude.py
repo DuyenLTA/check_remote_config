@@ -181,14 +181,14 @@ def test_luot_tinh_nang_chi_chay_tab_chon_bo_check_id_ads():
 def test_luot_tinh_nang_iaa_gen_ngam_dung_tu_sheet_goc():
     _, prompt = c.lenh("pkg.a", "S1", tabs=["iaa", "gen-ngam"])
     assert prompt.startswith("/rc-check pkg.a --serial S1 --tc iaa --tc gen-ngam\n")
-    assert "`rcr-check --tc iaa --case all`" in prompt and "BLOCKED" in prompt
+    assert "`rcr-check --tc iaa --case all --khung` rồi `rcr-iaa chay" in prompt and "BLOCKED" in prompt
 
 
 def test_luot_check_tin_build_co_tinh_nang_chay_sdk_roi_tung_tinh_nang_gop_mot_report():
     _, prompt = c.lenh("pkg.a", "S1", sdk="3.5.4", them_tinh_nang=["iaa", "widget", "gen-ngam"])
     assert prompt.startswith("/rc-check pkg.a --serial S1 --sdk 3.5.4\n")
     assert "Tin build con ghi tinh nang: iaa, widget, gen-ngam" in prompt
-    assert ('`rcr-check --tc iaa --case all`, `rcr-check --tab "widget" --case all`, '
+    assert ('`rcr-check --tc iaa --case all --khung` rồi `rcr-iaa chay --luot <file .luot.json vừa dựng>`, `rcr-check --tab "widget" --case all`, '
             '`rcr-gen-ngam chay --package <pkg> --serial <serial>`') in prompt
     assert "MOT report gop" in prompt and "rcr-check --package pkg.a --gop" in prompt
     with pytest.raises(ValueError):

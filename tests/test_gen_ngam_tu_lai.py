@@ -111,3 +111,12 @@ def test_cum_toast_do_tu_luc_hien_khong_tu_luc_worker():
     assert cum == [(10.0, 12.0, 18.3, 20.4), (30.0, 32.0, 32.0, 34.0)]
     assert [round(x, 1) for x in thoi_gian_toast(cum[0])] == [6.3, 10.4]      # dung 6,3-10,4s: cham 8s PASS
     may.NHAT_KY_TOAST.clear()
+
+
+def test_record_khung_moi_dong_cho_tool_lai_theo_nhom():
+    from rcr import precond_android
+    rec = precond_android.record_khung("IAA-01", {"label": "#IAA-01 Home", "feature": "IAA"},
+                                       {"expects": ("Load native khi vào Home.", "Show đúng ID.")})
+    assert rec["key"] == "IAA-01" and rec["verdict"] == "NEEDS_HUMAN"
+    assert [l["v"] for l in rec["lines"]] == ["NEEDS_HUMAN", "NEEDS_HUMAN"]
+    assert [l["e"] for l in rec["lines"]] == ["Load native khi vào Home.", "Show đúng ID."]

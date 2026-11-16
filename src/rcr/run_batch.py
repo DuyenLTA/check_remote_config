@@ -135,6 +135,13 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             chosen = runnable[key]
             log_fn(f"--- case {key} ---")
             row = by_key.get(key, {})
+            if getattr(args, "khung", False):
+                # Chi dung khung luot cho bo tu lai theo nhom (rcr-iaa / rcr-gen-ngam): KHONG dat config, khong
+                # clear data, khong lai FO. `--no-actions` van lam ca ba cho TUNG case (IAA AIP892 16/11: 20+ phut).
+                records.append(precond_android.record_khung(key, row, chosen)
+                               | {"thoi_gian_s": 0, "noi_chuoi": False})
+                luu()
+                continue
             # Precondition doi phien ban Android may nay khong co (Android < 8.0 tren may Android 12): chay chi ra
             # ket qua cua nhanh khac -> BLOCKED ngay, khong chay / khong chay lai (user chot, AIP893 widget R03).
             chan = precond_android.thieu_android(fo_ngon_ngu.tien_dk_chuoi(key, runnable), *android)

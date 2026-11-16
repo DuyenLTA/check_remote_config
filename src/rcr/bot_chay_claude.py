@@ -212,8 +212,11 @@ def _lenh_tinh_nang(tabs: list[str]) -> tuple[list[str], str]:
         raise ValueError(f"tab tính năng không hợp lệ: {sai!r}")
     co = [f"--tc {t}" if t in NGUON_TINH_NANG else f'--tab "{t}"' for t in tabs]
     # Gen ngam da dong goi (16/11/2026): tu lai + tu cham theo nhom config, khong lai tung case qua rcr-check.
-    return co, ", ".join("`rcr-gen-ngam chay --package <pkg> --serial <serial>`" if c == "--tc gen-ngam"
-                         else f"`rcr-check {c} --case all`" for c in co)
+    # IAA: dung khung bang --khung (vai giay, khong dung may) roi rcr-iaa tu lai theo 4 bien the - `--no-actions` van
+    # dat config + clear data + lai FO tung case (AIP892 16/11: 20+ phut chi de dung khung).
+    lenh = {"--tc gen-ngam": "`rcr-gen-ngam chay --package <pkg> --serial <serial>`",
+            "--tc iaa": "`rcr-check --tc iaa --case all --khung` rồi `rcr-iaa chay --luot <file .luot.json vừa dựng>`"}
+    return co, ", ".join(lenh.get(c) or f"`rcr-check {c} --case all`" for c in co)
 
 
 def lenh(package: str, serial: str, cases: list[str] | None = None,

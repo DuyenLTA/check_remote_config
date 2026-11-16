@@ -11,7 +11,7 @@ dòng ID), `-02` chỉ thường, `-03` chỉ high, `-04` tắt. Tool **không l
 
 ## Quy trình — tool tự lái (4 lượt lái thay vì 36 case)
 
-1. `rcr-check --package P --serial S --tc iaa --case all --no-actions --report out/run-P-S-iaa-<hhmmss>.html --app-label "<tên> <ver>"`
+1. `rcr-check --package P --serial S --tc iaa --case all --khung --report out/run-P-S-iaa-<hhmmss>.html --app-label "<tên> <ver>"`
    — dựng case + file lượt + report khung (tool chỉ đặt / trả config từng case, không lái; chưa đo thời gian lượt này).
 2. Tự lái — **không cần dò đường lái cho từng app** (đường lái khai theo KHUÔN, `src/rcr/data/iaa_duong_lai.yaml`):
    ```
