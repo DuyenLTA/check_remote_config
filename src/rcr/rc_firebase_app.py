@@ -140,6 +140,32 @@ def _don_apk_cu() -> None:
             pass
 
 
+CACHE_APP = Path(__file__).resolve().parents[2] / "out" / "firebase-app-theo-ban.json"
+
+
+async def _khoa_ban(client, serial: str, package: str) -> str:
+    out, _, _ = await client.shell(serial, "dumpsys", "package", package)
+    m = re.search(r"versionCode=(\d+)", out or "")
+    # lastUpdateTime: cai de build khac cung versionCode (dev quen tang so) van ra khoa moi
+    t = re.search(r"lastUpdateTime=([^\n]+)", out or "")
+    return f"{package}@{m.group(1)}@{t.group(1).strip() if t else ''}" if m else ""
+
+
+def _doc_cache() -> dict:
+    try:
+        return json.loads(CACHE_APP.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _ghi_cache(cache: dict) -> None:
+    try:
+        CACHE_APP.parent.mkdir(parents=True, exist_ok=True)
+        CACHE_APP.write_text(json.dumps(cache, ensure_ascii=False, indent=1), encoding="utf-8")
+    except OSError:
+        pass
+
+
 async def thong_tin_tren_may(client, serial: str, package: str) -> dict:
     """Keo APK dang cai tren may -> `thong_tin_apk` (Firebase project, app id, version)."""
     from .dex_check import PUSH_TIMEOUT, apk_paths
@@ -147,6 +173,12 @@ async def thong_tin_tren_may(client, serial: str, package: str) -> dict:
     duong = await apk_paths(client, serial, package)
     if not duong:
         raise RcError(f"máy chưa cài {package}")
+    # Cung ban app (package + versionCode) thi thong tin Firebase y het: moi lenh rcr-check (moi tinh nang, moi
+    # bien the IAA dat/tra) tung keo lai ca APK ~100 MB vao /tmp -> cache, moi ban chi keo mot lan.
+    khoa = await _khoa_ban(client, serial, package)
+    cache = _doc_cache()
+    if khoa and isinstance(cache.get(khoa), dict) and cache[khoa].get("project"):
+        return cache[khoa]
     _don_apk_cu()
     fd, ten = tempfile.mkstemp(prefix="rcr_fb_", suffix=".apk")
     os.close(fd)
@@ -162,6 +194,9 @@ async def thong_tin_tren_may(client, serial: str, package: str) -> dict:
         # Nho app id cho App Tester: lan cai build sau mo thang trang app bang deep link, khong cuon tim.
         from . import app_tester_link
         app_tester_link.ghi(package, info.get("app_id", ""))
+        if khoa:
+            cache[khoa] = info
+            _ghi_cache(cache)
         return info
     finally:
         local.unlink(missing_ok=True)
