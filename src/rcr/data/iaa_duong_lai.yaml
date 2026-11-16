@@ -110,6 +110,168 @@ khuon:
           - cho: 4
           - back: 3
 
+  # App fitness (muc 3 sheet KT: banner_home, inter_home, reward_nutrition, inter_back, native_reason_uninstall,
+  # inter_uninstall). Do 16/11/2026 tren vivo V2143: AIP921 Fitatics 1.1.0. Moi man trong MainActivity (Compose);
+  # nut "Continue" / tab Workout - Nutrition co chu nhung bounds rong -> `tap_toa_do`. Sau pm clear, FO xong con
+  # 5 buoc thiet lap ho so (ten / muc tieu / co the / van dong / Enter app). Home co popup Add Widget (Close) va
+  # popup rate (nut X khong co node). Inter cach nhau 30s -> `cho: 31` truoc moi lan bam can thay inter.
+  fitness:
+    nhan_dien: "^Collections$"
+    doan:
+      - ten: Thiết lập hồ sơ lần đầu (sau pm clear)
+        buoc:
+          - cho: 3
+          - nhap: "Test"
+            o: "^Your name$"
+            neu_co: "^What's your name\\?$"
+          - tap_toa_do: [0.5, 0.943]
+            neu_co: "^(Continue|Enter app)$"
+          - tap_neu_co: "^(Lose fat|Stay fit)$"
+          - tap_toa_do: [0.5, 0.943]
+            neu_co: "^(Continue|Enter app)$"
+          - tap_toa_do: [0.5, 0.943]
+            neu_co: "^(Continue|Enter app)$"
+          - tap_neu_co: "^(Sedentary|Light)$"
+          - tap_toa_do: [0.5, 0.943]
+            neu_co: "^(Continue|Enter app)$"
+          - tap_toa_do: [0.5, 0.943]
+            neu_co: "^(Continue|Enter app)$"
+            cho_sau: 5
+          - dong_neu_co: "^Close$"
+          - tap_toa_do: [0.845, 0.309]
+            neu_co: "^Please rate us"
+      - ten: Tập luyện · Home (banner reload 10s, preload inter home)
+        buoc:
+          - dong_neu_co: "^Close$"
+          - tap_toa_do: [0.845, 0.309]
+            neu_co: "^Please rate us"
+          - tap_toa_do: [0.25, 0.943]
+          - cho_chu: "^Collections$"
+          - cho: 35
+      - ten: Inter Home - bấm thẻ Collection, rồi bấm lại trong 30s (không được có inter)
+        buoc:
+          - tap_toa_do: [0.845, 0.309]
+            neu_co: "^Please rate us"
+          - tap: "^(Gym|Home Pilates|Fitness at Home)$"
+          - dong_ad: 8
+          - cho: 4
+          - back: 1
+          - dong_ad: 5
+          - cho_chu: "^Collections$"
+          - tap: "^(Home Pilates|Fitness at Home|Gym)$"
+          - dong_ad: 6
+          - cho: 3
+          - back: 1
+          - dong_ad: 5
+      - ten: Dinh dưỡng · AI Scan - bấm Scan (inter home), chụp, BACK ở hub (inter back)
+        buoc:
+          - ve_chu: "^(Collections|Scan your meal|Meal plan)$"
+            toi_da: 60
+          - cap_quyen: android.permission.CAMERA
+          - cho: 31
+          - tap_toa_do: [0.75, 0.943]
+          - cho_chu: "^Scan your meal$"
+          - cho: 4
+          - tap: "^Scan your meal$"
+          - dong_ad: 8
+          - cho_chu: "^Fit the dish in the frame"
+          - tap_toa_do: [0.5, 0.917]
+            cho_sau: 12
+          - back: 1
+          - cho_chu: "^Scan your meal$"
+          - cho: 31
+          - back: 1
+          - dong_ad: 8
+          - cho: 3
+      - ten: Dinh dưỡng · AI Scan - hết lượt free thì Watch Ads (reward)
+        buoc:
+          - ve_chu: "^(Collections|Scan your meal|Meal plan)$"
+            toi_da: 60
+          - tap_toa_do: [0.75, 0.943]
+          - cho_chu: "^Scan your meal$"
+          - tap_neu_co: "^Scan your meal$"
+            khi_thieu: "^Watch Ads.*"
+          - dong_ad: 8
+          - tap_toa_do: [0.5, 0.917]
+            neu_co: "^Fit the dish in the frame"
+            cho_sau: 12
+          - back: 1
+            neu_co: "^(Couldn't recognize this meal|Retake photo)$"
+          - tap_neu_co: "^Scan your meal$"
+            khi_thieu: "^Watch Ads.*"
+          - dong_ad: 8
+          - tap_toa_do: [0.5, 0.917]
+            neu_co: "^Fit the dish in the frame"
+            cho_sau: 12
+          - back: 1
+            neu_co: "^(Couldn't recognize this meal|Retake photo)$"
+          - tap_neu_co: "^Scan your meal$"
+            khi_thieu: "^Watch Ads.*"
+          - dong_ad: 8
+          - tap_toa_do: [0.5, 0.917]
+            neu_co: "^Fit the dish in the frame"
+            cho_sau: 12
+          - back: 1
+            neu_co: "^(Couldn't recognize this meal|Retake photo)$"
+          - tap_neu_co: "^Scan your meal$"
+            khi_thieu: "^Watch Ads.*"
+          - dong_ad: 8
+          - tap_toa_do: [0.5, 0.917]
+            neu_co: "^Fit the dish in the frame"
+            cho_sau: 12
+          - back: 1
+            neu_co: "^(Couldn't recognize this meal|Retake photo)$"
+          - xem_ads_chu: "^Watch Ads.*"
+            toi_chu: "^Fit the dish in the frame"
+            toi_da: 240
+          - cho: 3
+          - back: 1
+      - ten: Thực đơn gợi ý · Công thức món - bấm món (inter home), BACK ở công thức và ở thực đơn (inter back)
+        buoc:
+          - ve_chu: "^(Collections|Scan your meal|Meal plan)$"
+            toi_da: 60
+          - cho: 31
+          - tap_toa_do: [0.75, 0.943]
+          - cho_chu: "^Meal plan$"
+          - tap: "^Meal plan$"
+          - cho_chu: "^Breakfast · "
+          - cho: 4
+          - tap: "^Breakfast · "
+          - dong_ad: 8
+          - cho: 31
+          - back: 1
+          - dong_ad: 8
+          - cho_chu: "^Breakfast · "
+          - cho: 31
+          - back: 1
+          - dong_ad: 8
+          - cho: 3
+      - ten: Luồng Uninstall (shortcut launcher - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+          - cho: 8
+          - dong_ad: 20
+          - tap_neu_co: "^(Continue training|Scan a meal)$"
+            cho_truoc: 4
+          - tap_neu_co: "^Start Now$"
+          - cho: 15                          # inter onboarding hien de len UninstallActivity: doi het dem nguoc
+          - dong_ad: 20
+          - cho_chu: "^Still want to uninstall$"
+          - cho: 8
+          - tap: "^Still want to uninstall$"
+          - cho_chu: "^Why are you leaving\\?$"
+          - cho: 6
+          - tap: "^Too many ads$"
+          - cho: 8
+          - tap_toa_do: [0.726, 0.951]
+            neu_co: "^Uninstall$"
+            cho_sau: 3
+          - cho: 15                          # inter uninstall: doi het dem nguoc roi moi dong (BACK som khong dong)
+          - dong_ad: 20
+          - cho: 3
+          - back: 2
+
 # Ghim khuon (khong bat buoc - app chua khai tool tu nhan khuon tren Home).
 com.aiphotogenerator.aivideomaker.photoslideshow: {khuon: ai_photo}     # AIP893
 com.ai.aiimage.aivideogenerator: {khuon: ai_photo}                      # AIP885
+fitness.workout.aitraining.abs.exercises: {khuon: fitness}              # AIP921 (Home sau FO con man thiet lap ho so)

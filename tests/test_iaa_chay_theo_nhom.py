@@ -119,12 +119,63 @@ def test_duong_lai_aip893_khai_du_doan_va_buoc_hop_le():
     """Moi buoc trong data/iaa_duong_lai.yaml phai la loai buoc iaa_lai / rating_cong_thuc hieu duoc."""
     from rcr import iaa_lai
     hop_le = {"ve_chu", "tap_neu_co", "cho", "back", "mo_lai", "dong_ad", "shortcut", "nhap", "xem_ads_chu", "ve_man", "dong_neu_co",
-              "tap", "tap_duoi", "cho_man", "cho_chu", "chon_anh", "xem_ads"}
-    doan = iaa_lai.duong_lai("com.aiphotogenerator.aivideomaker.photoslideshow")
-    assert doan and all(d.get("ten") and d.get("buoc") for d in doan)
-    for d in doan:
-        for b in d["buoc"]:
-            assert hop_le & set(b), (d["ten"], b)
+              "tap", "tap_duoi", "cho_man", "cho_chu", "chon_anh", "xem_ads", "tap_toa_do", "cap_quyen"}
+    for pkg in ("com.aiphotogenerator.aivideomaker.photoslideshow", "fitness.workout.aitraining.abs.exercises"):
+        doan = iaa_lai.duong_lai(pkg)
+        assert doan and all(d.get("ten") and d.get("buoc") for d in doan)
+        for d in doan:
+            for b in d["buoc"]:
+                assert hop_le & set(b), (d["ten"], b)
+
+
+def test_nhan_shortcut_khop_ca_long_label():
+    """vivo V2143 AIP921: shortLabel 'Uninstall' nhung popup launcher ghi longLabel 'Uninstall app'."""
+    import asyncio
+    from rcr import iaa_lai
+
+    class May:
+        async def shell(self, *_a):
+            return ("ShortcutInfo {id=shortcut_uninstall, flags=0x85\n packageName=fitness.x\n"
+                    " shortLabel=Uninstall, resId=0[null]\n longLabel=Uninstall app, resId=0[null]\n"
+                    "ShortcutInfo {id=shortcut_uninstall, flags=0x85\n packageName=com.khac\n"
+                    " shortLabel=Uninstall, resId=0[null]\n longLabel=null, resId=0[null]\n", "", 0)
+    assert asyncio.run(iaa_lai.cac_nhan_shortcut(May(), "S", "fitness.x", ".*uninstall.*")) == ["Uninstall", "Uninstall app"]
+    assert asyncio.run(iaa_lai.cac_nhan_shortcut(May(), "S", "com.khac", ".*uninstall.*")) == ["Uninstall"]
+
+
+def test_buoc_neu_co_bo_qua_khi_khong_co_chu_va_tap_toa_do_khi_co():
+    """Nut Compose bounds rong ('Continue'): `neu_co` thay chu (ke ca bounds rong) thi bam theo ti le man hinh."""
+    import asyncio
+    from rcr import device_app, iaa_lai, rating_cong_thuc
+    from rcr.ui_dump import parse_dump
+
+    xml = ('<hierarchy><node text="Continue" resource-id="" class="android.widget.TextView" package="p" '
+           'content-desc="" clickable="false" bounds="[0,0][0,0]" /></hierarchy>')
+    bam: list = []
+
+    class May:
+        async def shell(self, *a):
+            return ("Physical size: 1080x2408\n" if "wm" in a else "", "", 0)
+
+    async def focus(*_a):
+        return "p", "p.MainActivity"
+
+    async def nodes(*_a):
+        return parse_dump(xml)
+
+    async def tap(_c, _s, x, y):
+        bam.append((x, y))
+
+    cu = (device_app.focus, rating_cong_thuc._nodes, device_app.tap)
+    device_app.focus, rating_cong_thuc._nodes, device_app.tap = focus, nodes, tap
+    try:
+        b = {"tap_toa_do": [0.5, 0.943], "neu_co": "^Continue$", "cho_sau": 0}
+        assert asyncio.run(iaa_lai.buoc(May(), "S", "p", b, []))
+        assert bam == [(540, 2270)]
+        assert asyncio.run(iaa_lai.buoc(May(), "S", "p", {**b, "neu_co": "^Enter app$"}, []))
+        assert len(bam) == 1
+    finally:
+        device_app.focus, rating_cong_thuc._nodes, device_app.tap = cu
 
 
 def test_nhan_shortcut_lay_theo_id_cua_dung_app():

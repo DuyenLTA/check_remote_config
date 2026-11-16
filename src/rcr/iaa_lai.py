@@ -46,18 +46,26 @@ def duong_lai(package: str) -> list[dict] | None:
     return iaa_khuon.doan_khai_san(package)[1]
 
 
-async def nhan_shortcut(client, serial: str, package: str, sid: str) -> str:
-    """Nhan (shortLabel) cua shortcut co id khop regex `sid` (vd "(?i)uninstall": app dat id uninstall / UNINSTALL /
-    shortcut_uninstall), theo ngon ngu may."""
+async def cac_nhan_shortcut(client, serial: str, package: str, sid: str) -> list[str]:
+    """[shortLabel, longLabel] cua shortcut co id khop regex `sid` (vd "(?i)uninstall": app dat id uninstall /
+    UNINSTALL / shortcut_uninstall), theo ngon ngu may. Launcher co cho du rong thi hien longLabel (vivo V2143,
+    AIP921 16/11/2026: shortLabel "Uninstall", popup ghi "Uninstall app") -> phai khop ca hai."""
     out, _, _ = await client.shell(serial, "dumpsys", "shortcut")
     khoi = re.split(r"ShortcutInfo \{", out or "")
     for k in khoi:
         m_id = re.match(r"id=([^,]+),", k)
         if m_id and re.fullmatch(sid, m_id.group(1)) and f"packageName={package}\n" in k + "\n":
-            m = re.search(r"shortLabel=([^,]+), resId", k)
-            if m:
-                return m.group(1).strip()
-    return ""
+            nhan = [m.group(1).strip() for m in re.finditer(r"(?:short|long)Label=([^,]+), resId", k)]
+            nhan = [n for n in nhan if n and n != "null"]
+            if nhan:
+                return nhan
+    return []
+
+
+async def nhan_shortcut(client, serial: str, package: str, sid: str) -> str:
+    """Nhan (shortLabel) cua shortcut co id khop regex `sid`."""
+    nhan = await cac_nhan_shortcut(client, serial, package, sid)
+    return nhan[0] if nhan else ""
 
 
 async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, log: list[str]) -> bool:
@@ -70,11 +78,12 @@ async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, 
             log.append("không đọc được tên icon từ APK (cần aapt trong Android SDK) — khai `app:` cho bước shortcut")
             return False
         nhan_app = f"^{re.escape(ten)}"
-    nhan = await nhan_shortcut(client, serial, package, sid)
-    if not nhan:
+    cac_nhan = await cac_nhan_shortcut(client, serial, package, sid)
+    if not cac_nhan:
         log.append(f"app không có shortcut id={sid!r} (dumpsys shortcut)")
         return False
-    muc = f"^{re.escape(nhan)}$"
+    nhan = cac_nhan[0]
+    muc = "^(" + "|".join(map(re.escape, cac_nhan)) + ")$"
     for _ in range(2):                                  # HOME 2 lan: ve trang dau cua launcher
         await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
         await asyncio.sleep(1.0)
@@ -229,7 +238,34 @@ async def _xem_ads_chu(client, serial: str, package: str, b: dict, log: list[str
     return False
 
 
+def co_chu(nodes, mau: str) -> bool:
+    """Co node nao khop chu `mau` - KE CA node khong co toa do (Compose: nut "Continue", tab duoi tra bounds rong)."""
+    return any(rating_cong_thuc._khop(n, mau) for n in nodes)
+
+
 async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bool:
+    if "neu_co" in b:
+        # Buoc tuy chon: chi lam khi man dang co chu `neu_co` (vd man thiet lap ho so chi hien lan dau sau pm clear).
+        await _dong_ad_neu_co(client, serial, log)
+        if not co_chu(await rating_cong_thuc._nodes(client, serial, package), b["neu_co"]):
+            return True
+        b = {k: v for k, v in b.items() if k != "neu_co"}
+    if "cap_quyen" in b:
+        # Hop thoai quyen he thong (permissioncontroller) khong thuoc package app -> buoc tap/cho_chu khong thay.
+        # Cap truoc bang pm grant (AIP921: inter hien truoc hop quyen Camera cua AI Scan, 16/11/2026).
+        for quyen in ([b["cap_quyen"]] if isinstance(b["cap_quyen"], str) else b["cap_quyen"]):
+            await client.shell(serial, "pm", "grant", package, quyen)
+        log.append(f"cấp quyền {b['cap_quyen']}")
+        return True
+    if "tap_toa_do" in b:
+        # Nut Compose co chu nhung uiautomator tra bounds rong (AIP921: "Continue", tab Workout / Nutrition):
+        # bam theo ti le man hinh [x, y].
+        rong, cao = await _co_man(client, serial)
+        fx, fy = b["tap_toa_do"]
+        await device_app.tap(client, serial, int(rong * float(fx)), int(cao * float(fy)))
+        await asyncio.sleep(float(b.get("cho_sau", 2.0)))
+        log.append(f"bấm toạ độ {fx},{fy}")
+        return True
     if "cho" in b:
         await asyncio.sleep(float(b["cho"]))
         log.append(f"chờ {b['cho']}s")
