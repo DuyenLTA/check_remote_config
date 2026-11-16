@@ -44,10 +44,20 @@ from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
 
 
-# Case ra ket qua lo lung (khong PASS/FAIL) -> chay toi da bay nhieu lan (tinh ca lan dau): 2 = chay lai MOT lan.
-# User chot 16/11/2026 "chay them 1 lan la duoc roi": so do 10 ngay, lan chay thu 3 ton ~2,7 gio cho 49 case, chi
-# 9 case doi ket qua.
-LAN_CHAY_LAI = 2
+# Case ra ket qua lo lung (khong PASS/FAIL) -> chay toi da bay nhieu lan (tinh ca lan dau).
+# Tab SDK FO: ad load / fill / no-fill thay doi giua cac lan -> 3 lan (14 ngay: 5 case 3.6.1 chi ra ket qua o lan 3).
+# Tab tinh nang (rating, widget, daily checkin, gen ngam...): chay lai MOT lan la du (user chot 16/11/2026).
+LAN_CHAY_LAI = 3
+LAN_CHAY_LAI_TINH_NANG = 2
+MA_SDK_RE = re.compile(r"^SDK\d", re.I)
+
+
+def so_lan_chay(key: str) -> int:
+    """So lan chay toi da cua case: tab SDK FO (ten tab la so phien ban, hoac ma TC "SDK361-..." khong kem tab)
+    giu LAN_CHAY_LAI, tab tinh nang chi chay lai mot lan."""
+    tab, co, ma = key.partition("#")
+    la_sdk = bool(TAB_SDK_RE.search(tab)) if co else bool(MA_SDK_RE.match(key))
+    return LAN_CHAY_LAI if la_sdk else min(LAN_CHAY_LAI, LAN_CHAY_LAI_TINH_NANG)
 
 
 def _noop(_msg: str) -> None:
@@ -182,7 +192,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             runs = [nen | dict(luot) | them for luot in chosen["runs"]]
             # Report chi duoc co PASS/FAIL (user chot 2026-10-06): ket qua lo
             # lung (doc file trung luc SDK ghi, ad chua fill...) -> tu chay lai.
-            toi_da = LAN_CHAY_LAI + 1     # +1: cho lan xac nhan / phan xu FAIL
+            lan_toi_da = so_lan_chay(key)
+            toi_da = lan_toi_da + 1       # +1: cho lan xac nhan / phan xu FAIL
             tc_lech = rc_json_lech.lech({k: v for luot in chosen["runs"] for k, v in luot.items()},
                                         baseline.configs)
             for dong in tc_lech:
@@ -261,7 +272,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                     except (RcError, AdbError) as exc:
                         if isinstance(exc, AdbTransportError):
                             raise
-                        if lan >= LAN_CHAY_LAI:
+                        if lan >= lan_toi_da:
                             if ro_gan_nhat is None:
                                 raise
                             # Lan chay lai de xac nhan bi loi doc file (vd ngay sau
@@ -297,7 +308,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                         if ly_do:
                             log_fn(f"    lan {lan}: verdict {v}, khong chay lai: {ly_do}")
                             break
-                        if lan >= LAN_CHAY_LAI:
+                        if lan >= lan_toi_da:
                             break
                         log_fn(f"    lan {lan}: verdict {v} -> chay lai case")
                         continue

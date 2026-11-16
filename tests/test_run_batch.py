@@ -184,3 +184,11 @@ def test_precondition_khong_tao_duoc_thi_blocked_va_khong_chay_lai(monkeypatch):
 def test_moi_case_ghi_thoi_gian_chay_len_report(monkeypatch):
     recs = run(monkeypatch, {"a": "PASS", "b": "FAIL", "c": "PASS"}, lan=3)
     assert all(isinstance(r["thoi_gian_s"], int) and r["thoi_gian_s"] >= 0 for r in recs)
+
+
+def test_so_lan_chay_tab_sdk_ba_lan_tab_tinh_nang_mot_lan_chay_lai():
+    # SDK FO: load / fill / no-fill doi giua cac lan -> giu 3 lan; tinh nang chay lai 1 lan (user chot 16/11/2026)
+    assert run_batch.so_lan_chay("3.6.1#SDK361-RG01-03") == 3
+    assert run_batch.so_lan_chay("SDK361-R02-01") == 3
+    for key in ("daily checkin#CHECKIN-R04-01", "rating#RATING-R01-01", "widget#WIDGET-R01-01", "GEN-R01-03"):
+        assert run_batch.so_lan_chay(key) == 2
