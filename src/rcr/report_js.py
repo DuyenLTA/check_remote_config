@@ -90,7 +90,7 @@ function render() {
         `<div class="gcount">${demPill(all)}</div></div>` + rows.map(row).join("") + `</section>`;
     }).join("");
     if (!than || !nhieuTab) return than;
-    const ten = t ? t[0].toUpperCase() + t.slice(1) : "Khác";
+    const ten = ({iaa: "IAA", "gen-ngam": "Gen ngầm"})[t] || (t ? t[0].toUpperCase() + t.slice(1) : "Khác");
     return `<div class="tabkhoi"><div class="tabhead"><h2>${esc(ten)}</h2>` +
       `<span class="tabso">${trongTab.length} case</span><div class="gcount">${demPill(trongTab)}</div></div>` +
       than + `</div>`;
