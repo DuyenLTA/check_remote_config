@@ -78,6 +78,8 @@ NHAC_RATING_KHONG_GEN = (
     "test, KHONG lay man khac (vd ket qua scan) thay vao; ghi `rcr-check --cham-tay <file luot> --case <ma> --dong "
     "<cac dong> --ket KHONG_AP_DUNG --ly-do \"app khong gen anh/video, khong co man Result\"` - report tu bo han "
     "case / dong do. Chi test vi tri app co (Home, Exit click, App Shortcut...).\n"
+    "Nut 'Rate on Google Play' mo trang app tren store CO SAN cua may (vd vivo App Store khi may chua cai Google Play) "
+    "la DUNG, khong phai bug (user chot 16/11/2026); BACK trong store ben thu ba do store xu ly -> KHONG_AP_DUNG.\n"
 )
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.

@@ -205,6 +205,7 @@ def test_rating_app_khong_gen_thi_bo_qua_case_result():
     for kw in ({"tabs": ["rating"]}, {"sdk": "3.5.4"}):
         _, p = c.lenh("pkg.a", "S1", **kw)
         assert "KHONG_AP_DUNG" in p and "khong co man Result" in p and "BO QUA" in p
+        assert "store CO SAN cua may" in p and "khong phai bug" in p
 
 
 def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
