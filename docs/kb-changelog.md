@@ -43,6 +43,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 16/11/2026 | Policy kèm lượt IAA chỉ check **ads** (`/policy-check --chi-ads`: không mua sub, bỏ rule tab Sub_VN) | `rc-check.md` 7a, `src/rcr/bot_chay_claude.py` NHAC_POLICY, repo audit `policy_check_runner.py` | — |
 | 16/11/2026 | Lượt có bộ IAA (chỉ tính năng hay SDK kèm tính năng) bắt buộc chạy thêm `/policy-check` làm bước cuối, rule FAIL vào menu bug dạng `policy#<mã rule>`; lượt không có IAA vẫn theo luật 11/11 (policy tách riêng) | `rc-check.md` 7a, `src/rcr/bot_chay_claude.py` NHAC_POLICY | — |
 | 16/11/2026 | Mọi lượt chạy app phải check ID ads (audit-fanout) trước, kể cả lượt chỉ chạy tính năng (`/check tinh_nang`); bỏ luật 11/11 "tab tính năng không check ID ads" | `rc-check.md` 3c + 4, `src/rcr/bot_chay_claude.py` PROMPT_TINH_NANG, `src/rcr/bot_job_check.py` | — |
 | 16/11/2026 | `/check` ô `tinh_nang` có thêm lựa chọn `tất cả` = chạy cả 5 bộ tính năng (rating, widget, daily checkin, IAA, gen ngầm) trong một lượt; bỏ luật 13/11 "không có lựa chọn gộp" | `src/rcr/bot_lenh_slash.py` | — |

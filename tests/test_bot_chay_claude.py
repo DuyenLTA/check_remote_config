@@ -198,7 +198,7 @@ def test_luot_check_tin_build_co_tinh_nang_chay_sdk_roi_tung_tinh_nang_gop_mot_r
 def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
     # Luot chi tinh nang co IAA -> nhac policy-check dung package + serial, rule FAIL vao bugs dang policy#
     _, p = c.lenh("pkg.a", "S1", tabs=["iaa", "widget"])
-    assert "policy-check.md" in p and "pkg.a --serial S1" in p and "policy#<ma rule>" in p
+    assert "policy-check.md" in p and "pkg.a --serial S1 --chi-ads" in p and "policy#<ma rule>" in p
     # SDK kem tinh nang co IAA -> cung nhac
     _, p = c.lenh("pkg.a", "S1", sdk="3.5.4", them_tinh_nang=["iaa", "rating"])
     assert "policy-check.md" in p

@@ -214,12 +214,12 @@ NHAC_TINH_NANG = (
 )
 
 
-# Luot co bo IAA bat buoc check them policy Ads + Sub (user chot 16/11/2026; ngoai le cua luat 11/11 "policy tach
-# rieng"). Chay SAU CUNG: policy pm clear + mua sub test -> app thanh Pro ~30 phut, chay truoc thi case ads hong.
+# Luot co bo IAA bat buoc check them policy ADS (user chot 16/11/2026; ngoai le cua luat 11/11 "policy tach rieng").
+# Chi ads, khong sub: `--chi-ads` -> khong mua sub, bo rule tab Sub_VN. Van chay SAU CUNG vi policy pm clear app.
 NHAC_POLICY = (
-    "Luot nay co bo IAA -> BAT BUOC check policy Ads + Sub lam buoc CUOI: xong HET cac bo (ke ca vong chay lai, do tay, "
-    "--gop) va da tra config ve nguyen trang thi doc TOAN BO `<repo audit>/.claude/commands/policy-check.md` va lam "
-    "dung no voi `{package} --serial {serial}` (cung may). Moi rule phai chot PASS/FAIL (N/A chi khi app khong co thu "
+    "Luot nay co bo IAA -> BAT BUOC check policy ADS (khong check sub, khong mua sub) lam buoc CUOI: xong HET cac bo "
+    "(ke ca vong chay lai, do tay, --gop) va da tra config ve nguyen trang thi doc TOAN BO "
+    "`<repo audit>/.claude/commands/policy-check.md` va lam dung no voi `{package} --serial {serial} --chi-ads` (cung may). Moi rule phai chot PASS/FAIL (N/A chi khi app khong co thu "
     "rule noi toi, ghi can cu); con BLOCKED thi evidence_followup roi tu lai may. Policy khong chan ket qua bo TC. "
     "`tom_tat` them so PASS/FAIL policy + duong dan TUYET DOI report policy; moi rule FAIL them vao `bugs` voi "
     "`case` = `policy#<ma rule>`. Policy loi / khong thay repo audit -> ghi ly do vao `tom_tat`, khong phai loi luot.\n"
