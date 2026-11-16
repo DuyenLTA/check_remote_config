@@ -1,0 +1,69 @@
+# Chu tren man cua tab TC "gen ngam" (tao anh / video chay ngam), moi app mot muc theo package - `rcr-gen-ngam`.
+# Gia tri la regex so voi text HOAC content-desc cua node. App moi cung khuon (AI photo/video gen) thi chep muc gan
+# nhat roi sua chu; cach do tung case: docs/rc-check/gen-ngam-tu-lai.md.
+#
+#   tab_home / tab_anh / tab_video : nut thanh duoi (Home / tao anh / tao video)
+#   lich_su      : nut mo History (desc)      badge: so canh nut History (text chi co so)
+#   mau          : chu nam TREN anh mau o man chon anh -> bam o bam duoc dau tien ben duoi
+#   xac_nhan     : nut tao (desc "Confirm")   man_chon_anh / man_cho / man_ket_qua / man_lich_su: activity
+#   popup_dem    : chu popup dem nguoc ve Home (nhom 1 = so giay)   popup_ok: nut dong popup
+#   toast_xong / toast_view : toast trong app khi tao xong + nut mo ket qua
+#   push_dang_tao / push_xong : chu thong bao he thong (title / text) luc dang tao / khi xong
+#   o_dang_tao / o_moi / o_loi : nhan tren o History;  het_luot: popup / toast het luot ngay
+#   luu / da_luu : nut luu o Ket qua va chu sau khi luu;  thu_muc_luu: relative_path MediaStore
+#   so_sanh      : thanh keo truoc/sau (I2I);  rate: popup danh gia (dong bang desc Close)
+#   xin_quyen    : popup trong app xin quyen thong bao (nut Allow / Not now)
+#   bo_dong      : dong Expected KHONG ap dung cho app (user chot 16/11/2026: bo khoi report, khong cham)
+#
+# AIP892 BeautyGenie 2.2.0 (16) do tren Pixel 6 13/11/2026 (luot bot gn-233521): Premium bam Confirm vao thang
+# ProcessingActivity; anh I2I server mat 30-34s, video 45-250s; popup giay 12 (anh) / giay 5 (video), ve Home giay
+# 15 / 8; toast "Your result is ready" + View tu an ~8s; push xong "Your result is ready" / "Tap to view it".
+com.aimakeup.aifaceeditor.facemakeup.faceswap:
+  tab_home: "^Home$"
+  tab_anh: "^Image Studio$"
+  tab_video: "^Video Studio$"
+  lich_su: "^History$"
+  mau: "^Sample$"
+  xac_nhan: "^Confirm$"
+  man_chon_anh: "PhotoSelect"
+  man_cho: "ProcessingActivity"
+  man_ket_qua: "ResultActivity"
+  man_lich_su: "HistoryActivity"
+  man_home: "MainActivity"
+  popup_dem: "Taking you to Home in (\\d+)\\s*s"
+  popup_ok: "^OK$"
+  popup_anh_giay: 12.4         # nhin dung giay nay sau khi vao man cho (= generating_wait - 3 + 0,4; Test Data 15 / 8)
+  popup_video_giay: 5.4
+  # Khung chu popup (man 1080x2400, Pixel 6 16/11/2026) - chi dung khi lan nhin UI truot qua popup; khung sai thi tach
+  # video bao "khong thay popup" (so voi khung truoc khi ve Home), khong ra PASS gia.
+  popup_hop_dem: [132, 1140, 948, 1284]
+  popup_hop_tieu_de: [312, 1040, 769, 1116]
+  popup_hop_ok: [505, 1380, 575, 1452]
+  toast_xong: "^Your (?:result|creation) is ready$"
+  toast_view: "^View$"
+  toast_dang_tao: "Generating, please wait"
+  push_dang_tao: "Creating your content"
+  push_xong: "(?:result|creation) is ready"
+  o_dang_tao: "^Generating\\.*$"
+  o_moi: "^New$"
+  o_loi: "^Failed$"
+  het_luot: "Daily [Ll]imit [Rr]eached"
+  het_luot_dong: "^Back to Home$"
+  luu: "^Download in HD$"
+  da_luu: "^Saved$"
+  thu_muc_luu: "Pictures/BeautyGenie"
+  so_sanh: "Draggable slider handle"
+  rate: "rate us"
+  xin_quyen: "Get notified when it"
+  xin_quyen_cho: "^Allow$"
+  xin_quyen_khong: "^Not now$"
+  widget: "^Add Widget$"
+  chon_nhieu: "(\\d+) selected"
+  xoa: "^Delete$"
+  bo_dong:
+    - mau: "Không có thanh kéo so sánh \\(T2I\\)"
+      ly_do: "app chỉ tạo ảnh bằng style + ảnh (I2I), không có T2I / vùng mô tả"
+    - mau: "Vùng mô tả hiện đúng 3 dòng"
+      ly_do: "app không có ô prompt nên Kết quả không có vùng mô tả / nút copy"
+    - mau: "Prompt copied"
+      ly_do: "app không có ô prompt nên không có nút copy prompt"

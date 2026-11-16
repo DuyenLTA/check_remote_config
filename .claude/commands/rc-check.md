@@ -196,8 +196,14 @@ tải lại sheet gốc mỗi lệnh (cả `--gop`/`--tiep`) rồi dựng bộ c
   **Không lái từng case**: dựng khung `--case all --no-actions`, rồi `<bin>/rcr-iaa chay` — tool tự lái đường IAA của app
   (`src/rcr/data/iaa_duong_lai.yaml`) cho 4 biến thể và tự chấm phần đọc được từ log; app chưa có đường lái thì dò
   một lần theo `docs/rc-check/iaa-chay-theo-nhom.md` (kèm luật `*_fail_time`, bẫy đã gặp) rồi khai vào file.
-- `--tc gen-ngam`: tab "TC Gen ngầm" (khuôn bộ TC, lượt E2E "Tiếp nối" → luôn `--chuoi`) của sheet
+- `--tc gen-ngam`: tab "TC Gen ngầm" của sheet
   `https://docs.google.com/spreadsheets/d/1FORGiI5X_N6HTmYyFdSiXCsAu7q91vTd59BfoGULT8c/edit`. Đổi sheet: `RC_TC_GEN_NGAM`.
+  **Đã đóng gói** (16/11/2026): KHÔNG chạy `rcr-check --tc gen-ngam` từng case, chạy thẳng
+  `<bin>/rcr-gen-ngam chay --package <pkg> --serial <S> --app-label "<app> <bản>"` — tool tự dựng khung từ sheet (vài
+  giây), lái theo 4 nhóm config (r01 / chung gồm S01 / r06 / r07), tự chấm từng dòng vào file lượt + report, tự trả
+  config. JSON cuối có `report`, `con_cham_tay` (dòng tool chưa đo được → chấm tay 5b), `lai_hut` (nhóm lái hụt →
+  sửa chữ trong `src/rcr/data/gen_ngam_cong_thuc.yaml` rồi `--nhom <nhóm> --tiep --luot <file>`). App chưa khai chữ
+  trên màn → chép mục gần nhất trong file đó. Chi tiết: `docs/rc-check/gen-ngam-tu-lai.md`.
 Bot gọi qua `/check` ô `tinh_nang` = `iaa` / `gen ngầm`.
 
 ```

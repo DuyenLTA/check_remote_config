@@ -12,6 +12,8 @@ dependencies = [
     # screencap.to_thumb thu nho anh truoc khi nhung vao report. Thieu no thi
     # report MAT SACH anh tung buoc ma luot chay van bao thanh cong.
     "pillow>=10.0",
+    # rcr-gen-ngam tach khung video man cho (do popup dem nguoc tung giay) - ffmpeg di kem goi.
+    "imageio-ffmpeg>=0.5",
 ]
 
 # CLI cho slash command /rc-check - chay mot luot, khong can mo web UI.
@@ -28,6 +30,7 @@ rcr-bao-bug = "rcr.bot_hop_thu_bug:main"
 rcr-publish = "rcr.bot_cho_publish:main"
 rcr-tong-hop = "rcr.tong_hop_sdk:main"
 rcr-iaa = "rcr.cli_iaa:main"
+rcr-gen-ngam = "rcr.cli_gen_ngam:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.27"]

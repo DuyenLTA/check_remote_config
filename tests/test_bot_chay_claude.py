@@ -189,7 +189,7 @@ def test_luot_check_tin_build_co_tinh_nang_chay_sdk_roi_tung_tinh_nang_gop_mot_r
     assert prompt.startswith("/rc-check pkg.a --serial S1 --sdk 3.5.4\n")
     assert "Tin build con ghi tinh nang: iaa, widget, gen-ngam" in prompt
     assert ('`rcr-check --tc iaa --case all`, `rcr-check --tab "widget" --case all`, '
-            '`rcr-check --tc gen-ngam --case all`') in prompt
+            '`rcr-gen-ngam chay --package <pkg> --serial <serial>`') in prompt
     assert "MOT report gop" in prompt and "rcr-check --package pkg.a --gop" in prompt
     with pytest.raises(ValueError):
         c.lenh("pkg.a", "S1", sdk="3.5.4", them_tinh_nang=["widget; rm -rf /"])
