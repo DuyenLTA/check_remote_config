@@ -54,6 +54,14 @@ NHAC_NEXT_GEN = (
     "khi chay lai buoc tai hien (--khong-tai-hien); report co muc 'Lech giua cac luot' thi neu ro trong cau bao "
     "(WORKFLOW.md muc 'Do tay ra cung ket qua moi luot').\n"
 )
+# Check ID ads (rc-check.md muc 3c) trong phien `claude -p`: dung chung cho luot SDK va luot chi tinh nang.
+NHAC_AUDIT = (
+    "Phien `claude -p` KHONG co tool Artifact (khong nap, 09/11/2026): dung mat thoi gian thu publish. Check ID ads van "
+    "lam DU buoc dung trang audit (audit-fanout muc 3: findings/notes + artifact_report_builder.py -> <pkg>-artifact.html "
+    "trong out cua repo audit) - report rc-check lay tab Check ID ads tu file do; chi BO buoc publish + artifact_link. "
+    "Repo audit da duoc --add-dir: chep script workflow bang `cat <repo audit>/.claude/workflows/audit-fanout.mjs > out/scratch-<ngay>/audit-fanout.mjs` (lenh `cp` tu duong dan .claude bi -p chan) roi goi Workflow. "
+    "Workflow audit chay nen: CHO thong bao no xong roi moi chay case trong CUNG luot nay; KHONG ScheduleWakeup.\n"
+)
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.
 PROMPT = (
@@ -78,10 +86,7 @@ PROMPT = (
     "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case. KHONG tu viet vong lap sleep doc "
     "journal.jsonl / file output de cho: thong bao xong chi toi khi lenh Bash dang chay ket thuc, vong lap do giu may "
     "dung im toi het han (AIP872 04/11/2026 mat ~7 phut). Trong luc cho thi lam viec khong can may (doc TC, preflight).\n"
-    "Phien `claude -p` KHONG co tool Artifact (khong nap, 09/11/2026): dung mat thoi gian thu publish. Check ID ads van "
-    "lam DU buoc dung trang audit (audit-fanout muc 3: findings/notes + artifact_report_builder.py -> <pkg>-artifact.html "
-    "trong out cua repo audit) - report rc-check lay tab Check ID ads tu file do; chi BO buoc publish + artifact_link. "
-    "Repo audit da duoc --add-dir: chep script workflow bang `cat <repo audit>/.claude/workflows/audit-fanout.mjs > out/scratch-<ngay>/audit-fanout.mjs` (lenh `cp` tu duong dan .claude bi -p chan) roi goi Workflow. "
+    + NHAC_AUDIT +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Sua tool giua luot: chi chay test cua file vua sua (pytest tests/test_<file>.py), KHONG chay ca bo test - "
     "may dung im trong luc cho.\n"
@@ -159,7 +164,8 @@ PROMPT_VERIFY_SUB = (
 TIMEOUT_SUB = 240 * 60
 TIMEOUT_VERIFY_SUB = 60 * 60
 # /check tinh_nang: tab SDK rieng (rating / widget / daily checkin) trong bo TC chung. QA chon tab nao chay tab do:
-# khong FO, khong checklist Next-Gen, khong check ID ads, khong chan theo plan tuan (user chot 11/11/2026).
+# khong FO, khong checklist Next-Gen, khong chan theo plan tuan (user chot 11/11/2026). Van check ID ads (audit-fanout)
+# truoc bo dau tien nhu moi luot chay app (user chot 16/11/2026, bo luat 11/11 "khong check ID ads").
 TAB_TINH_NANG = ("rating", "widget", "daily checkin")
 # Bo TC tinh nang KHONG nam trong sheet chung: rcr-check tu dung tu sheet goc moi lenh (`--tc <nguon>`):
 # iaa = muc "3. ID ads inapp" cua tab app o sheet KT, gen-ngam = sheet checklist gen ngam (user chot 12/11/2026).
@@ -170,14 +176,17 @@ PROMPT_TINH_NANG = (
     "ngoi truoc may. CHI chay bo TC: {tabs} (moi bo mot lenh: {lenh_bo}; bo sau chay khi bo truoc xong). "
     "Bo `--tc iaa` / `--tc gen-ngam` rcr-check tu dung tu sheet goc; dong tool khong tu cham duoc thi cham tay theo "
     "muc 5b, dieu kien khong tao duoc (nho dev gia lap...) thi BLOCKED kem ly do. KHONG chay tab FO / base / delta, KHONG "
-    "chay checklist Next-Gen, KHONG truyen --sdk, BO muc 3c (check ID ads). Preflight van chay nhung truyen "
+    "chay checklist Next-Gen, KHONG truyen --sdk. Sau preflight, TRUOC bo dau tien phai lam muc 3c (check ID ads "
+    "bang audit-fanout) nhu moi luot chay app; ID ads lech sheet KHONG phai ly do dung: ghi vi tri lech vao tom_tat "
+    "roi chay tiep, dong ads vi tri lech cham theo unit that trong log. Preflight van chay nhung truyen "
     "--bo-qua-plan (lech plan tuan khong phai ly do dung). Tab khong co case nao chay duoc (app khong co key cua "
     "SDK do / tab trong) -> ghi ro trong tom_tat, khong phai loi. Moi may la may test AdMob, ad_click khong phai ly do "
     "dung. Gap diem can nguoi quyet (preflight LOI, man la) thi dung. Khong commit/push.\n"
     "Lenh nen bi cat (background time limit) -> chay tiep bang `rcr-check --tiep <file .luot.json>`, KHONG chay lai tu dau.\n"
     "Nhieu tab: dung MOT report gop bang `--gop` cac file luot (khong can may); gop khong duoc thi `link` = report tab "
     "dau, duong dan report tab con lai ghi trong `tom_tat`.\n"
-    "Phien `claude -p` KHONG co tool Artifact: `link` = duong dan TUYET DOI report .html.\n"
+    + NHAC_AUDIT +
+    "`link` = duong dan TUYET DOI report .html.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<duong dan TUYET DOI file report .html>", '
     '"tom_tat": "<tieng Viet co dau, toi da 300 ky tu: so PASS/FAIL tung tab hoac ly do dung>", '

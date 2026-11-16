@@ -8,7 +8,7 @@ that (tin hoi Check, luot verify) van di qua dung duong cua tin build -> chi co 
 - /check <ma app> <version> [sdk]: tin hoi Check moi o kenh QA (chi QA duoc duyet). Build bot da thay -> giu
   thong tin build cu; build chua thay -> can `sdk` de chon nhanh (Next-Gen / bo TC) nhu tin build.
   Kem `tinh_nang` (rating / widget / daily checkin / iaa / gen ngam, nhieu cai cach dau phay) -> xep thang luot `loai_job: "tinh_nang"` chi chay
-  dung tab do, khong FO, khong check ID ads.
+  dung tab do, khong FO; van check ID ads truoc (user chot 16/11/2026).
 - /check-bug <ma app>: bug bot da log cho app + trang thai Jira; nut verify bug Reviewing tren build gan nhat.
 - /check-sub <ma app> <version>: xep luot chay bo TC sub Android (`/sub-check`) - job `loai_job: "sub"`, cai ban
   release tu App Tester nhu Check (chi QA duoc duyet).
@@ -67,7 +67,7 @@ def dang_ky(bot) -> None:
     @app_commands.describe(ma_app="Mã app, vd AIP922", version="Version kèm code, vd 3.7.0 (30)",
                            sdk="Chỉ cần khi bot chưa thấy tin build: số SDK (3.6.1, 3.7.0…) hoặc next-gen",
                            tinh_nang="Chỉ chạy bộ TC tính năng (rating / widget / daily checkin / iaa / gen ngầm, "
-                                     "hoặc tất cả); chọn nhiều thì cách nhau dấu phẩy. Không chạy FO, không check ID ads")
+                                     "hoặc tất cả); chọn nhiều thì cách nhau dấu phẩy. Không chạy FO, vẫn check ID ads trước")
     @app_commands.autocomplete(ma_app=goi_y_ma, tinh_nang=goi_y_tn)
     async def check(it: discord.Interaction, ma_app: str, version: str, sdk: str | None = None,
                     tinh_nang: str | None = None):
@@ -310,10 +310,10 @@ async def lenh_check_tinh_nang(bot, it: discord.Interaction, ma_app: str, versio
 
 
 async def xep_check_tinh_nang(bot, tin: dict, nguoi, tabs: list[str]) -> str:
-    """Luot chi chay tab SDK tinh nang QA chon: khong FO, khong checklist Next-Gen, khong check ID ads."""
+    """Luot chi chay tab SDK tinh nang QA chon: khong FO, khong checklist Next-Gen; van check ID ads truoc."""
     ds = ", ".join(tabs).replace("gen-ngam", "gen ngầm")
     return await _xep_luot_rieng(bot, tin, nguoi, {"loai_job": "tinh_nang", "tabs": list(tabs)}, "⭐",
-                                 f"Check {ds}", f"Chỉ bộ TC {ds} (không FO, không check ID ads), bản release "
+                                 f"Check {ds}", f"Chỉ bộ TC {ds} (không FO, có check ID ads trước), bản release "
                                  "từ App Tester", "/check")
 
 

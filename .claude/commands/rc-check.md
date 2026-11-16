@@ -128,7 +128,9 @@ còn snapshot `--keep` chưa `--restore`, và **plan tuần**.
 ## 3c. Check ID ads (audit-fanout) — sau preflight, trước khi chạy case
 
 Áp dụng **cả hai nhánh**. Bỏ qua khi lượt không chạy case: kiểu (a)/(b) ở mục 4, `--set` đứng riêng, `--restore`,
-`--tiep`, `--cham-tay`, `--gop` chỉ dựng lại report; và lượt chỉ chạy tab tính năng (rating / widget / daily checkin).
+`--tiep`, `--cham-tay`, `--gop` chỉ dựng lại report. **Mọi lượt chạy app đều check ID ads trước, kể cả lượt chỉ chạy
+tính năng** (rating / widget / daily checkin / IAA / gen ngầm — user chốt 16/11/2026); lượt SDK kèm tính năng chỉ check
+một lần ở đầu lượt.
 
 1. Repo audit: `$AD_AUDIT_REPO`, rồi `~/android-ad-audit` — cái có `tools/ad-checklist-diff/audit_runner.py`. Không thấy
    → ghi "chưa check ID ads (không thấy repo audit)" vào câu báo, chạy tiếp.
@@ -174,7 +176,7 @@ Tab: mặc định **không truyền `--tab`** (tool tự chọn đúng một ta
 `--tab 3.4.0`, `sdk rating` / `sdk widget` / `sdk daily checkin` → `--tab rating` / `widget` / `"daily checkin"`. Ba SDK
 riêng này không thuộc FO — user không nhắc thì **đừng tự chạy**. Lượt chỉ chạy tab tính năng (user nêu, hoặc bot gọi qua
 `/check` ô `tinh_nang`, user chốt 11/11/2026): **chọn tab nào chạy tab đó** — không FO, không checklist Next-Gen, không
-`--sdk`, **bỏ 3c**, preflight kèm `--bo-qua-plan`; nhiều tab thì mỗi tab một lệnh rồi `--gop` thành một report.
+`--sdk`, **vẫn làm 3c trước bộ đầu tiên** (user chốt 16/11/2026), preflight kèm `--bo-qua-plan`; nhiều tab thì mỗi tab một lệnh rồi `--gop` thành một report.
 
 **Tin build ghi cả SDK lẫn tính năng** (user chốt 14/11/2026, vd `sdk 3.5.4 - Apply IAA - SDK Widget - SDK Rating - SDK
 Daily Checkin - Luồng gen ngầm - Uninstall`): check **hết** tính năng đã đóng gói, không chỉ SDK. Bot tách tính năng từ

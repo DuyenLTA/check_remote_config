@@ -108,8 +108,8 @@ async def bao_ket_qua(bot, job: dict, qa, out: Path) -> None:
     if not job.get("da_bao"):
         # Tom tat ID ads doc bang code (dung package, ghi trong luot nay), khong theo chu Claude viet.
         # Trang audit day du nam trong tab cua chinh report -> chi dinh kem mot file report.
-        # Luot sub / tab tinh nang khong check ID ads -> khong co dong audit.
-        audit = "" if job.get("loai_job") == "sub" or build_ma_app.chi_tinh_nang(job) else audit_tom_tat.dong_tin(
+        # Luot sub khong check ID ads -> khong co dong audit. Luot chi tinh nang van check (user chot 16/11/2026).
+        audit = "" if job.get("loai_job") == "sub" else audit_tom_tat.dong_tin(
             audit_tom_tat.tim(job["package"], tu_luc=job.get("bat_dau") or 0))
         # Ket qua + file report + nut Verify nam ngay tren tin goc (khong tra loi tin moi).
         await qa.edit(content=dong_dau,

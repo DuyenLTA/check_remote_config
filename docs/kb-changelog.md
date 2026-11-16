@@ -43,6 +43,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 16/11/2026 | Mọi lượt chạy app phải check ID ads (audit-fanout) trước, kể cả lượt chỉ chạy tính năng (`/check tinh_nang`); bỏ luật 11/11 "tab tính năng không check ID ads" | `rc-check.md` 3c + 4, `src/rcr/bot_chay_claude.py` PROMPT_TINH_NANG, `src/rcr/bot_job_check.py` | — |
 | 16/11/2026 | `/check` ô `tinh_nang` có thêm lựa chọn `tất cả` = chạy cả 5 bộ tính năng (rating, widget, daily checkin, IAA, gen ngầm) trong một lượt; bỏ luật 13/11 "không có lựa chọn gộp" | `src/rcr/bot_lenh_slash.py` | — |
 | 16/11/2026 | Gen ngầm: dòng T2I / vùng mô tả / copy prompt của app không có T2I bỏ khỏi report; nhóm R01 được ép `generating_wait_image_seconds=45` để ảnh xong trước popup, report ghi rõ | `src/rcr/data/gen_ngam_cong_thuc.yaml`, `docs/rc-check/gen-ngam-tu-lai.md` | rcr-gen-ngam |
 | 14/11/2026 | Tin build ghi cả SDK lẫn tính năng → check hết tính năng đã đóng gói trong cùng lượt, gộp một report | `.claude/commands/rc-check.md` | b47820d |

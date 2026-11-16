@@ -229,7 +229,7 @@ def test_check_tinh_nang_xep_job_chi_tab_da_chon(tmp_path):
     assert "Đã xếp lượt check rating" in kq
     job = bot.q.jobs[0]
     assert job["loai_job"] == "tinh_nang" and job["tabs"] == ["rating"] and job["package"] == "p.eng"
-    assert "không check ID ads" in kenh.sent[-1]
+    assert "có check ID ads trước" in kenh.sent[-1]
     # widget cung build la viec khac -> van xep; go lai rating -> khong xep trung
     asyncio.run(s.xep_check_tinh_nang(bot, tin, nguoi, s.CHON_TINH_NANG["widget"]))
     assert len(bot.q.jobs) == 2
