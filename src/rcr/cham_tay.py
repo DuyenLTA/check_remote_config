@@ -47,7 +47,7 @@ def so_dong(text: str) -> list[int]:
 
 
 def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude",
-         dieu_kien: str = "", anh: list[dict] = ()) -> dict:
+         dieu_kien: str = "", anh: list[dict] = (), dk_khong_ap_dung: bool = False) -> dict:
     """Tra record moi: cac dong `dong` mang verdict `ket` + ly do, verdict case tinh lai.
 
     `ket=BLOCKED`: precondition khong tao duoc - ly do vao `precondition_thieu`, case ra BLOCKED.
@@ -58,6 +58,10 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
     `anh`: [{ten, src (data URI)}] anh chup luot do tay - report hien ngay o case, nguoi doc khong phai tin
     chu (user 29/10/2026: report kho nhin). Trung ten thi giu ban moi.
     """
+    if dk_khong_ap_dung or ket == KHONG_AP_DUNG:
+        # Dieu kien "khong tao duoc" thuoc tinh nang app KHONG CO (vd placement 'result' o app khong gen anh/video):
+        # khong phai dieu kien chua dat -> khong ep ca case BLOCKED; dong nao do duoc van giu ket qua.
+        record = {**record, "precondition_thieu": []}
     if dieu_kien.strip():
         record = {**record, "precondition_thieu": [],
                   "ep_ad_fail": f"{ai} tạo điều kiện ở lượt đo tay: {' '.join(dieu_kien.split())}"}
@@ -150,7 +154,8 @@ def chay(args, log_fn) -> dict:
     truoc = records[i].get("verdict")
     records[i] = cham(records[i], so_dong(args.dong), args.ket, args.ly_do,
                       dieu_kien=getattr(args, "dieu_kien_dat", "") or "",
-                      anh=doc_anh(getattr(args, "anh", "") or ""))
+                      anh=doc_anh(getattr(args, "anh", "") or ""),
+                      dk_khong_ap_dung=bool(getattr(args, "dk_khong_ap_dung", False)))
     log_fn(f"{args.case}: dòng {args.dong} → {args.ket}; verdict case {truoc} → {records[i]['verdict']}")
     meta = {k: v for k, v in data.items() if k not in ("records", "phien_ban", "xong")}
     report = args.report or data.get("report") or ""

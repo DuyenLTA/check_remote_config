@@ -397,6 +397,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--anh", default="", help="kem --cham-tay: anh chup luot do tay (phay ngan cach), nhung vao report ngay o case")
     p.add_argument("--ket", default="", help="PASS | FAIL | NEEDS_HUMAN | NOT_VERIFIABLE | BLOCKED")
     p.add_argument("--ly-do", default="", help="so do / cach do, hien tren report")
+    p.add_argument("--dk-khong-ap-dung", action="store_true",
+                   help="kem --cham-tay: dieu kien thieu cua case thuoc tinh nang app khong co (N/A) -> bo, khong ep BLOCKED")
     p.add_argument("--dieu-kien-dat", default="",
                    help="kem --cham-tay: luot do tay DA tao duoc precondition ma tool khong tao duoc "
                         "- ghi cach tao; bo precondition_thieu cua luot tool (khong go ad_click)")

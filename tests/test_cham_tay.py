@@ -162,3 +162,14 @@ def test_khong_ap_dung_bi_bo_khoi_report():
     ra = report_data.bo_khong_ap_dung([mot_phan, ca_case])
     assert [r["key"] for r in ra] == [REC["key"]]
     assert all(l["v"] != "KHONG_AP_DUNG" for l in ra[0]["lines"]) and len(ra[0]["lines"]) == 2
+
+
+def test_dieu_kien_thuoc_tinh_nang_app_khong_co_thi_khong_ep_blocked():
+    """AIP921: precondition 'không tạo được placement result' (app không gen) -> case Home/exit đo đạt vẫn PASS."""
+    rec = {**REC, "precondition_thieu": ["Không tạo được placement 'result'"]}
+    van_blocked = cham_tay.cham(rec, [1, 4], "PASS", "đo trên Home")
+    assert van_blocked["verdict"] == "BLOCKED"
+    ra = cham_tay.cham(rec, [1, 4], "PASS", "Home + exit đạt; vế result không áp dụng", dk_khong_ap_dung=True)
+    assert ra["verdict"] == "PASS" and ra["precondition_thieu"] == []
+    na = cham_tay.cham(rec, [1, 2, 4], "KHONG_AP_DUNG", "app không gen ảnh/video")
+    assert na["verdict"] == "KHONG_AP_DUNG"
