@@ -24,6 +24,7 @@ from .gen_ngam_cham import So, ghi_luot
 from .models import RcError
 
 OUT_MAC_DINH = Path(__file__).resolve().parents[2] / "out"
+ANDROID_TOI_THIEU = 33          # Android 13: POST_NOTIFICATIONS la quyen runtime
 # nhom -> (case dai dien lay config Test Data, key ep them)
 NHOM = {
     "r01": ("GEN-R01-01", {"generating_wait_image_seconds": "45"}),
@@ -107,6 +108,12 @@ def chay(a) -> dict:
     so.log = _log
     so.luu = lambda: luu_so(f_so, so)
     client = AdbClient(None)
+    sdk, _, _ = asyncio.run(client.shell(a.serial, "getprop", "ro.build.version.sdk"))
+    if int((sdk or "0").strip() or 0) < ANDROID_TOI_THIEU:
+        # Bo TC xin quyen thong bao (R01-01, S01) chi co tren Android 13+: may Android 12 khong co hop thoai -> nhom
+        # chung dung o S01, ~22 case khong do (Pixel 4 16/11/2026). Dung ngay, bao chon may khac.
+        raise RcError(f"máy {a.serial} là API {sdk.strip()} (< {ANDROID_TOI_THIEU}, Android 13): bộ gen ngầm cần hộp "
+                      "thoại xin quyền thông báo POST_NOTIFICATIONS — chạy trên máy Android 13+ (vd Pixel 6)")
     gen_ngam_may.MAU_TOAST[:] = [ct["toast_xong"]]
     asyncio.run(client.shell(a.serial, "logcat", "-G", "16M"))
     ctx = dau.Ctx(client, a.serial, a.package, ct, so, Path(a.out_dir) / "gen-ngam-video", _log)

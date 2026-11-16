@@ -203,7 +203,7 @@ tải lại sheet gốc mỗi lệnh (cả `--gop`/`--tiep`) rồi dựng bộ c
   giây), lái theo 4 nhóm config (r01 / chung gồm S01 / r06 / r07), tự chấm từng dòng vào file lượt + report, tự trả
   config. JSON cuối có `report`, `con_cham_tay` (dòng tool chưa đo được → chấm tay 5b), `lai_hut` (nhóm lái hụt →
   sửa chữ trong `src/rcr/data/gen_ngam_cong_thuc.yaml` rồi `--nhom <nhóm> --tiep --luot <file>`). App chưa khai chữ
-  trên màn → chép mục gần nhất trong file đó. Chi tiết: `docs/rc-check/gen-ngam-tu-lai.md`.
+  trên màn → chép mục gần nhất trong file đó. Cần máy **Android 13+** (Pixel 6; Pixel 4 Android 12 bị từ chối). Chi tiết: `docs/rc-check/gen-ngam-tu-lai.md`.
 Bot gọi qua `/check` ô `tinh_nang` = `iaa` / `gen ngầm`.
 
 ```

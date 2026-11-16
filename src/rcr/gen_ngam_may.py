@@ -64,16 +64,17 @@ async def gio(client, serial: str) -> float:
 
 async def nhin(client, serial: str, package: str) -> Man:
     from .adb_parsers import AdbError
-    for lan in range(3):
+    for lan in range(5):
         t = await gio(client, serial)
         try:
             xml = await ui_dump.dump(client, serial)
             break
         except AdbError:
-            # uiautomator thinh thoang khong ghi file dump (luot 16/11: "No such file") -> nhin lai, dung chet ca luot.
-            if lan == 2:
+            # uiautomator thinh thoang khong ghi file dump ("No such file", Pixel 6) hoac khong cho duoc man dung yen
+            # ("could not get idle state", Pixel 4 luc anh dong) -> nhin lai cham dan, dung chet ca nhom.
+            if lan == 4:
                 raise
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.5 + lan)
     pkg, act = await device_app.focus(client, serial)
     m = Man(t, pkg, (act or "").rsplit(".", 1)[-1], ui_dump.app_nodes(ui_dump.parse_dump(xml), package))
     if MAU_TOAST:

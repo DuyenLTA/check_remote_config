@@ -5,6 +5,9 @@
 
 ## Chạy
 
+**Máy Android 13+** (API ≥ 33, vd Pixel 6): R01-01 / S01 cần hộp thoại xin quyền `POST_NOTIFICATIONS`; máy Android 12
+(Pixel 4) không có → tool dừng ngay, báo chọn máy khác (16/11/2026: chạy trên Pixel 4 ra FAIL giả, nhóm chung dừng ở S01).
+
 ```
 <bin>/rcr-gen-ngam chay --package <pkg> --serial <S> --app-label "<app> <bản>"      # cả tab, ~25–30 phút
 <bin>/rcr-gen-ngam chay ... --nhom r06 --tiep --luot <file .luot.json>                # chạy lại một nhóm
