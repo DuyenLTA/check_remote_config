@@ -201,6 +201,12 @@ def test_app_moi_do_xong_phai_luu_cong_thuc_vao_data():
         assert "rating_gen.yaml" in p and "iaa_duong_lai.yaml" in p and "tom_tat" in p
 
 
+def test_rating_app_khong_gen_thi_bo_qua_case_result():
+    for kw in ({"tabs": ["rating"]}, {"sdk": "3.5.4"}):
+        _, p = c.lenh("pkg.a", "S1", **kw)
+        assert "KHONG_AP_DUNG" in p and "khong co man Result" in p and "BO QUA" in p
+
+
 def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
     # Luot chi tinh nang co IAA -> nhac policy-check dung package + serial, rule FAIL vao bugs dang policy#
     _, p = c.lenh("pkg.a", "S1", tabs=["iaa", "widget"])

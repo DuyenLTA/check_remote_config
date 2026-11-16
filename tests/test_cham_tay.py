@@ -150,3 +150,15 @@ def test_dong_blocked_la_he_qua_cua_dong_fail_thi_case_van_fail():
 def test_dong_blocked_khong_kem_fail_van_la_dieu_kien_case():
     ra = cham_tay.cham(REC, [1, 4], "BLOCKED", "thiếu máy OPPO")
     assert ra["verdict"] == "BLOCKED" and ra["precondition_thieu"] == ["thiếu máy OPPO"]
+
+
+def test_khong_ap_dung_bi_bo_khoi_report():
+    """App khong gen anh/video: case / dong can man Result ghi KHONG_AP_DUNG -> khong vao report."""
+    from rcr import report_data
+    mot_phan = cham_tay.cham(REC, [1, 4], "KHONG_AP_DUNG", "app không gen ảnh/video, không có màn Result")
+    assert mot_phan["verdict"] == "PASS" and mot_phan["pending"] == 0     # dong PASS + dong bo qua -> PASS
+    ca_case = cham_tay.cham({**REC, "key": "rating#R01-02"}, [1, 2, 4], "KHONG_AP_DUNG", "app không gen ảnh/video")
+    assert ca_case["verdict"] == "KHONG_AP_DUNG"
+    ra = report_data.bo_khong_ap_dung([mot_phan, ca_case])
+    assert [r["key"] for r in ra] == [REC["key"]]
+    assert all(l["v"] != "KHONG_AP_DUNG" for l in ra[0]["lines"]) and len(ra[0]["lines"]) == 2

@@ -13,11 +13,11 @@ from pathlib import Path
 
 from . import luot_file, run_batch
 from .models import RcError
-from .verdict_levels import CONFIG_BLOCKED, FAIL, PASS, worst
+from .verdict_levels import CONFIG_BLOCKED, FAIL, KHONG_AP_DUNG, PASS, worst
 
 # BLOCKED: precondition khong tao duoc (case doi may OPPO ma khong co may, can throttle mang...).
 # Do thay tren may khac roi chấm PASS la lam gia (user 03/11/2026) - phai ghi BLOCKED kem ly do.
-KET_HOP_LE = (PASS, FAIL, "NEEDS_HUMAN", "NOT_VERIFIABLE", CONFIG_BLOCKED)
+KET_HOP_LE = (PASS, FAIL, "NEEDS_HUMAN", "NOT_VERIFIABLE", CONFIG_BLOCKED, KHONG_AP_DUNG)
 
 
 def doc_anh(text: str) -> list[dict]:
@@ -89,7 +89,7 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
     cu_anh = {a["ten"]: a for a in record.get("anh_tay") or []}
     cu_anh.update({a["ten"]: a for a in anh if a.get("src")})
     return {**record, "lines": lines, "verdict": verdict, "anh_tay": list(cu_anh.values()),
-            "pending": sum(1 for l in lines if l["v"] not in (PASS, FAIL) and l.get("scope") != "po"),
+            "pending": sum(1 for l in lines if l["v"] not in (PASS, FAIL, KHONG_AP_DUNG) and l.get("scope") != "po"),
             "cham_tay": cu + [{"dong": n, "v": ket, "ly_do": ly_do.strip(), "ai": ai, "luc": ngay} for n in dong]}
 
 

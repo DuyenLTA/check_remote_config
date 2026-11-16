@@ -15,10 +15,14 @@ NOT_VERIFIABLE = "NOT_VERIFIABLE"  # tool khong do duoc bang dump/log - nguoi nh
 NEEDS_HUMAN = "NEEDS_HUMAN"        # can thao tac tay moi den duoc trang thai do
 CONFIG_OK = "CONFIG_OK"            # dat duoc config, case khong co dong Expected nao
 CONFIG_BLOCKED = "BLOCKED"         # config khong song qua lan mo app -> chua test duoc
+# App khong co tinh nang / vi tri ma dong TC noi toi (AIP921 fitness: khong gen anh, khong man Result - user chot
+# 16/11/2026). Chi gan qua cham tay kem can cu; report BO HAN case / dong do (khong hien, khong dem).
+KHONG_AP_DUNG = "KHONG_AP_DUNG"
 
 # Xau nhat dung dau - verdict cua case lay phan tu dau tien gap duoc.
 # CONFIG_OK dung TRUOC PASS: "dat duoc config" ken hon "da cham va dung".
-SEVERITY = (FAIL, CONFIG_BLOCKED, NEEDS_HUMAN, NOT_VERIFIABLE, CONFIG_OK, PASS)
+# KHONG_AP_DUNG dung SAU PASS: case co dong PASS + dong N/A van la PASS; chi toan dong N/A moi ra N/A.
+SEVERITY = (FAIL, CONFIG_BLOCKED, NEEDS_HUMAN, NOT_VERIFIABLE, CONFIG_OK, PASS, KHONG_AP_DUNG)
 
 
 def worst(verdicts) -> str:

@@ -45,6 +45,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 16/11/2026 | App không gen ảnh/video (không có màn Result gen): case rating cần màn Result gen ảnh/video bỏ qua — không test, không lấy màn khác thay, chấm tay `KHONG_AP_DUNG` và report bỏ hẳn case/dòng đó | `src/rcr/bot_chay_claude.py` NHAC_RATING_KHONG_GEN, `report_data.bo_khong_ap_dung` | — |
 | 16/11/2026 | App mới tool chưa có công thức lái: phiên bot đo tay xong phải khai công thức vào `src/rcr/data/` (iaa_duong_lai / rating_gen / checkin / gen_ngam / fo_flow), chạy lại đúng case để chứng minh, ghi file đã sửa vào tóm tắt | `src/rcr/bot_chay_claude.py` NHAC_LUU_CONG_THUC | — |
 | 16/11/2026 | Policy kèm lượt IAA chỉ check **ads** (`/policy-check --chi-ads`: không mua sub, bỏ rule tab Sub_VN) | `rc-check.md` 7a, `src/rcr/bot_chay_claude.py` NHAC_POLICY, repo audit `policy_check_runner.py` | — |
 | 16/11/2026 | Lượt có bộ IAA (chỉ tính năng hay SDK kèm tính năng) bắt buộc chạy thêm `/policy-check` làm bước cuối, rule FAIL vào menu bug dạng `policy#<mã rule>`; lượt không có IAA vẫn theo luật 11/11 (policy tách riêng) | `rc-check.md` 7a, `src/rcr/bot_chay_claude.py` NHAC_POLICY | — |

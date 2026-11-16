@@ -9,6 +9,7 @@ Dump chi dung luc cham (`assert_check`), cham xong thi bo.
 
 from __future__ import annotations
 
+from .verdict_levels import KHONG_AP_DUNG
 from . import thoi_gian
 
 from . import report_runs
@@ -166,8 +167,23 @@ def _ly_do(step: dict) -> str:
     return " · ".join(p for p in phan if p)
 
 
+def bo_khong_ap_dung(records: list[dict]) -> list[dict]:
+    """Case / dong KHONG_AP_DUNG (app khong co tinh nang TC noi toi, vd app khong gen anh/video thi khong co man
+    Result gen) bo han khoi report - khong hien, khong dem (user chot 16/11/2026)."""
+    ra = []
+    for r in records:
+        if r.get("verdict") == KHONG_AP_DUNG:
+            continue
+        lines = r.get("lines") or []
+        if any(l.get("v") == KHONG_AP_DUNG for l in lines):
+            r = {**r, "lines": [l for l in lines if l.get("v") != KHONG_AP_DUNG]}
+        ra.append(r)
+    return ra
+
+
 def page_data(baseline, tc: dict, records: list[dict], app_label: str = "") -> dict:
     """Du lieu day du cho `report_html.build`."""
+    records = bo_khong_ap_dung(records)
     name = app_label or baseline.package.split(".")[-1]
     # "—" la cho HIEN o o trong bang, KHONG duoc ghep vao tieu de: tieu de
     # thanh "Luot cham Piclux —", dau gach cut duoi (do 2026-09-28).

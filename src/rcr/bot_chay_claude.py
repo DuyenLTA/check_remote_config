@@ -70,6 +70,15 @@ NHAC_LUU_CONG_THUC = (
     "checkin_cong_thuc.yaml, gen_ngam_cong_thuc.yaml, fo_flow.yaml), sua code lai thi kem test, roi chay lai DUNG cac "
     "case do bang cong thuc moi de chung minh. Ghi ten file da sua vao `tom_tat` (khong commit - user commit).\n"
 )
+# Tab rating viet theo app gen anh/video. App KHONG gen anh/video (khong co man Result gen) -> moi case can man Result
+# gen anh / video bo qua: khong test, khong lay man khac thay, khong vao report (AIP921 fitness 16/11/2026, user chot).
+NHAC_RATING_KHONG_GEN = (
+    "Tab rating: app KHONG phai app gen anh/video (khong co man Result gen anh/video) -> moi case / dong can man Result "
+    "gen anh, gen video (Result — gen anh/video, chon sao / bam X / Feedback / 1-5 sao tai Result...) BO QUA: KHONG "
+    "test, KHONG lay man khac (vd ket qua scan) thay vao; ghi `rcr-check --cham-tay <file luot> --case <ma> --dong "
+    "<cac dong> --ket KHONG_AP_DUNG --ly-do \"app khong gen anh/video, khong co man Result\"` - report tu bo han "
+    "case / dong do. Chi test vi tri app co (Home, Exit click, App Shortcut...).\n"
+)
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.
 PROMPT = (
@@ -94,7 +103,7 @@ PROMPT = (
     "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case. KHONG tu viet vong lap sleep doc "
     "journal.jsonl / file output de cho: thong bao xong chi toi khi lenh Bash dang chay ket thuc, vong lap do giu may "
     "dung im toi het han (AIP872 04/11/2026 mat ~7 phut). Trong luc cho thi lam viec khong can may (doc TC, preflight).\n"
-    + NHAC_AUDIT + NHAC_LUU_CONG_THUC +
+    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_RATING_KHONG_GEN +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Sua tool giua luot: chi chay test cua file vua sua (pytest tests/test_<file>.py), KHONG chay ca bo test - "
     "may dung im trong luc cho.\n"
@@ -194,7 +203,7 @@ PROMPT_TINH_NANG = (
     "{policy}"
     "Nhieu tab: dung MOT report gop bang `--gop` cac file luot (khong can may); gop khong duoc thi `link` = report tab "
     "dau, duong dan report tab con lai ghi trong `tom_tat`.\n"
-    + NHAC_AUDIT + NHAC_LUU_CONG_THUC +
+    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_RATING_KHONG_GEN +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<duong dan TUYET DOI file report .html>", '
