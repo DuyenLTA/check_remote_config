@@ -50,6 +50,22 @@ def test_thu_tu_high_fail_roi_moi_goi_thuong_la_pass():
     assert iaa_cham_log.cham_thu_tu(ev, 1, LOADING.high.id, LOADING.thuong.id)[0] == "PASS"
 
 
+def test_hai_ad_song_song_moi_cai_high_fail_roi_thuong_la_pass():
+    """Man Uninstall AIP893: native show + preload man sau -> 2 request high, 2 fail, 2 request thuong."""
+    h, t = LOADING.high.id, LOADING.thuong.id
+    log = _log(_dong(1.0, "track_ad_request", h), _dong(1.1, "track_ad_request", h), _dong(2.6, "ad_load", h, "failed"),
+               _dong(2.6, "track_ad_request", t), _dong(3.1, "ad_load", h, "failed"), _dong(3.1, "track_ad_request", t))
+    ev = iaa_cham_log.su_kien(log, iaa_nhom.ban_do_unit(DS))
+    assert iaa_cham_log.cham_thu_tu(ev, 1, h, t)[0] == "PASS"
+
+
+def test_high_fill_ma_van_goi_thuong_la_fail():
+    h, t = LOADING.high.id, LOADING.thuong.id
+    log = _log(_dong(1.0, "track_ad_request", h), _dong(2.0, "ad_load", h), _dong(2.1, "track_ad_request", t))
+    ev = iaa_cham_log.su_kien(log, iaa_nhom.ban_do_unit(DS))
+    assert iaa_cham_log.cham_thu_tu(ev, 1, h, t)[0] == "FAIL"
+
+
 def test_banner_khong_ghi_load_fail_cua_high_van_pass():
     """Banner Home AIP893: high request -> goi thuong, KHONG co dong ad_load failed cua high."""
     log = _log(_dong(1.0, "track_ad_request", LOADING.high.id), _dong(2.5, "track_ad_request", LOADING.thuong.id),

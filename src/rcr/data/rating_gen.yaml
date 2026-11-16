@@ -73,12 +73,18 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
       toi_chu: "^\\d{1,3}%$"
       dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
       toi_da: 300
-    - cho_chu: "^(Text to Image Generate|Magic With AI)$"
-      toi_da: 60
+    # Cho gen dai (generating_wait_image_seconds lon) -> result mo thang tu man cho, popup Rating hien o day (do
+    # 16/11/2026: placement result chi ban khi vao result tu man cho, mo tu History KHONG hien popup).
+    - cho_chu: "^(100%|Result|Text to Image Generate|Magic With AI)$"
+      toi_da: 90
     - cho: 25
+      bo_qua_neu: "^(100%|Result)$"
     - dong_neu_co: "^(Close|Close sheet)$"
+      bo_qua_neu: "^(100%|Result)$"
     - tap: "^History$"
+      bo_qua_neu: "^(100%|Result)$"
     - tap_duoi: "^History$"
+      bo_qua_neu: "^(100%|Result)$"
     - cho_chu: "^(Result|Back to Home)$"
       toi_da: 90
   video:
@@ -102,12 +108,16 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
       toi_chu: "^\\d{1,3}%$"
       dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
       toi_da: 300
-    - cho_chu: "^(Text to Image Generate|Magic With AI)$"
-      toi_da: 60
+    - cho_chu: "^(100%|Result|Text to Image Generate|Magic With AI)$"
+      toi_da: 300
     - cho: 60
+      bo_qua_neu: "^(100%|Result)$"
     - dong_neu_co: "^(Close|Close sheet)$"
+      bo_qua_neu: "^(100%|Result)$"
     - tap: "^History$"
+      bo_qua_neu: "^(100%|Result)$"
     - tap_duoi: "^History$"
+      bo_qua_neu: "^(100%|Result)$"
     - cho_chu: "^(Result|Back to Home|Download)$"
       toi_da: 150
 

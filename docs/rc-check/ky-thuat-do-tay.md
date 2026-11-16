@@ -45,6 +45,11 @@
 
 ## Tab rating — cách đo đã chốt (AIP892 2.2.0, 13/11/2026: 3/3 PASS theo TC sửa)
 
+App gen NGẦM (AIP893 16/11/2026): màn chờ tự về Home trước khi ảnh xong, result mở từ History thì **không** bắn popup
+`placement=result`; popup chỉ hiện khi result mở thẳng từ màn chờ → giữ `generating_wait_image_seconds=60`,
+`generating_wait_video_seconds=300` trên `testvsl` (`--set … --keep`) suốt lượt rating, ghi điều kiện ép vào report,
+xong `--restore`. Ảnh đầu tiên trong trình chọn ảnh phải là JPEG thật (file video đuôi .jpg → `invalid-input`).
+
 Tool chưa lái được nhóm R01/R02 (bước "Gen ảnh, chờ popup" ra `NEEDS_HUMAN`) → đo tay theo đây, app khác dùng lại.
 Bật event FA trước: `setprop debug.firebase.analytics.app <pkg>`, đọc `FA-SVC` "Logging event" trên `logcat -v epoch`;
 xong trả `debug.firebase.analytics.app` về giá trị cũ.

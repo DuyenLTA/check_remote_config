@@ -105,6 +105,10 @@ khuon:
       - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
         buoc:
           - shortcut: "(?i).*uninstall.*"     # id: uninstall / UNINSTALL / shortcut_uninstall; nhan "Gỡ cài đặt" tren may VN
+          # AIP893 (Pixel 6 16/11/2026): shortcut mo lai app qua Splash -> Question -> Billing roi moi toi
+          # UninstallActivity -> lai het FO, khong chi cho 8s (truoc do doan nay BACK khi con o Question, 0 request).
+          - ve_man: "UninstallActivity"
+            toi_da: 150
           - cho: 8
           - dong_ad: 6
           - cho: 4

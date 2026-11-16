@@ -226,6 +226,11 @@ async def _buoc(client, serial: str, package: str, b: dict, log: list[str]) -> b
     activity (ve_chu / cho_chu / xem_ads_chu / dong_ad / nhap / tap_neu_co...), buoc cu thi roi ve `_mot_buoc`.
     AIP893 (16/11/2026): Home / chon anh / loading / result deu la MainActivity -> cong thuc theo activity khong lai duoc."""
     from . import iaa_lai
+    if b.get("bo_qua_neu"):
+        # Buoc chi can khi man KHONG co chu nay (AIP893: result mo thang tu man cho -> bo duong vao History).
+        if tim(await _nodes(client, serial, package), b["bo_qua_neu"]):
+            return True
+        b = {k: v for k, v in b.items() if k != "bo_qua_neu"}
     return await iaa_lai.buoc(client, serial, package, b, log)
 
 

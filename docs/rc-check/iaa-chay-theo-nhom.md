@@ -64,6 +64,14 @@ khớp khuôn nào → thêm chữ chỉ-có-ở-Home vào `nhan_dien` (hoặc k
 
 ## Bẫy đã gặp (đừng kẹt lại)
 
+- **Shortcut Uninstall mở lại app qua FO** (AIP893 16/11): Splash → Question → Billing rồi mới tới `UninstallActivity`
+  → đoạn lái có `ve_man: UninstallActivity` sau `shortcut`. Màn Uninstall request **2 native song song** (show + preload
+  màn sau) — bộ chấm thứ tự đếm theo số dư high (request / fail) chứ không ghép 1-1.
+- **Widget của app nằm trên launcher**: app không hiện popup Add Widget (đúng thiết kế) → tab widget / checkin ra FAIL
+  giả. Gỡ widget (nhấn giữ → Remove) trước mỗi lượt cần popup.
+- **Lệnh `rcr-iaa chay` bị cắt** giữa chừng: chạy tiếp `--bien-the-ds <còn lại>`; lần chấm cuối tự nạp log các biến thể đã
+  lái trước. Lái lại riêng một đoạn: `--doan <regex tên đoạn>` (log `-doan` riêng, nối vào log biến thể rồi `rcr-iaa cham`).
+
 - **Máy đang bị lượt khác dùng**: trước khi lái, `ps -eo pid,etime,args | grep "rcr-check.*<serial>"` và hàng chờ bot
   (`out/bot-hang-doi.json`). Đừng `pgrep -f` trong vòng chờ — nó đếm cả chính lệnh chờ, không bao giờ thoát.
 - **App thành Pro sau lượt check policy / mua sub test** (`PurchaseEG: verifyPurchased SUBS: true` trong log app): app

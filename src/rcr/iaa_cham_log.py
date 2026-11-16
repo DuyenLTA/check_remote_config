@@ -143,24 +143,33 @@ def cham_thu_tu(ev: list[dict], i: int, unit_high: str, unit_thuong: str) -> tup
         u = unit_high or unit_thuong
         n = sum(1 for e in ds if e["ten"] == "track_ad_request")
         return ("PASS", f"request {_duoi(u)} {n} lần") if n else None
-    # Moi chu ky (giua hai lan request thuong): phai co request high truoc, va high KHONG load thanh cong
-    # (high fill ma van goi thuong la sai). Khong doi event `ad_load failed` cua high: banner khong ghi event do
-    # (AIP893 13/11/2026 banner Home: high request -> 1-2s sau goi thuong, khong co dong fail).
-    sai, cap, moc = [], 0, 0
-    for k, e in enumerate(ds):
+    # Moi request thuong phai "tieu" mot request high chua fill truoc do: request high +1, high load OK -1 (high
+    # fill thi khong duoc goi thuong), request thuong -1. Dem theo so du thay vi ghep cua so giua hai request thuong:
+    # vi tri request 2 ad song song (AIP893 16/11/2026 man Uninstall: native show + preload man sau -> 2 high, 2 fail,
+    # 2 thuong) bi cham FAIL gia o request thuong thu 2. Khong doi event `ad_load failed` cua high: banner khong ghi
+    # event do (AIP893 13/11/2026 banner Home: high request -> 1-2s sau goi thuong, khong co dong fail).
+    # Hai request high giong het nhau cach vai chuc ms bi parser gop lam mot (log that 178.129 / 178.150) -> lan high
+    # load FAIL cung la bang chung da co request high: `fail_cho` (high da fail chua bi tieu) + `req_cho` (high
+    # request chua co ket qua - banner khong ghi fail).
+    sai, cap, req_cho, fail_cho = [], 0, 0, 0
+    for e in ds:
+        if e["tang"] == "high":
+            if e["ten"] == "track_ad_request":
+                req_cho += 1
+            elif e["ten"] == "ad_load":
+                req_cho = max(0, req_cho - 1)
+                fail_cho += 0 if e["ok"] else 1
+            continue
         if e["tang"] != "thuong" or e["ten"] != "track_ad_request":
             continue
-        truoc = [x for x in ds[moc:k] if x["tang"] == "high"]
-        moc = k + 1
-        # Chu ky bat dau tu lan request high GAN NHAT (banner reload 10s: lan high fill cua chu ky truoc khong tinh).
-        dau = max((j for j, x in enumerate(truoc) if x["ten"] == "track_ad_request"), default=None)
-        co_req = dau is not None
-        chu_ky = truoc[dau:] if co_req else []
-        high_fill = any(x["ten"] == "ad_load" and x["ok"] for x in chu_ky)
-        if not co_req or high_fill:
-            sai.append(_gio(e))
-        else:
+        if fail_cho > 0:
+            fail_cho -= 1
             cap += 1
+        elif req_cho > 0:
+            req_cho -= 1
+            cap += 1
+        else:
+            sai.append(_gio(e))
     req_h = sum(1 for e in ds if e["tang"] == "high" and e["ten"] == "track_ad_request")
     if not req_h:
         return ("FAIL", f"không request tầng high {_duoi(unit_high)} lần nào")
