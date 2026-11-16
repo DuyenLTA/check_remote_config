@@ -39,10 +39,11 @@ MAX_NUT = 25                       # Discord: toi da 25 nut (5 hang x 5) mot tin
 MAX_GOI_Y = 25                     # Discord: toi da 25 goi y autocomplete
 SDK_HOP_LE = re.compile(r"^(?:\d+\.\d+\.\d+|next-?gen|revert next-?gen)$", re.I)
 # /check tinh_nang: tab SDK rieng trong bo TC chung (khong thuoc FO) - chi chay khi QA chon (user chot 11/11/2026).
-# Chon nhieu = go nhieu ten cach dau phay (goi y tu noi them), khong co lua chon gop kieu "ca 3" (user chot 13/11/2026).
+# Chon nhieu = go nhieu ten cach dau phay (goi y tu noi them); "tất cả" = ca 5 tinh nang mot luot (user chot 16/11/2026).
 CHON_TINH_NANG = {"rating": ["rating"], "widget": ["widget"], "daily checkin": ["daily checkin"],
                   # Khong la tab sheet chung: rcr-check dung tu muc 3 ID ads inapp (sheet KT) / sheet gen ngam.
                   "iaa": ["iaa"], "gen ngầm": ["gen-ngam"]}
+TAT_CA = "tất cả"                  # chon gop: chay het CHON_TINH_NANG, khong phai mot tab rieng
 MAX_TEN_GOI_Y = 100                # Discord: ten / gia tri goi y autocomplete toi da 100 ky tu
 ICON_TRANG_THAI = {"reviewing": "⏳", "closed": "✅", "done": "✅", "reopened": "🔁", "to do": "🔁"}
 
@@ -65,8 +66,8 @@ def dang_ky(bot) -> None:
     @tree.command(name="check", description="Gửi tin hỏi Check cho một build (chạy lại hoặc build bot chưa thấy)")
     @app_commands.describe(ma_app="Mã app, vd AIP922", version="Version kèm code, vd 3.7.0 (30)",
                            sdk="Chỉ cần khi bot chưa thấy tin build: số SDK (3.6.1, 3.7.0…) hoặc next-gen",
-                           tinh_nang="Chỉ chạy bộ TC tính năng (rating / widget / daily checkin / iaa / gen ngầm); "
-                                     "chọn nhiều thì cách nhau dấu phẩy. Không chạy FO, không check ID ads")
+                           tinh_nang="Chỉ chạy bộ TC tính năng (rating / widget / daily checkin / iaa / gen ngầm, "
+                                     "hoặc tất cả); chọn nhiều thì cách nhau dấu phẩy. Không chạy FO, không check ID ads")
     @app_commands.autocomplete(ma_app=goi_y_ma, tinh_nang=goi_y_tn)
     async def check(it: discord.Interaction, ma_app: str, version: str, sdk: str | None = None,
                     tinh_nang: str | None = None):
@@ -115,17 +116,21 @@ def goi_y_tinh_nang(dang_go: str) -> list[str]:
     da = [t for t in dict.fromkeys(truoc) if t in CHON_TINH_NANG]
     con = [t for t in CHON_TINH_NANG if t not in da and dang in t]
     goi_y = ([", ".join(da)] if da and not dang else []) + [", ".join(da + [t]) for t in con]
+    if not da and dang in TAT_CA:                  # chon gop chi goi y khi chua go ten nao
+        goi_y.insert(0, TAT_CA)
     return [g for g in goi_y if len(g) <= MAX_TEN_GOI_Y][:MAX_GOI_Y]
 
 
 def doc_tinh_nang(chuoi: str) -> tuple[list[str], str]:
-    """'rating, widget' -> (['rating', 'widget'], ''). Ten la -> ([], loi). Trung ten thi bo trung."""
+    """'rating, widget' -> (['rating', 'widget'], ''). 'tất cả' -> ca 5 tab. Ten la -> ([], loi). Trung thi bo trung."""
     ten = [t for t in dict.fromkeys(_tach_tinh_nang(chuoi)) if t]
-    sai = [t for t in ten if t not in CHON_TINH_NANG]
+    sai = [t for t in ten if t not in CHON_TINH_NANG and t != TAT_CA]
     if sai or not ten:
         return [], (f"Không hiểu tính năng: {', '.join(sai) or '(trống)'}. Chọn trong: "
-                    f"{', '.join(CHON_TINH_NANG)} — nhiều cái thì cách nhau dấu phẩy.")
-    return [tab for t in ten for tab in CHON_TINH_NANG[t]], ""
+                    f"{', '.join(CHON_TINH_NANG)}, {TAT_CA} — nhiều cái thì cách nhau dấu phẩy.")
+    if TAT_CA in ten:
+        ten = list(CHON_TINH_NANG)
+    return list(dict.fromkeys(tab for t in ten for tab in CHON_TINH_NANG[t])), ""
 
 
 def goi_y_ma_app(bot, dang_go: str) -> list[str]:

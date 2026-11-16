@@ -253,8 +253,16 @@ def test_doc_tinh_nang_chon_nhieu_cach_dau_phay():
     assert s.doc_tinh_nang(" , ")[0] == []
 
 
+def test_doc_tinh_nang_tat_ca_chay_ca_5():
+    tat_ca = ["rating", "widget", "daily checkin", "iaa", "gen-ngam"]
+    assert s.doc_tinh_nang("tất cả") == (tat_ca, "")
+    assert s.doc_tinh_nang("Tất cả, rating") == (tat_ca, "")
+
+
 def test_goi_y_tinh_nang_noi_them_ten_con_lai():
-    assert s.goi_y_tinh_nang("") == list(s.CHON_TINH_NANG)
+    assert s.goi_y_tinh_nang("") == [s.TAT_CA] + list(s.CHON_TINH_NANG)
+    assert s.goi_y_tinh_nang("tất") == [s.TAT_CA]
+    assert s.TAT_CA not in s.goi_y_tinh_nang("rating, ")
     assert s.goi_y_tinh_nang("wi") == ["widget"]
     assert s.goi_y_tinh_nang("rating, wi") == ["rating, widget"]
     goi = s.goi_y_tinh_nang("rating, ")
