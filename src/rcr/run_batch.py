@@ -39,6 +39,7 @@ from . import (
     report_html,
     tc_select,
 )
+from . import bo_case_thieu_cong_thuc as thieu_ct
 from . import mang_cham_cua_so as cua_so_mod
 from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
@@ -115,6 +116,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         return tat_ca
 
     chuoi = bool(getattr(args, "chuoi", False))
+    gen_thieu: set[str] = set()   # loai gen (anh/video) case truoc bao chua co cong thuc -> bo case sau can no
+    bo_thieu: set[str] = set()    # key case da bo vi thieu cong thuc (case 'Tiep noi' chung cung bo)
     truoc_chuoi = None        # case vua chay (che do --chuoi): case sau "Tiep noi" no thi chay tiep tren app
     for wanted in [k.strip() for k in args.case.split(",") if k.strip()]:
         key = wanted
@@ -148,6 +151,15 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             if chan:
                 log_fn("    precondition không tạo được: " + "; ".join(chan) + " -> BLOCKED, không chạy")
                 records.append(precond_android.record_blocked(key, row, chosen, chan)
+                               | {"thoi_gian_s": round(time.monotonic() - bat_dau), "noi_chuoi": False})
+                truoc_chuoi = None
+                luu()
+                continue
+            bo = thieu_ct.ly_do_bo(chosen, gen_thieu, bo_thieu) if gen_thieu else ""
+            if bo:
+                log_fn("    " + bo)
+                bo_thieu.add(key)
+                records.append(thieu_ct.record_bo_qua(key, row, chosen, bo)
                                | {"thoi_gian_s": round(time.monotonic() - bat_dau), "noi_chuoi": False})
                 truoc_chuoi = None
                 luu()
@@ -405,6 +417,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         if tc_lech:
             result["tc_lech"] = tc_lech
         log_fn(f"    verdict: {result['verdict']}")
+        gen_thieu |= thieu_ct.loai_thieu(result)
         records.append(report_data.case_record(key, by_key.get(key, {}), result)
                        | {"thoi_gian_s": round(time.monotonic() - bat_dau), "noi_chuoi": noi})
         luu()

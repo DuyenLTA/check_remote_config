@@ -71,6 +71,8 @@ khớp khuôn nào → thêm chữ chỉ-có-ở-Home vào `nhan_dien` (hoặc k
   giả. Gỡ widget (nhấn giữ → Remove) trước mỗi lượt cần popup.
 - **Lệnh `rcr-iaa chay` bị cắt** giữa chừng: chạy tiếp `--bien-the-ds <còn lại>`; lần chấm cuối tự nạp log các biến thể đã
   lái trước. Lái lại riêng một đoạn: `--doan <regex tên đoạn>` (log `-doan` riêng, nối vào log biến thể rồi `rcr-iaa cham`).
+- **Biến thể đầu (`bat`) hỏng đoạn** → `rcr-iaa chay` dừng ngay, không chạy 3 biến thể sau (mỗi biến thể ~20 phút):
+  sửa khuôn rồi chạy lại. Đoạn hỏng do app (không do khuôn) thì thêm `--chay-du` (16/11/2026, AIP921 khuôn mới hỏng 2 lần).
 
 - **Máy đang bị lượt khác dùng**: trước khi lái, `ps -eo pid,etime,args | grep "rcr-check.*<serial>"` và hàng chờ bot
   (`out/bot-hang-doi.json`). Đừng `pgrep -f` trong vòng chờ — nó đếm cả chính lệnh chờ, không bao giờ thoát.

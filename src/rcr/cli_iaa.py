@@ -136,6 +136,11 @@ def _log_cu(args, da_lai: dict) -> list[str]:
     return ra
 
 
+def doan_hong(ket: dict | None) -> list[str]:
+    """Ten cac doan duong lai chua xong trong ket qua `iaa_lai.lai` cua mot bien the."""
+    return [d.get("ten") or "?" for d in (ket or {}).get("doan") or [] if not d.get("xong")]
+
+
 def chay(args) -> dict:
     """4 bien the noi tiep tren MOT may: dat config -> lai FO toi Home + tu lai duong IAA (ghi log FA-SVC) -> tra -> cham."""
     import asyncio
@@ -175,6 +180,13 @@ def chay(args) -> dict:
             lai[b] = asyncio.run(iaa_lai.lai(client, args.serial, args.package, doan, file_log, _log))
         finally:
             tra(args)
+        hong = doan_hong(lai[b])
+        if hong and len(lai) == 1 and not getattr(args, "chay_du", False):
+            # Bien the dau (mac dinh `bat`) la phep thu cua khuon: doan hong o day thi 3 bien the sau hong y het,
+            # moi bien the ~20 phut (AIP921 16/11/2026: khuon moi hong 2 lan, moi lan chay ca 4 bien the).
+            raise RcError(f"biến thể '{b}' hỏng đoạn: {', '.join(hong)} — sửa khuôn trong src/rcr/data/"
+                          "iaa_duong_lai.yaml rồi chạy lại; chưa chạy các biến thể còn lại. Đoạn hỏng do app "
+                          "(không phải khuôn) thì chạy lại kèm --chay-du.")
         logs.append(f"{b}={file_log}")
         _log(f"xong biến thể '{b}'")
     if getattr(args, "doan", ""):
@@ -197,6 +209,8 @@ def main(argv=None) -> int:
     p.add_argument("--doan", default="", help="chay: chi lai cac doan co ten khop regex (log ghi file -doan rieng, "
                    "khong cham)")
     p.add_argument("--bien-the-ds", default="bat,thuong,high,tat", help="chay: các biến thể lái lần lượt")
+    p.add_argument("--chay-du", action="store_true",
+                   help="chay: biến thể đầu hỏng đoạn vẫn chạy tiếp các biến thể sau (đoạn hỏng do app, không do khuôn)")
     p.add_argument("--out-dir", type=Path, default=OUT_MAC_DINH)
     a = p.parse_args(argv)
     try:

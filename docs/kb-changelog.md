@@ -10,6 +10,7 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 
 | Ngày | Đầu ra sai | Sửa gì | Trước → sau |
 |---|---|---|---|
+| 16/11/2026 | AIP921 lượt IAA + widget + rating mất ~6 giờ 40: rating chạy 23 case 34 phút ra 18 NEEDS_HUMAN cùng lý do "chưa có công thức gen"; khuôn IAA mới hỏng 2 lần, mỗi lần chạy cả 4 biến thể (~20 phút/biến thể) | `bo_case_thieu_cong_thuc`: case đầu báo thiếu công thức gen thì bỏ các case sau cần gen cùng loại (và case tiếp nối); `rcr-iaa chay` dừng khi biến thể đầu hỏng đoạn (`--chay-du` để chạy đủ) | rating 34 phút → vài phút; khuôn hỏng mất 20 phút thay vì 80 |
 | 16/11/2026 | Công thức tính năng đã đóng gói dùng chung giữa các app cùng khuôn: gen ngầm `khuon_chung`, rating / checkin `khuon` + `nhan_dien` chữ Home; app mới không cần khai riêng, chữ lệch thì thêm vào regex khuôn | `src/rcr/cong_thuc_khuon.py`, `gen_ngam_may.cong_thuc` | — |
 | 16/11/2026 | AIP921 rating R01-06 FAIL "popup không hiện ở Launcher" trong khi tool dừng ở bước gen (chưa tới chỗ popup) | `assert_check._ha_fail_khi_buoc_dung` hạ mọi FAIL vì vắng mặt (`VANG_MAT_RE`: không thấy / không hiện / không có request / không có event) khi tool dừng giữa bước | FAIL giả → đo tay |
 | 13/11/2026 | AIP918 Linguza 3.7.2 chấm theo tab 3.6.1 nên R01-01 FAIL giả "kỳ vọng 3.6.1" | QA tạo tab "TC SDK 3.7.2"; `tc_catalog.CA_HAI_SDK` ghim tab 3.7.2 | Tab 3.6.1 + checklist → tab 3.7.2 + checklist |

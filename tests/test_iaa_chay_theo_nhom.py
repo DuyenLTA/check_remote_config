@@ -272,3 +272,10 @@ def test_shortcut_chi_nhan_giu_icon_app_khong_nhan_giu_widget():
     ]
     import re
     assert [x.node_id for x in iaa_lai._icon_app(nodes, f"^{re.escape(ten)}$")] == ["2"]
+
+
+def test_doan_hong_cua_bien_the_dau_dung_luot_som():
+    """Khuon moi: bien the dau hong doan nao thi dung, khong chay 3 bien the sau (~20 phut moi bien the)."""
+    assert cli_iaa.doan_hong({"doan": [{"ten": "home", "xong": True}, {"ten": "reward", "xong": False}]}) == ["reward"]
+    assert cli_iaa.doan_hong({"doan": [{"ten": "home", "xong": True}]}) == []
+    assert cli_iaa.doan_hong(None) == []
