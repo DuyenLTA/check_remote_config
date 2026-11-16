@@ -27,11 +27,25 @@ TRINH_CHON_RE = re.compile(r"(?:providers\.media|photopicker|documentsui|com\.go
                            r"|gallery|android\.media)", re.I)
 
 
-def cong_thuc(package: str, loai: str) -> list[dict] | None:
-    """Danh sach buoc cua app `package` cho `loai` ("anh" / "video"); chua co -> None."""
+def cong_thuc(package: str, loai: str, nodes=None) -> list[dict] | None:
+    """Danh sach buoc cua app `package` cho `loai` ("anh" / "video"); app chua khai -> khuon khop chu Home
+    (`nodes`), khong khop -> None."""
     import yaml
+    from . import cong_thuc_khuon
     data = yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}
-    return (data.get(package) or {}).get(loai)
+    return (cong_thuc_khuon.chon(data, package, nodes)[1] or {}).get(loai)
+
+
+async def cong_thuc_tren_may(client, serial: str, package: str, loai: str, log: list[str]) -> list[dict] | None:
+    """Nhu cong_thuc; app chua khai thi ve Home, doc chu tren Home roi chon khuon dung chung."""
+    buoc = cong_thuc(package, loai)
+    if buoc:
+        return buoc
+    await _mot_buoc(client, serial, package, {"ve_man": "MainActivity|HomeActivity", "toi_da": 60}, log)
+    buoc = cong_thuc(package, loai, await _nodes(client, serial, package))
+    if buoc:
+        log.append(f"app chưa có công thức riêng — dùng khuôn chung khớp chữ Home ({loai})")
+    return buoc
 
 
 def _khop(n, mau: str) -> bool:
@@ -228,10 +242,10 @@ async def chay_ds(client, serial: str, package: str, ds: list[dict], log: list[s
 async def chay(client, serial: str, package: str, loai: str) -> dict:
     """{"co_cong_thuc", "xong", "log", "mua_sub"}: lai toi man result theo cong thuc; het luot gen thi mua sub
     roi chay lai cong thuc tu dau (mot lan)."""
-    buoc = cong_thuc(package, loai)
-    if not buoc:
-        return {"co_cong_thuc": False, "xong": False, "log": []}
     log: list[str] = []
+    buoc = await cong_thuc_tren_may(client, serial, package, loai, log)
+    if not buoc:
+        return {"co_cong_thuc": False, "xong": False, "log": log}
     da_mua = False
     while True:
         try:

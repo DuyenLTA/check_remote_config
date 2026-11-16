@@ -10,7 +10,7 @@
 # Kieu buoc dung chung voi data/rating_gen.yaml (rating_cong_thuc): ve_man, dong_neu_co, tap, tap_duoi (+ thu),
 # cho_man, cho_chu, chon_anh (trinh chon anh he thong: bam anh dau tien + Done).
 
-com.aiphotogenerator.aivideomaker.photoslideshow:     # AIP893 - do 13/11/2026 tren Pixel 6, ban 2.6.0
+com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo    # AIP893 - do 13/11/2026 tren Pixel 6, ban 2.6.0
   home: "MainActivity"
   home_chu: "^AI Try On Outfits$"
   vao_unlock:
@@ -26,3 +26,9 @@ com.aiphotogenerator.aivideomaker.photoslideshow:     # AIP893 - do 13/11/2026 t
     - tap: "^History$"
     - cho_chu: "^History$"
   moi_tao: "just now|\\d+\\s*(?:second|minute)s?\\s+ago"
+
+# KHUON: app chua co muc rieng -> chon khuon co `nhan_dien` khop chu tren Home (src/rcr/cong_thuc_khuon.py).
+khuon:
+  ai_photo:
+    nhan_dien: "^(Text to Image Generate|Magic With AI)$"
+    <<: *ai_photo

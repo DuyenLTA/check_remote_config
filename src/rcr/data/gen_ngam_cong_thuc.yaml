@@ -18,29 +18,26 @@
 # AIP892 BeautyGenie 2.2.0 (16) do tren Pixel 6 13/11/2026 (luot bot gn-233521): Premium bam Confirm vao thang
 # ProcessingActivity; anh I2I server mat 30-34s, video 45-250s; popup giay 12 (anh) / giay 5 (video), ve Home giay
 # 15 / 8; toast "Your result is ready" + View tu an ~8s; push xong "Your result is ready" / "Tap to view it".
-com.aimakeup.aifaceeditor.facemakeup.faceswap:
+# KHUON CHUNG: moi app gen anh/video cung template dung chung `khuon_chung`; muc theo package chi ghi phan RIENG
+# (toa do man, thu muc luu, giay popup theo Test Data, dong bo) va de len khuon chung. App lech chu thi THEM chu vao
+# regex khuon chung (A|B), dung tach muc rieng (user chot 16/11/2026: doc cong thuc dung chung cho nhanh).
+khuon_chung:
   tab_home: "^Home$"
-  tab_anh: "^Image Studio$"
-  tab_video: "^Video Studio$"
-  # Pixel 4 (Android 12): nut tab co chu nhung bounds rong -> bam theo ty le man (x, y) cua thanh duoi.
-  tab_toa_do: {tab_home: [0.167, 0.945], tab_anh: [0.5, 0.945], tab_video: [0.833, 0.945]}
+  tab_anh: "^(Image Studio|Image)$"
+  tab_video: "^(Video Studio|Video)$"
   lich_su: "^History$"
   mau: "^Sample$"
+  popup_anh_giay: 12.4         # mac dinh theo Test Data TC (generating_wait 15 / 8): = wait - 3 + 0,4
+  popup_video_giay: 5.4
+  thu_muc_luu: "Pictures/"
   xac_nhan: "^Confirm$"
-  man_chon_anh: "PhotoSelect"
-  man_cho: "ProcessingActivity"
-  man_ket_qua: "ResultActivity"
-  man_lich_su: "HistoryActivity"
+  man_chon_anh: "PhotoSelect|SelectPhoto|Picker|Gallery"
+  man_cho: "Processing|Generating|Loading"
+  man_ket_qua: "Result"
+  man_lich_su: "History"
   man_home: "MainActivity"
   popup_dem: "Taking you to Home in (\\d+)\\s*s"
   popup_ok: "^OK$"
-  popup_anh_giay: 12.4         # nhin dung giay nay sau khi vao man cho (= generating_wait - 3 + 0,4; Test Data 15 / 8)
-  popup_video_giay: 5.4
-  # Khung chu popup (man 1080x2400, Pixel 6 16/11/2026) - chi dung khi lan nhin UI truot qua popup; khung sai thi tach
-  # video bao "khong thay popup" (so voi khung truoc khi ve Home), khong ra PASS gia.
-  popup_hop_dem: [132, 1140, 948, 1284]
-  popup_hop_tieu_de: [312, 1040, 769, 1116]
-  popup_hop_ok: [505, 1380, 575, 1452]
   toast_xong: "^Your (?:result|creation) is ready$"
   toast_view: "^View$"
   toast_dang_tao: "Generating, please wait"
@@ -53,7 +50,6 @@ com.aimakeup.aifaceeditor.facemakeup.faceswap:
   het_luot_dong: "^Back to Home$"
   luu: "^Download in HD$"
   da_luu: "^Saved$"
-  thu_muc_luu: "Pictures/BeautyGenie"
   so_sanh: "Draggable slider handle"
   rate: "rate us"
   xin_quyen: "Get notified when it"
@@ -62,6 +58,18 @@ com.aimakeup.aifaceeditor.facemakeup.faceswap:
   widget: "^Add Widget$"
   chon_nhieu: "(\\d+) selected"
   xoa: "^Delete$"
+
+com.aimakeup.aifaceeditor.facemakeup.faceswap:
+  # Pixel 4 (Android 12): nut tab co chu nhung bounds rong -> bam theo ty le man (x, y) cua thanh duoi.
+  tab_toa_do: {tab_home: [0.167, 0.945], tab_anh: [0.5, 0.945], tab_video: [0.833, 0.945]}
+  popup_anh_giay: 12.4         # nhin dung giay nay sau khi vao man cho (= generating_wait - 3 + 0,4; Test Data 15 / 8)
+  popup_video_giay: 5.4
+  # Khung chu popup (man 1080x2400, Pixel 6 16/11/2026) - chi dung khi lan nhin UI truot qua popup; khung sai thi tach
+  # video bao "khong thay popup" (so voi khung truoc khi ve Home), khong ra PASS gia.
+  popup_hop_dem: [132, 1140, 948, 1284]
+  popup_hop_tieu_de: [312, 1040, 769, 1116]
+  popup_hop_ok: [505, 1380, 575, 1452]
+  thu_muc_luu: "Pictures/BeautyGenie"
   bo_dong:
     - mau: "Không có thanh kéo so sánh \\(T2I\\)"
       ly_do: "app chỉ tạo ảnh bằng style + ảnh (I2I), không có T2I / vùng mô tả"

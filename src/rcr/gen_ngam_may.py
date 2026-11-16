@@ -27,8 +27,13 @@ NHAT_KY_TOAST: list[tuple[float, bool]] = []
 
 
 def cong_thuc(package: str) -> dict | None:
+    """Khuon chung + muc rieng cua app (de len). App chua co muc rieng -> khuon chung, co co `_khuon_chung`."""
     import yaml
-    return (yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}).get(package)
+    data = yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}
+    chung, rieng = data.get("khuon_chung") or {}, data.get(package)
+    if rieng is None:
+        return {**chung, "_khuon_chung": True} if chung else None
+    return {**chung, **rieng}
 
 
 @dataclass

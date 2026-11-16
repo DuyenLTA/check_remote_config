@@ -110,9 +110,11 @@ def resolve(text: str, nodes):
     return None
 
 
-def cong_thuc(package: str) -> dict | None:
+def cong_thuc(package: str, nodes=None) -> dict | None:
+    """Muc rieng cua app; chua khai -> khuon dung chung khop chu Home (`nodes`) - src/rcr/cong_thuc_khuon.py."""
     import yaml
-    return (yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}).get(package)
+    from . import cong_thuc_khuon
+    return cong_thuc_khuon.chon(yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}, package, nodes)[1]
 
 
 async def lam(client, serial: str, action: Checkin, record: dict, ctx: dict) -> None:
@@ -128,7 +130,9 @@ async def lam(client, serial: str, action: Checkin, record: dict, ctx: dict) -> 
 
 
 async def _lam(client, serial, package, action: Checkin, ctx) -> dict:
-    ct = cong_thuc(package) or {}
+    ct = cong_thuc(package)
+    if ct is None:                       # app chua khai: doc chu man dang hien (thuong la Home) -> khuon dung chung
+        ct = cong_thuc(package, await rating_cong_thuc._nodes(client, serial, package)) or {}
     v = action.viec
     if v == "quan_sat":
         return await _quan_sat(client, serial, package)

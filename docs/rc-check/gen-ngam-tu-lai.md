@@ -18,6 +18,14 @@ Mỗi lần `chay` / `cham` tool **tải lại sheet TC** trước (QA hay sửa
 `rcr-check --tc gen-ngam --no-actions` vẫn đặt config + clear data + lái FO từng case (6+ phút) — dựng khung bằng `--khung`.
 Số đo lưu ở `out/gen-ngam-<pkg>-so.json`, video màn chờ ở `out/gen-ngam-video/`.
 
+## Công thức dùng chung (16/11/2026)
+
+`gen_ngam_cong_thuc.yaml` có `khuon_chung` (chữ màn của khuôn app gen ảnh/video); mục theo package chỉ ghi phần riêng
+(toạ độ màn, thư mục lưu, giây popup, `bo_dong`) và đè lên khuôn chung. App chưa có mục riêng vẫn chạy bằng khuôn chung;
+chữ nào lệch thì thêm vào regex khuôn chung (A|B). Rating (`rating_gen.yaml`) và daily checkin (`checkin_cong_thuc.yaml`)
+có mục `khuon` + `nhan_dien` (chữ Home) — app chưa khai thì tool về Home, chọn khuôn khớp (`src/rcr/cong_thuc_khuon.py`),
+giống IAA (`iaa_duong_lai.yaml`).
+
 ## Nhóm config (mỗi nhóm một lần đặt config + clear data + lái FO)
 
 | Nhóm | Case | Ghi chú |

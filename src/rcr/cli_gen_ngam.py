@@ -96,6 +96,9 @@ def chay(a) -> dict:
     ct = gen_ngam_may.cong_thuc(a.package)
     if not ct:
         raise RcError(f"{a.package}: chưa khai chữ trên màn trong src/rcr/data/gen_ngam_cong_thuc.yaml")
+    if ct.get("_khuon_chung"):
+        _log("App chưa có mục riêng trong gen_ngam_cong_thuc.yaml -> dùng khuôn chung; chữ nào không khớp (lái hụt) "
+             "thì thêm chữ của app vào regex khuôn chung (A|B)")
     from . import gen_ngam_khung
     if not a.luot:
         a.luot = str(gen_ngam_khung.dung(a.package, a.serial, a.out_dir, a.app_label))

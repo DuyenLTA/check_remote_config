@@ -18,7 +18,7 @@
 # free tu Check-in) -> Processing ~30s -> ResultActivity, popup Rating hien sau ~1s.
 # Het luot gen free trong ngay -> dialog "Daily Limit Reached" (do 12/11/2026 sau ~4 lan gen): khong gen tiep duoc.
 
-com.aimakeup.aifaceeditor.facemakeup.faceswap:
+com.aimakeup.aifaceeditor.facemakeup.faceswap: &beauty
   anh:
     - ve_man: "MainActivity"
       toi_da: 15
@@ -51,7 +51,7 @@ com.aimakeup.aifaceeditor.facemakeup.faceswap:
 # ~12s roi tu ve Home, ket qua nam o History (the dau tien) -> mo the moi toi man Result (chu "Result", "Back to Home").
 # Anh dau tien trong trinh chon anh phai la JPEG that: may co file video dat duoi .jpg (app khac luu) -> server tra
 # `validation.invalid-input`, man "Something Went Wrong" (khong phai bug app).
-com.aiphotogenerator.aivideomaker.photoslideshow:
+com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
   anh:
     - ve_chu: "^(Text to Image Generate|Magic With AI)$"
       tab: "^Home$"
@@ -110,3 +110,12 @@ com.aiphotogenerator.aivideomaker.photoslideshow:
     - tap_duoi: "^History$"
     - cho_chu: "^(Result|Back to Home|Download)$"
       toi_da: 150
+
+# KHUON: app chua co muc rieng -> tool ve Home, chon khuon co `nhan_dien` khop chu tren Home (src/rcr/cong_thuc_khuon.py).
+khuon:
+  beauty:                      # AIP892 BeautyGenie: Home co hang "QUICK FIXES"
+    nhan_dien: "^QUICK FIXES$"
+    <<: *beauty
+  ai_photo:                    # AIP893 / AIP885: Home co "Text to Image Generate" / "Magic With AI"
+    nhan_dien: "^(Text to Image Generate|Magic With AI)$"
+    <<: *ai_photo

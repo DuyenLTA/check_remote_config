@@ -154,3 +154,11 @@ def test_vao_tab_nut_bounds_rong_thi_bam_theo_toa_do(monkeypatch):
     m = asyncio.run(tao.vao_tab(None, "S", P, CT, "tab_anh"))
     assert bam == [(540, 2154)] and tao.dang_o_tab(m, CT, "tab_anh")
 
+
+
+def test_cong_thuc_app_moi_dung_khuon_chung_app_cu_de_len():
+    """User chot 16/11/2026: cong thuc gen ngam doc dung chung - app moi (AIP893) khong can muc rieng moi chay duoc."""
+    moi = may.cong_thuc("com.aiphotogenerator.aivideomaker.photoslideshow")
+    assert moi["_khuon_chung"] and moi["popup_dem"] and moi["xac_nhan"] and "bo_dong" not in moi
+    assert CT["thu_muc_luu"] == "Pictures/BeautyGenie" and CT["bo_dong"] and "_khuon_chung" not in CT
+    assert CT["popup_dem"] == moi["popup_dem"]

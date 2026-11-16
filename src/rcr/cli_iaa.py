@@ -12,6 +12,7 @@ Cach lai app moi bien the + bay da gap: docs/rc-check/iaa-chay-theo-nhom.md.
 from __future__ import annotations
 
 import argparse
+import re
 import json
 import subprocess
 import sys
@@ -124,6 +125,17 @@ def cham(args, ds=None) -> dict:
     return {"da_ghi": ghi, "bo_qua": bo, "con_cham_tay": con, "report": data.get("report", "")}
 
 
+def _log_cu(args, da_lai: dict) -> list[str]:
+    """Log cua bien the KHONG lai trong lan nay nhung da lai o lan truoc (chay tiep `--bien-the-ds high,tat` sau khi
+    lenh bi cat): thieu log `bat` thi moi dong "request high truoc / co request" bi cham FAIL gia (AIP893 16/11/2026)."""
+    ra = []
+    for b in iaa_nhom.BIEN_THE:
+        f = Path(args.out_dir) / f"iaa-{args.package}-{b}.log"
+        if b not in da_lai and f.is_file() and f.stat().st_size:
+            ra.append(f"{b}={f}")
+    return ra
+
+
 def chay(args) -> dict:
     """4 bien the noi tiep tren MOT may: dat config -> lai FO toi Home + tu lai duong IAA (ghi log FA-SVC) -> tra -> cham."""
     import asyncio
@@ -151,14 +163,23 @@ def chay(args) -> dict:
                 raise RcError(f"{args.package}: Home không khớp khuôn nào trong src/rcr/data/iaa_duong_lai.yaml — thêm "
                               "chữ của app vào regex khuôn gần nhất (hoặc khai khuôn mới) theo "
                               "docs/rc-check/iaa-chay-theo-nhom.md.")
-            file_log = Path(args.out_dir) / f"iaa-{args.package}-{b}.log"
+            if getattr(args, "doan", ""):
+                # Lai lai rieng vai doan (vd Uninstall hong vi widget de len icon): log ghi file rieng, khong de log
+                # day du cua bien the; cham thi noi hai file (`rcr-iaa cham --log b=<file noi>`).
+                doan = [d for d in doan if re.search(args.doan, d.get("ten", ""), re.I)]
+                if not doan:
+                    raise RcError(f"--doan {args.doan!r}: không đoạn nào của khuôn {nguon} khớp")
+            hau_to = "-doan" if getattr(args, "doan", "") else ""
+            file_log = Path(args.out_dir) / f"iaa-{args.package}-{b}{hau_to}.log"
             _log(f"Lái đường IAA biến thể '{b}' ({nguon})...")
             lai[b] = asyncio.run(iaa_lai.lai(client, args.serial, args.package, doan, file_log, _log))
         finally:
             tra(args)
         logs.append(f"{b}={file_log}")
         _log(f"xong biến thể '{b}'")
-    args.log = logs
+    if getattr(args, "doan", ""):
+        return {"duong_lai": nguon, "lai": lai, "logs": logs, "thoi_gian_s": round(time.monotonic() - bat_dau)}
+    args.log = logs + _log_cu(args, lai)
     kq = cham(args, ds) if args.luot else {}
     return {"duong_lai": nguon, "lai": lai, "logs": logs, "thoi_gian_s": round(time.monotonic() - bat_dau), **kq}
 
@@ -173,6 +194,8 @@ def main(argv=None) -> int:
     p.add_argument("--luot", default="", help="file lượt .luot.json của lượt rcr-check --tc iaa")
     p.add_argument("--log", action="append", metavar="BIEN_THE=FILE", help="log logcat -v epoch của một lượt lái")
     p.add_argument("--ghi-de", action="store_true", help="ghi đè cả dòng đã PASS/FAIL")
+    p.add_argument("--doan", default="", help="chay: chi lai cac doan co ten khop regex (log ghi file -doan rieng, "
+                   "khong cham)")
     p.add_argument("--bien-the-ds", default="bat,thuong,high,tat", help="chay: các biến thể lái lần lượt")
     p.add_argument("--out-dir", type=Path, default=OUT_MAC_DINH)
     a = p.parse_args(argv)
