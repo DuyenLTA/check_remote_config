@@ -120,3 +120,37 @@ def test_record_khung_moi_dong_cho_tool_lai_theo_nhom():
     assert rec["key"] == "IAA-01" and rec["verdict"] == "NEEDS_HUMAN"
     assert [l["v"] for l in rec["lines"]] == ["NEEDS_HUMAN", "NEEDS_HUMAN"]
     assert [l["e"] for l in rec["lines"]] == ["Load native khi vào Home.", "Show đúng ID."]
+
+
+def test_vao_tab_nut_bounds_rong_thi_bam_theo_toa_do(monkeypatch):
+    """16/11/2026 Pixel 4 (Android 12): nut tab 'Image Studio' co chu nhung bounds [0,0][0,0] -> moi nhom gen ngam
+    LAI HUT 'khong vao duoc tab tao anh'. Bam theo `tab_toa_do` cua cong thuc app."""
+    import asyncio
+    from rcr import gen_ngam_tao as tao
+    home = may.Man(0, P, "x.MainActivity", [_n("Home", b=(0, 0, 0, 0)), _n("Image Studio", b=(0, 0, 0, 0), i=1)])
+    tab_anh = may.Man(0, P, "x.MainActivity", [_n("Image Studio", b=(48, 98, 486, 190), i=2)])
+    nhin = iter([tab_anh])
+    bam = []
+
+    async def ve_main(*a):
+        return home
+
+    async def nhin_may(*a):
+        return next(nhin)
+
+    async def size(*a):
+        return 1080, 2280
+
+    async def tap(c, s, x, y):
+        bam.append((x, y))
+
+    async def khong(*a, **k):
+        return None
+    monkeypatch.setattr(tao, "ve_main", ve_main)
+    monkeypatch.setattr(tao.may, "nhin", nhin_may)
+    monkeypatch.setattr(tao.device_app, "screen_size", size)
+    monkeypatch.setattr(tao.device_app, "tap", tap)
+    monkeypatch.setattr(tao.asyncio, "sleep", khong)
+    m = asyncio.run(tao.vao_tab(None, "S", P, CT, "tab_anh"))
+    assert bam == [(540, 2154)] and tao.dang_o_tab(m, CT, "tab_anh")
+

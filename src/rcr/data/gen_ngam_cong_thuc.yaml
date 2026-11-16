@@ -22,6 +22,8 @@ com.aimakeup.aifaceeditor.facemakeup.faceswap:
   tab_home: "^Home$"
   tab_anh: "^Image Studio$"
   tab_video: "^Video Studio$"
+  # Pixel 4 (Android 12): nut tab co chu nhung bounds rong -> bam theo ty le man (x, y) cua thanh duoi.
+  tab_toa_do: {tab_home: [0.167, 0.945], tab_anh: [0.5, 0.945], tab_video: [0.833, 0.945]}
   lich_su: "^History$"
   mau: "^Sample$"
   xac_nhan: "^Confirm$"

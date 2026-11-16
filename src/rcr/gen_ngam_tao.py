@@ -129,6 +129,13 @@ async def vao_tab(client, serial, package, ct, tab: str) -> may.Man:
         nut = next((n for n in m.tat_ca(ct[tab]) if n.bounds.top > 1500), None) or m.tim(ct[tab])
         if nut is not None:
             await bam(client, serial, nut, 1.2)
+        elif (ct.get("tab_toa_do") or {}).get(tab):
+            # Pixel 4 (Android 12, BeautyGenie 2.2.0 16/11/2026): nut tab thanh duoi co chu nhung bounds rong
+            # [0,0][0,0] -> bam theo ty le man khai trong cong thuc app.
+            rong, cao = await device_app.screen_size(client, serial)
+            x, y = ct["tab_toa_do"][tab]
+            await device_app.tap(client, serial, int(rong * float(x)), int(cao * float(y)))
+            await asyncio.sleep(1.2)
         m = await may.nhin(client, serial, package)
     return m
 

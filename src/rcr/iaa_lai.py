@@ -36,6 +36,7 @@ from . import device_app, fo_flow, rating_cong_thuc, ui_dump
 
 DATA = Path(__file__).parent / "data" / "iaa_duong_lai.yaml"
 TRANG_LAUNCHER_TOI_DA = 15            # vivo V2143: icon AIP893 o trang 9
+SHORTCUT_TOI_DA = 120.0               # ca buoc shortcut (tim icon + nhan giu): qua thi bo doan, khong treo luot
 CAI_DAT_RE = re.compile(r"packageinstaller|uninstaller", re.I)
 AD_TRUOC_BUOC = ("tap", "tap_duoi", "cho_chu", "chon_anh")
 
@@ -70,21 +71,38 @@ async def nhan_shortcut(client, serial: str, package: str, sid: str) -> str:
 
 async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, log: list[str]) -> bool:
     """Nhan giu icon app tren launcher roi bam muc shortcut. Activity cua shortcut thuong khong export ->
-    `am start` bi chan (AIP893 13/11/2026), chi launcher mo duoc."""
+    `am start` bi chan (AIP893 13/11/2026), chi launcher mo duoc. Toi da SHORTCUT_TOI_DA giay: Pixel 6 16/11/2026
+    ket 7+ phut o day (lat 15 trang man hinh chinh, nhan giu tung icon trung tien to ten) -> dung, bao hong doan."""
+    try:
+        return await asyncio.wait_for(_shortcut_lam(client, serial, package, nhan_app, sid, log), SHORTCUT_TOI_DA)
+    except asyncio.TimeoutError:
+        log.append(f"quá {SHORTCUT_TOI_DA:.0f}s chưa mở được shortcut {sid!r} — bỏ đoạn này")
+        await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
+        return False
+
+
+async def _shortcut_lam(client, serial: str, package: str, nhan_app: str, sid: str, log: list[str]) -> bool:
     if not nhan_app:
         from . import iaa_khuon
         ten = await iaa_khuon.nhan_icon(client, serial, package)
         if not ten:
             log.append("không đọc được tên icon từ APK (cần aapt trong Android SDK) — khai `app:` cho bước shortcut")
             return False
-        nhan_app = f"^{re.escape(ten)}"
+        # Khop DUNG ten (khong chi tien to): may test cai nhieu app AI photo cung tien to -> nhan giu nham tung icon.
+        nhan_app = f"^{re.escape(ten)}$"
     cac_nhan = await cac_nhan_shortcut(client, serial, package, sid)
     if not cac_nhan:
         log.append(f"app không có shortcut id={sid!r} (dumpsys shortcut)")
         return False
-    nhan = cac_nhan[0]
     muc = "^(" + "|".join(map(re.escape, cac_nhan)) + ")$"
     for _ in range(2):                                  # HOME 2 lan: ve trang dau cua launcher
+        await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
+        await asyncio.sleep(1.0)
+    # Pixel: icon app thuong chi nam trong ngan keo ung dung -> tim bang o tim kiem cua ngan keo truoc.
+    kq = await _shortcut_ngan_keo(client, serial, package, nhan_app, cac_nhan, muc, log)
+    if kq is not None:
+        return kq
+    for _ in range(2):
         await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
         await asyncio.sleep(1.0)
     for trang in range(TRANG_LAUNCHER_TOI_DA):
@@ -93,48 +111,84 @@ async def _shortcut(client, serial: str, package: str, nhan_app: str, sid: str, 
         # "Sorapix: AI Hair Changer") -> thu lan luot; shortcut chi tinh khi man mo ra dung package dang test.
         icons = [n for n in nodes if rating_cong_thuc._khop(n, nhan_app) and not n.bounds.empty]
         for icon in icons:
-            x, y = icon.bounds.center
-            nut = None
-            for _lan in range(2):               # nhan giu luc launcher con truot trang thi khong ra popup -> thu lai
-                await client.shell(serial, "input", "swipe", str(x), str(y), str(x), str(y), "1500")
-                for _ in range(4):              # popup shortcut hien cham (Pixel 4: >1,5s) -> do lai toi ~4s
-                    await asyncio.sleep(1.0)
-                    nut = rating_cong_thuc.tim(ui_dump.parse_dump(await ui_dump.dump(client, serial)), muc)
-                    if nut:
-                        break
-                if nut:
-                    break
-                await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
-                await asyncio.sleep(1.0)
-                # Popup chi co vai cho: app dang co thong bao thi muc shortcut bi day ra ngoai (Pixel 4 AIP885
-                # 13/11/2026: "Your photo is almost here" -> chi con Rate Us / Create an Image). Xoa thong bao roi thu lai.
-                log.append(f"popup icon ({x},{y}) chưa có mục {nhan!r} — tạm ẩn thông báo của app rồi nhấn giữ lại")
-                await _xoa_thong_bao(client, serial, package)
-            if not nut:
-                log.append(f"nhấn giữ icon ({x},{y}) không thấy mục shortcut {muc!r}")
-                await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
-                await asyncio.sleep(1.0)
-                continue
-            await device_app.tap(client, serial, *nut.bounds.center)
-            await asyncio.sleep(2.0)
-            pkg, act = await device_app.focus(client, serial)
-            if CAI_DAT_RE.search(f"{pkg} {act}"):
-                for _ in range(2):
-                    await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
-                    await asyncio.sleep(1.0)
-                log.append(f"mục {nhan!r} mở trình gỡ cài đặt của hệ thống — đã huỷ, không gỡ")
-                return False
-            if pkg and pkg != package:
-                # Shortcut cua app KHAC trung ten: thoat ra, khong lam gi tren app do (HOME ve trang 1 -> dung tim).
-                log.append(f"icon ({x},{y}) mở app khác ({pkg}) — thoát, không lái app đó")
-                await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
-                return False
-            log.append(f"shortcut {nhan}")
-            return True
+            kq = await _thu_icon(client, serial, package, icon, cac_nhan, muc, log)
+            if kq is not None:
+                return kq
         await client.shell(serial, "input", "swipe", "900", "1200", "150", "1200", "300")   # sang trang launcher
         await asyncio.sleep(1.5)                                                             # cho truot xong
         log.append(f"chưa thấy icon ở trang {trang + 1}")
     return False
+
+
+async def _shortcut_ngan_keo(client, serial, package, nhan_app, cac_nhan, muc, log) -> bool | None:
+    """Mo ngan keo ung dung (vuot len tu day), go ten app vao o tim kiem, nhan giu icon ket qua.
+    None = launcher khong co o tim kiem / khong ra icon -> de cach lat trang man hinh chinh lam tiep."""
+    w, h = await device_app.screen_size(client, serial)
+    await client.shell(serial, "input", "swipe", str(w // 2), str(int(h * 0.92)), str(w // 2), str(int(h * 0.25)), "300")
+    await asyncio.sleep(1.5)
+    nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+    o_tim = next((n for n in nodes if not n.bounds.empty and re.search(
+        r"search", f"{n.resource_id} {n.text} {n.content_desc}", re.I)), None)
+    if o_tim is None:
+        log.append("ngăn kéo ứng dụng không có ô tìm kiếm — tìm trên màn hình chính")
+        return None
+    await device_app.tap(client, serial, *o_tim.bounds.center)
+    await asyncio.sleep(1.0)
+    ten = re.sub(r"^\^|\$$", "", nhan_app).replace("\\", "")
+    await client.shell(serial, "input", "text", shlex.quote(ten.split(":")[0].strip().replace(" ", "%s")))
+    await asyncio.sleep(2.0)
+    nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+    icons = [n for n in nodes if rating_cong_thuc._khop(n, nhan_app) and not n.bounds.empty]
+    for icon in icons:
+        kq = await _thu_icon(client, serial, package, icon, cac_nhan, muc, log)
+        if kq is not None:
+            return kq
+    log.append(f"tìm '{ten}' trong ngăn kéo ứng dụng không ra icon — tìm trên màn hình chính")
+    return None
+
+
+async def _thu_icon(client, serial, package, icon, cac_nhan, muc, log) -> bool | None:
+    """Nhan giu mot icon, bam muc shortcut. True = da mo shortcut cua app; False = dung (mo trinh go / app khac);
+    None = icon nay khong ra muc shortcut -> thu icon khac."""
+    nhan = cac_nhan[0]
+    x, y = icon.bounds.center
+    nut = None
+    for _lan in range(2):               # nhan giu luc launcher con truot trang thi khong ra popup -> thu lai
+        await client.shell(serial, "input", "swipe", str(x), str(y), str(x), str(y), "1500")
+        for _ in range(4):              # popup shortcut hien cham (Pixel 4: >1,5s) -> do lai toi ~4s
+            await asyncio.sleep(1.0)
+            nut = rating_cong_thuc.tim(ui_dump.parse_dump(await ui_dump.dump(client, serial)), muc)
+            if nut:
+                break
+        if nut:
+            break
+        await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        await asyncio.sleep(1.0)
+        # Popup chi co vai cho: app dang co thong bao thi muc shortcut bi day ra ngoai (Pixel 4 AIP885
+        # 13/11/2026: "Your photo is almost here" -> chi con Rate Us / Create an Image). Xoa thong bao roi thu lai.
+        log.append(f"popup icon ({x},{y}) chưa có mục {nhan!r} — tạm ẩn thông báo của app rồi nhấn giữ lại")
+        await _xoa_thong_bao(client, serial, package)
+    if not nut:
+        log.append(f"nhấn giữ icon ({x},{y}) không thấy mục shortcut {muc!r}")
+        await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        await asyncio.sleep(1.0)
+        return None
+    await device_app.tap(client, serial, *nut.bounds.center)
+    await asyncio.sleep(2.0)
+    pkg, act = await device_app.focus(client, serial)
+    if CAI_DAT_RE.search(f"{pkg} {act}"):
+        for _ in range(2):
+            await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+            await asyncio.sleep(1.0)
+        log.append(f"mục {nhan!r} mở trình gỡ cài đặt của hệ thống — đã huỷ, không gỡ")
+        return False
+    if pkg and pkg != package:
+        # Shortcut cua app KHAC trung ten: thoat ra, khong lam gi tren app do (HOME ve trang 1 -> dung tim).
+        log.append(f"icon ({x},{y}) mở app khác ({pkg}) — thoát, không lái app đó")
+        await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")
+        return False
+    log.append(f"shortcut {nhan}")
+    return True
 
 
 async def _xoa_thong_bao(client, serial: str, package: str) -> None:

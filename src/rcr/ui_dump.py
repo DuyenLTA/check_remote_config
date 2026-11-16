@@ -154,6 +154,22 @@ def app_nodes(nodes: list[DeviceNode], package: str = "") -> list[DeviceNode]:
     return [n for n in out if n.package == package] if package else out
 
 
+async def _dump_tat_animator(client, serial: str) -> str:
+    """Dump voi `animator_duration_scale` = 0 (animation dung ngay) roi luon tra gia tri cu. Tra stdout+stderr."""
+    cu, _e, _ = await client.shell(serial, "settings", "get", "global", "animator_duration_scale")
+    cu = (cu or "").strip()
+    await client.shell(serial, "settings", "put", "global", "animator_duration_scale", "0")
+    try:
+        await asyncio.sleep(0.5)
+        out, err, _ = await client.shell(serial, "uiautomator", "dump", DUMP_PATH, timeout=DUMP_TIMEOUT)
+        return f"{out} {err}"
+    finally:
+        if cu and cu != "null":
+            await client.shell(serial, "settings", "put", "global", "animator_duration_scale", cu)
+        else:
+            await client.shell(serial, "settings", "delete", "global", "animator_duration_scale")
+
+
 async def dump(client, serial: str) -> str:
     """Chup man hinh dang hien. Tra nguyen van XML."""
     guard(serial)
@@ -170,6 +186,10 @@ async def dump(client, serial: str) -> str:
             from . import mo_khoa_may
             await mo_khoa_may.mo_khoa(client, serial)
         await asyncio.sleep(NULL_ROOT_WAIT)
+    if "could not get idle state" in joined:
+        # Man co animation lap vo han (Compose: thanh keo so sanh o Result BeautyGenie 2.2.0, Pixel 4 16/11/2026) ->
+        # uiautomator khong bao gio thay UI dung yen. Tat animator tam thoi cho mot lan dump roi tra gia tri cu.
+        joined = await _dump_tat_animator(client, serial)
     if "ERROR" in joined.upper() or "Exception" in joined:
         raise AdbError(f"uiautomator dump that bai: {joined.strip()}")
     xml, err, _ = await client.shell(serial, "cat", DUMP_PATH, timeout=DUMP_TIMEOUT)

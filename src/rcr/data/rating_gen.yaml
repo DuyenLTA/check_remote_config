@@ -31,5 +31,82 @@ com.aimakeup.aifaceeditor.facemakeup.faceswap:
       toi: "Processing|Result"
       dung_neu: "^Daily Limit Reached$"
       toi_da: 150
+    # Ban co gen NGAM (16/11/2026, Pixel 4): man Processing tu ve Home o giay ~15, anh server 30-34s -> ket qua nam
+    # o History (the moi nhat co nhan "New"); mo the -> ResultActivity. Cho anh xong roi moi mo History.
+    - cho_man: "MainActivity|ResultActivity"
+      toi_da: 60
+    - cho: 30
+    - dong_neu_co: "^(Close|OK)$"
+    - tap: "^History$"
+      toi_da: 20
+    - cho_man: "HistoryActivity|ResultActivity"
+      toi_da: 20
+    - tap: "^New$"
+      toi_da: 60
     - cho_man: "ResultActivity"
+      toi_da: 30
+
+# AIP893 AI Photo Video Slideshow 2.6.0 (do tren Pixel 6 16/11/2026): app Compose (Home / chon anh / loading / result
+# deu la MainActivity) -> buoc theo CHU (ve_chu / cho_chu / xem_ads_chu, chay qua iaa_lai.buoc). Gen NGAM: man loading
+# ~12s roi tu ve Home, ket qua nam o History (the dau tien) -> mo the moi toi man Result (chu "Result", "Back to Home").
+# Anh dau tien trong trinh chon anh phai la JPEG that: may co file video dat duoi .jpg (app khac luu) -> server tra
+# `validation.invalid-input`, man "Something Went Wrong" (khong phai bug app).
+com.aiphotogenerator.aivideomaker.photoslideshow:
+  anh:
+    - ve_chu: "^(Text to Image Generate|Magic With AI)$"
+      tab: "^Home$"
+      toi_da: 120
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^Image to Image Generate$"
+    - dong_ad: 6
+    - cho_chu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
+    - cho: 3
+    - tap: "^(Tap To Upload|Upload|Upload Photo|Select Photo|Add Photo)$"
+    - chon_anh: true
+    - tap_neu_co: "^Confirm( \\(\\d+/\\d+\\))?$"
+    - cho: 4
+    - nhap: "a cat in space"
+      o: "(What do you have in mind|Describe|[Ee]nter .*prompt|[Tt]ype .*prompt)"
+    - tap: "^Generate$"
+    - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+      tap_tai: [0.5, 0.935]
+      toi_chu: "^\\d{1,3}%$"
+      dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+      toi_da: 300
+    - cho_chu: "^(Text to Image Generate|Magic With AI)$"
+      toi_da: 60
+    - cho: 25
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^History$"
+    - tap_duoi: "^History$"
+    - cho_chu: "^(Result|Back to Home)$"
+      toi_da: 90
+  video:
+    - ve_chu: "^(Text to Image Generate|Magic With AI)$"
+      tab: "^Home$"
+      toi_da: 120
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^Image to Video Generate$"
+    - dong_ad: 6
+    - cho_chu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
+    - cho: 3
+    - tap: "^(Tap To Upload|Upload|Upload Photo|Select Photo|Add Photo)$"
+    - chon_anh: true
+    - tap_neu_co: "^Confirm( \\(\\d+/\\d+\\))?$"
+    - cho: 4
+    - nhap: "a cat walking"
+      o: "(What do you have in mind|Describe|[Ee]nter .*prompt|[Tt]ype .*prompt)"
+    - tap: "^Generate$"
+    - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+      tap_tai: [0.5, 0.935]
+      toi_chu: "^\\d{1,3}%$"
+      dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+      toi_da: 300
+    - cho_chu: "^(Text to Image Generate|Magic With AI)$"
+      toi_da: 60
+    - cho: 60
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^History$"
+    - tap_duoi: "^History$"
+    - cho_chu: "^(Result|Back to Home|Download)$"
       toi_da: 150

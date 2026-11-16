@@ -126,7 +126,45 @@ def test_null_root_node_mai_khong_het_thi_van_bao_loi(monkeypatch):
 
 def test_loi_dump_khac_khong_thu_lai(monkeypatch):
     monkeypatch.setattr(ui_dump, "NULL_ROOT_WAIT", 0)
-    adb = _DumpAdb(["ERROR: could not get idle state."])
-    with pytest.raises(AdbError, match="idle state"):
+    adb = _DumpAdb(["ERROR: something else."])
+    with pytest.raises(AdbError, match="something else"):
         asyncio.run(ui_dump.dump(adb, "18311FDF60085N"))
     assert adb.so_lan_dump == 1
+
+
+class _AnimAdb(_DumpAdb):
+    """Ghi lai lenh `settings` de kiem animator duoc tat roi tra ve gia tri cu."""
+
+    def __init__(self, dumps, cu="1.0"):
+        super().__init__(dumps)
+        self.cu, self.settings = cu, []
+
+    async def shell(self, serial, *args, timeout=None):
+        if args[0] == "settings":
+            self.settings.append(args[1:])
+            return (self.cu if args[1] == "get" else ""), "", 0
+        return await super().shell(serial, *args, timeout=timeout)
+
+
+def test_khong_idle_thi_tat_animator_dump_lai_roi_tra(monkeypatch):
+    """16/11/2026 Pixel 4, BeautyGenie 2.2.0: man Result co thanh keo animation lap -> 'could not get idle state'
+    moi lan dump -> tat animator mot lan dump roi tra gia tri cu."""
+    monkeypatch.setattr(ui_dump.asyncio, "sleep", _khong_cho)
+    adb = _AnimAdb(["ERROR: could not get idle state.", "UI hierchary dumped to: x"])
+    assert "<hierarchy" in asyncio.run(ui_dump.dump(adb, "18311FDF60085N"))
+    assert adb.so_lan_dump == 2
+    assert adb.settings == [("get", "global", "animator_duration_scale"),
+                            ("put", "global", "animator_duration_scale", "0"),
+                            ("put", "global", "animator_duration_scale", "1.0")]
+
+
+def test_khong_idle_ca_khi_tat_animator_thi_bao_loi_va_xoa_setting_chua_co(monkeypatch):
+    monkeypatch.setattr(ui_dump.asyncio, "sleep", _khong_cho)
+    adb = _AnimAdb(["ERROR: could not get idle state."] * 2, cu="null")
+    with pytest.raises(AdbError, match="idle state"):
+        asyncio.run(ui_dump.dump(adb, "18311FDF60085N"))
+    assert adb.settings[-1] == ("delete", "global", "animator_duration_scale")
+
+
+async def _khong_cho(*_a, **_k):
+    return None

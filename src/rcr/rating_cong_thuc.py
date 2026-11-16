@@ -207,12 +207,20 @@ async def _mua_sub(client, serial: str, package: str, log: list[str]) -> bool:
     return True
 
 
+async def _buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bool:
+    """Mot buoc cong thuc qua bo chay cua IAA (`iaa_lai.buoc`): them cac buoc cho app Compose moi man chung mot
+    activity (ve_chu / cho_chu / xem_ads_chu / dong_ad / nhap / tap_neu_co...), buoc cu thi roi ve `_mot_buoc`.
+    AIP893 (16/11/2026): Home / chon anh / loading / result deu la MainActivity -> cong thuc theo activity khong lai duoc."""
+    from . import iaa_lai
+    return await iaa_lai.buoc(client, serial, package, b, log)
+
+
 async def chay_ds(client, serial: str, package: str, ds: list[dict], log: list[str], bien: dict | None = None) -> bool:
     """Chay mot danh sach buoc cong thuc bat ky (dung chung cho tab daily checkin). `bien`: thay "{ten}" trong gia tri."""
     for b in ds:
         if bien:
             b = {k: (v.format(**bien) if isinstance(v, str) and "{" in v else v) for k, v in b.items()}
-        if not await _mot_buoc(client, serial, package, b, log):
+        if not await _buoc(client, serial, package, b, log):
             return False
     return True
 
@@ -228,7 +236,7 @@ async def chay(client, serial: str, package: str, loai: str) -> dict:
     while True:
         try:
             for b in buoc:
-                if not await _mot_buoc(client, serial, package, b, log):
+                if not await _buoc(client, serial, package, b, log):
                     return {"co_cong_thuc": True, "xong": False, "log": log, "mua_sub": da_mua}
             return {"co_cong_thuc": True, "xong": True, "log": log, "mua_sub": da_mua}
         except HetLuot:

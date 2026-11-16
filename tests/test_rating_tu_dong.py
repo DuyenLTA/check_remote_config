@@ -127,3 +127,15 @@ def test_cham_popup_theo_vi_tri_chi_bat_result():
     assert assert_rating.cham("Home không hiện popup.", d)["verdict"] == "PASS"
     assert assert_rating.cham('Result hiện popup; event placement_name = "result".', d)["verdict"] == "PASS"
     assert assert_rating.cham("Exit_click không hiện popup, app thoát bình thường.", d)["verdict"] == "PASS"
+
+
+def test_cong_thuc_app_compose_chay_buoc_theo_chu():
+    """App Compose (AIP893): cong thuc dung buoc cua iaa_lai (cho / ve_chu / xem_ads_chu) -> chay_ds phai hieu."""
+    import asyncio
+    pkg = "com.aiphotogenerator.aivideomaker.photoslideshow"
+    ds = rating_cong_thuc.cong_thuc(pkg, "anh")
+    assert ds and any("xem_ads_chu" in b for b in ds) and any("ve_chu" in b for b in ds)
+    assert rating_cong_thuc.cong_thuc(pkg, "video")
+    log: list[str] = []
+    assert asyncio.run(rating_cong_thuc.chay_ds(None, "s", pkg, [{"cho": 0}, {"back": 0}], log))
+    assert log == ["chờ 0s", "BACK ×0"]

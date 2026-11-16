@@ -110,6 +110,82 @@ khuon:
           - cho: 4
           - back: 3
 
+  # App lam dep (muc 3 sheet KT: 501_home_banner, inter_back, reward_img_vid, inter_style, native_result_img_vid,
+  # native_loading, native_reason_uninstall, inter_uninstall). Do 16/11/2026 tren Pixel 4: AIP892 BeautyGenie 2.2.0.
+  # Moi man la Activity rieng (MainActivity / PhotoSelect / Processing / History / Result) -> buoc theo activity.
+  # Home: hang style duoi "QUICK FIXES" (the Before/After), nut History (desc). Gen NGAM: Processing tu ve Home o giay
+  # ~15, anh server 30-34s -> mo History, the "New" -> Result. Man Result co animation lap (dump can tat animator).
+  beauty_genie:
+    nhan_dien: "^QUICK FIXES$"
+    doan:
+      - ten: Home (banner reload 10s, preload inter style / inter back)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 180
+          - dong_neu_co: "^(Close|Not now)$"
+          - cho: 35
+      - ten: Style lần 1 (inter style), Upload ảnh (preload reward, native loading), back (không inter back liền sau inter style)
+        buoc:
+          - ve_man: "MainActivity"
+          - dong_neu_co: "^(Close|Not now)$"
+          - tap_duoi: "^QUICK FIXES$"
+          - dong_ad: 6
+          - cho_man: "PhotoSelect"
+            toi_da: 40
+          - cho: 6
+          - back: 1
+          - dong_ad: 6
+          - cho: 5
+      - ten: Style lần 2 cùng session (không inter style), back ở Upload (inter back)
+        buoc:
+          - ve_man: "MainActivity"
+          - dong_neu_co: "^(Close|Not now)$"
+          - tap_duoi: "^QUICK FIXES$"
+            thu: 2
+          - dong_ad: 6
+          - cho_man: "PhotoSelect"
+            toi_da: 40
+          - cho: 6
+          - back: 1
+          - dong_ad: 8
+          - cho: 5
+      - ten: Gen ảnh bằng style (reward, native loading reload 5s, native result qua History)
+        buoc:
+          - ve_man: "MainActivity"
+          - dong_neu_co: "^(Close|Not now)$"
+          - tap_duoi: "^QUICK FIXES$"
+          - dong_ad: 6
+          - cho_man: "PhotoSelect"
+            toi_da: 40
+          - tap_duoi: "^Sample$"
+          - tap: "^Confirm$"
+          - xem_ads: "^(Watch Ads \\(\\d/\\d\\)|Free Generate)$"
+            toi: "Processing|Result"
+            dung_neu: "^Daily Limit Reached$"
+            toi_da: 200
+          - cho_man: "MainActivity|ResultActivity"
+            toi_da: 60
+          - cho: 25
+          - dong_neu_co: "^(Close|OK|Not now)$"
+          - tap: "^History$"
+            toi_da: 20
+          - cho_man: "HistoryActivity|ResultActivity"
+            toi_da: 20
+          - tap: "^New$"
+            toi_da: 60
+          - cho_man: "ResultActivity"
+            toi_da: 30
+          - cho: 10
+          - back: 2
+          - dong_ad: 8
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+          - cho: 8
+          - dong_ad: 6
+          - cho: 4
+          - back: 3
+
   # App fitness (muc 3 sheet KT: banner_home, inter_home, reward_nutrition, inter_back, native_reason_uninstall,
   # inter_uninstall). Do 16/11/2026 tren vivo V2143: AIP921 Fitatics 1.1.0. Moi man trong MainActivity (Compose);
   # nut "Continue" / tab Workout - Nutrition co chu nhung bounds rong -> `tap_toa_do`. Sau pm clear, FO xong con
