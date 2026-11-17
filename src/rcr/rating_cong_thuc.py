@@ -24,12 +24,21 @@ NHIP = 1.0
 DONG_TOI_DA = 4
 LUONG_FO_RE = re.compile(r"Splash|AdActivity|Language|Onboarding|Question|Billing", re.I)
 GOI_SUB = "weekly"      # goi test ngan nhat (chu ky test 5 phut)
-# Mua sub qua nut tren sheet xem ads (AIP893 "Unlock Now"): goi test weekly het han sau ~30 phut (5 phut x 6 lan
-# gia han) < ca tab rating -> uu tien goi dai nhat, Paywall khong co thi lui dan.
-GOI_SUB_UU_TIEN = ("yearly", "monthly", "weekly")
-# (serial, package) da mua (hoac da thu mua) qua nut trong tien trinh nay: sub gan voi tai khoan Play, clear data van
-# con -> moi lan chay rcr-check chi mua mot lan, mua hong cung khong thu lai moi case.
-_DA_MUA_QUA_NUT: set[tuple[str, str]] = set()
+# Mua sub qua nut tren sheet xem ads (AIP893 "Unlock Now"): user chot 17/11/2026 uu tien weekly (gia test re nhat),
+# Paywall khong co thi lui dan. Goi test weekly het han sau ~30 phut (5 phut x 6 lan gia han) -> xem MUA_LAI_SAU.
+GOI_SUB_UU_TIEN = ("weekly", "monthly", "yearly")
+# Sau chung nay giay ke tu lan mua truoc, sheet xem ads hien lai = goi test da het han -> mua lai, khong lui ve xem ads
+# (may khong fill rewarded thi moi lan gen mat 5-10 phut roi hong).
+MUA_LAI_SAU = 25 * 60
+# (serial, package) -> luc da mua (hoac da thu mua) qua nut trong tien trinh nay: sub gan voi tai khoan Play, clear
+# data van con -> trong MUA_LAI_SAU chi mua mot lan, mua hong cung khong thu lai moi case.
+_DA_MUA_QUA_NUT: dict[tuple[str, str], float] = {}
+
+
+def nen_mua_qua_nut(serial: str, package: str, bay_gio: float | None = None) -> bool:
+    """Chua mua lan nao trong tien trinh, hoac lan truoc da qua MUA_LAI_SAU (goi test weekly da het han)."""
+    luc = _DA_MUA_QUA_NUT.get((serial, package))
+    return luc is None or (time.monotonic() if bay_gio is None else bay_gio) - luc >= MUA_LAI_SAU
 # Trinh chon anh he thong: o anh co desc "Photo taken on ..." (photopicker Android 13+), nut xac nhan Done / Add.
 ANH_RE = re.compile(r"^(?:Photo|Ảnh|Anh)\b.*(?:taken|chụp|chup)", re.I)
 XAC_NHAN_ANH_RE = re.compile(r"^(?:Done|Add|Select|Xong|Thêm|Chọn)$", re.I)
@@ -383,13 +392,13 @@ async def chay(client, serial: str, package: str, loai: str) -> dict:
     while True:
         try:
             for b in buoc:
-                if "mua_sub_chu" in b and (serial, package) not in _DA_MUA_QUA_NUT:
+                if "mua_sub_chu" in b and nen_mua_qua_nut(serial, package):
                     b = {**b, "mua_sub": True}        # chi luong rating mua; IAA (chay_ds / iaa_lai) khong bao gio
                 if not await _buoc(client, serial, package, b, log):
                     return {"co_cong_thuc": True, "xong": False, "log": log, "mua_sub": da_mua}
             return {"co_cong_thuc": True, "xong": True, "log": log, "mua_sub": da_mua}
         except MuaSub as e:
-            _DA_MUA_QUA_NUT.add((serial, package))
+            _DA_MUA_QUA_NUT[(serial, package)] = time.monotonic()
             da_mua = await _mua_qua_nut(client, serial, package, e.nut, log) or da_mua
         except HetLuot:
             if da_mua or not await _mua_sub(client, serial, package, log):
