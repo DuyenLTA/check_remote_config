@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 
-from .verdict_levels import FAIL, NEEDS_HUMAN, PASS, out, worst
+from .verdict_levels import FAIL, PASS, out, worst
 
 X_HIEN_RE = re.compile(r"\b(?:button\s+|n[úu]t\s+)?X\s+(ch[ưu]a\s+)?(?:hi[ệe]n|xu[ấa]t\s+hi[ệe]n)(?P<rest>[^.;]*)", re.I)
 GIAY_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*gi[âa]y", re.I)
@@ -48,16 +48,24 @@ def cham(text: str, drive: dict) -> dict | None:
     recs = _recs(drive or {})
     if not recs:
         return None
-    dung = next((r["dung"] for r in recs if r.get("dung")), "")
-    if dung:
-        # Buoc rating dung giua chung (vd gen khong toi result): khong co bang chung cho dong nao - khong FAIL gia.
-        return out(NEEDS_HUMAN, f"tool dừng ở bước rating: {dung}", "")
+    dung_rec = next((r for r in recs if r.get("dung")), None)
+    if dung_rec:
+        # Buoc rating dung giua chung: act_rating da tu lam lai (tru thieu cong thuc / app khong co shortcut Rating)
+        # -> chi PASS/FAIL, ghi ro so lan da lam va ly do dung.
+        return _da_thu(out(FAIL, f"làm bước rating {1 + (dung_rec.get('do_lai') or 0)} lần, tool vẫn dừng: "
+                                 f"{dung_rec['dung']}", ""))
     phan = [k for k in (_x(text, recs), _nhan(text, recs), _mo(text, recs), _back(text, recs), _dong(text, recs),
                         _thoat(text, recs), _shortcut(text, recs), _popup(text, recs), _event(text, recs)) if k]
     if not phan:
         return None
     v = worst([k["verdict"] for k in phan])
-    return out(v, "; ".join(k["reason"] for k in phan), " · ".join(str(k.get("actual") or "") for k in phan))
+    kq = out(v, "; ".join(k["reason"] for k in phan), " · ".join(str(k.get("actual") or "") for k in phan))
+    return _da_thu(kq) if any(k.get("da_thu_lai") for k in phan) else kq
+
+
+def _da_thu(kq: dict) -> dict:
+    """FAIL sau khi act_rating da tu lam lai / do lai: assert_check khong ha ve NEEDS_HUMAN du ly do co "khong thay"."""
+    return {**kq, "da_thu_lai": True}
 
 
 def _x(text, recs):
@@ -65,8 +73,11 @@ def _x(text, recs):
     if not m:
         return None
     do = next((r["do_x"] for r in reversed(recs) if (r.get("do_x") or {}).get("khung")), None)
+    lan = 1 + next((r.get("do_lai") or 0 for r in reversed(recs) if "do_x" in r), 0)
     if not do:
-        return out(NEEDS_HUMAN, "chưa đo được lúc nút X hiện (không có khung chụp lúc popup hiện)", "")
+        # act_rating da tu do lai DO_LAI lan ma van khong co khung chup nao luc popup hien
+        return _da_thu(out(FAIL, f"đo {lan} lần, lần nào cũng không có khung chụp lúc popup hiện — không đo được "
+                                 f"mốc nút X", ""))
     hien, chua = do.get("x_hien_s"), do.get("x_chua_hien_luc_s")
     so = GIAY_RE.search(m.group("rest") or "")
     moc = f"X hiện ở {hien}s sau popup" + (f", còn chưa có ở {chua}s" if chua is not None else "")
@@ -78,19 +89,22 @@ def _x(text, recs):
             return out(FAIL, f"X đã hiện ở {hien}s, trước mốc {n:g}s", moc)
         if chua is not None and chua >= n - 0.1:
             return out(PASS, f"mốc {chua}s (≥ {n:g}s) chưa có X", moc)
-        return out(NEEDS_HUMAN, f"không có khung chụp ở mốc {n:g}s để xác nhận X chưa hiện", moc)
+        # Khung cuoi chua co X truoc moc n ma khung dau co X sau moc: X hien o khoang giua, act_rating da do lai
+        # neu khoang ho qua rong. Khong chung minh duoc "chua hien o moc n" -> FAIL kem ly do.
+        return _da_thu(out(FAIL, f"đo {lan} lần, không có khung chụp ở mốc {n:g}s — không chứng minh được X chưa "
+                                 f"hiện lúc đó", moc))
     if NGAY_RE.search(m.group("rest") or ""):
         if do.get("co_tu_khung_dau") and hien > SAI_SO_X:
-            return out(NEEDS_HUMAN, f"khung chụp đầu tiên ({hien}s sau popup) đã có X — không biết X có từ 0s không",
-                       moc)
+            return _da_thu(out(FAIL, f"đo {lan} lần, khung chụp đầu tiên vẫn trễ ({hien}s sau popup) mà đã có X — "
+                       f"không chứng minh được X hiện ngay", moc))
         return out(PASS if hien <= SAI_SO_X else FAIL, f"X hiện {hien}s sau popup (kỳ vọng ngay)", moc)
     if so:
         n = float(so.group(1).replace(",", "."))
         if do.get("co_tu_khung_dau") and hien > n + SAI_SO_X:
-            # Khung dau da co X (chup bat dau tre - vd sau khi dong ad o result): chi biet X hien <= {hien}s,
-            # khong phai X hien dung luc {hien}s (AIP893 17/11/2026: 12.9s / 13.05s FAIL gia).
-            return out(NEEDS_HUMAN, f"khung chụp đầu tiên ({hien}s sau popup) đã có X — chụp bắt đầu trễ, chưa đo "
-                       f"được mốc {n:g}s", moc)
+            # Khung dau da co X (chup bat dau tre - vd sau khi dong ad o result): chi biet X hien <= {hien}s.
+            # act_rating da tu gen lai + do lai; toi day la ca cac lan do lai deu tre -> khong chung minh duoc moc.
+            return _da_thu(out(FAIL, f"đo {lan} lần, khung chụp đầu tiên vẫn trễ ({hien}s sau popup) mà đã có X — "
+                       f"không chứng minh được X hiện sau {n:g}s", moc))
         ok = n - SAI_SO_X <= hien <= n + SAI_SO_X
         return out(PASS if ok else FAIL, f"X hiện {hien}s sau popup (kỳ vọng {n:g}s)", moc)
     return out(PASS, "nút X có hiện", moc)

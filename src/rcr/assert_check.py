@@ -360,7 +360,8 @@ def _ha_fail_khi_buoc_dung(lines: list[dict], drive: dict) -> list[dict]:
     buoc = drive.get("stopped_at")
     ra = []
     for r in lines:
-        if r.get("verdict") == FAIL and VANG_MAT_RE.search(str(r.get("reason") or "")):
+        # `da_thu_lai`: FAIL cua tab rating sau khi tool da tu lam lai / do lai - giu FAIL (chi PASS/FAIL)
+        if r.get("verdict") == FAIL and not r.get("da_thu_lai") and VANG_MAT_RE.search(str(r.get("reason") or "")):
             r = {**r, "verdict": NEEDS_HUMAN,
                  "reason": f"tool dừng ở bước {buoc} (chưa làm được thao tác), chưa tới màn cần chấm: {r.get('reason')}"}
         ra.append(r)

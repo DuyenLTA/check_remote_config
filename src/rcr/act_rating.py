@@ -39,6 +39,8 @@ MAN_RESULT_CHU = "^Result$"                   # tieu de man Result cua app Compo
 CHUP_GIAY = 6.0         # cua so chup lien tuc tu luc toi result / bam BACK: du cho show_rating_button_x toi 4-5s
 CHO_POPUP = 8.0
 KHOI_DONG_CHUP = 0.8
+DO_LAI = 2              # so lan tu lam lai buoc rating khi buoc dung giua chung / lan do X khong du de cham
+SAI_SO_X_CHUP = 0.6     # = assert_rating.SAI_SO_X: khung dau cach popup <= muc nay coi nhu chup tu luc popup hien
 SAU_THAO_TAC = 1.5
 
 
@@ -90,14 +92,48 @@ def resolve(text: str, nodes):
 async def lam(client, serial: str, action: Rating, record: dict, ctx: dict) -> None:
     package = ctx["package"]
     moc = await log_moc.bay_gio(client, serial)
-    try:
-        ket = await _lam(client, serial, package, action, moc)
-    except (AdbError, OSError, ValueError, TypeError, KeyError) as exc:
-        # Loi bat ngo trong mot buoc khong duoc lam sap ca luot (cac case sau van phai chay): dung case nay.
-        ket = {"dung": f"lỗi khi làm bước rating {action.viec}: {type(exc).__name__}: {exc}"}
-    record["rating"] = {"viec": action.viec, **ket, "su_kien": await rating_may.su_kien(client, serial, moc)}
+    ket = await _lam_an_toan(client, serial, package, action, moc)
+    # Chi PASS/FAIL: buoc dung giua chung hay lan do X khong du de cham thi tu lam lai (dong popup con mo, lam lai ca
+    # buoc) chu khong tra viec cho nguoi. Het DO_LAI lan van vay thi assert_rating cham FAIL kem ly do.
+    lam_lai: list[str] = []
+    while len(lam_lai) < DO_LAI:
+        if ket.get("dung"):
+            if not _dung_lam_lai_duoc(ket["dung"]):
+                break
+            vi_sao = f"bước dừng: {ket['dung']}"
+        elif action.viec in ("gen", "thoat") and ket.get("popup") and _do_x_chua_ro(ket.get("do_x")):
+            vi_sao = _do_x_chua_ro(ket.get("do_x"))
+        else:
+            break
+        lam_lai.append(vi_sao)
+        await _dong_popup_rating(client, serial, package)
+        moc = await log_moc.bay_gio(client, serial)
+        ket = await _lam_an_toan(client, serial, package, action, moc)
+    record["rating"] = {"viec": action.viec, **ket, "do_lai": len(lam_lai), "lam_lai_vi": lam_lai,
+                        "su_kien": await rating_may.su_kien(client, serial, moc)}
     if ket.get("dung"):
         record["dung_lai"] = ket["dung"]
+
+
+async def _lam_an_toan(client, serial: str, package: str, action: Rating, moc: str) -> dict:
+    try:
+        return await _lam(client, serial, package, action, moc)
+    except (AdbError, OSError, ValueError, TypeError, KeyError) as exc:
+        # Loi bat ngo trong mot buoc khong duoc lam sap ca luot (cac case sau van phai chay): dung case nay.
+        return {"dung": f"lỗi khi làm bước rating {action.viec}: {type(exc).__name__}: {exc}"}
+
+
+async def _dong_popup_rating(client, serial: str, package: str) -> None:
+    """Truoc khi lam lai: popup Rating con mo thi bam X (khong co X thi BACK) de lan sau bat dau tu man sach."""
+    try:
+        pop = await rating_may.nhin(client, serial, package)
+        if pop.get("x"):
+            await device_app.tap(client, serial, *pop["x"])
+        elif pop.get("hien"):
+            await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        await asyncio.sleep(SAU_THAO_TAC)
+    except (AdbError, OSError, ValueError):
+        pass
 
 
 async def _lam(client, serial: str, package: str, action: Rating, moc: str) -> dict:
@@ -145,6 +181,29 @@ async def _cho_popup_do_x(client, serial: str, package: str, moc: str) -> dict:
     _, act = await _act(client, serial)
     return {"popup": pop.get("hien", False), "nut": pop.get("nut", ""), "x_luc_xem": bool(pop.get("x")),
             "viewed": vw, "do_x": do_x, "man": act}
+
+
+def _do_x_chua_ro(do_x: dict | None) -> str:
+    """Lan do X nay khong du de cham -> ly do (rong = do duoc). Ba truong hop:
+    - khong co khung chup nao (loi doc khung / khong thay nut X luc do);
+    - chup bat dau tre: khung dau da co X ma cach popup > SAI_SO_X_CHUP (AIP893 17/11/2026: 12.9s / 13.05s; lan chay
+      lai do dung 2.0s) -> chi biet X hien <= khung dau;
+    - hai khung ke nhau quanh luc X hien cach nhau > 2*SAI_SO_X_CHUP (may giat) -> khong biet X hien o giua luc nao."""
+    do_x = do_x or {}
+    hien, chua = do_x.get("x_hien_s"), do_x.get("x_chua_hien_luc_s")
+    if not do_x.get("khung"):
+        return f"không có khung chụp ({do_x.get('loi') or 'chưa chụp'})"
+    if do_x.get("co_tu_khung_dau") and (hien or 0) > SAI_SO_X_CHUP:
+        return f"khung chụp đầu đã có X ({hien}s sau popup) — chụp bắt đầu trễ"
+    if hien is not None and chua is not None and hien - chua > 2 * SAI_SO_X_CHUP:
+        return f"hở khung chụp từ {chua}s tới {hien}s quanh lúc X hiện"
+    return ""
+
+
+def _dung_lam_lai_duoc(dung: str) -> bool:
+    """Buoc dung vi luc chay (gen khong toi result, popup chua len, loi adb) thi lam lai co the qua. Thieu cong thuc gen
+    / app khong co shortcut Rating thi lam lai van vay."""
+    return not re.search(r"chưa có công thức|không có shortcut Rating", dung)
 
 
 async def _gen(client, serial: str, package: str, action: Rating, moc: str) -> dict:

@@ -198,9 +198,90 @@ def test_ve_home_app_compose_back_tu_result_khong_back_o_home(monkeypatch):
 
 
 def test_x_sau_n_giay_khung_dau_da_co_x_khong_fail_gia():
-    # Chup bat dau tre (khung dau 12.9s sau popup da co X) -> khong ket luan "X hien 12.9s" la FAIL
+    # Chup bat dau tre (khung dau 12.9s sau popup da co X) -> khong ket luan "X hien 12.9s"; sau khi tool da tu do lai
+    # ma van tre thi FAIL kem so lan do (khong tra NEEDS_HUMAN)
     gen = {"viec": "gen", "popup": True, "man": "M", "su_kien": [],
            "do_x": {"khung": 20, "x_hien_s": 12.94, "x_chua_hien_luc_s": None, "co_tu_khung_dau": True}}
-    assert assert_rating.cham("Button X hiện sau 2 giây.", _drive(gen))["verdict"] == "NEEDS_HUMAN"
+    kq = assert_rating.cham("Button X hiện sau 2 giây.", _drive(gen))
+    assert kq["verdict"] == "FAIL" and "đo 1 lần" in kq["reason"] and kq["da_thu_lai"]
+    gen["do_lai"] = 2
+    assert "đo 3 lần" in assert_rating.cham("Button X hiện sau 2 giây.", _drive(gen))["reason"]
+    gen.pop("do_lai")
     gen["do_x"] = {"khung": 20, "x_hien_s": 2.1, "x_chua_hien_luc_s": 1.6}
     assert assert_rating.cham("Button X hiện sau 2 giây.", _drive(gen))["verdict"] == "PASS"
+
+
+def test_khong_con_needs_human_o_tab_rating():
+    # Ba nhanh truoc day tra NEEDS_HUMAN: buoc dung, khong co khung chup, ho khung o moc N -> gio la FAIL co ly do
+    dung = {"viec": "gen", "dung": "gen anh không tới được result: hết giờ", "do_lai": 2, "su_kien": []}
+    kq = assert_rating.cham("Popup rating hiển thị.", _drive(dung))
+    assert kq["verdict"] == "FAIL" and "3 lần" in kq["reason"] and kq["da_thu_lai"]
+    khong_khung = {"viec": "gen", "popup": True, "man": "M", "su_kien": [], "do_x": {}, "do_lai": 2}
+    kq = assert_rating.cham("Button X hiện sau 2 giây.", _drive(khong_khung))
+    assert kq["verdict"] == "FAIL" and "đo 3 lần" in kq["reason"]
+    ho = {"viec": "gen", "popup": True, "man": "M", "su_kien": [],
+          "do_x": {"khung": 20, "x_hien_s": 3.4, "x_chua_hien_luc_s": 1.2}}
+    kq = assert_rating.cham("Button X chưa hiện ở mốc 2 giây.", _drive(ho))
+    assert kq["verdict"] == "FAIL" and "mốc 2s" in kq["reason"]
+
+
+def test_fail_da_thu_lai_khong_bi_ha_ve_needs_human():
+    from rcr import assert_check
+    dong = [{"verdict": "FAIL", "reason": "làm bước rating 3 lần, tool vẫn dừng: không thấy popup", "da_thu_lai": True},
+            {"verdict": "FAIL", "reason": "không thấy 'Rate' trên màn nào"}]
+    ra = assert_check._ha_fail_khi_buoc_dung(dong, {"status": "NEEDS_HUMAN", "stopped_at": 2})
+    assert [r["verdict"] for r in ra] == ["FAIL", "NEEDS_HUMAN"]
+
+
+def _lam_gia(monkeypatch, ket_lan):
+    """Chay act_rating.lam voi _lam_an_toan tra lan luot `ket_lan`; tra (record, so lan lam, so lan dong popup)."""
+    import asyncio
+    goi = {"lam": 0, "dong": 0}
+
+    async def lam(*_):
+        goi["lam"] += 1
+        return ket_lan[min(goi["lam"], len(ket_lan)) - 1]
+
+    async def dong(*_):
+        goi["dong"] += 1
+
+    async def moc(*_):
+        return "m"
+
+    async def su_kien(*_):
+        return []
+
+    monkeypatch.setattr(act_rating, "_lam_an_toan", lam)
+    monkeypatch.setattr(act_rating, "_dong_popup_rating", dong)
+    monkeypatch.setattr(act_rating.log_moc, "bay_gio", moc)
+    monkeypatch.setattr(act_rating.rating_may, "su_kien", su_kien)
+    record = {}
+    action = act_rating.Rating("gen", "gen", loai="anh")
+    asyncio.run(act_rating.lam(None, "s", action, record, {"package": "p"}))
+    return record, goi["lam"], goi["dong"]
+
+
+def test_chup_tre_thi_tu_lam_lai_va_do_lai(monkeypatch):
+    # AIP893 17/11/2026: khung dau 12.9s sau popup da co X -> dong popup, gen lai, lan sau do ra 2.0s
+    tre = {"popup": True, "do_x": {"khung": 20, "x_hien_s": 12.94, "co_tu_khung_dau": True}}
+    dung = {"popup": True, "do_x": {"khung": 20, "x_hien_s": 2.0, "x_chua_hien_luc_s": 1.6}}
+    record, lam, dong = _lam_gia(monkeypatch, [tre, dung])
+    assert (lam, dong) == (2, 1)
+    assert record["rating"]["do_x"]["x_hien_s"] == 2.0 and record["rating"]["do_lai"] == 1
+
+
+def test_buoc_dung_thi_tu_lam_lai_toi_da_hai_lan(monkeypatch):
+    dung = {"dung": "gen anh không tới được result: hết giờ"}
+    record, lam, _ = _lam_gia(monkeypatch, [dung])
+    assert lam == 3 and record["rating"]["do_lai"] == 2 and record["dung_lai"]
+
+
+def test_thieu_cong_thuc_thi_khong_lam_lai(monkeypatch):
+    record, lam, _ = _lam_gia(monkeypatch, [{"dung": "app chưa có công thức gen anh trong data/rating_gen.yaml"}])
+    assert lam == 1 and record["rating"]["do_lai"] == 0
+
+
+def test_do_duoc_ngay_thi_khong_lam_lai(monkeypatch):
+    ok = {"popup": True, "do_x": {"khung": 20, "x_hien_s": 0.3, "co_tu_khung_dau": True}}
+    _, lam, dong = _lam_gia(monkeypatch, [ok])
+    assert (lam, dong) == (1, 0)
