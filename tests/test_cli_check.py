@@ -438,6 +438,14 @@ def test_go_so_mo_ho_thi_dung_lai_chu_khong_chay_bua():
         tc_select.pick(runnable, "99")
 
 
+def test_khoa_bo_tinh_nang_khong_tab_nhan_ca_ten_bo_dang_truoc():
+    runnable = {"IAA-01-01": {}, "IAA-04-01": {}}
+    assert tc_select.pick(runnable, "iaa#IAA-01-01") == "IAA-01-01"
+    assert tc_select.pick(runnable, "IAA-04-01") == "IAA-04-01"
+    with pytest.raises(RcError, match="khong ton tai"):
+        tc_select.pick(runnable, "iaa#IAA-09-01")
+
+
 def test_chi_chay_dung_tab_duoc_neu_ten(adb, tmp_path):
     """Neu dich danh ban SDK thi chay them tab khac la mat thoi gian tren may that."""
     bl = baseline_of(adb)

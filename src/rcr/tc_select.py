@@ -129,6 +129,12 @@ def pick(runnable: dict, wanted: str) -> str:
             f"Case {wanted} co o nhieu tab: {', '.join(sorted(same_number))}. "
             "Ghi ro tab, vd --case " + sorted(same_number)[0]
         )
+    # Bo tinh nang dung tu sheet rieng (`--tc iaa`, `--tc gen-ngam`) co khoa khong ten tab (`IAA-01-01`),
+    # nhung bot / nguoi go van kem ten bo (`iaa#IAA-01-01`): bo tien to neu phan sau khop dung mot khoa tran.
+    if "#" in wanted:
+        bare = wanted.rsplit("#", 1)[-1]
+        if bare in runnable and "#" not in bare:
+            return bare
     raise RcError(
         f"Case {wanted} khong chay tu dong duoc (hoac khong ton tai). "
         f"Co {len(runnable)} case chay duoc, vd: {', '.join(sorted(runnable)[:5])}"

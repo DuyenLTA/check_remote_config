@@ -198,7 +198,10 @@ khuon:
           - tap: "^Too many ads$"
           - cho: 6
           # Bam Uninstall o man Why: app mo thang Settings > App info (KHONG bam Uninstall o day) -> BACK ve.
-          - tap: "^Uninstall$"
+          # vivo V2143 (17/11/2026): nut Cancel / Uninstall co chu nhung bounds rong -> con o man Why thi bam toa do.
+          - tap_neu_co: "^Uninstall$"
+          - tap_toa_do: [0.724, 0.959]
+            neu_co: "^Why do you uninstall\\?$"
           - dong_ad: 8
           - cho: 4
           - back: 3
