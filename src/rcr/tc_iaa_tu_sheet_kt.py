@@ -15,6 +15,8 @@ import re
 from dataclasses import dataclass
 
 from .models import Case, RcError
+from .tc_iaa_key_mo_ta import key_trong_mo_ta
+from .tc_iaa_tach_y import dong_expected
 
 MUC_INAPP_RE = re.compile(r"^\s*3\s*\.\s*ID ads in\s*-?\s*app", re.I)
 MUC_KHAC_RE = re.compile(r"^\s*\d+\s*\.\s+\S")
@@ -99,17 +101,14 @@ def doc_muc_inapp(rows: list[list[str]]) -> list[ViTri]:
     return list(vi_tri.values())
 
 
-def _dong_mo_ta(mo_ta: str) -> list[str]:
-    """Moi dong khong trong cua o mo ta -> mot dong Expected, giu nguyen chu (ke ca '*', '-', '=>')."""
-    return [d.strip() for d in mo_ta.splitlines() if d.strip()]
-
-
-def _case(n: str, v: ViTri, bien_the: str, bat: dict[Tang, bool], expects: list[str]) -> Case:
+def _case(n: str, v: ViTri, bien_the: str, bat: dict[Tang, bool], expects: list[str],
+          them: dict[str, str] | None = None) -> Case:
     noi = v.man or v.goc
+    dat = [f"{t.key}={'true' if b else 'false'}" for t, b in bat.items()] + [f"{k}={g}" for k, g in (them or {}).items()]
     return Case(
         n=n, feature=f"IAA · {noi}", description=f"{v.goc} — {v.loai or 'ads'}", sub_scenario=bien_the,
         precondition="User free (chưa mua Premium). Mô tả vị trí lấy từ mục 3 ID ads inapp, sheet Check thông số KT.",
-        test_data="\n".join(f"{t.key}={'true' if b else 'false'}" for t, b in bat.items()),
+        test_data="\n".join(dat),
         actions=(f"Đi tới vị trí {noi} đúng như mô tả (màn preload, thao tác hiển thị, thao tác reload).",
                  "Quan sát hiển thị ads + log request / load / show của app."),
         expects=tuple(expects), user_state="old_user",
@@ -119,6 +118,7 @@ def _case(n: str, v: ViTri, bien_the: str, bat: dict[Tang, bool], expects: list[
 def tao_case(ds: list[ViTri]) -> list[Case]:
     """Moi vi tri -> case bat ca hai / chi thuong / chi high / tat remote (tang nao thieu thi bo bien the do)."""
     out: list[Case] = []
+    key_vi_tri = {t.key for v in ds for t in (v.high, v.thuong) if t}
     for i, v in enumerate(ds, 1):
         noi, loai = v.man or v.goc, v.loai or "ads"
         tang = [t for t in (v.high, v.thuong) if t]
@@ -128,8 +128,9 @@ def tao_case(ds: list[ViTri]) -> list[Case]:
         out.append(_case(ma(1), v, "Bật remote (high + thường)" if len(tang) == 2 else "Bật remote",
                          {t: True for t in tang},
                          # Expected = NGUYEN VAN tung dong cot Ad description (user chot 12/11/2026: check dung
-                         # chinh xac cot nay, khong them cau tu viet) + dong ID lay tu cot ID cua sheet.
-                         [*_dong_mo_ta(v.mo_ta), don]))
+                         # chinh xac cot nay, khong them cau tu viet) + dong ID lay tu cot ID cua sheet. Dong gop
+                         # nhieu y (nhieu man / su kien / key) them moi y mot dong `↳` (user chot 17/11/2026).
+                         [*dong_expected(v.mo_ta), don]))
         if v.high and v.thuong:
             out.append(_case(ma(2), v, "Chỉ bật tầng thường", {v.high: False, v.thuong: True},
                              [f"Chỉ request unit thường {v.thuong.id}, không request unit high {v.high.id}.",
@@ -140,7 +141,24 @@ def tao_case(ds: list[ViTri]) -> list[Case]:
         out.append(_case(ma(4), v, "Tắt remote", {t: False for t in tang},
                          [f"Không request unit nào của vị trí ({', '.join(t.id for t in tang)}).",
                           f"Không preload, không hiển thị {loai} tại {noi}."]))
+        key_case = _case_key_mo_ta(ma(5), v, tang, key_vi_tri)
+        if key_case:
+            out.append(key_case)
     return out
+
+
+def _case_key_mo_ta(n: str, v: ViTri, tang: list[Tang], key_vi_tri: set[str]) -> Case | None:
+    """Cot Ad description co key RC khac (`free_scan_nutrition_limit_per_day = 3`...) -> mot case doi gia tri tung key
+    (vi tri van bat) roi check app an key: DEX co doc key + config tren may nhan gia tri moi + hanh vi theo gia tri moi."""
+    ds = key_trong_mo_ta(v.mo_ta, key_vi_tri)
+    if not ds:
+        return None
+    doi = {k: moi for k, _, moi in ds if moi is not None}
+    expects = [f"App ăn key {k}: đổi {goc} → {moi} thì app đọc key (soi DEX), nhận giá trị {moi} và chạy đúng theo "
+               f"{k} = {moi}." for k, goc, moi in ds if moi is not None]
+    expects += [f"Key {k} = {goc}: không tự suy được giá trị khác → đổi tay một giá trị khác rồi xem app có ăn key."
+                for k, goc, moi in ds if moi is None]
+    return _case(n, v, "Đổi giá trị key trong Ad description", {t: True for t in tang}, expects, doi)
 
 
 def tu_workbook(path, package: str) -> list[Case]:

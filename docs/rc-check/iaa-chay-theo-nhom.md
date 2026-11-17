@@ -9,6 +9,19 @@ Tool dựng từ mục **"3. ID ads inapp"** của tab app trong sheet "Check th
 `ii` (thứ tự trên sheet) ra 4 case: `IAA-ii-01` bật high + thường (Expected = nguyên văn từng dòng cột Ad description +
 dòng ID), `-02` chỉ thường, `-03` chỉ high, `-04` tắt. Tool **không lái được** câu "Đi tới vị trí X đúng như mô tả".
 
+**Check kĩ từng ý của cột Ad description** (chốt 17/11/2026): mọi màn preload, màn hiển thị, thao tác hiển thị, chu kỳ /
+sự kiện reload, khoảng cách giữa các ad, thứ tự high → thường, dừng khi remote tắt, key RC — không bỏ ý nào. Tool
+(`tc_iaa_tach_y`) giữ nguyên văn dòng gốc và thêm sau nó mỗi ý một dòng `↳` (danh sách màn / sự kiện / key tách ra từng
+dòng; câu văn nhiều vế thì một dòng "Đủ từng vế" liệt kê vế). Mỗi dòng `↳` một kết luận riêng bằng log cùng lượt; một
+màn / một vế chưa đo được thì dòng đó không PASS, case không PASS.
+
+**Key RC trong cột Ad description** (chốt 17/11/2026, vụ AIP921 `free_scan_nutrition_limit_per_day = 3`…): mô tả có key
+nào ngoài cặp `show_*` của vị trí thì phải check hết. Tool (`tc_iaa_key_mo_ta`) thêm case `IAA-ii-05`: vị trí vẫn bật,
+đổi giá trị từng key (số +1, true/false đảo). `rcr-iaa` không chạy case này — chạy riêng
+`rcr-check --tc iaa --case IAA-ii-05` rồi chấm từng key: app đọc key (soi DEX, `keys_not_used` rỗng) + config trên máy
+nhận giá trị mới + hành vi theo giá trị mới (vd free 4 lượt thay vì 3). Key app không đọc → FAIL. Key không suy được giá
+trị khác (chữ) thì tự đặt một giá trị khác bằng `--set` rồi chấm như trên.
+
 ## Quy trình — tool tự lái (4 lượt lái thay vì 36 case)
 
 1. `rcr-check --package P --serial S --tc iaa --case all --khung --report out/run-P-S-iaa-<hhmmss>.html --app-label "<tên> <ver>"`

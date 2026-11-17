@@ -195,6 +195,7 @@ tải lại sheet gốc mỗi lệnh (cả `--gop`/`--tiep`) rồi dựng bộ c
   đúng màn + đúng thời điểm (giờ request so với lúc vào màn / bấm nút), show đúng màn, reload đúng chu kỳ (≥ 3 lần liên
   tiếp, lệch ≤ 1s) và đúng sự kiện (back về Home, chọn lý do, hide app…), giới hạn số lần (1 ad/session, `*_fail_time`),
   tắt remote → 0 request của vị trí. Mỗi vế của câu mô tả là một kết luận riêng; vế nào không đo được thì không PASS.
+  **Check hết mọi ý của Ad description** (chốt 17/11/2026): mỗi màn / sự kiện / vế là một dòng `↳` riêng, key RC ngoài `show_*` có case `IAA-ii-05` — xem `docs/rc-check/iaa-chay-theo-nhom.md`.
   **Không lái từng case**: dựng khung `--case all --khung` (vài giây; `--no-actions` vẫn đặt config + clear data + lái FO từng case, 20+ phút), rồi `<bin>/rcr-iaa chay` — tool tự lái đường IAA của app
   (`src/rcr/data/iaa_duong_lai.yaml`) cho 4 biến thể và tự chấm phần đọc được từ log; app chưa có đường lái thì dò
   một lần theo `docs/rc-check/iaa-chay-theo-nhom.md` (kèm luật `*_fail_time`, bẫy đã gặp) rồi khai vào file.
