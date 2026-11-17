@@ -287,3 +287,12 @@ def test_load_ok_ma_khong_show_la_dat():
           {"t": 2.0, "ten": "ad_load", "unit": "u1", "vi_tri": 0, "tang": "high", "ok": True}]
     ra = dict((n, (k, ly)) for n, k, ly in iaa_cham_log.cham_mot_tang(ev, 0, "high", "thuong", "u1", "u2", True))
     assert ra[1][0] == "PASS" and ra[2][0] == "PASS" and "load ok" in ra[2][1]
+
+
+def test_config_cua_case_cho_report():
+    """Report IAA ghi đúng key rcr-iaa đã đặt cho vị trí của case (không còn "không đặt key nào")."""
+    cfg = iaa_nhom.config_cua_case(DS, "IAA-01-01")
+    assert cfg and set(cfg.values()) == {"true"}
+    tat = iaa_nhom.config_cua_case(DS, "IAA-01-04")
+    assert tat and set(tat.values()) == {"false"}
+    assert iaa_nhom.config_cua_case(DS, "widget#W1") == {}

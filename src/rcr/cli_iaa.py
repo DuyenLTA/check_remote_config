@@ -103,6 +103,12 @@ def cham(args, ds=None) -> dict:
     data = luot_file.doc(args.luot, args.package)
     records = data["records"]
     theo_key = {r.get("key"): k for k, r in enumerate(records)}
+    for r in records:
+        if not r.get("overrides"):
+            cfg = iaa_nhom.config_cua_case(ds, str(r.get("key") or ""))
+            if cfg:
+                r["overrides"] = cfg
+                r["reset"] = r.get("reset") if r.get("reset") not in (None, "", "—") else "pm clear (rcr-iaa đặt theo biến thể)"
     ghi, bo = [], []
     for ma, dong, ket, ly in kq:
         k = theo_key.get(ma)

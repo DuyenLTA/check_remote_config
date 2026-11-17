@@ -47,6 +47,18 @@ def gia_tri(ds: list[ViTri], bien_the: str) -> dict[str, str]:
     return ra
 
 
+def config_cua_case(ds: list[ViTri], ma: str) -> dict[str, str]:
+    """Key RC `rcr-iaa` da dat cho vi tri cua case `IAA-ii-nn` o bien the nn (de report hien o "Config da dat";
+    khung `--khung` khong dat config theo case nen record de trong -> report tung ghi "khong dat key nao")."""
+    try:
+        _, i, n = ma.split("-")
+        bien_the = next(b for b, (so, *_) in BIEN_THE.items() if so == int(n))
+        v = ds[int(i) - 1]
+    except (ValueError, StopIteration, IndexError):
+        return {}
+    return gia_tri([v], bien_the)
+
+
 def ma_case(i: int, bien_the: str) -> str:
     """Vi tri thu i (dem tu 1, thu tu sheet) -> ma case cua bien the, vd IAA-03-02."""
     return f"IAA-{i:02d}-{so_case(bien_the):02d}"
