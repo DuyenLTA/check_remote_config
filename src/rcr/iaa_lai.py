@@ -279,11 +279,16 @@ async def _co_man(client, serial: str) -> tuple[int, int]:
 async def _xem_ads_chu(client, serial: str, package: str, b: dict, log: list[str]) -> bool:
     het = time.monotonic() + float(b.get("toi_da", 150))
     rong, cao = await _co_man(client, serial)
+    bam_khong_mo = 0
     while time.monotonic() < het:
         _pkg, act = await device_app.focus(client, serial)
         if "AdActivity" in (act or ""):
+            bam_khong_mo = 0
             log.append(await fo_flow.dong_ad_dang_che(client, serial, cho=45) or "chờ ad hết giờ")
             continue
+        if bam_khong_mo >= rating_cong_thuc.BAM_KHONG_MO_TOI_DA:
+            log.append(rating_cong_thuc.KHONG_FILL_THUONG)
+            return False
         nodes = await rating_cong_thuc._nodes(client, serial, package)
         chan = rating_cong_thuc.tim(nodes, b["dung_neu"]) if b.get("dung_neu") else None
         if chan:
@@ -306,6 +311,7 @@ async def _xem_ads_chu(client, serial: str, package: str, b: dict, log: list[str
                 return False
             log.append(f"bấm {nut.text or nut.content_desc}")
             await device_app.tap(client, serial, x, y)
+            bam_khong_mo += 1
             await asyncio.sleep(4.0)
             continue
         await asyncio.sleep(rating_cong_thuc.NHIP)

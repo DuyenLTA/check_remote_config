@@ -16,6 +16,10 @@ from . import device_app, fo_flow, ui_dump
 
 DATA = Path(__file__).parent / "data" / "rating_gen.yaml"
 TOI_DA_MAC_DINH = 30.0
+# Bam "Watch Ads" bay nhieu lan lien ma khong mo AdActivity -> ad thuong khong load (kho khong fill): dung, khong cho het
+# 150-300s cua buoc (dem 16/11/2026 may R58 khong load duoc reward, moi lan gen ton toi da 5 phut).
+BAM_KHONG_MO_TOI_DA = 2
+KHONG_FILL_THUONG = "bấm Watch Ads 2 lần không mở quảng cáo thưởng — ad thưởng không load (kho không fill)"
 NHIP = 1.0
 DONG_TOI_DA = 4
 LUONG_FO_RE = re.compile(r"Splash|AdActivity|Language|Onboarding|Question|Billing", re.I)
@@ -138,6 +142,7 @@ async def _chon_anh(client, serial: str, het: float, log: list[str]) -> bool:
 
 async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str]) -> bool:
     het = time.monotonic() + float(buoc.get("toi_da", TOI_DA_MAC_DINH))
+    bam_khong_mo = 0                  # xem_ads: so lan bam nut lien ma chua thay AdActivity
     if "chon_anh" in buoc:
         return await _chon_anh(client, serial, het, log)
     if "cho_chu" in buoc:
@@ -187,8 +192,12 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
                 log.append(f"xem ads xong → {act.rsplit('.', 1)[-1]}")
                 return True
             if "AdActivity" in (act or ""):
+                bam_khong_mo = 0
                 log.append(await fo_flow.dong_ad_dang_che(client, serial, cho=45) or "chờ ad hết giờ")
                 continue
+            if bam_khong_mo >= BAM_KHONG_MO_TOI_DA:
+                log.append(KHONG_FILL_THUONG)
+                return False
             nodes = await _nodes(client, serial, package)
             chan = tim(nodes, buoc["dung_neu"]) if buoc.get("dung_neu") else None
             if chan:
@@ -198,6 +207,7 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
             if node:
                 log.append(f"bấm {node.text}")
                 await _bam(client, serial, node)
+                bam_khong_mo += 1
                 await asyncio.sleep(3.0)      # cho ad mo len, tranh bam lai nut cu
                 continue
         elif not ({"tap", "tap_duoi"} & set(buoc)):
