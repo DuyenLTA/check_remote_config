@@ -103,6 +103,9 @@ NHAC_LOAD_KHONG_SHOW = (
     "force-stop app luc ad dang chay (~2-3s) roi mo lai, xem bo dem + event ad_reward; KHONG ghi BLOCKED. Luong "
     "Uninstall: man Thank You chi hien ~3s sau khi dong inter 'Go cai dat' roi moi mo Cai dat - theo doi man tung giay "
     "sau khi dong inter, khong ket luan 'khong co man Thank You' (user chot 17/11/2026, AIP935).\n"
+    "Preload: ad da load o man truoc ma chua dung thi man sau dung lai (khong load them) la DUNG voi dong 'preload tai "
+    "man X' (user chot 17/11/2026, AIP921). KHONG BAO GIO ghi 'PO/QA xac nhan' trong ly do khi chua co xac nhan that; "
+    "cach hieu TC chua chac thi ghi NEEDS_HUMAN kem cau hoi cho QA.\n"
 )
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.

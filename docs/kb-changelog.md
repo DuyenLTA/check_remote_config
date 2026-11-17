@@ -54,7 +54,11 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 17/11/2026 | Preload: ad đã load ở màn trước mà chưa dùng thì màn sau dùng lại là đúng; phiên bot không được ghi "PO/QA xác nhận" khi chưa có xác nhận thật (AIP921 IAA-04-01) | `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
 | 17/11/2026 | Reward 'thoát giữa chừng không thưởng': force-stop app lúc ad đang chạy rồi mở lại để kiểm, không BLOCKED; luồng Uninstall: màn Thank You chỉ hiện ~3s sau khi đóng inter Gỡ cài đặt — theo dõi từng giây | `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
+| 17/11/2026 | Check kĩ mọi ý của cột Ad description (màn preload, màn hiển thị, chu kỳ / sự kiện reload…): dòng gộp nhiều màn / sự kiện / key tách mỗi ý một dòng `↳`, câu nhiều vế có dòng "Đủ từng vế" | `src/rcr/tc_iaa_tach_y.py`, `docs/rc-check/iaa-chay-theo-nhom.md` | — |
+| 17/11/2026 | Cột Ad description có key RC ngoài `show_*` (vd `free_scan_nutrition_limit_per_day = 3`) → check hết: sinh case `IAA-ii-05` đổi giá trị từng key, chấm app có ăn key không | `src/rcr/tc_iaa_key_mo_ta.py`, `src/rcr/tc_iaa_tu_sheet_kt.py`, `.claude/commands/rc-check.md` | — |
+| 17/11/2026 | Verify bug nhận cả Resolved lẫn Reviewing, PASS → Done (Resolved đi qua Reviewing); verify không giới hạn thời gian | `src/rcr/bot_jira_rest.py`, `src/rcr/bot_chay_claude.py` | 9327d16 |
 | 17/11/2026 | Dòng hiển thị ads: đã request + load ok đúng unit mà không show → PASS, không báo bug (chỉ cần có request + load là đúng) | `src/rcr/iaa_cham_log.py` cham_mot_tang, `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
 | 16/11/2026 | Rating: 'Rate on Google Play' mở store có sẵn của máy (vd vivo App Store khi máy chưa cài Google Play) là đúng, không phải bug; BACK trong store bên thứ ba là ngoài phạm vi | `src/rcr/bot_chay_claude.py` NHAC_RATING_KHONG_GEN | — |
 | 16/11/2026 | App không gen ảnh/video (không có màn Result gen): case rating cần màn Result gen ảnh/video bỏ qua — không test, không lấy màn khác thay, chấm tay `KHONG_AP_DUNG` và report bỏ hẳn case/dòng đó | `src/rcr/bot_chay_claude.py` NHAC_RATING_KHONG_GEN, `report_data.bo_khong_ap_dung` | — |
