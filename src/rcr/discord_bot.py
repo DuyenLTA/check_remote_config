@@ -37,6 +37,7 @@ from pathlib import Path
 import discord
 from discord import app_commands
 
+from . import firebase_dang_nhap
 from . import (audit_tom_tat, bot_bat_tin_lo, bot_canh_may, bot_chay_claude, bot_cho_publish, bot_cong_viec, bot_don_forum_chu_nhat,  # noqa: F401 - test thay
                bot_dung_luot, bot_forum, bot_gui_lai, bot_hang_doi, bot_hoi_dap, bot_hop_thu_bug, bot_jira_rest, bot_job_check, bot_job_verify,
                bot_kenh_project, bot_keo_sprint, bot_lenh_slash, bot_log_jira, bot_may_phu, bot_nhan_build,
@@ -84,6 +85,7 @@ class BuildBot(discord.Client):
         self.reviewer = env("DISCORD_JIRA_REVIEWER")
         self.dang_log: set[int] = set()  # msg_id dang log Jira -> bam Log Jira hai lan khong tao trung
         # Verify bug Reviewing goi Jira REST thang; thieu token -> tinh nang tat, luong Check giu nguyen.
+        self._da_bao_firebase = False
         self.jira_url, self.jira_token = env("JIRA_URL"), env("JIRA_PERSONAL_TOKEN")
         self.dev_ids = env("DISCORD_DEV_IDS")   # dev tag khi bao bug o kenh project (phay ngan cach)
         self.hoi_lock = asyncio.Lock()          # hoi dap: moi lan mot cau
@@ -230,9 +232,23 @@ class BuildBot(discord.Client):
             # Job chay xong nhung chua gui duoc ket qua truoc khi bot tat -> chi gui lai, khong can may.
             for job in self.q.lay_cho_gui():
                 asyncio.create_task(self._chay_tren(job, "", job.get("ten_may") or "?"))
-            for d in may:
-                if d.serial in self.ban or bot_hang_doi.may_ban(bot_hang_doi.khoa_may(OUT, d.serial)):
-                    continue
+            ranh = [d for d in may if d.serial not in self.ban
+                    and not bot_hang_doi.may_ban(bot_hang_doi.khoa_may(OUT, d.serial))]
+            if ranh and self.q.co_cho() and not await asyncio.to_thread(firebase_dang_nhap.con_han):
+                # CLI het han: nhan job la case doi config BLOCKED hang loat (dem 16/11/2026: 7 case) -> giu job
+                # trong hang, bao QA mot lan, cho nguoi `firebase login --reauth` roi tu chay tiep.
+                if not self._da_bao_firebase:
+                    self._da_bao_firebase = True
+                    try:
+                        await (await self._kenh_qa()).send(
+                            "⚠️ Firebase CLI trên máy bot hết đăng nhập — bot tạm không nhận job (đổi Remote Config sẽ "
+                            "hỏng). Chạy `firebase login --reauth` trên máy bot, bot tự chạy tiếp hàng đợi.")
+                    except Exception as exc:   # noqa: BLE001 - chi thieu tin bao
+                        log.warning("khong bao duoc Firebase het han: %s", exc)
+                ranh = []
+            elif ranh:
+                self._da_bao_firebase = False
+            for d in ranh:
                 job = self.q.lay()
                 if job is None:
                     break

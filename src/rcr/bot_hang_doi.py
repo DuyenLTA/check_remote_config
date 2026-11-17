@@ -174,6 +174,10 @@ class HangDoi:
         """Dang cai / chay test tren mot may (chinh hoac phu). Da co `kq` = chi con gui ket qua, khong dung RC."""
         return not self._ranh(j) and j.get("kq") is None
 
+    def co_cho(self) -> bool:
+        """Con job chua chay (chua giao may, chua co ket qua) - khong danh dau dang chay nhu `lay`."""
+        return any(self._ranh(j) and j.get("kq") is None for j in self.jobs)
+
     def lay(self) -> dict | None:
         """Job dau tien chua chay (khong xoa khoi hang toi khi `xong`). Moi may ranh goi mot lan.
         `dang_o` (job da giao cho may tinh phu, luu ca qua lan khoi dong lai) cung la dang chay.
