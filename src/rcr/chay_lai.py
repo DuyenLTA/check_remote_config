@@ -8,7 +8,16 @@ luot 22 case Piclux 2.4.0 (24/10/2026) ton gap ~3 lan thoi gian vi cac dong nay.
 
 from __future__ import annotations
 
+import re
+
 from .verdict_levels import FAIL, PASS
+
+# Ly do chac chan lap lai neu chay lai (dieu kien cua app / may, khong phai tool nhin tre): lan 1 da biet -> khong chay
+# lai. Truoc day lan 2 LUON chay vi chi so voi lan truoc (lan dau chua co gi de so) - AIP892/AIP893 16/11/2026 ton
+# ~10-40 phut/luot cho cac case "khong co shortcut", "chua co cong thuc", "man Result khong dump duoc", "can Android < 8".
+TAT_DINH_RE = re.compile(
+    r"app không có shortcut|chưa có công thức|could not get idle state|không chụp được màn Result"
+    r"|cần máy (?:Android|API)|kho không fill|không fill", re.I)
 
 
 def _dong(result: dict) -> list[dict]:
@@ -36,6 +45,9 @@ def ly_do_khong_chay_lai(result: dict, dau_truoc: tuple | None) -> str:
     con_mo = [l for l in _dong(result) if l["verdict"] not in (PASS, FAIL)]
     if con_mo and all(l.get("tinh") for l in con_mo):
         return f"{len(con_mo)} dòng chưa chấm đều suy từ câu chữ (phải nhìn mắt / không nêu kỳ vọng)"
+    if con_mo and all(l.get("tinh") or TAT_DINH_RE.search(l.get("reason") or "") for l in con_mo):
+        m = next(TAT_DINH_RE.search(l.get("reason") or "") for l in con_mo if TAT_DINH_RE.search(l.get("reason") or ""))
+        return f"lý do lặp chắc chắn ({m.group(0)}) — chạy lại vẫn y hệt"
     if dau_truoc is not None and dau_van(result) == dau_truoc:
         return "lần này ra y hệt lần trước ở mọi dòng"
     return ""

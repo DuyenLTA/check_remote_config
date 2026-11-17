@@ -42,3 +42,14 @@ def test_blocked_vi_dieu_kien_lan_chay_thi_van_chay_lai():
     kq = _kq(MAT, verdict="NOT_VERIFIABLE", run_verdict="BLOCKED")
     assert chay_lai.ly_do_khong_chay_lai(kq, chay_lai.dau_van(kq)) == ""
     assert chay_lai.ly_do_khong_chay_lai(_kq(MAT, verdict="BLOCKED"), None) == ""
+
+
+def test_ly_do_tat_dinh_thi_khong_chay_lai_ngay_lan_1():
+    """16/11/2026: 'khong co shortcut', 'chua co cong thuc', man Result khong dump... lan 2 luon y het -> bo ngay."""
+    from rcr import chay_lai
+    kq = {"verdict": "NEEDS_HUMAN", "runs": [{"verdict": "NEEDS_HUMAN", "assert": {"lines": [
+        {"n": 1, "verdict": "PASS", "reason": "ok"},
+        {"n": 2, "verdict": "NEEDS_HUMAN", "reason": "tool dừng ở bước rating: app không có shortcut Rating để mở"}]}}]}
+    assert "lặp chắc chắn" in chay_lai.ly_do_khong_chay_lai(kq, None)
+    kq["runs"][0]["assert"]["lines"][1]["reason"] = "chưa chụp được màn sau bước cuối"
+    assert chay_lai.ly_do_khong_chay_lai(kq, None) == ""
