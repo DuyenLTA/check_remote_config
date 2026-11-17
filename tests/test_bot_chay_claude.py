@@ -214,6 +214,7 @@ def test_ad_load_ok_khong_show_la_dat():
         assert "load ok dung unit ma khong show -> PASS" in p
         assert "force-stop app luc ad dang chay" in p and "man Thank You chi hien ~3s" in p
         assert "man sau dung lai" in p and "KHONG BAO GIO ghi 'PO/QA xac nhan'" in p
+        assert "chon lai ly do khac khong reload nua la DUNG" in p
 
 
 def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
