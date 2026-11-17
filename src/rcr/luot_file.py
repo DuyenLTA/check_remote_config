@@ -70,8 +70,28 @@ def ghi_nguyen_tu(path: Path, text: str) -> None:
             time.sleep(0.5)
 
 
+_CODE: list[str] = []
+
+
+def phien_ban_code() -> str:
+    """Commit code dang chay (+ '-sua' khi co file chua commit): biet luot nao chay code cu (16/11/2026 bot chay luot
+    AIP893 bang code truoc khi sua, ket qua lan voi luot code moi)."""
+    if not _CODE:
+        import subprocess
+        goc = Path(__file__).resolve().parents[2]
+        try:
+            sha = subprocess.run(["git", "-C", str(goc), "rev-parse", "--short", "HEAD"], capture_output=True,
+                                 text=True, timeout=10).stdout.strip()
+            sua = subprocess.run(["git", "-C", str(goc), "status", "--porcelain", "--untracked-files=no", "src"],
+                                 capture_output=True, text=True, timeout=10).stdout.strip()
+            _CODE.append((sha or "?") + ("-sua" if sua else ""))
+        except (OSError, subprocess.SubprocessError):
+            _CODE.append("?")
+    return _CODE[0]
+
+
 def ghi(path: Path, meta: dict, records: list[dict], xong: bool) -> None:
-    ghi_nguyen_tu(path, json.dumps({**meta, "phien_ban": PHIEN_BAN, "xong": xong,
+    ghi_nguyen_tu(path, json.dumps({**meta, "phien_ban": PHIEN_BAN, "code": phien_ban_code(), "xong": xong,
                                     "cap_nhat": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                                     "records": records}, ensure_ascii=False))
 

@@ -407,6 +407,38 @@ def thu_muc_luot(repo: Path, package: str, serial: str) -> Path:
     return d
 
 
+LUOT_DO_GIO = 12 * 3600
+
+
+def luot_do(repo: Path, package: str, serial: str, bay_gio: float | None = None) -> list[Path]:
+    """File luot chua xong (`xong`: false) cua package + may nay trong LUOT_DO_GIO gan day - luot bi cat giua chung
+    (bot restart / Dung / het gio)."""
+    now = time.time() if bay_gio is None else bay_gio
+    ra = []
+    for f in sorted((Path(repo) / "out").glob(f"*{package}*{serial}*.luot.json"), key=lambda x: -x.stat().st_mtime):
+        if now - f.stat().st_mtime > LUOT_DO_GIO:
+            continue
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not d.get("xong") and d.get("records"):
+            ra.append(f)
+    return ra[:6]
+
+
+def nhac_luot_do(repo: Path, package: str, serial: str) -> str:
+    """Luot truoc bi cat giua chung -> chay TIEP bang --tiep thay vi chay lai tu dau (16/11/2026: restart bot cat luot
+    AIP893, phien moi chay lai ca 5 tab ~3 tieng)."""
+    ds = luot_do(repo, package, serial)
+    if not ds:
+        return ""
+    return ("Luot truoc cua app nay tren may nay bi cat giua chung, con file luot CHUA xong: "
+            + ", ".join(f"`{f}`" for f in ds) + ". Bo nao co file do (dung tab / bo TC, sheet khong doi) thi chay "
+            "TIEP bang `rcr-check --tiep <file>` (rcr-iaa / rcr-gen-ngam: `--luot <file> --tiep` neu co), KHONG chay "
+            "lai tu dau; case da co ket qua giu nguyen. Truong `code` trong file ghi commit da chay case cu.\n")
+
+
 def nhac_thu_muc_luot(d: Path) -> str:
     return (f"\nThu muc rieng cua luot nay: `{d}` (env RCR_THU_MUC_LUOT). MOI file tam / log logcat / anh do tay / "
             "script phu cua luot ghi vao day - KHONG dung /tmp/rc, out/manual hay out/scratch-<ngay> chung (luot khac "
@@ -440,7 +472,7 @@ def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
     try:
         cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan, tabs, them_tinh_nang)
         thu_muc = thu_muc_luot(repo, package, serial)
-        prompt += nhac_thu_muc_luot(thu_muc)
+        prompt += nhac_thu_muc_luot(thu_muc) + nhac_luot_do(repo, package, serial)
         # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
         # Giu khoa may CA job (khong chi tung lenh rcr-check): giua hai lenh may khong con trong nhu ranh cho luot khac
         # chen vao. Lenh con biet cha da giu qua env RCR_GIU_MAY. May dang bi luot tay giu -> chay nhu cu (khoa tung lenh).

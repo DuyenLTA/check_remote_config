@@ -244,3 +244,18 @@ def test_moi_luot_mot_thu_muc_rieng(tmp_path):
     d = b.thu_muc_luot(tmp_path, "com.x", "S1")
     assert d.is_dir() and d.parent.parent == tmp_path / "out" and "com.x-S1-" in d.name
     assert str(d) in b.nhac_thu_muc_luot(d) and "/tmp/rc" in b.nhac_thu_muc_luot(d)
+
+
+def test_luot_do_chua_xong_thi_nhac_chay_tiep(tmp_path):
+    """16/11/2026: restart bot cat luot AIP893, phien moi chay lai tu dau ~3 tieng -> nhac --tiep file luot do."""
+    import json
+    import time
+    from rcr import bot_chay_claude as b
+    (tmp_path / "out").mkdir()
+    do = tmp_path / "out" / "run-com.x-S1-rating-1.luot.json"
+    do.write_text(json.dumps({"xong": False, "records": [{"key": "a"}]}), encoding="utf-8")
+    (tmp_path / "out" / "run-com.x-S1-widget-1.luot.json").write_text(json.dumps({"xong": True, "records": [{}]}),
+                                                                       encoding="utf-8")
+    assert b.luot_do(tmp_path, "com.x", "S1") == [do]
+    assert "--tiep" in b.nhac_luot_do(tmp_path, "com.x", "S1")
+    assert b.luot_do(tmp_path, "com.x", "S1", time.time() + b.LUOT_DO_GIO + 60) == []
