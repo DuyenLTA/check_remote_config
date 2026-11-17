@@ -35,6 +35,11 @@ async def dong_rate(client, serial, package, ct, man=None) -> bool:
         return False
     x = man.tim("^Close$")
     if x is None:
+        # Nut X cua popup hien tre show_rating_button_x giay (AIP892 = 2s, 17/11/2026): BACK luc nay o Home la thoat
+        # app (nhom chung / r06 lai hut ra launcher) -> cho X hien roi moi bam.
+        m2 = await may.cho(client, serial, package, lambda x2: x2.tim("^Close$"), 5.0)
+        x = m2.tim("^Close$") if m2 else None
+    if x is None:
         return False
     await bam(client, serial, x, 1.2)
     return True
@@ -79,9 +84,11 @@ async def dam_bao_premium(client, serial, package, premium) -> dict:
     """Goi test weekly gia han 5 phut / lan: het han giua luot thi mua lai (Premium la precondition cua bo TC)."""
     if premium:
         return {"premium": True, "mua": False}
-    if premium is None:
+    if premium is None or premium is False:
         # Log khoi dong chua noi ro (query billing hong / cham): mo lanh lai doc cho chac truoc khi mua - mua lai
         # khi goi con han ton ~40s moi nhom (do 16/11/2026).
+        # Ca khi da biet chua Premium: phien dau sau pm clear app dung danh sach SKU mac dinh (AIP892: vip.geni.*,
+        # Play tra 0 san pham -> Paywall khong co gia); phai mo lanh lan nua cho app doc SKU tu RC (vip.makeup.*).
         lanh = await sub_thao_tac.mo_lanh(client, serial, package)
         await sub_thao_tac.ve_home(client, serial, package)
         if lanh.get("premium"):

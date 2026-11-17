@@ -232,3 +232,14 @@ def test_gop_nhieu_tab_giu_bo_tc_cua_moi_tab(tmp_path):
     assert keys == ["rating#R1", "widget#W1"] and meta["tc"]["total"] == 2
     giu, da_xoa, _ = luot_file.loc_theo_tc(recs, meta["tc"]["cases"])
     assert da_xoa == ["rating#R2"] and sorted(r["key"] for r in giu) == ["rating#R1", "widget#W1"]
+
+
+def test_tab_chi_o_mot_file_khong_bi_loc_theo_tc(tmp_path):
+    """Gop bo IAA (config ep theo bien the) voi tab khac: tab chi o MOT file thi khong loc 'doi noi dung'."""
+    a, b = tmp_path / "a.json", tmp_path / "b.json"
+    luot_file.ghi(a, {"package": PKG, "tc_nguon": "iaa"}, [{"key": "IAA-01-01", "lines": []}], True)
+    luot_file.ghi(b, {"package": PKG}, [{"key": "widget#W1", "tab": "widget", "lines": []},
+                                        {"key": "widget#W2", "tab": "widget", "lines": []}], True)
+    luot_file.ghi(tmp_path / "c.json", {"package": PKG}, [{"key": "widget#W1", "tab": "widget", "lines": []}], True)
+    assert luot_file.tab_nhieu_file([str(a), str(b)], PKG) == set()
+    assert luot_file.tab_nhieu_file([str(a), str(b), str(tmp_path / "c.json")], PKG) == {"widget"}

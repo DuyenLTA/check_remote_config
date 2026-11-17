@@ -20,6 +20,12 @@ NHIP = 1.0
 DONG_TOI_DA = 4
 LUONG_FO_RE = re.compile(r"Splash|AdActivity|Language|Onboarding|Question|Billing", re.I)
 GOI_SUB = "weekly"      # goi test ngan nhat (chu ky test 5 phut)
+# Mua sub qua nut tren sheet xem ads (AIP893 "Unlock Now"): goi test weekly het han sau ~30 phut (5 phut x 6 lan
+# gia han) < ca tab rating -> uu tien goi dai nhat, Paywall khong co thi lui dan.
+GOI_SUB_UU_TIEN = ("yearly", "monthly", "weekly")
+# (serial, package) da mua (hoac da thu mua) qua nut trong tien trinh nay: sub gan voi tai khoan Play, clear data van
+# con -> moi lan chay rcr-check chi mua mot lan, mua hong cung khong thu lai moi case.
+_DA_MUA_QUA_NUT: set[tuple[str, str]] = set()
 # Trinh chon anh he thong: o anh co desc "Photo taken on ..." (photopicker Android 13+), nut xac nhan Done / Add.
 ANH_RE = re.compile(r"^(?:Photo|Ảnh|Anh)\b.*(?:taken|chụp|chup)", re.I)
 XAC_NHAN_ANH_RE = re.compile(r"^(?:Done|Add|Select|Xong|Thêm|Chọn)$", re.I)
@@ -34,6 +40,18 @@ def cong_thuc(package: str, loai: str, nodes=None) -> list[dict] | None:
     from . import cong_thuc_khuon
     data = yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}
     return (cong_thuc_khuon.chon(data, package, nodes)[1] or {}).get(loai)
+
+
+def ep_cau_hinh(package: str) -> dict[str, str]:
+    """Config tool phai TU DAT cho moi case tab rating cua app (muc `ep_cau_hinh` trong rating_gen.yaml).
+
+    App gen ngam (AIP893): man cho tu ve Home truoc khi anh xong -> result mo tu History khong ban popup
+    `placement=result`; phai giu `generating_wait_*` dai de result mo thang tu man cho. Dat bang `--set --keep`
+    khong duoc: moi lenh rcr-check doc baseline la go het gia tri testvsl. Key cua case van thang (gop sau)."""
+    import yaml
+    data = yaml.safe_load(DATA.read_text(encoding="utf-8")) or {}
+    muc = data.get(package) or {}
+    return {str(k): str(v) for k, v in (muc.get("ep_cau_hinh") or {}).items()}
 
 
 async def cong_thuc_tren_may(client, serial: str, package: str, loai: str, log: list[str]) -> list[dict] | None:
@@ -221,6 +239,42 @@ async def _mua_sub(client, serial: str, package: str, log: list[str]) -> bool:
     return True
 
 
+class MuaSub(Exception):
+    """Sheet xem ads co nut mua (`mua_sub_chu`): bo xem ads, mua sub qua nut nay roi gen lai."""
+
+    def __init__(self, nut):
+        super().__init__(nut.text or nut.content_desc)
+        self.nut = nut
+
+
+async def _mua_qua_nut(client, serial: str, package: str, nut, log: list[str]) -> bool:
+    """Gen bi chan sau reward ad (AIP893 'Watch Ads (0/2)'): may khong co fill rewarded thi moi lan gen cho het 300s
+    roi NEEDS_HUMAN. Bam nut mo Paywall ngay tren sheet do (user chot 16/11/2026: tab rating mua sub cho nhanh) roi mua
+    bang flow co san `sub_thao_tac.mua` (dang o Paywall thi doc luon, khong can profile). Mua xong mo lanh de billing
+    cap nhat; cong thuc chay lai tu dau (buoc dau ve Home, tu lai qua FO)."""
+    from . import sub_thao_tac
+    from .models import RcError
+    log.append(f"bấm {nut.text or nut.content_desc} (mua sub thay vì xem ads)")
+    await _bam(client, serial, nut)
+    await asyncio.sleep(3.0)
+    for goi in GOI_SUB_UU_TIEN:
+        try:
+            kq = await sub_thao_tac.mua(client, serial, package, goi, "approves", True)
+        except RcError as exc:
+            if "không có gói" in str(exc):
+                continue
+            log.append(f"mua sub lỗi: {exc} — gen theo đường xem ads")
+            await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+            return False
+        lanh = await sub_thao_tac.mo_lanh(client, serial, package)
+        log.append(f"mua sub {goi}: popup {'test' if (kq.get('popup') or {}).get('la_test') else 'không thấy'}"
+                   f" · premium={lanh.get('premium')}")
+        return True
+    log.append("Paywall không có gói yearly/monthly/weekly — gen theo đường xem ads")
+    await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+    return False
+
+
 async def _buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bool:
     """Mot buoc cong thuc qua bo chay cua IAA (`iaa_lai.buoc`): them cac buoc cho app Compose moi man chung mot
     activity (ve_chu / cho_chu / xem_ads_chu / dong_ad / nhap / tap_neu_co...), buoc cu thi roi ve `_mot_buoc`.
@@ -255,9 +309,14 @@ async def chay(client, serial: str, package: str, loai: str) -> dict:
     while True:
         try:
             for b in buoc:
+                if "mua_sub_chu" in b and (serial, package) not in _DA_MUA_QUA_NUT:
+                    b = {**b, "mua_sub": True}        # chi luong rating mua; IAA (chay_ds / iaa_lai) khong bao gio
                 if not await _buoc(client, serial, package, b, log):
                     return {"co_cong_thuc": True, "xong": False, "log": log, "mua_sub": da_mua}
             return {"co_cong_thuc": True, "xong": True, "log": log, "mua_sub": da_mua}
+        except MuaSub as e:
+            _DA_MUA_QUA_NUT.add((serial, package))
+            da_mua = await _mua_qua_nut(client, serial, package, e.nut, log) or da_mua
         except HetLuot:
             if da_mua or not await _mua_sub(client, serial, package, log):
                 return {"co_cong_thuc": True, "xong": False, "log": log, "mua_sub": da_mua}

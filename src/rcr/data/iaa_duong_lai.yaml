@@ -185,8 +185,21 @@ khuon:
       - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
         buoc:
           - shortcut: "(?i).*uninstall.*"
+          # AIP892 (Pixel 6 17/11/2026): shortcut mo lai app qua Splash -> Question -> UninstallActivity; truoc day
+          # chi cho 8s roi BACK khi con o Question -> doan bao "xong" ma chua toi man Uninstall nao.
+          - ve_man: "UninstallActivity"
+            toi_da: 150
           - cho: 8
           - dong_ad: 6
+          - cho_chu: "^Still want to uninstall$"
+          - tap: "^Still want to uninstall$"
+          - cho_chu: "^Why do you uninstall\\?$"
+          - cho: 6
+          - tap: "^Too many ads$"
+          - cho: 6
+          # Bam Uninstall o man Why: app mo thang Settings > App info (KHONG bam Uninstall o day) -> BACK ve.
+          - tap: "^Uninstall$"
+          - dong_ad: 8
           - cho: 4
           - back: 3
 

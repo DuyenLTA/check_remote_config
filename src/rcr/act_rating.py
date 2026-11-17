@@ -253,7 +253,7 @@ async def _back(client, serial: str, package: str) -> dict:
         pkg, act = await _act(client, serial)
     await asyncio.sleep(SAU_THAO_TAC)
     pkg, act = await _act(client, serial)
-    return {"truoc": truoc, "pkg": pkg, "man": act}
+    return {"truoc": truoc, "pkg": pkg, "man": act, "trong_app": pkg == package}
 
 
 async def _shortcut(client, serial: str, package: str, mo: bool) -> dict:

@@ -40,6 +40,7 @@ from . import (
     tc_select,
 )
 from . import bo_case_thieu_cong_thuc as thieu_ct
+from . import rating_cong_thuc
 from . import mang_cham_cua_so as cua_so_mod
 from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
@@ -220,7 +221,11 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             # mem giu cache cu (ads bat) nen khong ai thay. Key case tu ghi thi
             # case thang.
             nen = {k: "true" for k in rc_guards.NEN_ADS if k in baseline.configs}
-            runs = [nen | dict(luot) | them for luot in chosen["runs"]]
+            # Tab rating: config app can de toi duoc man cua case (rating_gen.yaml `ep_cau_hinh`), key case thang.
+            ep_rating = rating_cong_thuc.ep_cau_hinh(baseline.package) if key.startswith("rating#") else {}
+            if ep_rating:
+                log_fn("  ép điều kiện tab rating: " + ", ".join(f"{k}={v}" for k, v in ep_rating.items()))
+            runs = [nen | ep_rating | dict(luot) | them for luot in chosen["runs"]]
             # Report chi duoc co PASS/FAIL (user chot 2026-10-06): ket qua lo
             # lung (doc file trung luc SDK ghi, ad chua fill...) -> tu chay lai.
             lan_toi_da = so_lan_chay(key)

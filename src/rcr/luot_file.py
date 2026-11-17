@@ -166,6 +166,17 @@ def doc_nhieu(paths: list[str], package: str) -> tuple[dict, list[dict]]:
     return {**datas[-1], "tc": _gop_tc(d.get("tc") or {} for d in datas)}, gop(*(d["records"] for d in datas))
 
 
+def tab_nhieu_file(paths: list[str], package: str) -> set[str]:
+    """Tab co record o >= 2 file luot dang gop. Chi cac tab nay moi can loc theo bo TC moi nhat: tab chi o MOT file
+    thi bo TC trong file do la cung lan chay voi record (bo IAA / gen ngam co config ep theo bien the / nhom khac
+    voi config TC -> loc thi bo nham ca bo, AIP892 17/11/2026: gop 5 file mat 46 case)."""
+    dem: dict[str, int] = {}
+    for p in paths:
+        for t in {r.get("tab", "") for r in _gan_tab_nguon(doc(p, package)).get("records") or []}:
+            dem[t] = dem.get(t, 0) + 1
+    return {t for t, n in dem.items() if n >= 2}
+
+
 def _gop_tc(tcs) -> dict:
     """Bo TC cua cac file luot gop: moi TAB lay ban cua file SAU CUNG co tab do.
 

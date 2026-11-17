@@ -52,6 +52,11 @@ com.aimakeup.aifaceeditor.facemakeup.faceswap: &beauty
 # Anh dau tien trong trinh chon anh phai la JPEG that: may co file video dat duoi .jpg (app khac luu) -> server tra
 # `validation.invalid-input`, man "Something Went Wrong" (khong phai bug app).
 com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
+  # Tool tu dat moi case tab rating (rcr-check go het testvsl moi lenh nen `--set --keep` khong giu duoc): man cho
+  # dai hon thoi gian gen -> result mo thang tu man cho -> popup `placement=result` (do lai Samsung A13 17/11/2026).
+  ep_cau_hinh:
+    generating_wait_image_seconds: "60"
+    generating_wait_video_seconds: "300"
   anh:
     - ve_chu: "^(Text to Image Generate|Magic With AI)$"
       tab: "^Home$"
@@ -72,6 +77,8 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
       tap_tai: [0.5, 0.935]
       toi_chu: "^\\d{1,3}%$"
       dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+      # Sheet "Just One More Step!!!" (do R58TB198BNN 17/11/2026): may khong co fill rewarded -> mua sub qua nut nay
+      mua_sub_chu: "^Unlock Now$"
       toi_da: 300
     # Cho gen dai (generating_wait_image_seconds lon) -> result mo thang tu man cho, popup Rating hien o day (do
     # 16/11/2026: placement result chi ban khi vao result tu man cho, mo tu History KHONG hien popup).
@@ -107,6 +114,8 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
       tap_tai: [0.5, 0.935]
       toi_chu: "^\\d{1,3}%$"
       dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+      # Sheet "Just One More Step!!!" (do R58TB198BNN 17/11/2026): may khong co fill rewarded -> mua sub qua nut nay
+      mua_sub_chu: "^Unlock Now$"
       toi_da: 300
     - cho_chu: "^(100%|Result|Text to Image Generate|Magic With AI)$"
       toi_da: 300

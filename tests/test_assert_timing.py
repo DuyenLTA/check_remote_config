@@ -286,3 +286,9 @@ def test_303_co_load_thi_khong_cham_bam_x_la_kho_khong_fill():
     assert v(r) == "NEEDS_HUMAN" and "về muộn" in r["reason"]
     r = at.cham("Bấm X → sang màn tiếp theo.", tl(roi=6.0), {}, req_303=("*****034",))
     assert v(r) == "PASS"
+
+
+def test_dong_nut_x_cua_popup_widget_khong_cham_theo_ob3():
+    """Popup Add Widget: 'button X goc phai tren' khong phai nut X cua native OB3."""
+    assert at.cham("Có preview widget và button X góc phải trên.", tl(fail=1.0), {}) is None
+    assert at.cham("Button X hiện sau 2 giây.", tl(fail=1.0), {}) is not None

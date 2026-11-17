@@ -13,7 +13,9 @@ dong_neu_co / cho_chu / ve_man - chay bang `rating_cong_thuc`), them buoc rieng 
                            Bam xong ma thay trinh go cai dat he thong -> BACK huy, bao loi (khong bao gio go that)
   xem_ads_chu: <regex nut> man cung activity (Compose): bam nut xem ad toi khi thay `toi_chu: <regex>`, dong ad giua
                            chung; node co chu ma bounds rong (AIP893 'Watch Ads (0/2)') thi bam `tap_tai: [x, y]` (ty le man);
-                           `dung_neu: <regex>` (vd "Daily Free limit Reached") -> dung doan, bao het luot (khong mua sub)
+                           `dung_neu: <regex>` (vd "Daily Free limit Reached") -> dung doan, bao het luot (khong mua sub);
+                           `mua_sub_chu: <regex>` = nut mo Paywall tren sheet (AIP893 "Unlock Now"): CHI luong rating bam
+                           de mua sub thay vi xem ads (IAA khong mua: app Pro mat het ads)
   ve_chu: <regex>          ve man goc nhan theo CHU (app Compose: moi man chung mot activity, `ve_man` bao xong ngay):
                            lai FO / mo lai app neu can, dong ad, BACK toi khi thay chu. `man: <regex activity>`,
                            `tab: <regex>` = tab duoi ve man goc (bam truoc khi BACK)
@@ -290,6 +292,9 @@ async def _xem_ads_chu(client, serial: str, package: str, b: dict, log: list[str
         if b.get("toi_chu") and rating_cong_thuc.tim(nodes, b["toi_chu"]):
             log.append("xem ads xong")
             return True
+        mua = rating_cong_thuc.tim(nodes, b["mua_sub_chu"]) if b.get("mua_sub") and b.get("mua_sub_chu") else None
+        if mua is not None:
+            raise rating_cong_thuc.MuaSub(mua)        # chi luong rating bat `mua_sub`: mua thay vi cho reward ad
         nut = next((n for n in nodes if rating_cong_thuc._khop(n, b["xem_ads_chu"])), None)
         if nut is not None:
             if nut.bounds.empty and b.get("tap_tai"):

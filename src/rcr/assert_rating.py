@@ -135,7 +135,11 @@ def _back(text, recs):
         ok = bool(goc) and man == goc
     else:
         ok = {"home": "main" in man.lower()}.get(dich, dich in man.lower())
-    return out(PASS if ok else FAIL, f"BACK → {man or r.get('pkg')}", man)
+    # Google Play cung co activity ten "MainActivityPrivate": man ngoai app thi khong tinh la ve Home / Splash
+    if r.get("trong_app") is False:
+        ok = False
+    return out(PASS if ok else FAIL, f"BACK → {r.get('pkg')}/{man}" if r.get("trong_app") is False
+               else f"BACK → {man or r.get('pkg')}", man)
 
 
 def _dong(text, recs):

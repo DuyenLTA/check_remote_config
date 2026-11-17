@@ -99,7 +99,11 @@ def dung_lai_report(args: argparse.Namespace) -> dict:
     tc = meta.get("tc") or {}
     if tc.get("cases"):
         # Bo TC cua file CUOI la ban moi nhat: case da xoa / doi noi dung khong mang ket qua cu.
-        records, da_xoa, doi = luot_file.loc_theo_tc(records, tc["cases"])
+        nhieu = luot_file.tab_nhieu_file(args.gop, args.package) if len(args.gop) > 1 else None
+        can_loc = [r for r in records if nhieu is None or r.get("tab", "") in nhieu]
+        giu_nguyen = [r for r in records if not (nhieu is None or r.get("tab", "") in nhieu)]
+        loc, da_xoa, doi = luot_file.loc_theo_tc(can_loc, tc["cases"])
+        records = [r for r in records if r in loc or r in giu_nguyen]
         for ten, keys in (("khong con tren sheet TC", da_xoa), ("da doi noi dung tren sheet", doi)):
             if keys:
                 _log(f"--gop: bo {len(keys)} case {ten}: {', '.join(keys)}")

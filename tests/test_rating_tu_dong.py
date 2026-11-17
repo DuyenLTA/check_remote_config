@@ -139,3 +139,15 @@ def test_cong_thuc_app_compose_chay_buoc_theo_chu():
     log: list[str] = []
     assert asyncio.run(rating_cong_thuc.chay_ds(None, "s", pkg, [{"cho": 0}, {"back": 0}], log))
     assert log == ["chờ 0s", "BACK ×0"]
+
+
+def test_back_con_o_google_play_khong_tinh_la_ve_home():
+    """Google Play co activity 'MainActivityPrivate': BACK van o Play thi 'Back ve Home/Splash' la FAIL."""
+    sao = {"viec": "sao", "sao": 5, "nut": "Rate on Google Play", "nut_enabled": True, "da_bam": True,
+           "truoc": "MainActivity", "pkg_sau": "com.android.vending", "man_sau": "TransparentMainActivityPrivate",
+           "google_play": True, "su_kien": []}
+    o_play = {"viec": "back", "man": "MainActivityPrivate", "pkg": "com.android.vending", "trong_app": False,
+              "su_kien": []}
+    assert assert_rating.cham("Back về màn Home.", _drive(sao, o_play))["verdict"] == "FAIL"
+    ve_app = dict(o_play, man="MainActivity", pkg="p", trong_app=True)
+    assert assert_rating.cham("Back về màn Home.", _drive(sao, ve_app))["verdict"] == "PASS"

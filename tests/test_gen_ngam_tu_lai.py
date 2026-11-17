@@ -162,3 +162,71 @@ def test_cong_thuc_app_moi_dung_khuon_chung_app_cu_de_len():
     assert moi["_khuon_chung"] and moi["popup_dem"] and moi["xac_nhan"] and "bo_dong" not in moi
     assert CT["thu_muc_luu"] == "Pictures/BeautyGenie" and CT["bo_dong"] and "_khuon_chung" not in CT
     assert CT["popup_dem"] == moi["popup_dem"]
+
+
+def test_chua_premium_thi_mo_lanh_lai_truoc_khi_mua(monkeypatch):
+    """Phien dau sau pm clear app dung SKU mac dinh (Paywall khong gia): phai mo lanh lai roi moi mua."""
+    import asyncio
+    from rcr import gen_ngam_tao as tao
+    thu_tu = []
+
+    async def mo_lanh(*a):
+        thu_tu.append("mo_lanh")
+        return {"premium": False}
+
+    async def ve_home(*a):
+        return {"reached": True}
+
+    async def mua(*a):
+        thu_tu.append("mua")
+        return {"log": {"premium": True}, "popup": {"la_test": True}}
+
+    monkeypatch.setattr(tao.sub_thao_tac, "mo_lanh", mo_lanh)
+    monkeypatch.setattr(tao.sub_thao_tac, "ve_home", ve_home)
+    monkeypatch.setattr(tao.sub_thao_tac, "mua", mua)
+    kq = asyncio.run(tao.dam_bao_premium(None, "s", "p", False))
+    assert thu_tu[:2] == ["mo_lanh", "mua"] and kq["premium"] and kq["mua"]
+
+
+def test_dong_rate_cho_nut_x_hien_tre(monkeypatch):
+    """Popup Rating o Home: X hien tre 2s -> phai cho X roi bam, khong tra False (BACK o Home la thoat app)."""
+    import asyncio
+    from rcr import gen_ngam_tao as tao
+
+    class Man:
+        def __init__(self, co_x):
+            self.co_x = co_x
+
+        def tim(self, mau):
+            if mau == "^Close$":
+                return "X" if self.co_x else None
+            return "popup"
+
+    bam_gi = []
+
+    async def cho(*a):
+        return Man(True)
+
+    async def bam(c, s, nut, cho_s):
+        bam_gi.append(nut)
+
+    monkeypatch.setattr(tao.may, "cho", cho)
+    monkeypatch.setattr(tao, "bam", bam)
+    assert asyncio.run(tao.dong_rate(None, "s", "p", {"rate": "Please rate"}, Man(False))) is True
+    assert bam_gi == ["X"]
+
+
+def test_luu_video_ra_jpg_ghi_ro_co_luu_nhung_la_anh_tinh():
+    """QA 17/11/2026: bug R04-04 la video CO luu nhung thanh .jpg (noi dung MP4), bam vao khong phat - khong phai
+    'khong luu'."""
+    import asyncio
+    from rcr.gen_ngam_nhom_chung_2 import ket_luan_luu_video
+
+    class C:
+        async def shell(self, *a, **k):
+            return " 00 00 00 20 66 74 79 70 69 73 6f 6d\n", "", 0
+    assert asyncio.run(may.loai_noi_dung(C(), "s", "/sdcard/Pictures/BeautyGenie/x.jpg")) == "mp4"
+    ok, ly_do = ket_luan_luu_video([{"ten": "BeautyGenie_1.jpg", "mime": "image/jpeg", "bang": "images",
+                                     "noi_dung": "mp4"}], "Pictures/BeautyGenie")
+    assert not ok and "CÓ lưu" in ly_do and "video MP4" in ly_do and "không phát được" in ly_do
+    assert ket_luan_luu_video([{"ten": "v.mp4", "mime": "video/mp4", "bang": "video"}], "P")[0]

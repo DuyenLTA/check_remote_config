@@ -241,10 +241,43 @@ async def r04(c: Ctx) -> None:
         raise LaiHut(f"R04-04: {sv['loi']}")
     tg = sv["t_xong"] - sv["t_bam"] if sv["t_xong"] else -1
     so.ghi("GEN-R04-04", "Lưu xong", 0 <= tg <= 6, f"offline bấm lưu → 'Saved' sau {_s(tg)}")
-    vid = [t for t in sv["tep"] if t["bang"] == "video" or t["mime"].startswith("video/")]
-    so.ghi("GEN-R04-04", "Video có trong Thư viện", bool(vid),
-           f"MediaStore mới trong {ct['thu_muc_luu']}: {sv['tep'] or 'không có'}"
-           + ("" if vid else " — không có bản ghi video (mime video/*)"))
+    ok, ly_do = ket_luan_luu_video(sv["tep"], ct["thu_muc_luu"])
+    if not ok and sv["tep"]:
+        # QA 17/11/2026: luu luc offline ra anh, BAT MANG lai thi Thu vien nhan thanh video -> do them trang thai sau khi
+        # co mang de bug ghi dung hien tuong (chi sai khi luu offline, va bao lau sau thi thanh video).
+        ly_do += await sau_khi_bat_mang(c, sv["t_bam"], ct["thu_muc_luu"])
+    so.ghi("GEN-R04-04", "Video có trong Thư viện", ok, ly_do)
+
+
+async def sau_khi_bat_mang(c: Ctx, t_bam: float, thu_muc: str, toi_da: float = 60) -> str:
+    """Sau khi bat lai mang: file vua luu co thanh video/* trong MediaStore khong, sau bao lau."""
+    import time as _t
+    bat_dau = _t.monotonic()
+    # File doi duoi / doi bang khi app xu ly lai (ten co the khac) -> nhan moi ban ghi video/* moi trong thu muc tu luc bam.
+    while _t.monotonic() - bat_dau < toi_da:
+        moi = await may.tep_moi(c.client, c.serial, thu_muc, int(t_bam) - 5)
+        vid = [t for t in moi if t["bang"] == "video" or t["mime"].startswith("video/")]
+        if vid:
+            return (f"; BẬT MẠNG lại: sau ~{_t.monotonic() - bat_dau:.0f}s Thư viện có video {vid[0]['ten']} "
+                    f"({vid[0]['mime']}) → chỉ sai khi lưu lúc không có mạng")
+        await asyncio.sleep(5)
+    return f"; bật mạng lại {toi_da:.0f}s vẫn không thành video"
+
+
+def ket_luan_luu_video(tep: list[dict], thu_muc: str) -> tuple[bool, str]:
+    """Video da luu vao Thu vien VA mo ra la video (MediaStore video/*). Luu ra anh (vd .jpg ma noi dung MP4) thi
+    ghi ro: CO luu nhung Thu vien nhan la anh tinh, bam vao khong phat duoc (QA 17/11/2026: cau cu "khong co ban ghi
+    video" doc nhu khong luu)."""
+    vid = [t for t in tep if t["bang"] == "video" or t["mime"].startswith("video/")]
+    if vid:
+        return True, f"đã lưu video vào Thư viện ({thu_muc}): {', '.join(t['ten'] for t in vid)} ({vid[0]['mime']})"
+    if not tep:
+        return False, f"không có file mới nào trong {thu_muc} sau khi bấm lưu"
+    t = tep[0]
+    nd = {"mp4": "nội dung là video MP4", "jpeg": "nội dung là ảnh JPEG", "png": "nội dung là ảnh PNG"}.get(
+        t.get("noi_dung", ""), "nội dung chưa đọc được")
+    return False, (f"CÓ lưu vào Thư viện nhưng thành ẢNH: {t['ten']} (MediaStore {t['mime']}, bảng {t['bang']}, {nd}) "
+                   "→ Thư viện hiện ảnh tĩnh, bấm vào không phát được video; không có bản ghi video/*")
 
 
 async def _nhin_toi_xong(c: Ctx, tu: float, so_xong: int = 1, cho_view: bool = False) -> list:

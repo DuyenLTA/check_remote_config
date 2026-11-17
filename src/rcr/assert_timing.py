@@ -77,6 +77,9 @@ GIAY_RE = re.compile(r"t0\s*\+\s*(\d+(?:[.,]\d+)?)|(?:sau|t[ạa]i)\s*(?:đủ\s
                      r"~\s*(\d+(?:[.,]\d+)?)\s*s\b", re.I)
 
 
+TINH_NANG_RE = re.compile(r"widget|check-?\s?in|rating|feedback|tutorial", re.I)
+
+
 def _so(cfg: dict, key: str) -> float | None:
     try:
         return float(str(cfg.get(key, "")).strip())
@@ -109,6 +112,10 @@ def cham(text: str, tl: dict | None, cfg: dict, req_303=(), co_ve_303: bool = Fa
     if chu_ngu and chu_ngu.group(1) != "3":
         # "OB5 hiển thị native full 303 kèm button X" (S04-01, 303 hung sang OB5) noi ve OB5, khong phai dong
         # thoi gian OB3 - truoc day cham bang lan ghe OB3 va ra PASS "kho khong fill" (Pixel 6 09/11/2026).
+        return None
+    if TINH_NANG_RE.search(text) and not OB3_RE.search(text):
+        # "Co preview widget va button X goc phai tren" (popup Add Widget, tab widget AIP892 16/11/2026) noi ve
+        # popup tinh nang, khong phai nut X cua native OB3 - truoc day ra FAIL "app khong goi ad cho OB3".
         return None
     dau = luot[0]
     if AD_MOI_RE.search(text):

@@ -209,8 +209,27 @@ async def tep_moi(client, serial: str, thu_muc: str, tu_giay: int) -> list[dict]
             if thu_muc in d:
                 ten = re.search(r"_display_name=([^,]+)", d)
                 mime = re.search(r"mime_type=([^,]+)", d)
-                ra.append({"ten": ten.group(1) if ten else "", "mime": mime.group(1) if mime else "", "bang": bang})
+                rel = re.search(r"relative_path=([^,]+)", d)
+                tep = {"ten": ten.group(1) if ten else "", "mime": mime.group(1) if mime else "", "bang": bang}
+                if ten and rel:
+                    tep["noi_dung"] = await loai_noi_dung(client, serial, f"/sdcard/{rel.group(1)}{ten.group(1)}")
+                ra.append(tep)
     return ra
+
+
+async def loai_noi_dung(client, serial: str, duong_dan: str) -> str:
+    """Loai file theo byte dau (khong theo duoi / mime MediaStore): 'mp4' / 'jpeg' / 'png' / ''.
+    AIP892 16/11/2026: video luu ra BeautyGenie_x.jpg, MediaStore ghi image/jpeg nhung noi dung la MP4 -> Thu vien
+    hien anh tinh, bam vao khong phat duoc."""
+    out, _, _ = await client.shell(serial, "head", "-c", "12", f"'{duong_dan}'", "|", "od", "-An", "-tx1")
+    b = "".join((out or "").split())
+    if b[8:16] == "66747970":          # "ftyp" o byte 4-7: ISO Media (MP4 / MOV)
+        return "mp4"
+    if b.startswith("ffd8ff"):
+        return "jpeg"
+    if b.startswith("89504e47"):
+        return "png"
+    return ""
 
 
 async def toast_he_thong(client, serial: str, package: str) -> bool:
