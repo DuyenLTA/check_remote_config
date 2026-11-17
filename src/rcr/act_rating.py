@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import shlex
 import time
 from dataclasses import dataclass
 
@@ -28,6 +29,9 @@ BAM_X_SAU_RE = re.compile(r"b[ấa]m\s+x\b", re.I)
 SAO_RE = re.compile(r"^\s*(?:ch[ọo]n|đ[ổo]i\s+sang|doi\s+sang)\s+([1-5])\s*sao\b(?P<rest>.*)$", re.I)
 BAM_NUT_RE = re.compile(r"b[ấa]m\s+(?:button|n[úu]t|[\"“])", re.I)
 X_RE = re.compile(r"^\s*b[ấa]m\s+(?:n[úu]t\s+|button\s+)?x\b", re.I)
+# "Nhap "Test feedback QA <timestamp>"." (man Feedback cua rating, R02): go chu vao o nhap. Truoc day buoc nay ra
+# needs_human -> o feedback trong, nut Submit khong bat, R02-03 khong bao gio thay toast (AIP893 17/11/2026, 4 vong).
+NHAP_RE = re.compile(r"^\s*nh[ậa]p\s+[\"“”']([^\"“”']+)[\"“”']", re.I)
 THOAT_RE = re.compile(r"^\s*(?:th[ựu]c\s+hi[ệe]n\s+(?:thao\s+t[áa]c\s+)?)?tho[áa]t\s+app\b", re.I)
 BACK_RE = re.compile(r"^\s*b[ấa]m\s+(?:←|back|n[úu]t\s+back)\s+(?:tr[êe]n|t[ừu])\b", re.I)
 SHORTCUT_RE = re.compile(r"^\s*nh[ấa]n\s+gi[ữu]\s+icon\s+app\b(?P<rest>.*)$", re.I)
@@ -51,6 +55,7 @@ class Rating:
     loai: str = ""
     sao: int = 0
     bam: bool = False
+    chu: str = ""
 
     @property
     def summary(self) -> dict:
@@ -74,6 +79,9 @@ def resolve(text: str, nodes):
         bam = bool(BAM_NUT_RE.search(m.group("rest")))
         return Rating("sao", f"chọn {m.group(1)} sao" + (", bấm nút Rate" if bam else ""), sao=int(m.group(1)),
                       bam=bam)
+    m = NHAP_RE.match(text)
+    if m:
+        return Rating("nhap", f"gõ {m.group(1)!r} vào ô nhập", chu=m.group(1))
     if X_RE.match(text) and _co_popup(nodes):
         return Rating("x", "bấm nút X của popup Rating")
     if THOAT_RE.match(text):
@@ -143,6 +151,8 @@ async def _lam(client, serial: str, package: str, action: Rating, moc: str) -> d
         ket = await _sao(client, serial, package, action)
     elif action.viec == "x":
         ket = await _x(client, serial, package)
+    elif action.viec == "nhap":
+        ket = await _nhap(client, serial, package, action.chu)
     elif action.viec == "thoat":
         ket = await _thoat(client, serial, package, moc)
     elif action.viec == "back":
@@ -248,6 +258,33 @@ async def _x(client, serial: str, package: str) -> dict:
     sau = await rating_may.nhin(client, serial, package)
     pkg, act = await _act(client, serial)
     return {"bam": True, "truoc": truoc, "man": act, "pkg": pkg, "popup_con": sau["hien"]}
+
+
+def _chu_go(chu: str) -> str:
+    """`<timestamp>` trong TC -> moc gio that (moi lan gui feedback mot noi dung khac)."""
+    return re.sub(r"<\s*timestamp\s*>", time.strftime("%Y%m%d-%H%M%S"), chu, flags=re.I)
+
+
+async def _nhap(client, serial: str, package: str, chu: str) -> dict:
+    """Go chu vao o nhap dau tien cua man (EditText), roi dong ban phim (BACK luc ban phim mo chi dong ban phim)."""
+    nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)), package)
+    o = next((n for n in nodes if "EditText" in (n.cls or "") and not n.bounds.empty), None)
+    if o is None:
+        return {"dung": "không thấy ô nhập chữ trên màn"}
+    await device_app.tap(client, serial, *o.bounds.center)
+    await asyncio.sleep(1.0)
+    go = _chu_go(chu)
+    # `input text`: dau cach -> %s; chu dac biet cua shell may -> quote ca chuoi
+    await client.shell(serial, "input", "text", shlex.quote(go.replace(" ", "%s")))
+    await asyncio.sleep(0.8)
+    ime, _, _ = await client.shell(serial, "dumpsys", "input_method")
+    if "mInputShown=true" in (ime or ""):
+        await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        await asyncio.sleep(0.8)
+    sau = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)), package)
+    da_go = any(go in (n.text or "") for n in sau if "EditText" in (n.cls or ""))
+    _, act = await _act(client, serial)
+    return {"chu": go, "da_go": da_go, "man": act} if da_go else {"dung": f"gõ {go!r} mà ô nhập không có chữ đó"}
 
 
 async def _dong_popup_de(client, serial: str, package: str) -> list[str]:

@@ -285,3 +285,52 @@ def test_do_duoc_ngay_thi_khong_lam_lai(monkeypatch):
     ok = {"popup": True, "do_x": {"khung": 20, "x_hien_s": 0.3, "co_tu_khung_dau": True}}
     _, lam, dong = _lam_gia(monkeypatch, [ok])
     assert (lam, dong) == (1, 0)
+
+
+def test_buoc_nhap_feedback_dich_thanh_go_chu():
+    # AIP893 R02-02 17/11/2026: buoc nay tung ra needs_human -> Submit khong bat, R02-03 / R02-04 dung theo
+    a = act_rating.resolve('Nhập "Test feedback QA <timestamp>".', [])
+    assert a.viec == "nhap" and a.chu == "Test feedback QA <timestamp>"
+    assert "<timestamp>" not in act_rating._chu_go(a.chu) and act_rating._chu_go(a.chu).startswith("Test feedback QA 20")
+
+
+def test_nhap_go_vao_o_edittext_va_dong_ban_phim(monkeypatch):
+    import asyncio
+    pkg = "p"
+    o = {"chu": ""}
+
+    def xml():
+        return (f'<hierarchy><node package="{pkg}" class="android.widget.EditText" text="{o["chu"]}" '
+                f'content-desc="" clickable="true" enabled="true" bounds="[40,600][1040,900]"/></hierarchy>')
+
+    async def dump(client, serial):
+        return xml()
+
+    async def tap(client, serial, x, y):
+        o["tap"] = (x, y)
+
+    async def focus(client, serial):
+        return pkg, f"{pkg}.VslRatingFeedbackActivity"
+
+    class Client:
+        lenh = []
+
+        async def shell(self, serial, *args):
+            self.lenh.append(args)
+            if args[:2] == ("input", "text"):
+                o["chu"] = args[2].strip("'").replace("%s", " ")
+            if args[:2] == ("dumpsys", "input_method"):
+                return "mInputShown=true", "", 0
+            return "", "", 0
+
+    async def ngu(*_):
+        return None
+
+    monkeypatch.setattr(act_rating.ui_dump, "dump", dump)
+    monkeypatch.setattr(act_rating.device_app, "tap", tap)
+    monkeypatch.setattr(act_rating.device_app, "focus", focus)
+    monkeypatch.setattr(act_rating.asyncio, "sleep", ngu)
+    c = Client()
+    ket = asyncio.run(act_rating._nhap(c, "s", pkg, "Test feedback QA"))
+    assert ket["da_go"] and o["chu"] == "Test feedback QA" and o["tap"] == (540, 750)
+    assert ("input", "keyevent", "KEYCODE_BACK") in c.lenh
