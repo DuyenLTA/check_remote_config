@@ -98,6 +98,11 @@ def nen_back_ad_test(serial: str, nodes: list, bay_gio: float | None = None) -> 
     """Goi SAU `nut_dong_ad` tra None: True khi nen BACK de dong ad test khong co node nut dong."""
     if not fo_steps.la_ad_test(nodes):
         return False
+    # Co node nut dong (chi dang "dem nguoc"): KHONG BACK, de `nut_dong_ad` bam khi qua TRAN_DEM_NGUOC. Creative video
+    # WebView giu chu "1" cu canh Close sau khi da hien dau tick -> tuong con dem; BACK o giay 9 khong dong ad nay,
+    # ad che man ~80s, hong ca doan lai sau (AIP892 2.2.0 inter style, vivo V2143 17/11/2026). Bam Close thi dong ngay.
+    if fo_steps.find_close_ad(nodes, cho_dem_nguoc=False) is not None:
+        return False
     now = time.monotonic() if bay_gio is None else bay_gio
     bat_dau = _AD.get(serial, (now, None, now))[0]
     if now - bat_dau < CHO_BACK_AD_TEST:
@@ -119,7 +124,7 @@ async def _qua_native_full(client, serial: str, nodes: list, screen) -> tuple[st
     return f"dong native full man ({node.label})", False
 
 
-async def dong_ad_dang_che(client, serial: str, cho: float = 15.0) -> str:
+async def dong_ad_dang_che(client, serial: str, cho: float = 30.0) -> str:
     """Dong ad toan man con che sau case chi quan sat -> mo ta da bam, "" neu khong can/khong thay nut.
 
     Case chi co buoc quan sat khong qua `walk_to` nen inter cu nam do toi luc

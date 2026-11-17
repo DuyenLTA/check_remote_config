@@ -163,7 +163,13 @@ PROMPT_VERIFY = (
     '"tom_tat": "<tieng Viet co dau, toi da 300 ky tu>", '
     '"cases": [{{"case": "<ma case dung nhu tren>", "verdict": "PASS|FAIL|BLOCKED|NEEDS_HUMAN|KHONG_ON_DINH", '
     '"thuc_te": "<so do that, tieng Viet co dau>"}}]}}\n'
-    "`verdict` FAIL chi khi da ra lai theo 5d va chac la bug that; FAIL gia / loi tool / chua chac thi NEEDS_HUMAN."
+    "`verdict` FAIL chi khi da ra lai theo 5d va chac la bug that; FAIL gia / chua chac thi NEEDS_HUMAN.\n"
+    "Tool lai HONG doan (vd ad che man khong dong duoc, lac man) hoac con dong `con_cham_tay`: TU LAI MAY DO TAY BU "
+    "het cac dong cua case can verify roi moi tra verdict, KHONG tra NEEDS_HUMAN chi vi tool hong (AIP892-58 17/11/2026: "
+    "tool hong doan Style, phien tra NEEDS_HUMAN ngay, bug bi treo). Ad che man: cho het dem nguoc roi bam DUNG nut "
+    "Close/X (co node `dismiss-button` thi bam chu Close; khong co node thi bam theo toa do doc tu anh chup man), "
+    "KHONG BACK (BACK khong dong inter video WebView, ad che man ~80s). "
+    "NEEDS_HUMAN chi khi cau TC that su mo ho (ghi kem cau hoi cho QA) hoac thieu dieu kien khong tao duoc."
 )
 # Verify khong gioi han thoi gian (user chot 17/11/2026): luot IAA AIP892 bi cat o 40 phut giua luc do tay,
 # 5 bug khong ra ket luan. Luot treo thi QA bam Dung.

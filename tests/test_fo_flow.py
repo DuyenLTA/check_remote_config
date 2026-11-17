@@ -188,3 +188,18 @@ def test_bam_nut_tiep_tuc_o_goc_duoi_phai_ne_popup_validator(monkeypatch):
     # Popup lan do che toi y=1294 (het ngang nut) va toi x=847 (lan Next hep [792,1260][951,1363]).
     assert 554 < x < 951 and 1294 < y < 1363
     assert 792 + (951 - 792) * 3 // 4 > 847
+
+
+def test_ad_test_co_node_close_khong_back_ma_bam_close_sau_tran_dem_nguoc():
+    # Dump that AIP892 2.2.0 inter style (vivo V2143 17/11/2026): Close da hien dau tick nhung cay UI van con chu "1"
+    # canh nut. BACK khong dong ad nay -> phai cho qua TRAN_DEM_NGUOC roi bam dung chu Close.
+    fo_flow._AD.clear()
+    xml = (Path(__file__).parent / "fixtures" / "uidump_ad_test_video_close_con_so_dem_nguoc_cu.xml").read_text(
+        encoding="utf-8")
+    ns = nodes(xml)
+    for t in (100.0, 110.0, 115.0):
+        assert fo_flow.nut_dong_ad("S", ns, bay_gio=t) is None
+        assert not fo_flow.nen_back_ad_test("S", ns, bay_gio=t)
+    assert fo_flow.nut_dong_ad("S", ns, bay_gio=121.0) is None      # qua tran: thay nut, doc lai lan nua cho chac
+    nut = fo_flow.nut_dong_ad("S", ns, bay_gio=122.0)
+    assert nut is not None and nut.text == "Close"

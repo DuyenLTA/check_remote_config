@@ -91,6 +91,8 @@ def test_luot_verify_chi_chay_dung_case():
     cmd, prompt = c.lenh("pkg.a", "S1", ["3.6.1#SDK361-SPL-001", "daily checkin#4"])
     assert prompt.startswith("/rc-check pkg.a --serial S1 --case \"3.6.1#SDK361-SPL-001,daily checkin#4\"\n")
     assert "KHONG doc/sua/log Jira" in prompt and '"cases"' in prompt
+    # Tool lai hong -> phien phai do tay bu, khong tra NEEDS_HUMAN ngay (bug bi treo khong ai keo).
+    assert "TU LAI MAY DO TAY BU" in prompt and "KHONG BACK" in prompt
     assert not any("\n" in a for a in cmd)
     assert c.lenh("pkg.a", "S1", [])[1] == c.lenh("pkg.a", "S1")[1]   # khong case -> prompt cu
 
