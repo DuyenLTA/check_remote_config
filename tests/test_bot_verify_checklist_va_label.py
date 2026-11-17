@@ -54,7 +54,7 @@ def test_tim_auto_qa_jql_va_marker(fake):
         _issue("../evil", "x")]}]
     ra = jr.tim_auto_qa(URL, TOKEN, "AIP920")
     q = urllib.parse.parse_qs(urllib.parse.urlsplit(fake["req"][0].full_url).query)
-    assert q["jql"][0].startswith('project = AIP920 AND labels = "auto-qa" AND status = Reviewing')
+    assert q["jql"][0].startswith('project = AIP920 AND labels = "auto-qa" AND status in (Resolved, Reviewing)')
     assert q["fields"] == ["summary,description,status"] and q["validateQuery"] == ["warn"]
     assert q["maxResults"] == [str(jr.MAX_AUTO_QA)]
     assert [i["key"] for i in ra] == ["AIP920-1", "AIP920-2"]               # key sai mau bi loai
@@ -109,7 +109,7 @@ def test_luot_verify_checklist_prompt_va_khong_lan_tc():
     assert "rcr-sdk-check" in prompt and "EV-07, HT-03, 1.7" in prompt and "KHOP -> PASS" in prompt
     assert "KHONG doc/sua/log Jira" in prompt and '"cases"' in prompt
     assert not any("\n" in a for a in cmd)                 # prompt di qua stdin
-    assert c.TIMEOUT_VERIFY_CHECKLIST == 70 * 60 > c.TIMEOUT_VERIFY
+    assert c.TIMEOUT_VERIFY == c.TIMEOUT_VERIFY_CHECKLIST == c.TIMEOUT_VERIFY_SUB == c.KHONG_GIOI_HAN
     with pytest.raises(ValueError):                        # TC lan checklist -> tu choi, khong doan
         c.lenh("pkg.a", "S1", ["EV-07", "a#1"])
 

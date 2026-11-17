@@ -113,3 +113,11 @@ def test_tin_tom_tat_verify_chi_bug_dang_verify():
     assert "EV-11" not in t and "Đo tay" not in t
     dung = v.tin_tom_tat_verify(job, {"trang_thai": "DUNG", "tom_tat": "máy khoá", "cases": []})
     assert "chưa kết luận" in dung and "Lượt dừng: máy khoá" in dung
+
+
+def test_tab_co_gach_ngang_van_chay_lai_duoc():
+    """AIP892-63..65 (17/11/2026): `gen-ngam#...` bi bo qua "khong chay lai tu dong duoc" vi ten tab co `-`."""
+    assert v.loai_case("gen-ngam#GEN-R04-04") == "tc"
+    assert v.loai_case("iaa#IAA-04-01") == "tc"
+    assert v.loai_case("daily checkin#4") == "tc"
+    assert v.loai_case("gen-ngam") is None

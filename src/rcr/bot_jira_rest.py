@@ -34,6 +34,11 @@ DICH_FAIL = ("To Do", "Reopened")
 # Reviewing deu thuoc statusCategory Done (do AIP918-147 12/11/2026) -> loc "statusCategory != Done" bo sot ca hai.
 # Verify tay phai lay ca nhom nay, khong coi la xong.
 CHO_QA_VERIFY = ("Resolved", "Reviewing")
+# Bot tu verify (tin build moi) lay ca hai: dev coi Resolved nhu Reviewing (user chot 17/11/2026).
+_JQL_CHO_QA = f"status in ({', '.join(CHO_QA_VERIFY)})"
+# Workflow AIP959: Resolved chi di duoc sang Reviewing / In Progress, khong co Done hay To Do -> di qua
+# trang thai trung gian nay roi moi toi dich.
+QUA_TRUNG_GIAN = ("Reviewing",)
 
 
 class JiraLoi(RuntimeError):
@@ -108,12 +113,12 @@ def _goi_mot_lan(url: str, token: str, method: str, path: str, body: dict | None
 
 
 def dang_reviewing(url: str, token: str, keys: list[str]) -> list[str]:
-    """Cac key dang o trang thai Reviewing. Key sai mau bi loai truoc khi ghep JQL;
-    key da xoa / chuyen project khong tra ve -> coi nhu khong Reviewing."""
+    """Cac key dang cho QA verify (Resolved hoac Reviewing). Key sai mau bi loai truoc khi ghep JQL;
+    key da xoa / chuyen project khong tra ve -> coi nhu khong cho verify."""
     sach = sorted({k for k in keys if KEY_RE.fullmatch(k)})
     if not sach:
         return []
-    jql = f"key in ({', '.join(sach)}) AND status = Reviewing"
+    jql = f"key in ({', '.join(sach)}) AND {_JQL_CHO_QA}"
     q = urllib.parse.urlencode({"jql": jql, "fields": "status", "maxResults": len(sach), "validateQuery": "warn"})
     d = _goi(url, token, "GET", f"/rest/api/2/search?{q}")
     return [i["key"] for i in (d or {}).get("issues", [])]
@@ -156,14 +161,14 @@ def trang_thai(url: str, token: str, keys: list[str]) -> dict[str, dict]:
 def tim_auto_qa(url: str, token: str, project: str, chua_xong: bool = False) -> list[dict]:
     """Bug mang label `auto-qa` cua project: [{key, link, summary, marker, status}]; marker la
     {case, loai_ban, package} doc tu description, None khi thieu / sai mau. Toi da MAX_AUTO_QA issue.
-    Mac dinh chi bug dang Reviewing; `chua_xong` = moi trang thai chua Done (QA bam Verify tay khi dev
+    Mac dinh bug dang Resolved / Reviewing; `chua_xong` = moi trang thai chua Done (QA bam Verify tay khi dev
     chua keo bug sang Reviewing - bug con nam Backlog / To Do)."""
     from .bot_jira_marker import LABEL, doc_marker
 
     if not PROJECT_RE.fullmatch(project or ""):
         raise JiraLoi(f"project key Jira sai mau: {project!r}")
     cho = ", ".join(CHO_QA_VERIFY)
-    loc = f"(statusCategory != Done OR status in ({cho}))" if chua_xong else "status = Reviewing"
+    loc = f"(statusCategory != Done OR status in ({cho}))" if chua_xong else _JQL_CHO_QA
     jql = f'project = {project} AND labels = "{LABEL}" AND {loc} ORDER BY key'
     q = urllib.parse.urlencode({"jql": jql, "fields": "summary,description,status", "maxResults": MAX_AUTO_QA,
                                 "validateQuery": "warn"})
@@ -220,25 +225,39 @@ def da_comment(url: str, token: str, key: str, dau: str) -> bool:
     return any(str(c.get("body") or "").startswith(dau) for c in (d or {}).get("comments", []))
 
 
+def _khop(t: dict, x: str) -> bool:
+    return x.casefold() in (str(t.get("name") or "").casefold(),
+                            str((t.get("to") or {}).get("name") or "").casefold())
+
+
+def _tim_transition(url: str, token: str, key: str, cac_ten: tuple[str, ...]) -> tuple[str | None, list[dict]]:
+    d = _goi(url, token, "GET", f"/rest/api/2/issue/{key}/transitions")
+    ts = (d or {}).get("transitions", [])
+    return next((t["id"] for x in cac_ten for t in ts if _khop(t, x)), None), ts
+
+
+def _post_transition(url: str, token: str, key: str, tid) -> None:
+    _goi(url, token, "POST", f"/rest/api/2/issue/{key}/transitions", {"transition": {"id": str(tid)}})
+
+
 def chuyen(url: str, token: str, key: str, ten: str | tuple[str, ...]) -> None:
     """Chuyen issue qua transition khop `ten` theo ten transition HOAC trang thai dich (khong phan
     biet hoa thuong); nhieu ten thi ten dau khop truoc. Tra theo ten vi id transition khac nhau giua
-    cac workflow; khong khop ten nao -> loi, khong doan."""
+    cac workflow. Khong co duong thang (Resolved o workflow AIP959 chi sang Reviewing / In Progress)
+    thi di qua mot buoc QUA_TRUNG_GIAN roi thu lai; van khong khop -> loi, khong doan."""
     if not KEY_RE.fullmatch(key):
         raise JiraLoi(f"key Jira sai mau: {key!r}")
     cac_ten = (ten,) if isinstance(ten, str) else tuple(ten)
-    d = _goi(url, token, "GET", f"/rest/api/2/issue/{key}/transitions")
-    ts = (d or {}).get("transitions", [])
-
-    def khop(t: dict, x: str) -> bool:
-        return x.casefold() in (str(t.get("name") or "").casefold(),
-                                str((t.get("to") or {}).get("name") or "").casefold())
-
-    tid = next((t["id"] for x in cac_ten for t in ts if khop(t, x)), None)
+    tid, ts = _tim_transition(url, token, key, cac_ten)
+    if tid is None:
+        qua = next((t["id"] for x in QUA_TRUNG_GIAN for t in ts if _khop(t, x)), None)
+        if qua is not None:
+            _post_transition(url, token, key, qua)
+            tid, ts = _tim_transition(url, token, key, cac_ten)
     if tid is None:
         co = ", ".join(f"{t.get('name', '')} -> {(t.get('to') or {}).get('name', '?')}" for t in ts)
         raise JiraLoi(f"{key} khong co transition '{' / '.join(cac_ten)}' (co: {co})")
-    _goi(url, token, "POST", f"/rest/api/2/issue/{key}/transitions", {"transition": {"id": str(tid)}})
+    _post_transition(url, token, key, tid)
 
 
 def dinh_kem(url: str, token: str, key: str, files: list[tuple[str, bytes]]) -> None:

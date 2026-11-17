@@ -13,8 +13,9 @@ import unicodedata
 
 from .bot_jira_rest import link_project
 
-# `<tab>#<so|TC ID>` (tab co the co dau cach: `daily checkin#4`) hoac TC ID tran (`SDK350-OB3X-013`).
-CASE_TC_RE = re.compile(r"^[\w.]+(?: [\w.]+)*#[\w.-]+$|^SDK\d{3}-[\w-]+$")
+# `<tab>#<so|TC ID>` (tab co the co dau cach `daily checkin#4` hoac gach ngang `gen-ngam#GEN-R04-04`)
+# hoac TC ID tran (`SDK350-OB3X-013`).
+CASE_TC_RE = re.compile(r"^[\w.-]+(?: [\w.-]+)*#[\w.-]+$|^SDK\d{3}-[\w-]+$")
 # Ma dong checklist Next-Gen (sdk-check/references): `EV-07`, `HT-03`, `KT-02`, `MED-02`, `HV-01`, `1.7`.
 # Khong giao voi CASE_TC_RE (TC luon co `#` hoac tien to SDKnnn-).
 CASE_CHECKLIST_RE = re.compile(r"^(?:[A-Z]{2,4}-\d{1,3}|\d{1,2}\.\d{1,2})$")

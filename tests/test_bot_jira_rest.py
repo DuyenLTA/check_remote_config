@@ -57,7 +57,7 @@ def test_keys_rong_khong_goi_mang(fake):
 def test_key_ban_bi_loai_khoi_jql(fake):
     fake["tra"].append({"issues": []})
     jr.dang_reviewing(URL, TOKEN, ["AIP920-13", "AIP920-13) OR 1=1", "aip-1"])
-    assert _jql(fake["req"][0]) == "key in (AIP920-13) AND status = Reviewing"
+    assert _jql(fake["req"][0]) == "key in (AIP920-13) AND status in (Resolved, Reviewing)"
 
 
 def test_key_ban_het_thi_khong_goi(fake):
@@ -183,3 +183,35 @@ def test_link_project_tu_link_issue():
              "https://jira.apero.vn/browse/AIP922-107"]
     assert jr.link_project(links) == "https://jira.apero.vn/browse/AIP922"
     assert jr.link_project(["", "https://j/AIP922-106"]) == ""      # khong phai link /browse/ -> khong doan
+
+
+def test_resolved_khong_co_duong_thang_thi_qua_reviewing(fake):
+    """Workflow AIP959-71: Resolved chi sang Reviewing / In Progress -> PASS di Resolved -> Reviewing -> Done."""
+    fake["tra"] += [
+        {"transitions": [{"id": "71", "name": "Re-Progress", "to": {"name": "In Progress"}},
+                         {"id": "81", "name": "Request Review", "to": {"name": "Reviewing"}}]},
+        None,
+        {"transitions": [{"id": "91", "name": "Close Issue", "to": {"name": "Closed"}},
+                         {"id": "92", "name": "Reject Issue", "to": {"name": "Reopened"}}]},
+        None]
+    jr.chuyen(URL, TOKEN, "AIP959-71", jr.DICH_PASS)
+    post = [json.loads(r.data) for r in fake["req"] if r.get_method() == "POST"]
+    assert post == [{"transition": {"id": "81"}}, {"transition": {"id": "91"}}]
+
+
+def test_resolved_fail_qua_reviewing_ve_reopened(fake):
+    fake["tra"] += [
+        {"transitions": [{"id": "81", "name": "Request Review", "to": {"name": "Reviewing"}}]},
+        None,
+        {"transitions": [{"id": "92", "name": "Reject Issue", "to": {"name": "Reopened"}}]},
+        None]
+    jr.chuyen(URL, TOKEN, "AIP959-71", jr.DICH_FAIL)
+    post = [json.loads(r.data) for r in fake["req"] if r.get_method() == "POST"]
+    assert post == [{"transition": {"id": "81"}}, {"transition": {"id": "92"}}]
+
+
+def test_qua_reviewing_van_khong_co_dich_thi_loi(fake):
+    fake["tra"] += [{"transitions": [{"id": "81", "name": "Request Review", "to": {"name": "Reviewing"}}]},
+                    None, {"transitions": [{"id": "71", "name": "Re-Progress", "to": {"name": "In Progress"}}]}]
+    with pytest.raises(jr.JiraLoi, match="khong co transition 'Done / Closed'"):
+        jr.chuyen(URL, TOKEN, "AIP959-71", jr.DICH_PASS)

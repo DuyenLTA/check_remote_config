@@ -1,4 +1,4 @@
-"""Luot bot tu verify bug dev da keo sang Reviewing: xep job (tin build moi / QA bam Verify lai)
+"""Luot bot tu verify bug dev da keo sang Resolved / Reviewing: xep job (tin build moi / QA bam Verify lai)
 roi chay tren may - cai build, chay lai dung cac case, PASS -> Done, FAIL -> To Do (kem comment).
 Ten transition tuy workflow (Reviewing -> "Reject Issue"/Reopened, "Close Issue"/Closed): xem
 `jira.DICH_PASS` / `jira.DICH_FAIL`.
@@ -37,10 +37,11 @@ def nut(msg_id: int, *cac: tuple[str, str]) -> discord.ui.View:
 
 
 async def xep(bot, c: dict, kenh, bam_tay: bool = False) -> str:
-    """Tim bug bot da log cho app `c['ma']` dang Reviewing -> dang tin + xep job verify tren build `c`.
+    """Tim bug bot da log cho app `c['ma']` dang Resolved / Reviewing -> dang tin + xep job verify tren build `c`.
     `bam_tay` (QA bam nut Verify): lay ca bug chua Done nam ngoai Reviewing - dev nhieu khi chua keo bug
     sang Reviewing (bug con o Backlog) ma da day build fix (user chot 12/11/2026). Luong tu dong khi co
-    build moi van chi Reviewing: dev chua bao fix thi khong tu chay lai.
+    build moi lay Resolved + Reviewing (dev coi hai trang thai nhu nhau, user chot 17/11/2026): dev chua bao
+    fix thi khong tu chay lai.
     Tra cau tom tat (de tra loi QA bam nut)."""
     if not jira.bat(bot.jira_url, bot.jira_token):
         return "Bot chưa có JIRA_URL / JIRA_PERSONAL_TOKEN — tính năng verify đang tắt."
@@ -57,7 +58,7 @@ async def xep(bot, c: dict, kenh, bam_tay: bool = False) -> str:
 async def _xep(bot, c: dict, kenh, bam_tay: bool = False) -> str:
     uv = await (_ung_vien_chua_xong(bot, c["ma"]) if bam_tay else _ung_vien(bot, c["ma"]))
     if not uv:
-        return f"{c['ma']}: không có bug nào của bot " + ("chưa Done." if bam_tay else "đang Reviewing.")
+        return f"{c['ma']}: không có bug nào của bot " + ("chưa Done." if bam_tay else "đang Resolved / Reviewing.")
     chay, bo = v.phan_loai(uv, c["loai_ban"], c.get("package", ""))
     job = {**{k: c.get(k, "") for k in TRUONG_BUILD}, "loai_job": "verify", "verify": chay,
            "bo_qua": [{**u, "ly_do": ly} for u, ly in bo]}
@@ -71,17 +72,17 @@ async def _xep(bot, c: dict, kenh, bam_tay: bool = False) -> str:
     bot.q.nho_tin(job)
     vi_tri = bot.q.them(job)
     await vm.edit(view=nut(vm.id, ("huy", "Huỷ")))    # QA bo luot dang cho (vd dev bao day nham ban)
-    ngoai = [u["key"] for u in chay if not _o_reviewing(u)]
-    them = f" (ngoài Reviewing: {', '.join(ngoai)})" if ngoai else ""
+    ngoai = [u["key"] for u in chay if not (_o_reviewing(u) or _dev_bao_fix(u))]
+    them = f" (ngoài Resolved / Reviewing: {', '.join(ngoai)})" if ngoai else ""
     return f"Đã xếp verify {len(chay)} bug của {c['ma']}{them} — vị trí {vi_tri} trong hàng đợi."
 
 
 async def _ung_vien(bot, ma: str) -> list[dict]:
-    """Bug Reviewing cua app `ma`: label `auto-qa` tren Jira (moi flow) + bug bot log theo state (chua co label)."""
+    """Bug Resolved / Reviewing cua app `ma`: label `auto-qa` tren Jira (moi flow) + bug bot log theo state (chua co label)."""
     tu_jira = await asyncio.to_thread(jira.tim_auto_qa, bot.jira_url, bot.jira_token, ma)
     co = {i["key"] for i in tu_jira}
     cu = v.ung_vien(bot.q.tin, ma)
-    can_hoi = [u["key"] for u in cu if u["key"] not in co]       # key tren Jira da chac chan Reviewing
+    can_hoi = [u["key"] for u in cu if u["key"] not in co]       # key tren Jira da chac chan Resolved / Reviewing
     con = set(await asyncio.to_thread(jira.dang_reviewing, bot.jira_url, bot.jira_token, can_hoi)) if can_hoi else set()
     return bot_jira_marker.gop(tu_jira, [u for u in cu if u["key"] in co or u["key"] in con])
 

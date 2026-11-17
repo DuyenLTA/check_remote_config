@@ -34,7 +34,7 @@ def test_bam_tay_lay_ca_bug_backlog_bo_bug_done(tmp_path, monkeypatch):
     tom = asyncio.run(bj.xep(bot, BUILD, kenh, bam_tay=True))
     j = bot.q.jobs[0]
     assert [(u["key"], u["status"]) for u in j["verify"]] == [("AIP920-14", "Backlog")]
-    assert "ngoài Reviewing: AIP920-14" in tom and "đang Backlog" in kenh.sent[0]
+    assert "ngoài Resolved / Reviewing: AIP920-14" in tom and "đang Backlog" in kenh.sent[0]
 
 
 def test_bam_tay_khong_co_bug_chua_done(tmp_path, monkeypatch):
@@ -90,3 +90,14 @@ def test_resolved_fail_thi_keo_to_do_nhu_reviewing(tmp_path, monkeypatch):
     kq = {"trang_thai": "XONG", "cases": [{"case": "3.6.1#1", "verdict": "PASS"}, {"case": "3.6.1#2", "verdict": "FAIL"}]}
     goi, msg = _chay(tmp_path, monkeypatch, kq, tt_sau=tt, tt_truoc=tt)
     assert ("chuyen", "AIP920-14", jira.DICH_FAIL) in goi
+
+
+def test_tu_dong_khi_co_build_moi_lay_ca_resolved(tmp_path, monkeypatch):
+    """Dev coi Resolved nhu Reviewing (user chot 17/11/2026): luong tu dong cung xep verify bug Resolved."""
+    tu_jira = [{"key": "AIP920-20", "link": "u20", "summary": "x", "status": "Resolved",
+                "marker": {"case": "3.6.1#3", "loai_ban": "debug", "package": "pkg.a"}}]
+    _jira(monkeypatch, set(), tu_jira=tu_jira)
+    bot = _bot(tmp_path)
+    tom = asyncio.run(bj.xep(bot, BUILD, _Kenh()))
+    assert [u["key"] for u in bot.q.jobs[0]["verify"]] == ["AIP920-20"]
+    assert "ngoài" not in tom

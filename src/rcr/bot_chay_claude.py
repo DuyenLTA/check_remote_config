@@ -157,7 +157,9 @@ PROMPT_VERIFY = (
     '"thuc_te": "<so do that, tieng Viet co dau>"}}]}}\n'
     "`verdict` FAIL chi khi da ra lai theo 5d va chac la bug that; FAIL gia / loi tool / chua chac thi NEEDS_HUMAN."
 )
-TIMEOUT_VERIFY = 40 * 60
+# Verify khong gioi han thoi gian (user chot 17/11/2026): luot IAA AIP892 bi cat o 40 phut giua luc do tay,
+# 5 bug khong ra ket luan. Luot treo thi QA bam Dung.
+TIMEOUT_VERIFY = KHONG_GIOI_HAN
 # Verify dong checklist Next-Gen: chay ca checklist (rcr-sdk-check) roi do tay rieng cac ma can verify.
 PROMPT_VERIFY_CHECKLIST = (
     "/rc-check {package} --serial {serial} --next-gen\n\n"
@@ -174,7 +176,7 @@ PROMPT_VERIFY_CHECKLIST = (
     "`verdict` theo ket cua dong do: KHOP -> PASS, SAI -> FAIL (chi khi chac la bug that), DO_TAY chua do duoc / KHONG_AP_DUNG / "
     "loi tool -> NEEDS_HUMAN."
 )
-TIMEOUT_VERIFY_CHECKLIST = 70 * 60
+TIMEOUT_VERIFY_CHECKLIST = KHONG_GIOI_HAN
 # Check sub Android (/check-sub): ca bo 45 TC, moi lan quay lai "chua mua" phai cho het mot chu ky test (~5 phut).
 DUOI_KET_QUA = (
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
@@ -204,7 +206,7 @@ PROMPT_VERIFY_SUB = (
     + DUOI_KET_QUA
 )
 TIMEOUT_SUB = 240 * 60
-TIMEOUT_VERIFY_SUB = 60 * 60
+TIMEOUT_VERIFY_SUB = KHONG_GIOI_HAN
 # /check tinh_nang: tab SDK rieng (rating / widget / daily checkin) trong bo TC chung. QA chon tab nao chay tab do:
 # khong FO, khong checklist Next-Gen, khong chan theo plan tuan (user chot 11/11/2026). Van check ID ads (audit-fanout)
 # truoc bo dau tien nhu moi luot chay app (user chot 16/11/2026, bo luat 11/11 "khong check ID ads").
