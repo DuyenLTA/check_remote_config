@@ -239,3 +239,32 @@ def chuyen(url: str, token: str, key: str, ten: str | tuple[str, ...]) -> None:
         co = ", ".join(f"{t.get('name', '')} -> {(t.get('to') or {}).get('name', '?')}" for t in ts)
         raise JiraLoi(f"{key} khong co transition '{' / '.join(cac_ten)}' (co: {co})")
     _goi(url, token, "POST", f"/rest/api/2/issue/{key}/transitions", {"transition": {"id": str(tid)}})
+
+
+def dinh_kem(url: str, token: str, key: str, files: list[tuple[str, bytes]]) -> None:
+    """Gan file vao issue (POST /attachments, multipart). Jira bat buoc header X-Atlassian-Token: no-check.
+    Khong thu lai khi mat ket noi giua chung: request co the da ghi roi, gui lai la anh trung."""
+    if not KEY_RE.match(key):
+        raise JiraLoi(f"key không hợp lệ: {key!r}")
+    if not files:
+        return
+    ranh_gioi = f"rcr{int(time.time() * 1000)}"
+    phan = []
+    for ten, du_lieu in files:
+        ten = re.sub(r'[^\w.-]', "_", ten)[:100]
+        loai = "image/png" if ten.endswith(".png") else "image/webp" if ten.endswith(".webp") else "image/jpeg"
+        phan.append(f'--{ranh_gioi}\r\nContent-Disposition: form-data; name="file"; filename="{ten}"\r\n'
+                    f"Content-Type: {loai}\r\n\r\n".encode() + du_lieu + b"\r\n")
+    body = b"".join(phan) + f"--{ranh_gioi}--\r\n".encode()
+    path = f"/rest/api/2/issue/{key}/attachments"
+    req = urllib.request.Request(url.rstrip("/") + path, data=body, method="POST", headers={
+        "Authorization": f"Bearer {token}", "Accept": "application/json", "X-Atlassian-Token": "no-check",
+        "Content-Type": f"multipart/form-data; boundary={ranh_gioi}", "User-Agent": USER_AGENT})
+    try:
+        with _MO.open(req, timeout=TIMEOUT * 4) as r:
+            r.read()
+    except urllib.error.HTTPError as e:
+        chu = e.read()[:200].decode("utf-8", "replace")
+        raise JiraLoi(f"Jira POST {path} -> HTTP {e.code}: {chu}") from None
+    except Exception as e:  # noqa: BLE001 - khong in chi tiet (co the chua header)
+        raise JiraLoi(f"Jira POST {path} loi {type(e).__name__}") from None

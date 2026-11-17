@@ -171,6 +171,8 @@ def tin_jira(kq: dict, so_bug: int) -> str:
         dong.append(f"• {i['case']} → {i['key'] or 'không tạo'} {i['link']}{ghi}".rstrip())
     if kq.get("sprint"):
         dong.append(kq["sprint"][:300])
+    if kq.get("dinh_kem"):
+        dong.append(kq["dinh_kem"][:300])
     # Bot da keo vao sprint active ngay sau khi log -> bo luu y "khong co sprint active" cua phien log (da sai).
     if kq.get("luu_y") and not (kq.get("sprint") and "sprint" in kq["luu_y"].lower()):
         dong.append(f"Lưu ý: {kq['luu_y'][:300]}")
@@ -179,6 +181,21 @@ def tin_jira(kq: dict, so_bug: int) -> str:
     if kq.get("chi_phi") is not None:
         dong.append(f"Chi phí: ${kq['chi_phi'] or 0:.2f}")
     return "\n".join(dong)
+
+
+def tom_tat_dinh_kem(gan: dict[str, int]) -> str:
+    """{key: so anh (0 = case khong co anh, -1 = Jira tu choi)} -> mot dong cho tin Discord."""
+    if not gan:
+        return ""
+    co = sum(1 for n in gan.values() if n > 0)
+    dong = f"📎 Đính kèm ảnh bug: {co}/{len(gan)} issue"
+    khong = [k for k, n in gan.items() if n == 0]
+    loi = [k for k, n in gan.items() if n < 0]
+    if khong:
+        dong += f" · không có ảnh (case chấm bằng log): {', '.join(khong)}"
+    if loi:
+        dong += f" · Jira từ chối: {', '.join(loi)}"
+    return dong
 
 
 def tin_bao_dev(c: dict, kq: dict, bugs: list[dict]) -> str | None:

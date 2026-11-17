@@ -54,7 +54,8 @@ PROMPT = (
     "Server/DC, khong co accountId: field Reviewer gan theo username (`name`).\n"
     "Moi issue PHAI co label `auto-qa` (bot dung label nay de tim bug can verify lai). Neu bug co truong `marker`, "
     "chep NGUYEN VAN gia tri do thanh mot dong rieng o CUOI description (khong sua, khong them ky tu dinh dang).\n"
-    "Moi bug mot issue; dua ca link report vao description. Luot nay do bot Discord goi, khong co nguoi "
+    "Moi bug mot issue. KHONG dua link report (claude.ai) vao description: bot tu dinh kem anh bang chung cua "
+    "tung case vao issue sau khi tao (user chot 17/11/2026). Luot nay do bot Discord goi, khong co nguoi "
     "tra loi: skill can hoi gi thi dung bug do, ghi ly do vao `loi`.\n"
     "Tra loi bang tieng Viet. Dong CUOI cung phai dung mau (mot dong JSON). Moi chu trong `ghi_chu`, "
     "`luu_y`, `loi` (bot dang len Discord) viet tieng Viet CO DAU day du:\n"
@@ -149,8 +150,9 @@ def chay(bugs: list[dict], job: dict, link_report: str, reviewer: str, repo: Pat
     gio = time.strftime("%Y%m%d-%H%M%S")
     file = log_dir / f"jira-bugs-{gio}-{job['ma']}.json"
     bugs = them_marker(bugs, str(job.get("loai_ban") or ""), job["package"])
+    # Khong dua link report vao file: Claude se chep no vao description (user bo link, dinh kem anh thay the).
     file.write_text(json.dumps({"app": f"{job.get('ten', '')} {job['version']}", "package": job["package"],
-                                "report": link_report, "bugs": bugs}, ensure_ascii=False, indent=1),
+                                "bugs": bugs}, ensure_ascii=False, indent=1),
                     encoding="utf-8")
     log = log_dir / f"bot-jira-{gio}-{job['ma']}.log"
     try:

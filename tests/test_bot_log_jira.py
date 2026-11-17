@@ -52,7 +52,8 @@ def test_chay_ghi_bug_ra_file_va_dua_prompt_qua_stdin(tmp_path, monkeypatch):
     out = j.chay([BUG], JOB, "https://claude.ai/artifact/x", "qa.lead", tmp_path, tmp_path / "out")
     f = next((tmp_path / "out").glob("jira-bugs-*-AIP920.json"))
     data = json.loads(f.read_text("utf-8"))
-    assert data["bugs"] == [BUG] and data["report"] == "https://claude.ai/artifact/x"
+    assert data["bugs"] == [BUG] and "report" not in data   # link report khong vao Jira (dinh kem anh thay the)
+    assert "KHONG dua link report" in goi["input"]
     assert f.as_posix().split("/")[-1] in goi["input"] and "Chữ đè" not in goi["input"]   # bug nam o file
     assert goi["env"]["DISCORD_NOTIFY"] == "0" and out["loi"] == "" and out["log"]
     assert int(goi["env"]["MCP_TIMEOUT"]) >= 60000      # uvx mcp-atlassian khoi dong lau hon 30s mac dinh
