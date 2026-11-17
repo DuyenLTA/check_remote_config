@@ -212,6 +212,7 @@ def test_ad_load_ok_khong_show_la_dat():
     for kw in ({"tabs": ["iaa"]}, {"sdk": "3.5.4"}):
         _, p = c.lenh("pkg.a", "S1", **kw)
         assert "load ok dung unit ma khong show -> PASS" in p
+        assert "force-stop app luc ad dang chay" in p and "man Thank You chi hien ~3s" in p
 
 
 def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():

@@ -99,6 +99,10 @@ NHAC_LOAD_KHONG_SHOW = (
     "Dong ads 'hien thi / show / khoang cach giua cac ad': ad DA request + load ok dung unit ma khong show -> PASS "
     "(ghi so request/load), KHONG FAIL, khong dua vao bugs. Chi FAIL khi khong request, request sai unit, hoac show sai "
     "cho / sai luc.\n"
+    "Dong reward 'xem chua het / thoat giua chung thi khong thuong': ad reward test khong dong som duoc -> thoat bang "
+    "force-stop app luc ad dang chay (~2-3s) roi mo lai, xem bo dem + event ad_reward; KHONG ghi BLOCKED. Luong "
+    "Uninstall: man Thank You chi hien ~3s sau khi dong inter 'Go cai dat' roi moi mo Cai dat - theo doi man tung giay "
+    "sau khi dong inter, khong ket luan 'khong co man Thank You' (user chot 17/11/2026, AIP935).\n"
 )
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.

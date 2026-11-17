@@ -54,6 +54,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 17/11/2026 | Reward 'thoát giữa chừng không thưởng': force-stop app lúc ad đang chạy rồi mở lại để kiểm, không BLOCKED; luồng Uninstall: màn Thank You chỉ hiện ~3s sau khi đóng inter Gỡ cài đặt — theo dõi từng giây | `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
 | 17/11/2026 | Dòng hiển thị ads: đã request + load ok đúng unit mà không show → PASS, không báo bug (chỉ cần có request + load là đúng) | `src/rcr/iaa_cham_log.py` cham_mot_tang, `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
 | 16/11/2026 | Rating: 'Rate on Google Play' mở store có sẵn của máy (vd vivo App Store khi máy chưa cài Google Play) là đúng, không phải bug; BACK trong store bên thứ ba là ngoài phạm vi | `src/rcr/bot_chay_claude.py` NHAC_RATING_KHONG_GEN | — |
 | 16/11/2026 | App không gen ảnh/video (không có màn Result gen): case rating cần màn Result gen ảnh/video bỏ qua — không test, không lấy màn khác thay, chấm tay `KHONG_AP_DUNG` và report bỏ hẳn case/dòng đó | `src/rcr/bot_chay_claude.py` NHAC_RATING_KHONG_GEN, `report_data.bo_khong_ap_dung` | — |
