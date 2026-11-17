@@ -15,7 +15,7 @@ import discord
 from . import bot_cong_viec, bot_dung_luot, bot_hop_thu_bug, bot_job_verify, bot_kenh_project, bot_keo_sprint, bot_log_jira
 from . import bot_jira_rest as jira_rest
 from . import bot_tin_goc as tin_goc
-from . import bot_verify_jira
+from . import bot_jira_dinh_kem, bot_verify_jira
 from . import build_ma_app
 from .bot_giao_dien import NUT_HOI, NUT_HUY, XAM, nut
 
@@ -160,12 +160,19 @@ async def review_bug(bot, it: discord.Interaction, hanh_dong: str, c: dict, repo
                               view=bot_hop_thu_bug.view_menu_bug(c, chon))
         return
     keys_moi = [i["key"] for i in kq.get("issues") or [] if i.get("key")]
-    if jira_rest.bat(bot.jira_url, bot.jira_token):
+    if jira_rest.bat(getattr(bot, "jira_url", ""), getattr(bot, "jira_token", "")):
         try:
             # Phien log co the xem nham board khong co sprint -> keo ngay vao sprint active (moi board scrum)
             kq["sprint"] = await asyncio.to_thread(bot_keo_sprint.keo_ngay, bot.jira_url, bot.jira_token, keys_moi)
         except Exception as exc:          # noqa: BLE001 - keo sprint hong khong duoc lam hong ket qua log
             log.warning("keo bug vua log vao sprint loi: %s", exc)
+        try:
+            # Anh bang chung cua tung case thay cho link report trong description (user chot 17/11/2026)
+            gan = await asyncio.to_thread(bot_jira_dinh_kem.dinh_kem_issues, bot.jira_url, bot.jira_token, out,
+                                          c["package"], kq.get("issues") or [])
+            kq["dinh_kem"] = bot_cong_viec.tom_tat_dinh_kem(gan)
+        except Exception as exc:          # noqa: BLE001 - dinh kem hong khong duoc lam hong ket qua log
+            log.warning("dinh kem anh vao bug loi: %s", exc)
     c["jira"] = kq
     bot.q.nho_tin(c)
     tin_dev = bot_cong_viec.tin_bao_dev(c, kq, [bugs[i] for i in chon])
