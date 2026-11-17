@@ -53,3 +53,20 @@ def test_ly_do_tat_dinh_thi_khong_chay_lai_ngay_lan_1():
     assert "lặp chắc chắn" in chay_lai.ly_do_khong_chay_lai(kq, None)
     kq["runs"][0]["assert"]["lines"][1]["reason"] = "chưa chụp được màn sau bước cuối"
     assert chay_lai.ly_do_khong_chay_lai(kq, None) == ""
+
+
+def test_ly_do_do_duoc_chua_tung_doi_ket_qua_thi_khong_chay_lai():
+    """Do 13-17/11/2026: cac ly do nay chay lai 60+ lan khong lan nao ra PASS/FAIL."""
+    for ly_do in ("chưa thấy popup Add Widget ở màn nào trước đó — không có gì để đối chiếu",
+                  "tool dừng ở bước rating: gen anh không tới được result: bấm Confirm; hết giờ",
+                  "khung chụp đầu tiên (3s sau popup) đã có X — chụp bắt đầu trễ, chưa đo",
+                  "tool dừng ở bước 1 (chưa làm được thao tác), chưa tới màn cần chấm"):
+        kq = _kq(DAT, {"verdict": "NEEDS_HUMAN", "reason": ly_do}, verdict="NEEDS_HUMAN")
+        assert "lặp chắc chắn" in chay_lai.ly_do_khong_chay_lai(kq, None), ly_do
+
+
+def test_khong_thay_popup_rating_van_chay_lai():
+    """Ly do nay chay lai ra PASS/FAIL 7/20 lan -> giu chay lai."""
+    kq = _kq({"verdict": "NEEDS_HUMAN", "reason": "tool dừng ở bước rating: không thấy popup/màn Rating để chọn sao"},
+             verdict="NEEDS_HUMAN")
+    assert chay_lai.ly_do_khong_chay_lai(kq, None) == ""

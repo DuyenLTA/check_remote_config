@@ -17,7 +17,12 @@ from .verdict_levels import FAIL, PASS
 # ~10-40 phut/luot cho cac case "khong co shortcut", "chua co cong thuc", "man Result khong dump duoc", "can Android < 8".
 TAT_DINH_RE = re.compile(
     r"app không có shortcut|chưa có công thức|could not get idle state|không chụp được màn Result"
-    r"|cần máy (?:Android|API)|kho không fill|không fill", re.I)
+    r"|cần máy (?:Android|API)|kho không fill|không fill"
+    # Do 13-17/11/2026 tren luot.json 4 ngay (lich_su_dong): cac ly do duoi chay lai 60+ lan, ~6 gio, CHUA lan nao doi
+    # sang PASS/FAIL. "khong thay popup/man Rating" KHONG o day: chay lai ra ket qua 7/20 lan.
+    r"|chưa thấy popup Add Widget ở màn nào trước đó|gen anh không tới được result|chụp bắt đầu trễ"
+    r"|chưa đo được lúc nút X hiện|không có khung chụp ở mốc|không có nút Free Generate"
+    r"|tả UI của màn cần lái tới|chưa làm được thao tác", re.I)
 
 
 def _dong(result: dict) -> list[dict]:
