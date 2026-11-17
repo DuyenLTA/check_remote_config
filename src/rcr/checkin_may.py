@@ -146,7 +146,14 @@ async def sang_ngay_mai(client, serial: str) -> dict:
     await asyncio.sleep(2.0)
     tu_dong, _, _ = await client.shell(serial, "settings", "get", "global", "auto_time")
     if tu_dong.strip() == "1" and not await _bam_chu(client, serial, TU_DONG_RE.pattern):
-        return {"ok": False, "loi": "không thấy công tắc giờ tự động"}
+        # Android 17 (Pixel 6 17/11/2026) doi chu cong tac -> tat gio tu dong bang settings (shell co quyen) roi mo
+        # lai man Date & time de muc chon ngay het xam.
+        await client.shell(serial, "settings", "put", "global", "auto_time", "0")
+        await client.shell(serial, "am", "start", "-a", "android.settings.DATE_SETTINGS")
+        await asyncio.sleep(2.0)
+        tu_dong, _, _ = await client.shell(serial, "settings", "get", "global", "auto_time")
+        if tu_dong.strip() != "0":
+            return {"ok": False, "loi": "không thấy công tắc giờ tự động"}
     if not await _bam_chu(client, serial, NGAY_RE):
         return {"ok": False, "loi": "không mở được lịch chọn ngày"}
     ngay = str((datetime.date.fromisoformat(truoc.strip()) + datetime.timedelta(days=1)).day)
