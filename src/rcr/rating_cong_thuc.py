@@ -24,9 +24,9 @@ NHIP = 1.0
 DONG_TOI_DA = 4
 LUONG_FO_RE = re.compile(r"Splash|AdActivity|Language|Onboarding|Question|Billing", re.I)
 GOI_SUB = "weekly"      # goi test ngan nhat (chu ky test 5 phut)
-# Mua sub qua nut tren sheet xem ads (AIP893 "Unlock Now"): user chot 17/11/2026 uu tien weekly (gia test re nhat),
-# Paywall khong co thi lui dan. Goi test weekly het han sau ~30 phut (5 phut x 6 lan gia han) -> xem MUA_LAI_SAU.
-GOI_SUB_UU_TIEN = ("weekly", "monthly", "yearly")
+# Mua sub qua nut tren sheet xem ads (AIP893 "Unlock Now"): user chot 17/11/2026 CHI mua weekly hoac monthly, KHONG
+# BAO GIO yearly. Goi test weekly het han sau ~30 phut (5 phut x 6 lan gia han) -> xem MUA_LAI_SAU.
+GOI_SUB_UU_TIEN = ("weekly", "monthly")
 # Sau chung nay giay ke tu lan mua truoc, sheet xem ads hien lai = goi test da het han -> mua lai, khong lui ve xem ads
 # (may khong fill rewarded thi moi lan gen mat 5-10 phut roi hong).
 MUA_LAI_SAU = 25 * 60
@@ -353,7 +353,7 @@ async def _mua_qua_nut(client, serial: str, package: str, nut, log: list[str]) -
         log.append(f"mua sub {goi}: popup {'test' if (kq.get('popup') or {}).get('la_test') else 'không thấy'}"
                    f" · premium={lanh.get('premium')}")
         return True
-    log.append("Paywall không có gói yearly/monthly/weekly — gen theo đường xem ads")
+    log.append("Paywall không có gói weekly/monthly — gen theo đường xem ads (không mua yearly)")
     await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
     return False
 

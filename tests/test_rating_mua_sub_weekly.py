@@ -5,8 +5,8 @@ from __future__ import annotations
 from rcr import rating_cong_thuc as rc
 
 
-def test_uu_tien_weekly():
-    assert rc.GOI_SUB_UU_TIEN[0] == "weekly"
+def test_chi_mua_weekly_hoac_monthly():
+    assert rc.GOI_SUB_UU_TIEN == ("weekly", "monthly")      # user chot 17/11/2026: khong bao gio yearly
 
 
 def test_mua_lai_khi_goi_test_het_han():
