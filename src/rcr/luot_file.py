@@ -125,6 +125,11 @@ def _overrides_doi(r: dict, c: dict) -> bool:
     if "overrides" not in r or "overrides" not in c:
         return False
     ro, bo = r.get("overrides") or {}, set(r.get("keys_not_used") or [])
+    if not ro:
+        # Record chua tung dat config qua rcr-check: khung `--khung` (bo IAA, config do `rcr-iaa` dat theo bien the)
+        # hoac case BLOCKED truoc khi chay (precondition Android < 8.0). Khong co gi de so -> khong coi la doi
+        # (AIP935 17/11/2026: --gop widget + IAA + checkin bo oan 30 case).
+        return False
     return any(k not in bo and ro.get(k) != v for k, v in (c.get("overrides") or {}).items())
 
 

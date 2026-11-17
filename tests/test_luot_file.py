@@ -243,3 +243,17 @@ def test_tab_chi_o_mot_file_khong_bi_loc_theo_tc(tmp_path):
     luot_file.ghi(tmp_path / "c.json", {"package": PKG}, [{"key": "widget#W1", "tab": "widget", "lines": []}], True)
     assert luot_file.tab_nhieu_file([str(a), str(b)], PKG) == set()
     assert luot_file.tab_nhieu_file([str(a), str(b), str(tmp_path / "c.json")], PKG) == {"widget"}
+
+
+def test_gop_giu_record_khung_chua_dat_config():
+    # Bo IAA dung bang --khung (config do rcr-iaa dat) / case BLOCKED truoc khi chay: overrides rong -> khong bi bo.
+    from rcr import luot_file
+    tc = [{"key": "IAA-01-02", "label": "x", "precondition": "p", "overrides": {"show_banner_home": "true"}},
+          {"key": "widget#WIDGET-R03-01", "label": "y", "precondition": "q", "overrides": {"widget_screen_placement": "true"}}]
+    rec = [{"key": "IAA-01-02", "label": "x", "precondition": "p", "overrides": {}},
+           {"key": "widget#WIDGET-R03-01", "label": "y", "precondition": "q", "overrides": {}}]
+    giu, da_xoa, doi = luot_file.loc_theo_tc(rec, tc)
+    assert [r["key"] for r in giu] == ["IAA-01-02", "widget#WIDGET-R03-01"] and not da_xoa and not doi
+    # Record da dat config khac TC van bi bo nhu cu.
+    giu, _, doi = luot_file.loc_theo_tc([{**rec[0], "overrides": {"show_banner_home": "false"}}], tc[:1])
+    assert doi == ["IAA-01-02"] and not giu

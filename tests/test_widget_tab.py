@@ -97,6 +97,14 @@ def test_nut_xac_nhan_va_khung_widget_tren_launcher():
     assert widget_may.vung_widget(DIALOG, PKG) is None
 
 
+def test_nut_xac_nhan_launcher_vivo_tieng_viet():
+    # vivo V2143 (Android 13, launcher3 tieng Viet): dialog "Màn hình chính hệ thống" co "HỦY" / "TỰ ĐỘNG THÊM".
+    vivo = _dump(_node("HỦY", pkg="com.android.launcher3", bounds="[446,1473][622,1622]"),
+                 _node("TỰ ĐỘNG THÊM", pkg="com.android.launcher3", bounds="[622,1473][975,1622]"))
+    chu, nut = widget_may.nut_xac_nhan(vivo, PKG)
+    assert chu == "tự động thêm" and nut.bounds.center == (798, 1547)
+
+
 def test_displayed_lay_dung_man_cua_app_theo_thu_tu():
     log = (f"I ActivityTaskManager: Displayed {PKG}/.AIPhotoVideoMakerSplashActivity for user 0: +369ms\n"
            f"I ActivityTaskManager: Displayed {LAUNCHER}/.NexusLauncherActivity: +100ms\n"

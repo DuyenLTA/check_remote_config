@@ -29,8 +29,9 @@ TOAST_TEXT_RE = re.compile(r"Text:\s*\[([^\]]*)\]")
 
 # Nut xac nhan cua dialog ghim widget (launcher / ROM). Thu tu = uu tien: cau dai, ro nghia truoc; "Add"/"Them"
 # tran tru cuoi. So bang ca chu (khong phan biet hoa thuong), khong so chuoi con.
+# Launcher vivo (V2143, tieng Viet) ghi "TỰ ĐỘNG THÊM" (dao tu so voi "thêm tự động"), nut con lai la "HỦY".
 NUT_XAC_NHAN = ("add to home screen", "thêm vào màn hình chính", "add automatically", "thêm tự động",
-                "add widget", "add", "thêm")
+                "tự động thêm", "add widget", "add", "thêm")
 
 
 def parse_appwidget(out: str, package: str) -> list[dict]:
