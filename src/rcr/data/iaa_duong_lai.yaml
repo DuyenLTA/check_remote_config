@@ -351,7 +351,108 @@ khuon:
           - cho: 3
           - back: 2
 
+  # App hoc tieng Anh voi AI buddy (muc 3 sheet KT: banner all screens, inter feature, reward chat, native
+  # AI Characters / conversation history, inter back o Chat, native uninstall, inter uninstall). Do 16/11/2026 tren
+  # vivo V2143: AIP935 Lexi 1.2.0. Moi man trong MainActivity (Compose); tab duoi chi co content-desc ->
+  # `tap_toa_do`. Home co popup Add Widget (Close). Chat: dem "3/3" luot free, het luot -> "Watch an ad (0/2) · +3
+  # chats". Inter cach nhau 30s -> `cho: 31` truoc moi lan bam can thay inter. Man Uninstall theo ngon ngu may
+  # (VN: "Vẫn muốn gỡ cài đặt" / "Quá nhiều quảng cáo" / nut "Gỡ cài đặt"); bam Gỡ cài đặt thi app mo
+  # Thong tin ung dung cua Cai dat (khong go that) -> BACK.
+  english_buddy:
+    nhan_dien: "^(Today's Story|Chat with Foxy)$"
+    doan:
+      - ten: Home (banner reload 10s, preload inter feature)
+        buoc:
+          - ve_chu: "^Today's Story$"
+            tab: "^Home$"
+            toi_da: 180
+          - dong_neu_co: "^Close$"
+          - cho: 35
+      - ten: Tab Stories / Notebook / Settings (banner từng tab, inter feature cách 30s)
+        buoc:
+          - ve_chu: "^Today's Story$"
+            tab: "^Home$"
+          - dong_neu_co: "^Close$"
+          - cho: 31
+          - tap_toa_do: [0.382, 0.911]
+          - dong_ad: 6
+          - cho: 12
+          - cho: 31
+          - tap_toa_do: [0.617, 0.911]
+          - dong_ad: 6
+          - cho: 12
+          - cho: 31
+          - tap_toa_do: [0.852, 0.911]
+          - dong_ad: 6
+          - cho: 12
+          - tap_toa_do: [0.148, 0.911]
+          - dong_ad: 6
+      - ten: Truyện ở Home (inter feature), BACK
+        buoc:
+          - ve_chu: "^Today's Story$"
+            tab: "^Home$"
+          - dong_neu_co: "^Close$"
+          - cho: 31
+          - tap_toa_do: [0.5, 0.40]            # the truyen duoi "Today's Story" (ten truyen doi theo ngay)
+          - dong_ad: 6
+          - cho: 5
+          - back: 1
+          - dong_ad: 6
+      - ten: Chat with Foxy (inter feature, preload reward/native/inter back), AI Characters (native), hết 3 lượt free -> reward, BACK (inter back)
+        buoc:
+          - ve_chu: "^Today's Story$"
+            tab: "^Home$"
+          - dong_neu_co: "^Close$"
+          - cho: 31
+          - tap: "^Chat now$"
+          - dong_ad: 6
+          - cho_chu: "^Change character$"
+          - cho: 5
+          - tap: "^Change character$"
+          - cho_chu: "^AI Characters$"
+          - cho: 25
+          - back: 1
+          - cho_chu: "^Change character$"
+          - nhap: "hello"
+            o: "^Type a message"
+          - tap: "^Send$"
+          - cho: 8
+          - nhap: "hello"
+            o: "^Type a message"
+          - tap: "^Send$"
+          - cho: 8
+          - nhap: "hello"
+            o: "^Type a message"
+          - tap: "^Send$"
+          - cho: 8
+          - xem_ads_chu: "^Watch an ad \\(\\d/\\d\\)"
+            toi_chu: "^3/3$"
+            toi_da: 240
+          - cho: 3
+          - cho: 31
+          - tap: "^Back$"                  # nut Back cua man Chat (BACK he thong chi an ban phim -> khong co inter back)
+          - dong_ad: 8
+          - cho: 3
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - tap: "^(Vẫn muốn gỡ cài đặt|Still want to uninstall)$"
+          - cho_chu: "^(Vì sao bạn gỡ cài đặt\\?|Why .*uninstall.*\\?)$"
+          - cho: 6
+          - tap: "^(Quá nhiều quảng cáo|Too many ads)$"
+          - cho: 8
+          - tap: "^(Gỡ cài đặt|Uninstall)$"
+          - cho: 15
+          - back: 1
+          - dong_ad: 20
+          - cho: 3
+          - back: 2
+
 # Ghim khuon (khong bat buoc - app chua khai tool tu nhan khuon tren Home).
 com.aiphotogenerator.aivideomaker.photoslideshow: {khuon: ai_photo}     # AIP893
 com.ai.aiimage.aivideogenerator: {khuon: ai_photo}                      # AIP885
 fitness.workout.aitraining.abs.exercises: {khuon: fitness}              # AIP921 (Home sau FO con man thiet lap ho so)
+learnenglish.language.learningvocabulary.practice: {khuon: english_buddy}  # AIP935 Lexi

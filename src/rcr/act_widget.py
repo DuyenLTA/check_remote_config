@@ -30,7 +30,7 @@ TAP_WIDGET_RE = re.compile(r"^\s*(?:tap|b[ấa]m|nh[ấa]n|click|ch[ạa]m)\s+(?
 CHO_DIALOG = 6.0          # dialog ghim widget hien sau ~1s ke tu luc bam CTA; khong co sau 6s = launcher tu them
 NGHE_TOAST = 5.0          # toast Android hien ~2s (LENGTH_SHORT) - nghe du ca luc launcher dong dialog
 CHO_APPWIDGET = 5.0
-TRANG_TOI_DA = 5          # so lan lat trang launcher tim widget
+TRANG_TOI_DA = 12         # so lan lat trang launcher tim widget (vivo V2143 co 10 trang, widget moi ghim nam trang cuoi)
 CHO_SAU_THAO_TAC = 1.5
 CHO_QUA_SPLASH = 40.0
 

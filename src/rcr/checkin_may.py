@@ -27,7 +27,10 @@ SU_KIEN_RE = re.compile(
     r"^\s*(\d{9,}\.\d+).*Logging event: origin=\w+,name=((?:daily_)?checkin\w*|daily_checkin\w*),params=Bundle\[\{(.*?)\}\]",
     re.M)
 DAU_DOI_NGAY = "/data/local/tmp/rcr-doi-ngay"
-TU_DONG_RE = re.compile(r"^(?:Automatic date and time|Set time automatically|Use network-provided time)$", re.I)
+# vivo V2143 tieng Viet: "Tự động đặt giờ"; muc ngay "Ngày", nut thang sau desc "Tháng sau".
+TU_DONG_RE = re.compile(r"^(?:Automatic date and time|Set time automatically|Use network-provided time|Tự động đặt giờ)$", re.I)
+NGAY_RE = r"^(?:Date|Ngày)$"
+THANG_SAU_RE = r"^(?:Next month|Tháng sau)$"
 
 
 def _chu(nodes):
@@ -144,12 +147,12 @@ async def sang_ngay_mai(client, serial: str) -> dict:
     tu_dong, _, _ = await client.shell(serial, "settings", "get", "global", "auto_time")
     if tu_dong.strip() == "1" and not await _bam_chu(client, serial, TU_DONG_RE.pattern):
         return {"ok": False, "loi": "không thấy công tắc giờ tự động"}
-    if not await _bam_chu(client, serial, r"^Date$"):
+    if not await _bam_chu(client, serial, NGAY_RE):
         return {"ok": False, "loi": "không mở được lịch chọn ngày"}
     ngay = str((datetime.date.fromisoformat(truoc.strip()) + datetime.timedelta(days=1)).day)
     nodes = await _nodes_all(client, serial)
     if not any((n.text or "") == ngay and n.clickable for n in nodes):
-        await _bam_chu(client, serial, r"^Next month$", desc=True)
+        await _bam_chu(client, serial, THANG_SAU_RE, desc=True)
     if not await _bam_chu(client, serial, rf"^{re.escape(ngay)}$") or not await _bam_chu(client, serial, r"^OK$"):
         return {"ok": False, "loi": f"không chọn được ngày {ngay}"}
     sau, _, _ = await client.shell(serial, "date", "+%Y-%m-%d")

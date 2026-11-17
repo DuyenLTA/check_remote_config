@@ -232,3 +232,17 @@ def test_gop_nhieu_tab_giu_bo_tc_cua_moi_tab(tmp_path):
     assert keys == ["rating#R1", "widget#W1"] and meta["tc"]["total"] == 2
     giu, da_xoa, _ = luot_file.loc_theo_tc(recs, meta["tc"]["cases"])
     assert da_xoa == ["rating#R2"] and sorted(r["key"] for r in giu) == ["rating#R1", "widget#W1"]
+
+
+def test_gop_giu_record_khung_chua_dat_config():
+    # Bo IAA dung bang --khung (config do rcr-iaa dat) / case BLOCKED truoc khi chay: overrides rong -> khong bi bo.
+    from rcr import luot_file
+    tc = [{"key": "IAA-01-02", "label": "x", "precondition": "p", "overrides": {"show_banner_home": "true"}},
+          {"key": "widget#WIDGET-R03-01", "label": "y", "precondition": "q", "overrides": {"widget_screen_placement": "true"}}]
+    rec = [{"key": "IAA-01-02", "label": "x", "precondition": "p", "overrides": {}},
+           {"key": "widget#WIDGET-R03-01", "label": "y", "precondition": "q", "overrides": {}}]
+    giu, da_xoa, doi = luot_file.loc_theo_tc(rec, tc)
+    assert [r["key"] for r in giu] == ["IAA-01-02", "widget#WIDGET-R03-01"] and not da_xoa and not doi
+    # Record da dat config khac TC van bi bo nhu cu.
+    giu, _, doi = luot_file.loc_theo_tc([{**rec[0], "overrides": {"show_banner_home": "false"}}], tc[:1])
+    assert doi == ["IAA-01-02"] and not giu
