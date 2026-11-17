@@ -138,8 +138,11 @@ def _back(text, recs):
     # Google Play cung co activity ten "MainActivityPrivate": man ngoai app thi khong tinh la ve Home / Splash
     if r.get("trong_app") is False:
         ok = False
-    return out(PASS if ok else FAIL, f"BACK → {r.get('pkg')}/{man}" if r.get("trong_app") is False
-               else f"BACK → {man or r.get('pkg')}", man)
+    lan = r.get("so_back") or 1
+    them = (f" (BACK {lan} lần: lần 1 đóng sheet trang app trên Store → {r['qua'][0]}, lần 2 về app — Store hiện "
+            "popup trang app nên back 2 lần là đúng)") if lan > 1 and r.get("qua") else ""
+    return out(PASS if ok else FAIL, (f"BACK → {r.get('pkg')}/{man}" if r.get("trong_app") is False
+               else f"BACK → {man or r.get('pkg')}") + them, man)
 
 
 def _dong(text, recs):

@@ -243,17 +243,29 @@ async def _thoat(client, serial: str, package: str, moc: str) -> dict:
             "con_trong_app": pkg == package, "viewed": vw, "do_x": do_x}
 
 
+# "Rate on Google Play" mo trang app dang SHEET (TransparentMainActivityPrivate) chong len trang chu Store: BACK 1 dong
+# sheet -> trang chu Play, BACK 2 moi ve app. QA chot 17/11/2026: back 2 lan moi ve app la DUNG (Store dang hien popup
+# trang app), khong phai bug -> "Back tu Google Play" = BACK toi khi roi Store, toi da BACK_STORE_TOI_DA lan.
+BACK_STORE_TOI_DA = 2
+
+
 async def _back(client, serial: str, package: str) -> dict:
     _, truoc = await _act(client, serial)
-    await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
-    het = time.monotonic() + 8.0
-    pkg, act = await _act(client, serial)
-    while pkg != package and time.monotonic() < het:      # Google Play dong cham
-        await asyncio.sleep(1.0)
+    so_back, qua = 0, []
+    while True:
+        await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        so_back += 1
+        het = time.monotonic() + 8.0
         pkg, act = await _act(client, serial)
-    await asyncio.sleep(SAU_THAO_TAC)
-    pkg, act = await _act(client, serial)
-    return {"truoc": truoc, "pkg": pkg, "man": act, "trong_app": pkg == package}
+        while pkg != package and time.monotonic() < het:      # Google Play dong cham
+            await asyncio.sleep(1.0)
+            pkg, act = await _act(client, serial)
+        await asyncio.sleep(SAU_THAO_TAC)
+        pkg, act = await _act(client, serial)
+        qua.append(f"{pkg}/{(act or '').rsplit('.', 1)[-1]}")
+        if pkg != rating_may.GOOGLE_PLAY or so_back >= BACK_STORE_TOI_DA:
+            break
+    return {"truoc": truoc, "pkg": pkg, "man": act, "trong_app": pkg == package, "so_back": so_back, "qua": qua}
 
 
 async def _shortcut(client, serial: str, package: str, mo: bool) -> dict:
