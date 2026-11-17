@@ -62,6 +62,26 @@ def so_lan_chay(key: str) -> int:
     return LAN_CHAY_LAI if la_sdk else min(LAN_CHAY_LAI, LAN_CHAY_LAI_TINH_NANG)
 
 
+def so_lan_da_chay(cu: dict | None) -> int:
+    """Tong so lan case da chay qua moi vong (lan dau + cac vong --gop) cua record cu."""
+    if not cu:
+        return 0
+    return cu.get("so_lan_tong") or len(cu.get("lich_su_verdict") or []) or 1
+
+
+def da_chay_du(key: str, cu: dict | None, code_nay: str) -> bool:
+    """Case tab tinh nang da chay du so lan (user chot 16/11/2026: chay lai MOT lan) -> vong --gop khong chay lai nua.
+
+    Do 17/11/2026 AIP893: tab rating chay 1 luot + 4 vong --gop (~2h20), NEEDS_HUMAN 11 -> 6 -> 4 -> 4 - hai vong cuoi
+    khong doi duoc gi vi agent cu chay lai toi khi het NEEDS_HUMAN. Ngoai le: code tool da doi tu lan chay truoc (vua sua
+    tool cho dung case nay) -> cho chay lai, dem lai tu dau. Tab SDK FO (load / fill doi giua cac lan) giu nguyen."""
+    if not cu or so_lan_chay(key) >= LAN_CHAY_LAI:
+        return False
+    if not cu.get("code") or cu.get("code") != code_nay:
+        return False
+    return so_lan_da_chay(cu) >= so_lan_chay(key)
+
+
 def _noop(_msg: str) -> None:
     pass
 
@@ -125,6 +145,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
     may = await device_app.hang_may(client, baseline.serial)
     android = await precond_android.doc(client, baseline.serial)
     co_ket_qua = luot_file.da_xong(list(goc))
+    goc_theo_key = {r.get("key"): r for r in goc}
+    code_nay = luot_file.phien_ban_code()
 
     def luu(xong: bool = False) -> list[dict]:
         # Case hong vi loi chay khong duoc de len ket qua that cua luot truoc.
@@ -170,6 +192,11 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 log_fn(f"--- case {key}: đã có kết quả ở lượt trước, bỏ qua ---")
                 continue
             chosen = runnable[key]
+            cu = goc_theo_key.get(key)
+            if da_chay_du(key, cu, code_nay):
+                log_fn(f"--- case {key}: đã chạy {so_lan_da_chay(cu)} lần ({' → '.join(cu.get('lich_su_verdict') or [])})"
+                       f" bằng code {code_nay}, tab tính năng không chạy lại nữa — giữ kết quả lượt trước ---")
+                continue
             log_fn(f"--- case {key} ---")
             row = by_key.get(key, {})
             if getattr(args, "khung", False):
@@ -394,6 +421,11 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 result = ro_gan_nhat
             if result is not None:
                 result["lich_su_verdict"] = lich_su
+                # Dem qua cac vong --gop: cung code thi cong don, code da doi (vua sua tool) thi dem lai tu dau.
+                cu = goc_theo_key.get(key)
+                truoc = so_lan_da_chay(cu) if cu and cu.get("code") == code_nay else 0
+                result["so_lan_tong"] = truoc + len(lich_su)
+                result["code"] = code_nay
                 if len(lich_su) > 1:
                     result["lich_su_dong"] = lich_su_dong
                 if click_truoc and not result.get("ad_click"):

@@ -192,3 +192,25 @@ def test_so_lan_chay_tab_sdk_ba_lan_tab_tinh_nang_mot_lan_chay_lai():
     assert run_batch.so_lan_chay("SDK361-R02-01") == 3
     for key in ("daily checkin#CHECKIN-R04-01", "rating#RATING-R01-01", "widget#WIDGET-R01-01", "GEN-R01-03"):
         assert run_batch.so_lan_chay(key) == 2
+
+
+def test_tab_tinh_nang_chay_du_lan_thi_vong_gop_bo_qua():
+    # AIP893 17/11/2026: rating chay 1 luot + 4 vong --gop, NEEDS_HUMAN khong doi o 2 vong cuoi
+    from rcr import run_batch
+    cu = {"key": "rating#RATING-R06-01", "lich_su_verdict": ["NEEDS_HUMAN", "NEEDS_HUMAN"], "code": "abc123"}
+    assert run_batch.da_chay_du("rating#RATING-R06-01", cu, "abc123")
+    # Tool vua sua (code khac) -> cho chay lai
+    assert not run_batch.da_chay_du("rating#RATING-R06-01", cu, "def456")
+    # Record cu chua ghi code (luot truoc ban sua nay) -> khong chan
+    assert not run_batch.da_chay_du("rating#RATING-R06-01", {**cu, "code": None}, "abc123")
+    # Moi chay 1 lan (tool tu dung chay lai) -> vong --gop van duoc chay them
+    assert not run_batch.da_chay_du("rating#RATING-R06-01", {**cu, "lich_su_verdict": ["BLOCKED"]}, "abc123")
+    # Cong don qua cac vong: vong truoc 1 lan + vong nay 1 lan = 2 -> du
+    assert run_batch.da_chay_du("widget#W-01", {"lich_su_verdict": ["NEEDS_HUMAN"], "so_lan_tong": 2,
+                                                 "code": "abc123"}, "abc123")
+
+
+def test_tab_sdk_fo_khong_bi_chan_boi_gioi_han_tinh_nang():
+    from rcr import run_batch
+    cu = {"lich_su_verdict": ["NEEDS_HUMAN"] * 4, "so_lan_tong": 8, "code": "abc123"}
+    assert not run_batch.da_chay_du("3.6.1#SDK361-102-01", cu, "abc123")
