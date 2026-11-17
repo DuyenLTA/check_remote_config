@@ -169,7 +169,10 @@ def tin_jira(kq: dict, so_bug: int) -> str:
     for i in kq.get("issues") or []:
         ghi = f" ({i['ghi_chu']})" if i.get("ghi_chu") else ""
         dong.append(f"• {i['case']} → {i['key'] or 'không tạo'} {i['link']}{ghi}".rstrip())
-    if kq.get("luu_y"):
+    if kq.get("sprint"):
+        dong.append(kq["sprint"][:300])
+    # Bot da keo vao sprint active ngay sau khi log -> bo luu y "khong co sprint active" cua phien log (da sai).
+    if kq.get("luu_y") and not (kq.get("sprint") and "sprint" in kq["luu_y"].lower()):
         dong.append(f"Lưu ý: {kq['luu_y'][:300]}")
     if kq.get("loi"):
         dong.append(f"⛔ Lỗi: {kq['loi'][:300]}")

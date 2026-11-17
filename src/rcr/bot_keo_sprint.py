@@ -56,6 +56,24 @@ def them_vao_sprint(url: str, token: str, sprint_id: int, keys: list[str]) -> No
         jira._goi(url, token, "POST", f"/rest/agile/1.0/sprint/{int(sprint_id)}/issue", {"issues": sach})
 
 
+def keo_ngay(url: str, token: str, keys: list[str]) -> str:
+    """Ngay sau khi log Jira: dua bug vua tao vao sprint active cua project (quet MOI board scrum). Phien log chi xem
+    mot board (AIP892 17/11/2026: board 348 khong co sprint, sprint "2.2.0" o board khac -> 9 bug roi backlog).
+    Tra dong bao; chua co sprint active thi '' (vong quet dinh ky keo sau)."""
+    theo_project: dict[str, list[str]] = {}
+    for k in keys:
+        if jira.KEY_RE.fullmatch(k or ""):
+            theo_project.setdefault(k.rsplit("-", 1)[0], []).append(k)
+    dong = []
+    for project, ks in theo_project.items():
+        sp = sprint_active(url, token, project)
+        if sp is None:
+            continue
+        them_vao_sprint(url, token, sp["id"], ks)
+        dong.append(f"📌 đã đưa {len(ks)} bug vào sprint **{sp['name']}** ({project})")
+    return "; ".join(dong)
+
+
 def keo(url: str, token: str) -> list[str]:
     """Mot lan quet; tra dong bao cho QA, moi project da keo mot dong. Loi mot project khong chan project khac."""
     dong = []
