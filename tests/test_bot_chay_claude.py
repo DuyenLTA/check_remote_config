@@ -208,6 +208,12 @@ def test_rating_app_khong_gen_thi_bo_qua_case_result():
         assert "store CO SAN cua may" in p and "khong phai bug" in p
 
 
+def test_ad_load_ok_khong_show_la_dat():
+    for kw in ({"tabs": ["iaa"]}, {"sdk": "3.5.4"}):
+        _, p = c.lenh("pkg.a", "S1", **kw)
+        assert "load ok dung unit ma khong show -> PASS" in p
+
+
 def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
     # Luot chi tinh nang co IAA -> nhac policy-check dung package + serial, rule FAIL vao bugs dang policy#
     _, p = c.lenh("pkg.a", "S1", tabs=["iaa", "widget"])
