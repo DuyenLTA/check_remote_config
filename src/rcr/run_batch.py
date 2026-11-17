@@ -84,6 +84,26 @@ def ghi_report(baseline, tc_info, records, app_label, report: str, log_fn=_noop)
     log_fn(f"Report: {path} ({len(page) // 1024}KB)")
 
 
+DUNG_GIUA_RE = re.compile(r"tool dừng ở bước")
+
+
+def dung_giua_chung(result: dict) -> bool:
+    """Case chua ra PASS/FAIL vi tool dung giua cac buoc: trang thai app khong phai cai case sau 'Tiep noi' can."""
+    import json
+    return result.get("verdict") not in ("PASS", "FAIL") and bool(
+        DUNG_GIUA_RE.search(json.dumps(result.get("runs") or [], ensure_ascii=False)))
+
+
+def ly_do_dau_chuoi_hong(chosen: dict, dau_hong: set[str]) -> str:
+    """Case 'Tiep noi X' ma X da dung giua chung -> khong lai (lai cung chi ra NEEDS_HUMAN, ton 2-4 phut/case;
+    AIP892 checkin 16/11/2026 R01-04 -> R01-05 -> R01-07). '' neu van chay."""
+    m = fo_ngon_ngu.TIEP_NOI_RE.search(chosen.get("precondition") or "")
+    if m and any(k.endswith(m.group(1)) for k in dau_hong):
+        return (f"tiếp nối {m.group(1)} — case đó tool dừng giữa chừng nên trạng thái app không đúng; không lái, "
+                "chạy lại cả chuỗi sau khi sửa / đo tay")
+    return ""
+
+
 def tu_bat_chuoi(runnable: dict, case_arg: str) -> bool:
     """Co case duoc chon ma precondition ghi 'Tiep noi <case khac>' -> can chay theo chuoi."""
     chon = {k.strip() for k in (case_arg or "").split(",") if k.strip()}
@@ -131,6 +151,7 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         log_fn("Bộ case có case 'Tiếp nối' -> tự bật chế độ chuỗi (--chuoi)")
     gen_thieu: set[str] = set()   # loai gen (anh/video) case truoc bao chua co cong thuc -> bo case sau can no
     bo_thieu: set[str] = set()    # key case da bo vi thieu cong thuc (case 'Tiep noi' chung cung bo)
+    dau_hong: set[str] = set()    # case tool dung giua chung (chua PASS/FAIL) -> case 'Tiep noi' no khong lai nua
     truoc_chuoi = None        # case vua chay (che do --chuoi): case sau "Tiep noi" no thi chay tiep tren app
     for wanted in [k.strip() for k in args.case.split(",") if k.strip()]:
         key = wanted
@@ -169,6 +190,10 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 luu()
                 continue
             bo = thieu_ct.ly_do_bo(chosen, gen_thieu, bo_thieu) if gen_thieu else ""
+            if not bo:
+                bo = ly_do_dau_chuoi_hong(chosen, dau_hong)
+                if bo:
+                    dau_hong.add(key)          # case sau 'Tiep noi' case nay cung bo (ca chuoi)
             if bo:
                 log_fn("    " + bo)
                 bo_thieu.add(key)
@@ -435,6 +460,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
             result["tc_lech"] = tc_lech
         log_fn(f"    verdict: {result['verdict']}")
         gen_thieu |= thieu_ct.loai_thieu(result)
+        if dung_giua_chung(result):
+            dau_hong.add(key)
         records.append(report_data.case_record(key, by_key.get(key, {}), result)
                        | {"thoi_gian_s": round(time.monotonic() - bat_dau), "noi_chuoi": noi})
         luu()
