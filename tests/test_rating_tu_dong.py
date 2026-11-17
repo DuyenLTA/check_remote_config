@@ -334,3 +334,30 @@ def test_nhap_go_vao_o_edittext_va_dong_ban_phim(monkeypatch):
     ket = asyncio.run(act_rating._nhap(c, "s", pkg, "Test feedback QA"))
     assert ket["da_go"] and o["chu"] == "Test feedback QA" and o["tap"] == (540, 750)
     assert ("input", "keyevent", "KEYCODE_BACK") in c.lenh
+
+
+def test_ve_home_back_qua_man_prompt_sau_result(monkeypatch):
+    # AIP893 quay man 14:59 17/11/2026: BACK tu Result ve man "Image to Image" (Upload image), BACK nua moi ve Home
+    import asyncio
+    pkg = "com.aiphotogenerator.aivideomaker.photoslideshow"
+    chuoi = ["Result", "Upload image", "Text to Image Generate"]
+    backs = []
+
+    async def focus(client, serial):
+        return pkg, f"{pkg}.AIP893AIPhotoVideoMakerMainActivity"
+
+    async def dump(client, serial):
+        return (f'<hierarchy><node package="{pkg}" class="android.widget.TextView" text="{chuoi[len(backs)]}" '
+                f'content-desc="" bounds="[0,0][100,100]"/></hierarchy>')
+
+    class Client:
+        async def shell(self, serial, *args):
+            backs.append(args)
+
+    async def ngu(*_):
+        return None
+
+    monkeypatch.setattr(act_rating.device_app, "focus", focus)
+    monkeypatch.setattr(act_rating.ui_dump, "dump", dump)
+    monkeypatch.setattr(act_rating.asyncio, "sleep", ngu)
+    assert len(asyncio.run(act_rating._ve_home(Client(), "s", pkg))) == 2

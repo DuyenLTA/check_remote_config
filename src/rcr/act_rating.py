@@ -40,6 +40,8 @@ BAM_GIO_POPUP_RE = re.compile(r"b[ấa]m\s+gi[ờo].*popup", re.I)
 
 HOME_RE = re.compile(r"Main|Home", re.I)     # activity Home cua app (AIP892: MainActivity)
 MAN_RESULT_CHU = "^Result$"                   # tieu de man Result cua app Compose (AIP893) - BACK ve Home truoc khi thoat
+# Man con (khong phai Home) cua app Compose: Result, man upload / nhap prompt ma BACK tu Result roi vao (AIP893).
+MAN_CON_CHU = "^(Result|Upload image|Tap To Upload)$"
 CHUP_GIAY = 6.0         # cua so chup lien tuc tu luc toi result / bam BACK: du cho show_rating_button_x toi 4-5s
 CHO_POPUP = 8.0
 KHOI_DONG_CHUP = 0.8
@@ -327,7 +329,9 @@ async def _ve_home(client, serial: str, package: str) -> list[str]:
             # (BACK o Home la thoat app, mat buoc can do).
             # Tieu de "Result" thang chu Home: cay Compose cua AIP893 giu ca node Home an duoi Result (13:07 17/11/2026
             # R07-01: co chu Home trong dump ma man dang la Result -> khong BACK, FAIL gia "app thoat").
-            if not rating_cong_thuc.tim(nodes, MAN_RESULT_CHU):
+            # BACK tu Result ve man nhap prompt (I2I "Upload image / Tap To Upload"), chua phai Home (quay man 14:59
+            # 17/11/2026) -> con o Result HOAC man nhap prompt thi BACK tiep; man khac (Home, popup che) thi dung.
+            if not rating_cong_thuc.tim(nodes, MAN_CON_CHU):
                 break
         await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
         da.append(f"BACK từ {act}")
