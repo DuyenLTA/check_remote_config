@@ -173,3 +173,19 @@ def tai(link: str, out_dir) -> str:
         return tc_source.tai_ve(link, out_dir)
     except RcError as exc:
         raise RcError(f"không tải được plan tuần: {exc}") from None
+
+
+def tinh_nang(ma: str, out_dir, ngay: dt.date | None = None) -> list[str]:
+    """Bo tinh nang plan tuan ghi cho app `ma` (o scope: "- Apply IAA - SDK Widget - ..."), theo cung tu khoa
+    tin build (`build_ma_app.tinh_nang`). User 17/11/2026: AIP944 1.5.0 tin build chi ghi SDK nhung plan ghi
+    IAA / Widget / Rating / Daily Checkin / gen ngam / Uninstall -> bot phai chay ca cac bo do. Plan chua cau hinh /
+    tai hong / khong co dong app -> [] (luot van chay theo tin build)."""
+    import os
+    link = os.environ.get(ENV, "")
+    if not link or not ma:
+        return []
+    try:
+        yc = yeu_cau(tai(link, out_dir), ma, ngay or dt.date.today())
+    except Exception:      # noqa: BLE001 - plan hong khong duoc chan luot check
+        return []
+    return build_ma_app.tinh_nang("\n".join((yc or {}).get("pham_vi") or []))

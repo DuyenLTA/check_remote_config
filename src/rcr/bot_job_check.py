@@ -15,7 +15,7 @@ from pathlib import Path
 import discord
 
 from . import (audit_tom_tat, bot_chay_claude, bot_cong_viec, bot_dung_luot, bot_forum, bot_hop_thu_bug,
-               bot_kiem_testvsl, bot_report_may_phu, build_ma_app, usage_log)
+               bot_kiem_testvsl, bot_report_may_phu, build_ma_app, plan_tuan, usage_log)
 from . import bot_bug_tu_file_luot
 from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import XAM, XANH, nut
@@ -55,6 +55,13 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
         return True
     # /check tinh_nang hoac tin build chi ghi tinh nang: chi bo tinh nang, van doi RC qua testvsl.
     # Tin build ghi ca SDK lan tinh nang: chay SDK roi lan luot tung tinh nang, gop mot report (user chot 14/11/2026).
+    if job.get("loai_job") != "tinh_nang":
+        # Tinh nang plan tuan ghi ma tin build bo sot -> chay them (user chot 17/11/2026: "so trong plan").
+        plan = await asyncio.to_thread(plan_tuan.tinh_nang, str(job.get("ma") or ""), out)
+        them = [t for t in plan if t not in (job.get("tinh_nang") or [])]
+        if them:
+            job["tinh_nang"] = [*(job.get("tinh_nang") or []), *them]
+            job["tinh_nang_plan"] = them
     tinh_nang = build_ma_app.chi_tinh_nang(job)
     them_tn = [] if tinh_nang else build_ma_app.tabs_tinh_nang(job)
     next_gen = False if tinh_nang else build_ma_app.la_next_gen(job)
@@ -67,7 +74,8 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
             await qa.edit(content=tin_goc.noi(f"{dau}\n📲 Đã cài{ghi}.", bot_kiem_testvsl.tin_nhac(job, loi, bot.duyet)),
                           view=nut(("check", "Chạy lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
             return False
-    await qa.edit(content=f"{dau}\n📲 Đã cài{ghi}. Đang chạy /rc-check…")
+    theo_plan = f"\n🗓️ Chạy thêm theo plan tuần: {', '.join(job['tinh_nang_plan'])}" if job.get("tinh_nang_plan") else ""
+    await qa.edit(content=f"{dau}\n📲 Đã cài{ghi}. Đang chạy /rc-check…{theo_plan}")
     timeout = bot_chay_claude.TIMEOUT_NEXT_GEN if next_gen else bot_chay_claude.TIMEOUT_BO_TC
     bat_dau = time.time()
     bot_dung_luot.danh_dau_pha_rc(job, chi_checklist)  # Dung tu day -> phai don RC testvsl
