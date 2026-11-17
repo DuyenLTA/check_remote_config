@@ -2,7 +2,7 @@
 
 User chot 17/11/2026: log Jira kem anh / video bug, khong dan link report. Anh lay tu file luot
 (`out/run-*.luot.json`) cua dung package + case: anh do tay (`anh_tay`, Claude chon dung man loi)
-truoc, roi anh chup cac buoc tool lai (`steps[].shot`, lay cac buoc cuoi - man loi hien ra o cuoi).
+(lay anh cuoi) truoc, roi anh chup cac buoc tool lai (`steps[].shot`, lay cac buoc cuoi - man loi hien ra o cuoi).
 Ca hai luu dang data URI JPEG/PNG trong file luot nen khong phu thuoc file anh tren dia.
 """
 
@@ -16,7 +16,8 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-TOI_DA_ANH = 6
+# User chot 17/11/2026: chi 1 anh man loi (6 anh "nhieu qua") - anh do tay neu co, khong thi anh buoc cuoi.
+TOI_DA_ANH = 1
 # Jira Server mac dinh gioi han 10 MB/file; anh chup man ~100-300 KB - bo anh hong / qua lon.
 MAX_BYTE = 10 * 1024 * 1024
 DATA_URI_RE = re.compile(r"^data:image/(png|jpe?g|webp);base64,(.+)$", re.S)
@@ -68,7 +69,10 @@ def anh_cua_case(out: Path, package: str, case: str, toi_da: int = TOI_DA_ANH) -
         return []
     ma = TEN_RE.sub("_", case.split("#")[-1])[:60]
     ra: list[tuple[str, bytes]] = []
-    for i, a in enumerate(r.get("anh_tay") or [], 1):
+    # Anh do tay cuoi cung truoc: Claude chup man tien dieu kien truoc, man loi sau (SDK361-O02-01: vao_home roi
+    # inter_splash_old) -> lay tu cuoi ve.
+    tay = list(enumerate(r.get("anh_tay") or [], 1))
+    for i, a in reversed(tay):
         g = _giai_anh(str((a or {}).get("src") or "")) if isinstance(a, dict) else None
         if g:
             ten = TEN_RE.sub("_", str(a.get("ten") or f"anh{i}"))[:60]

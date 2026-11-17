@@ -88,3 +88,12 @@ def test_rest_dinh_kem_chan_key_la():
     import pytest
     with pytest.raises(jr.JiraLoi):
         jr.dinh_kem("https://jira.x", "PAT", "../x", [("a.png", PNG)])
+
+
+def test_mac_dinh_chi_mot_anh_man_loi(tmp_path):
+    shot = [{"n": i, "k": "chup_man", "shot": _uri(JPG)} for i in (1, 2, 3)]
+    _luot(tmp_path, "1", [{"key": "A-1", "verdict": "FAIL", "steps": shot,
+                           "anh_tay": [{"ten": "tien_dk", "src": _uri(JPG)}, {"ten": "loi", "src": _uri(PNG, "png")}]},
+                          {"key": "A-2", "verdict": "FAIL", "steps": shot}])
+    assert [t for t, _ in dk.anh_cua_case(tmp_path, "com.a.b", "A-1")] == ["A-1_loi.png"]
+    assert [t for t, _ in dk.anh_cua_case(tmp_path, "com.a.b", "A-2")] == ["A-2_buoc3_chup_man.jpg"]
