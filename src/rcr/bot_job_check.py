@@ -28,7 +28,20 @@ async def chay(bot, job: dict, serial: str, ten: str, repo: Path, out: Path) -> 
     if job.get("kq") is None:            # co kq = da chay xong, lan truoc gui ket qua loi -> chi gui lai
         if not await cai_va_chay(bot, job, qa, serial, ten, repo, out):
             return
+        if job["kq"].get("trang_thai") == bot_chay_claude.HET_HAN_MUC:
+            await cho_han_muc(bot, job, qa, ten)
+            return
     await bao_ket_qua(bot, job, qa, out)
+
+
+async def cho_han_muc(bot, job: dict, qa, ten: str) -> None:
+    """Phien Claude het han muc giua job: khong bao ket qua / khong dong job - giu trong hang, toi gio reset chay
+    tiep phan con thieu (tab da xong giu nguyen)."""
+    den = float(job["kq"].get("cho_den") or time.time())
+    bot.q.cho_lai(job, den)
+    await qa.edit(content=f"{bot_cong_viec.dau_tin(job)} · máy **{ten}**\n⏸️ Tài khoản Claude của bot hết hạn mức "
+                          f"giữa lượt — tự chạy tiếp phần còn lại lúc {time.strftime('%H:%M %d/%m', time.localtime(den))}"
+                          " (tab đã xong giữ nguyên).", view=None)
 
 
 async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out: Path) -> bool:
@@ -83,7 +96,8 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     kq = await asyncio.to_thread(bot_chay_claude.chay, job["package"], serial, repo, timeout, out,
                                  None, next_gen, "" if tinh_nang else job.get("tutorial") or "", "",
                                  bool(job.get("bo_qua_plan")),
-                                 build_ma_app.tabs_tinh_nang(job) if tinh_nang else None, them_tn)
+                                 build_ma_app.tabs_tinh_nang(job) if tinh_nang else None, them_tn,
+                                 job.get("chay_tiep_tu"))
     bot.q.cap_nhat(job, kq=kq, ten_may=ten, bat_dau=bat_dau)
     return True
 

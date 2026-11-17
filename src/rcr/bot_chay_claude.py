@@ -23,7 +23,8 @@ import subprocess
 import time
 from pathlib import Path
 
-from . import audit_tom_tat, bot_tien_trinh
+from . import audit_tom_tat, bot_het_han_muc, bot_tien_trinh
+from .bot_het_han_muc import HET_HAN_MUC  # noqa: F401 - bot_job_check dung qua module nay
 
 SERIAL_RE = re.compile(r"[A-Za-z0-9.:_-]+")
 SDK_RE = re.compile(r"\d+\.\d+\.\d+(?:-[\w.]+)?")   # so tutorial tu tin build (3.6.1, 3.7.1-alpha01)
@@ -167,6 +168,22 @@ PROMPT_VERIFY = (
 # Verify khong gioi han thoi gian (user chot 17/11/2026): luot IAA AIP892 bi cat o 40 phut giua luc do tay,
 # 5 bug khong ra ket luan. Luot treo thi QA bam Dung.
 TIMEOUT_VERIFY = KHONG_GIOI_HAN
+# Verify case IAA (`IAA-nn-nn`): khong nam trong sheet TC chung -> dung khung tu sheet KT roi rcr-iaa tu lai.
+PROMPT_VERIFY_IAA = (
+    "/rc-check {package} --serial {serial} --tc iaa --case \"{cases}\"\n\n"
+    "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi de VERIFY bug dev bao da fix, bug thuoc bo TC IAA. "
+    "Chi chay dung cac case tren: `rcr-check --tc iaa --case \"{cases}\" --khung` roi `rcr-iaa chay --package {package} "
+    "--serial {serial} --luot <file .luot.json vua dung>` voi cac bien the (`--bien-the-ds`) ma config cua case can "
+    "(vd case 'bat high + thuong' can bien the bat). Bo muc 3c (check ID ads), khong check policy. Van ra lai FAIL theo "
+    "muc 5d. Khong co nguoi ngoi truoc may: gap diem can nguoi quyet thi dung. Khong commit/push. KHONG doc/sua/log "
+    "Jira - bot tu lam theo verdict.\n"
+    "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
+    'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<link artifact claude.ai neu publish duoc, khong thi duong dan TUYET DOI file report .html>", '
+    '"tom_tat": "<tieng Viet co dau, toi da 300 ky tu>", '
+    '"cases": [{{"case": "<ma case dung nhu tren>", "verdict": "PASS|FAIL|BLOCKED|NEEDS_HUMAN|KHONG_ON_DINH", '
+    '"thuc_te": "<so do that, tieng Viet co dau>"}}]}}\n'
+    "`verdict` FAIL chi khi da ra lai theo 5d va chac la bug that; FAIL gia / loi tool / chua chac thi NEEDS_HUMAN."
+)
 # Verify dong checklist Next-Gen: chay ca checklist (rcr-sdk-check) roi do tay rieng cac ma can verify.
 PROMPT_VERIFY_CHECKLIST = (
     "/rc-check {package} --serial {serial} --next-gen\n\n"
@@ -346,10 +363,12 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
     if sai:
         raise ValueError(f"case không hợp lệ: {sai!r}")
     if len(set(loai.values())) > 1:                  # TC va checklist can hai luot khac nhau
-        raise ValueError(f"không chạy lẫn case TC và checklist trong một lượt: {cases!r}")
+        raise ValueError(f"không chạy lẫn các nhóm case (TC / checklist / sub / IAA) trong một lượt: {cases!r}")
     if set(loai.values()) == {"sub"}:
         return cmd, PROMPT_VERIFY_SUB.format(package=package, serial=serial,
                                              cases=",".join(c.split("#", 1)[1] for c in cases))
+    if set(loai.values()) == {"iaa"}:
+        return cmd, PROMPT_VERIFY_IAA.format(package=package, serial=serial, cases=",".join(cases))
     if set(loai.values()) == {"checklist"}:
         return cmd, PROMPT_VERIFY_CHECKLIST.format(package=package, serial=serial, cases=", ".join(cases))
     return cmd, PROMPT_VERIFY.format(package=package, serial=serial, cases=",".join(cases))
@@ -377,6 +396,9 @@ def doc_ket_qua(stdout: str) -> dict:
                 ra["trang_thai"] = "LOI"
         except json.JSONDecodeError:
             pass
+    if bot_het_han_muc.la_het_han_muc(d):     # khong phai loi app: job cho reset roi chay tiep
+        ra["trang_thai"] = bot_het_han_muc.HET_HAN_MUC
+        ra["cho_den"] = bot_het_han_muc.gio_reset(text)
     ra["chi_phi"] = d.get("total_cost_usd")
     ra["phut"] = round((d.get("duration_ms") or 0) / 60000, 1)
     return ra
@@ -477,15 +499,17 @@ def _khoa_job(repo: Path, serial: str):
 def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
          cases: list[str] | None = None, next_gen: bool = False, sdk: str = "", sub_version: str = "",
          bo_qua_plan: bool = False, tabs: list[str] | None = None,
-         them_tinh_nang: list[str] | None = None) -> dict:
+         them_tinh_nang: list[str] | None = None, chay_tiep_tu: float | None = None) -> dict:
     """Chay mot luot, log day du o `log_dir/bot-luot-<gio>.log`. Qua gio -> kill, trang_thai HET_GIO.
-    `them_tinh_nang`: bo tinh nang chay sau phan SDK trong cung luot (tin build ghi ca hai)."""
+    `them_tinh_nang`: bo tinh nang chay sau phan SDK trong cung luot (tin build ghi ca hai).
+    `chay_tiep_tu`: phien truoc cua job het han muc Claude - gio bat dau phien dau, tab xong tu do khong chay lai."""
     log_dir.mkdir(parents=True, exist_ok=True)
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
         cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan, tabs, them_tinh_nang)
         thu_muc = thu_muc_luot(repo, package, serial)
-        prompt += nhac_thu_muc_luot(thu_muc) + nhac_luot_do(repo, package, serial)
+        prompt += (nhac_thu_muc_luot(thu_muc) + nhac_luot_do(repo, package, serial)
+                   + bot_het_han_muc.nhac_tab_da_xong(repo, package, chay_tiep_tu))
         # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
         # Giu khoa may CA job (khong chi tung lenh rcr-check): giua hai lenh may khong con trong nhu ranh cho luot khac
         # chen vao. Lenh con biet cha da giu qua env RCR_GIU_MAY. May dang bi luot tay giu -> chay nhu cu (khoa tung lenh).

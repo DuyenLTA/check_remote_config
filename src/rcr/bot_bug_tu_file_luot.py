@@ -16,7 +16,7 @@ from .bot_chay_claude import doc_bugs
 
 log = logging.getLogger(__name__)
 
-TRANG_THAI_CUU = ("LOI", "HET_GIO")
+TRANG_THAI_CUU = ("LOI", "HET_GIO", "HET_HAN_MUC")
 GHI_CHU = "Bug lấy từ file lượt (phiên Claude dừng trước khi ghi kết quả) — FAIL do tool chấm, chưa ai xem lại."
 BUOC_BO = ("chup_man", "walk", "noop")
 

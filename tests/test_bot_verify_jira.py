@@ -121,3 +121,17 @@ def test_tab_co_gach_ngang_van_chay_lai_duoc():
     assert v.loai_case("iaa#IAA-04-01") == "tc"
     assert v.loai_case("daily checkin#4") == "tc"
     assert v.loai_case("gen-ngam") is None
+
+
+def test_case_iaa_chay_lai_duoc_bang_nhom_rieng():
+    """Bug IAA (`IAA-01-01`, khong co `#`) truoc day bi bo 'cần verify tay'; nay thanh nhom iaa."""
+    from rcr.bot_chay_claude import lenh
+    assert v.loai_case("IAA-01-01") == "iaa"
+    assert v.loai_case("IAA-1-1") is None
+    u = {"key": "AIP935-19", "link": "", "case": "IAA-01-01", "bug": {}, "loai_ban_goc": "release"}
+    chay, bo = v.phan_loai([u], "release", "p.k")
+    assert chay == [u] and not bo
+    _, prompt = lenh("learnenglish.language.learningvocabulary.practice", "ABC123", cases=["IAA-01-01"])
+    assert "--tc iaa --case \"IAA-01-01\"" in prompt and "rcr-iaa chay" in prompt
+    kq = {"trang_thai": "XONG", "cases": [{"case": "IAA-01-01", "verdict": "FAIL"}]}
+    assert v.ket_luan(kq, u) == "FAIL"

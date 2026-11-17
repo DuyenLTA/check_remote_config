@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -176,7 +177,22 @@ class HangDoi:
 
     def co_cho(self) -> bool:
         """Con job chua chay (chua giao may, chua co ket qua) - khong danh dau dang chay nhu `lay`."""
-        return any(self._ranh(j) and j.get("kq") is None for j in self.jobs)
+        return any(self._ranh(j) and j.get("kq") is None and not self._dang_cho(j) for j in self.jobs)
+
+    @staticmethod
+    def _dang_cho(j: dict) -> bool:
+        """Job het han muc Claude: nam trong hang toi `cho_den` moi duoc lay chay tiep."""
+        return float(j.get("cho_den") or 0) > time.time()
+
+    def cho_lai(self, job: dict, den: float) -> None:
+        """Phien Claude het han muc giua job: bo ket qua luot do, giu job trong hang, toi `den` chay tiep.
+        `chay_tiep_tu` giu gio bat dau phien DAU de phien sau biet tab nao da xong."""
+        dau = job.get("chay_tiep_tu") or job.get("bat_dau") or time.time()
+        for k in TRUONG_LUOT:
+            job.pop(k, None)
+        job.update(cho_den=den, chay_tiep_tu=dau)
+        self.dang_chay.discard(job["msg_id"])
+        self.luu()
 
     def lay(self) -> dict | None:
         """Job dau tien chua chay (khong xoa khoi hang toi khi `xong`). Moi may ranh goi mot lan.
@@ -186,8 +202,8 @@ class HangDoi:
         # luc QA bam Dung -> hai luot cung app song song (Check + verify cung build, hai build) xoa RC cua nhau
         # giua case, ra PASS/FAIL sai. Job sau cho; job khac app van chay o may ranh.
         ban = {j.get("package") for j in self.jobs if self._dang_test(j)}
-        job = next((j for j in self.jobs if self._ranh(j) and j.get("kq") is None and j.get("package") not in ban),
-                   None)
+        job = next((j for j in self.jobs if self._ranh(j) and j.get("kq") is None and j.get("package") not in ban
+                    and not self._dang_cho(j)), None)
         if job is not None:
             self.dang_chay.add(job["msg_id"])
         return job
@@ -207,6 +223,7 @@ class HangDoi:
             return "khong_co"
         if not self._ranh(job) or job.get("kq") is not None:
             return "dang_chay"
+        job.pop("cho_den", None)         # huy ca job dang cho reset han muc
         self.xong(job)
         return "da_huy"
 
@@ -216,6 +233,10 @@ class HangDoi:
         self.luu()
 
     def xong(self, job: dict) -> None:
+        if self._dang_cho(job):          # job cho reset han muc: tra may, khong bo khoi hang
+            self.dang_chay.discard(job["msg_id"])
+            self.luu()
+            return
         self.jobs = [j for j in self.jobs if j["msg_id"] != job["msg_id"]]
         self.dang_chay.discard(job["msg_id"])
         self.luu()

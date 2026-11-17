@@ -145,7 +145,10 @@ def nhan_o_may_chinh(bot, loai: str, d: dict) -> None:
             return
         if loai == "xong" and d.get("tin"):
             bot.q.nho_tin(d["tin"])
-        if loai == "xong":
+        if loai == "xong" and d.get("cho_den"):     # may phu het han muc Claude: job ve hang, cho reset
+            job.pop("dang_o", None)
+            bot.q.cho_lai(job, float(d["cho_den"]))
+        elif loai == "xong":
             bot.q.xong(job)
         else:
             job.pop("dang_o", None)
@@ -210,7 +213,8 @@ async def _chay_job(bot, job: dict, serial: str, ten: str, kenh) -> None:
         doi = json.dumps(sau, sort_keys=True, ensure_ascii=False) != truoc
         for lan in range(SO_LAN_GUI_XONG):   # mat tin xong -> bot chinh doi HAN_MAY_PHU roi moi biet
             try:
-                await gui(kenh, "xong", {"may": bot.ten_may, "msg_id": job["msg_id"], "tin": sau if doi else None})
+                await gui(kenh, "xong", {"may": bot.ten_may, "msg_id": job["msg_id"], "tin": sau if doi else None,
+                                        "cho_den": job.get("cho_den")})
                 break
             except bot_gui_lai.LOI_MANG as exc:
                 log.warning("chua gui duoc tin xong (lan %d): %s", lan + 1, exc)

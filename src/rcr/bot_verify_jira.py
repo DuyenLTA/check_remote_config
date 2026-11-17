@@ -21,6 +21,8 @@ CASE_TC_RE = re.compile(r"^[\w.-]+(?: [\w.-]+)*#[\w.-]+$|^SDK\d{3}-[\w-]+$")
 CASE_CHECKLIST_RE = re.compile(r"^(?:[A-Z]{2,4}-\d{1,3}|\d{1,2}\.\d{1,2})$")
 # Case bo TC sub Android (`/sub-check`): `sub#<so TC>` - kiem TRUOC CASE_TC_RE (mau do cung khop `x#y`).
 CASE_SUB_RE = re.compile(r"^sub#\d{1,4}$")
+# Case bo TC IAA (muc "3. ID ads inapp" o sheet KT, khong nam trong sheet TC chung): `IAA-01-01`, khong co `#`.
+CASE_IAA_RE = re.compile(r"^IAA-\d{2}-\d{2}$")
 LY_DO_THIEU_MARKER = "thiếu marker auto-qa — cần verify tay"
 MAX_TRUONG = 300
 MAX_TIN = 1900
@@ -38,7 +40,9 @@ def _cat(s, n: int = MAX_TRUONG) -> str:
 
 def loai_case(case: str) -> str | None:
     """"tc" (bo TC, chay bang --case) | "checklist" (dong checklist Next-Gen) | "sub" (bo TC sub, `/sub-check`)
-    | None (khong chay lai duoc)."""
+    | "iaa" (bo TC IAA, chay bang rcr-iaa) | None (khong chay lai duoc)."""
+    if CASE_IAA_RE.fullmatch(case or ""):
+        return "iaa"
     if CASE_SUB_RE.fullmatch(case or ""):
         return "sub"
     if CASE_TC_RE.fullmatch(case or ""):
@@ -81,12 +85,12 @@ def phan_loai(uv: list[dict], loai_ban_moi: str, package: str = "") -> tuple[lis
             bo.append((u, f"bug từ bản {u['loai_ban_goc']}, build mới là bản {loai_ban_moi} — cần verify tay"))
         else:
             chay.append(u)
-    nhom = {lo: [u for u in chay if loai_case(u["case"]) == lo] for lo in ("tc", "checklist", "sub")}
+    nhom = {lo: [u for u in chay if loai_case(u["case"]) == lo] for lo in ("tc", "checklist", "sub", "iaa")}
     co = [lo for lo in nhom if nhom[lo]]
     if len(co) > 1:
         giu = max(co, key=lambda lo: len(nhom[lo]))      # max giu nhom dau khi bang nhau -> tc truoc
         chay = nhom[giu]
-        bo += [(u, "lượt này chạy nhóm case khác (TC / checklist / sub) — bấm Verify bug Jira sau")
+        bo += [(u, "lượt này chạy nhóm case khác (TC / checklist / sub / IAA) — bấm Verify bug Jira sau")
                for lo in co if lo != giu for u in nhom[lo]]
     return chay, bo
 

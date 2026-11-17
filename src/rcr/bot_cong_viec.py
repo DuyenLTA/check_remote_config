@@ -25,7 +25,8 @@ CHO_THU_LAI_CAI = 60
 # Gioi han file dinh kem cua bot o server khong boost.
 MAX_DINH_KEM = 10 * 1024 * 1024
 TRANG_THAI = {"XONG": ("✅", "Xong"), "DUNG": ("⚠️", "Dừng — cần người xem"),
-              "LOI": ("⛔", "Lỗi"), "HET_GIO": ("⏱️", "Hết giờ")}
+              "LOI": ("⛔", "Lỗi"), "HET_GIO": ("⏱️", "Hết giờ"),
+              "HET_HAN_MUC": ("⏸️", "Hết hạn mức Claude — chờ reset rồi chạy tiếp")}
 
 
 def package_cua(ma: str, out_dir: Path) -> str:
