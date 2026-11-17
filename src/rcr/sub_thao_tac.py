@@ -20,6 +20,7 @@ CHO_POPUP = 20          # giay cho popup Google Play hien sau khi bam Continue
 CHO_VE_APP = 15         # giay cho app quay lai sau khi Subscribe
 CHO_KHOI_DONG = 13      # so lan doc log (2 giay/lan) cho app in ket qua verify sau khi mo lanh
 PROFILE_DIR = Path(__file__).resolve().parent / "data" / "sub-profiles"
+SO_LAN_BACK_VE_HOME = 3   # man con -> Home: toi da chung nay lan BACK truoc khi bao khong toi Paywall
 POPUP_DONG = ("Close", "Đóng", "Not now", "Later", "Maybe later", "No thanks", "Để sau")   # nut dong popup o Home
 
 
@@ -105,6 +106,16 @@ async def mo_paywall(client, serial: str, package: str) -> dict:
     if not home["reached"]:
         raise RcError(f"không về được Home (đang ở {home['activity']})")
     thieu = await di_theo(client, serial, prof["duong_vao_paywall"])
+    # App 1 activity (AIP893: Home va man Image to Image cung AIP893...MainActivity) -> walker bao "da toi Home" khi
+    # van o man con, khong thay nut PRO (17/11/2026: moi lan gen hong 8-10 phut). BACK tung buoc roi thu lai.
+    for _ in range(SO_LAN_BACK_VE_HOME):
+        if not thieu:
+            break
+        await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        await asyncio.sleep(2)
+        if await device_app.foreground(client, serial) != package:   # BACK lo thoat app -> mo lai, di lai FO
+            await ve_home(client, serial, package)
+        thieu = await di_theo(client, serial, prof["duong_vao_paywall"])
     pw = sub_doc_man.doc_paywall(await man(client, serial))
     if pw and pw["dong"] is None:          # nut X cua Paywall VisionLab hien tre vai giay -> doc lai
         await asyncio.sleep(3)
