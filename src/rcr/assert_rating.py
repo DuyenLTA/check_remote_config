@@ -86,6 +86,11 @@ def _x(text, recs):
         return out(PASS if hien <= SAI_SO_X else FAIL, f"X hiện {hien}s sau popup (kỳ vọng ngay)", moc)
     if so:
         n = float(so.group(1).replace(",", "."))
+        if do.get("co_tu_khung_dau") and hien > n + SAI_SO_X:
+            # Khung dau da co X (chup bat dau tre - vd sau khi dong ad o result): chi biet X hien <= {hien}s,
+            # khong phai X hien dung luc {hien}s (AIP893 17/11/2026: 12.9s / 13.05s FAIL gia).
+            return out(NEEDS_HUMAN, f"khung chụp đầu tiên ({hien}s sau popup) đã có X — chụp bắt đầu trễ, chưa đo "
+                       f"được mốc {n:g}s", moc)
         ok = n - SAI_SO_X <= hien <= n + SAI_SO_X
         return out(PASS if ok else FAIL, f"X hiện {hien}s sau popup (kỳ vọng {n:g}s)", moc)
     return out(PASS, "nút X có hiện", moc)
@@ -135,6 +140,11 @@ def _back(text, recs):
         ok = bool(goc) and man == goc
     else:
         ok = {"home": "main" in man.lower()}.get(dich, dich in man.lower())
+        # App Compose: Result nam trong MainActivity -> nhan man result bang tieu de "Result" tren man sau BACK
+        if not ok and dich == "result":
+            ok = any(re.fullmatch(r"(?i)\s*result\s*", c or "") for c in r.get("chu") or [])
+            if ok:
+                man = f"{man} (tiêu đề 'Result')"
     # Google Play cung co activity ten "MainActivityPrivate": man ngoai app thi khong tinh la ve Home / Splash
     if r.get("trong_app") is False:
         ok = False

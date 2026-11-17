@@ -130,6 +130,43 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
     - cho_chu: "^(Result|Back to Home|Download)$"
       toi_da: 150
 
+# AIP927 Pictifaze 1.1.0 (do tren Samsung A13 R58TB198BNN 17/11/2026): chi gen VIDEO (tab VIDEO: template slideshow AI,
+# tab SLIDESHOW la trinh dung video tai may, khong gen) -> khong co muc `anh`. Home MainActivity -> the template
+# (content-desc "Cinematic Crossfade") -> SelectPhotoActivity: carousel 5 o anh, phai dien DU moi bat
+# "Generate with Ads" (o -> sheet "Choose Photo Source" -> Gallery -> photopicker) -> sheet "Watch Ads (0/2)" (kho
+# khong fill thi app van cho gen) -> GeneratingActivity -> gen ngam: ~8s tu ve Home, video xong sau ~4-5 phut o
+# History -> ResultActivity ("Your video is ready"). Ep generating_wait_video_seconds dai de result mo thang tu man cho.
+photoslideshow.videoslideshow.addimage.photogen:
+  ep_cau_hinh:
+    generating_wait_video_seconds: "600"
+  video:
+    - ve_man: "MainActivity"
+      toi_da: 60
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^Cinematic Crossfade$"
+    - cho_man: "SelectPhoto"
+    - dien_o_anh: "^Change$"
+      nguon: "^Gallery$"
+      xong: "^Generate with Ads$"
+      toi_da: 240
+    - tap: "^Generate with Ads$"
+    - xem_ads: "^(Watch Ads.*|Free Generate)$"
+      toi: "Generating|Result"
+      dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+      toi_da: 300
+    - cho_man: "ResultActivity|MainActivity"
+      toi_da: 660
+    - cho: 5
+      bo_qua_neu: "^Your video is ready$"
+    - tap: "^History$"
+      bo_qua_neu: "^Your video is ready$"
+    - cho_man: "HistoryActivity"
+      bo_qua_neu: "^Your video is ready$"
+    - tap_duoi: "^History$"
+      bo_qua_neu: "^Your video is ready$"
+    - cho_man: "ResultActivity"
+      toi_da: 60
+
 # KHUON: app chua co muc rieng -> tool ve Home, chon khuon co `nhan_dien` khop chu tren Home (src/rcr/cong_thuc_khuon.py).
 khuon:
   beauty:                      # AIP892 BeautyGenie: Home co hang "QUICK FIXES"

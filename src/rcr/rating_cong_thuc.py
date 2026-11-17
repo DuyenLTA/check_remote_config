@@ -107,8 +107,69 @@ async def _bam(client, serial: str, node) -> None:
     await asyncio.sleep(NHIP)
 
 
-async def _chon_anh(client, serial: str, het: float, log: list[str]) -> bool:
-    """Trinh chon anh he thong (photopicker / Google Photos): bam anh dau tien roi nut xac nhan neu co."""
+def o_trong(png: bytes, bounds, nguong: int = 60) -> bool:
+    """O anh con trong (khung net dut tren nen toi): mot hang diem ngang o 1/4 chieu cao deu toi (hang giua trung icon
+    anh xam cua o trong). O da co anh thi co diem sang."""
+    from io import BytesIO
+    from PIL import Image
+    im = Image.open(BytesIO(png)).convert("L")
+    y = min(max(bounds.top + (bounds.bottom - bounds.top) // 4, 0), im.height - 1)
+    xs = range(max(bounds.left + 20, 0), min(bounds.right - 20, im.width - 1), 15)
+    return all(im.getpixel((x, y)) < nguong for x in xs)
+
+
+def nut_bat(nodes, mau: str) -> bool:
+    """Nut co chu khop `mau` dang bat: node chu hoac node bam duoc chua no phai enabled (Compose de enabled o node cha)."""
+    chu = tim(nodes, mau)
+    if chu is None:
+        return False
+    cha = [n for n in nodes if n.clickable and n.bounds.left <= chu.bounds.left and n.bounds.right >= chu.bounds.right
+           and n.bounds.top <= chu.bounds.top and n.bounds.bottom >= chu.bounds.bottom]
+    return all(n.enabled for n in cha) and chu.enabled
+
+
+async def _dien_o_anh(client, serial: str, package: str, buoc: dict, het: float, log: list[str]) -> bool:
+    """Template nhieu o anh (AIP927 Pictifaze: 'Cinematic Crossfade' co 5 o, phai dien DU moi bat 'Generate with
+    Ads'; o nam trong carousel ngang duoi chu moc, o thu 3 tro di phai cuon moi thay). Lap: nut xong da bat -> xong; o trong
+    dang hien -> bam, chon nguon (`nguon`, vd Gallery), chon anh thu k (moi o mot anh khac); khong con o trong -> cuon."""
+    from . import screencap
+    k = 0
+    while time.monotonic() < het:
+        nodes = await _nodes(client, serial, package)
+        if nut_bat(nodes, buoc["xong"]):
+            log.append(f"điền {k} ảnh — nút {buoc['xong']!r} đã bật")
+            return True
+        moc, nut = tim(nodes, buoc["dien_o_anh"]), tim(nodes, buoc["xong"])
+        if moc is None or nut is None:
+            await asyncio.sleep(NHIP)
+            continue
+        png = await screencap.raw(client, serial)
+        o = next((n for n in nodes if n.clickable and n.bounds.top >= moc.bounds.bottom
+                  and n.bounds.bottom <= nut.bounds.top and n.bounds.right - n.bounds.left >= 150
+                  and o_trong(png, n.bounds)), None)
+        if o is None:
+            await client.shell(serial, "input", "swipe", "900", str(moc.bounds.bottom + 800),
+                               "150", str(moc.bounds.bottom + 800), "1500")
+            await asyncio.sleep(NHIP)
+            continue
+        await _bam(client, serial, o)
+        await asyncio.sleep(2.0)
+        if buoc.get("nguon"):
+            nguon = tim(await _nodes(client, serial, package), buoc["nguon"])
+            if nguon:
+                await _bam(client, serial, nguon)
+                await asyncio.sleep(2.0)
+        k += 1
+        if not await _chon_anh(client, serial, min(het, time.monotonic() + 30), log, thu=k):
+            return False
+        await asyncio.sleep(2.0)
+    log.append(f"điền {k} ảnh mà nút {buoc['xong']!r} chưa bật")
+    return False
+
+
+async def _chon_anh(client, serial: str, het: float, log: list[str], thu: int = 1) -> bool:
+    """Trinh chon anh he thong (photopicker / Google Photos): bam anh thu `thu` (mac dinh anh dau tien) roi nut xac
+    nhan neu co."""
     da_bam = False
     while time.monotonic() < het:
         if not da_bam:
@@ -119,10 +180,11 @@ async def _chon_anh(client, serial: str, het: float, log: list[str]) -> bool:
                 continue
         nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
         if not da_bam:
-            anh = next((n for n in nodes if ANH_RE.search(n.content_desc or "") and not n.bounds.empty), None)
+            cac_anh = [n for n in nodes if ANH_RE.search(n.content_desc or "") and not n.bounds.empty]
+            anh = cac_anh[min(thu, len(cac_anh)) - 1] if cac_anh else None
             if anh:
                 await _bam(client, serial, anh)
-                log.append("chọn ảnh đầu tiên")
+                log.append("chọn ảnh đầu tiên" if thu == 1 else f"chọn ảnh thứ {thu}")
                 da_bam = True
                 continue
         else:
@@ -145,6 +207,8 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
     bam_khong_mo = 0                  # xem_ads: so lan bam nut lien ma chua thay AdActivity
     if "chon_anh" in buoc:
         return await _chon_anh(client, serial, het, log)
+    if "dien_o_anh" in buoc:
+        return await _dien_o_anh(client, serial, package, buoc, het, log)
     if "cho_chu" in buoc:
         while time.monotonic() < het:
             if tim(await _nodes(client, serial, package), buoc["cho_chu"]):

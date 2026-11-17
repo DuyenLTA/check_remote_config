@@ -35,6 +35,7 @@ CHON_RATING_RE = re.compile(r"ch[ọo]n\s+(?:option\s+)?rat", re.I)
 BAM_GIO_POPUP_RE = re.compile(r"b[ấa]m\s+gi[ờo].*popup", re.I)
 
 HOME_RE = re.compile(r"Main|Home", re.I)     # activity Home cua app (AIP892: MainActivity)
+MAN_RESULT_CHU = "^Result$"                   # tieu de man Result cua app Compose (AIP893) - BACK ve Home truoc khi thoat
 CHUP_GIAY = 6.0         # cua so chup lien tuc tu luc toi result / bam BACK: du cho show_rating_button_x toi 4-5s
 CHO_POPUP = 8.0
 KHOI_DONG_CHUP = 0.8
@@ -211,10 +212,27 @@ async def _ve_home(client, serial: str, package: str) -> list[str]:
     """Thao tac thoat app = BACK o Home. Buoc truoc co the de app o result / Feedback: BACK ve Home truoc (BACK tu
     result chi ve Home, chua phai thoat - R07-01 19:27 FAIL gia)."""
     da = []
+    # App Compose (AIP893: Home / Result chung MainActivity): ten activity khop HOME_RE ca khi dang o Result -> nhan
+    # Home bang chu `ve_chu` cua cong thuc gen anh (chu chi co o Home), khong co cong thuc thi theo ten activity.
+    ds = rating_cong_thuc.cong_thuc(package, "anh") or []
+    chu_home = next((b["ve_chu"] for b in ds if b.get("ve_chu")), None)
     for _ in range(3):
         pkg, act = await _act(client, serial)
-        if pkg != package or HOME_RE.search(act):
+        if pkg != package:
             break
+        if HOME_RE.search(act):
+            if not chu_home:
+                break
+            try:
+                nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)), package)
+            except (AdbError, ValueError):
+                nodes = []
+            # Chi BACK khi chac dang o Result (tieu de "Result"); khong thay chu Home vi popup che thi KHONG BACK
+            # (BACK o Home la thoat app, mat buoc can do).
+            # Tieu de "Result" thang chu Home: cay Compose cua AIP893 giu ca node Home an duoi Result (13:07 17/11/2026
+            # R07-01: co chu Home trong dump ma man dang la Result -> khong BACK, FAIL gia "app thoat").
+            if not rating_cong_thuc.tim(nodes, MAN_RESULT_CHU):
+                break
         await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
         da.append(f"BACK từ {act}")
         await asyncio.sleep(SAU_THAO_TAC)
@@ -265,7 +283,17 @@ async def _back(client, serial: str, package: str) -> dict:
         qua.append(f"{pkg}/{(act or '').rsplit('.', 1)[-1]}")
         if pkg != rating_may.GOOGLE_PLAY or so_back >= BACK_STORE_TOI_DA:
             break
-    return {"truoc": truoc, "pkg": pkg, "man": act, "trong_app": pkg == package, "so_back": so_back, "qua": qua}
+    # App Compose (Home / Result chung mot activity): ten activity khong noi man nao -> giu chu tren man de cham
+    # "Back ve man result" theo tieu de man, khong theo ten activity.
+    chu: list[str] = []
+    if pkg == package:
+        try:
+            nodes = ui_dump.app_nodes(ui_dump.parse_dump(await ui_dump.dump(client, serial)), package)
+            chu = [n.text for n in nodes if getattr(n, "text", "")][:60]
+        except (AdbError, ValueError):
+            chu = []
+    return {"truoc": truoc, "pkg": pkg, "man": act, "trong_app": pkg == package, "so_back": so_back, "qua": qua,
+            "chu": chu}
 
 
 async def _shortcut(client, serial: str, package: str, mo: bool) -> dict:

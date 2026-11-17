@@ -91,6 +91,18 @@ def test_cham_nhan_mo_feedback_back_ve_result():
     assert assert_rating.cham("Mở màn Feedback.", {"steps": []}) is None
 
 
+def test_back_ve_result_app_compose_nhan_theo_tieu_de():
+    # AIP893: Result nam trong MainActivity -> ten activity khong co chu "result", phai nhan bang tieu de man
+    main = "AIP893AIPhotoVideoMakerMainActivity"
+    sao = {"viec": "sao", "sao": 1, "nut": "RATE", "nut_enabled": True, "da_bam": True, "truoc": main,
+           "pkg_sau": "p", "man_sau": "VslRatingFeedbackActivity", "google_play": False, "su_kien": []}
+    ve_result = {"viec": "back", "man": main, "pkg": "p", "trong_app": True, "su_kien": [],
+                 "chu": ["Result", "Back to Home", "Download"]}
+    ve_home = {**ve_result, "chu": ["AI Studio", "Welcome,\nLet's create with AI!"]}
+    assert assert_rating.cham("Back về màn result.", _drive(sao, ve_result))["verdict"] == "PASS"
+    assert assert_rating.cham("Back về màn result.", _drive(sao, ve_home))["verdict"] == "FAIL"
+
+
 def test_cham_nut_x_theo_moc():
     gen = {"viec": "gen", "popup": True, "su_kien": [],
            "do_x": {"khung": 20, "x_hien_s": 2.9, "x_chua_hien_luc_s": 2.65, "khung_dau_s": 0.3}}
@@ -151,3 +163,44 @@ def test_back_con_o_google_play_khong_tinh_la_ve_home():
     assert assert_rating.cham("Back về màn Home.", _drive(sao, o_play))["verdict"] == "FAIL"
     ve_app = dict(o_play, man="MainActivity", pkg="p", trong_app=True)
     assert assert_rating.cham("Back về màn Home.", _drive(sao, ve_app))["verdict"] == "PASS"
+
+
+def test_ve_home_app_compose_back_tu_result_khong_back_o_home(monkeypatch):
+    # AIP893: Result va Home chung MainActivity -> buoc "thoat app" phai BACK tu Result ve Home truoc, nhung o Home
+    # (hoac khong chac la Result) thi KHONG BACK (BACK o Home = thoat app).
+    import asyncio
+    pkg = "com.aiphotogenerator.aivideomaker.photoslideshow"
+    man = {"chu": "Result"}
+    backs = []
+
+    async def focus(client, serial):
+        return pkg, f"{pkg}.AIP893AIPhotoVideoMakerMainActivity"
+
+    async def dump(client, serial):
+        return (f'<hierarchy><node package="{pkg}" class="android.widget.TextView" text="{man["chu"]}" '
+                f'content-desc="" bounds="[0,0][100,100]"/></hierarchy>')
+
+    class Client:
+        async def shell(self, serial, *args):
+            backs.append(args)
+            man["chu"] = "Text to Image Generate"
+
+    async def ngu(*_):
+        return None
+
+    monkeypatch.setattr(act_rating.device_app, "focus", focus)
+    monkeypatch.setattr(act_rating.ui_dump, "dump", dump)
+    monkeypatch.setattr(act_rating.asyncio, "sleep", ngu)
+    assert len(asyncio.run(act_rating._ve_home(Client(), "s", pkg))) == 1   # Result -> 1 BACK -> Home
+    backs.clear()
+    man["chu"] = "Today's Check-In"                                        # popup che, khong chac Result
+    assert asyncio.run(act_rating._ve_home(Client(), "s", pkg)) == [] and backs == []
+
+
+def test_x_sau_n_giay_khung_dau_da_co_x_khong_fail_gia():
+    # Chup bat dau tre (khung dau 12.9s sau popup da co X) -> khong ket luan "X hien 12.9s" la FAIL
+    gen = {"viec": "gen", "popup": True, "man": "M", "su_kien": [],
+           "do_x": {"khung": 20, "x_hien_s": 12.94, "x_chua_hien_luc_s": None, "co_tu_khung_dau": True}}
+    assert assert_rating.cham("Button X hiện sau 2 giây.", _drive(gen))["verdict"] == "NEEDS_HUMAN"
+    gen["do_x"] = {"khung": 20, "x_hien_s": 2.1, "x_chua_hien_luc_s": 1.6}
+    assert assert_rating.cham("Button X hiện sau 2 giây.", _drive(gen))["verdict"] == "PASS"
