@@ -236,3 +236,11 @@ def test_prompt_bat_bot_tu_cham_het_dong_nhin_mat_truoc_khi_ket_thuc():
     from rcr import bot_chay_claude as b
     _, prompt = b.lenh("com.x", "S", tabs=["rating"])
     assert "KHONG duoc con dong NEEDS_HUMAN" in prompt and "--cham-tay" in prompt
+
+
+def test_moi_luot_mot_thu_muc_rieng(tmp_path):
+    """16/11/2026: cac luot bot cung ghi /tmp/rc, out/manual -> log lan nhau. Moi luot mot thu muc rieng."""
+    from rcr import bot_chay_claude as b
+    d = b.thu_muc_luot(tmp_path, "com.x", "S1")
+    assert d.is_dir() and d.parent.parent == tmp_path / "out" and "com.x-S1-" in d.name
+    assert str(d) in b.nhac_thu_muc_luot(d) and "/tmp/rc" in b.nhac_thu_muc_luot(d)

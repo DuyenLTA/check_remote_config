@@ -399,6 +399,20 @@ def moi_truong() -> dict[str, str]:
     return {**os.environ, "DISCORD_NOTIFY": "0", "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"}
 
 
+def thu_muc_luot(repo: Path, package: str, serial: str) -> Path:
+    """Thu muc rieng cua MOT luot bot: out/scratch-<yymmdd>/<package>-<serial>-<hhmmss>/. Dem 16/11/2026 nhieu luot
+    cung ghi /tmp/rc, out/manual, out/scratch-<ngay> -> log lan nhau (uni.log cua lan do nao, m1.log cua may nao)."""
+    d = Path(repo) / "out" / f"scratch-{time.strftime('%y%m%d')}" / f"{package}-{serial}-{time.strftime('%H%M%S')}"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def nhac_thu_muc_luot(d: Path) -> str:
+    return (f"\nThu muc rieng cua luot nay: `{d}` (env RCR_THU_MUC_LUOT). MOI file tam / log logcat / anh do tay / "
+            "script phu cua luot ghi vao day - KHONG dung /tmp/rc, out/manual hay out/scratch-<ngay> chung (luot khac "
+            "dung chung, log lan nhau).\n")
+
+
 @contextlib.contextmanager
 def _khoa_job(repo: Path, serial: str):
     """Giu khoa may cho ca luot bot -> env cho tien trinh con; khoa dang bi giu thi {} (lenh con tu khoa nhu cu)."""
@@ -425,12 +439,14 @@ def chay(package: str, serial: str, repo: Path, timeout: int, log_dir: Path,
     log = log_dir / f"bot-luot-{time.strftime('%Y%m%d-%H%M%S')}-{serial}.log"
     try:
         cmd, prompt = lenh(package, serial, cases, next_gen, sdk, sub_version, bo_qua_plan, tabs, them_tinh_nang)
+        thu_muc = thu_muc_luot(repo, package, serial)
+        prompt += nhac_thu_muc_luot(thu_muc)
         # Theo serial: QA bam Dung -> bot_tien_trinh giet ca cay (claude + rcr-check + adb) -> BiDung.
         # Giu khoa may CA job (khong chi tung lenh rcr-check): giua hai lenh may khong con trong nhu ranh cho luot khac
         # chen vao. Lenh con biet cha da giu qua env RCR_GIU_MAY. May dang bi luot tay giu -> chay nhu cu (khoa tung lenh).
         with _khoa_job(repo, serial) as env_khoa:
-            p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo,
-                                    encoding="utf-8", errors="replace", env=moi_truong() | env_khoa)
+            p = bot_tien_trinh.chay(cmd, serial, timeout, input=prompt, cwd=repo, encoding="utf-8", errors="replace",
+                                    env=moi_truong() | env_khoa | {"RCR_THU_MUC_LUOT": str(thu_muc)})
     except bot_tien_trinh.BiDung as exc:
         log.write_text(f"DA DUNG: {exc}", encoding="utf-8")
         raise
