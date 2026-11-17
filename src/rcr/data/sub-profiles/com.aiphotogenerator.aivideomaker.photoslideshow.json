@@ -1,0 +1,10 @@
+{
+ "home_activity": "MainActivity",
+ "duong_vao_paywall": [
+  {
+   "text": "PRO"
+  }
+ ],
+ "ghi_chu": "AIP893: Paywall (VslBillingActivity) mở từ nút vương miện chữ PRO góc trên phải Home AI Studio (đo ảnh 17/11/2026, Pixel 6)",
+ "package": "com.aiphotogenerator.aivideomaker.photoslideshow"
+}
