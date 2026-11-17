@@ -54,6 +54,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 17/11/2026 | Dòng hiển thị ads: đã request + load ok đúng unit mà không show → PASS, không báo bug (chỉ cần có request + load là đúng) | `src/rcr/iaa_cham_log.py` cham_mot_tang, `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
 | 16/11/2026 | Rating: 'Rate on Google Play' mở store có sẵn của máy (vd vivo App Store khi máy chưa cài Google Play) là đúng, không phải bug; BACK trong store bên thứ ba là ngoài phạm vi | `src/rcr/bot_chay_claude.py` NHAC_RATING_KHONG_GEN | — |
 | 16/11/2026 | App không gen ảnh/video (không có màn Result gen): case rating cần màn Result gen ảnh/video bỏ qua — không test, không lấy màn khác thay, chấm tay `KHONG_AP_DUNG` và report bỏ hẳn case/dòng đó | `src/rcr/bot_chay_claude.py` NHAC_RATING_KHONG_GEN, `report_data.bo_khong_ap_dung` | — |
 | 16/11/2026 | App mới tool chưa có công thức lái: phiên bot đo tay xong phải khai công thức vào `src/rcr/data/` (iaa_duong_lai / rating_gen / checkin / gen_ngam / fo_flow), chạy lại đúng case để chứng minh, ghi file đã sửa vào tóm tắt | `src/rcr/bot_chay_claude.py` NHAC_LUU_CONG_THUC | — |

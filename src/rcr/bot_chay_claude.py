@@ -94,6 +94,12 @@ NHAC_RATING_KHONG_GEN = (
     "Nut 'Rate on Google Play' mo trang app tren store CO SAN cua may (vd vivo App Store khi may chua cai Google Play) "
     "la DUNG, khong phai bug (user chot 16/11/2026); BACK trong store ben thu ba do store xu ly -> KHONG_AP_DUNG.\n"
 )
+# Dong hien thi ads: da request + load ok dung unit ma khong show -> DAT (user chot 17/11/2026, AIP935 IAA-02-01).
+NHAC_LOAD_KHONG_SHOW = (
+    "Dong ads 'hien thi / show / khoang cach giua cac ad': ad DA request + load ok dung unit ma khong show -> PASS "
+    "(ghi so request/load), KHONG FAIL, khong dua vao bugs. Chi FAIL khi khong request, request sai unit, hoac show sai "
+    "cho / sai luc.\n"
+)
 # Moi may QA deu la may test AdMob (user chot 29/10/2026): ad_click khong bao gio la ly do dung - luot AIP805
 # 1.4.0 (14) dung o buoc check ID ads vi tuong may chua dang ky test device.
 PROMPT = (
@@ -118,7 +124,7 @@ PROMPT = (
     "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case. KHONG tu viet vong lap sleep doc "
     "journal.jsonl / file output de cho: thong bao xong chi toi khi lenh Bash dang chay ket thuc, vong lap do giu may "
     "dung im toi het han (AIP872 04/11/2026 mat ~7 phut). Trong luc cho thi lam viec khong can may (doc TC, preflight).\n"
-    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_CHAM_HET + NHAC_RATING_KHONG_GEN +
+    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_CHAM_HET + NHAC_RATING_KHONG_GEN + NHAC_LOAD_KHONG_SHOW +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Sua tool giua luot: chi chay test cua file vua sua (pytest tests/test_<file>.py), KHONG chay ca bo test - "
     "may dung im trong luc cho.\n"
@@ -218,7 +224,7 @@ PROMPT_TINH_NANG = (
     "{policy}"
     "Nhieu tab: dung MOT report gop bang `--gop` cac file luot (khong can may); gop khong duoc thi `link` = report tab "
     "dau, duong dan report tab con lai ghi trong `tom_tat`.\n"
-    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_CHAM_HET + NHAC_RATING_KHONG_GEN +
+    + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_CHAM_HET + NHAC_RATING_KHONG_GEN + NHAC_LOAD_KHONG_SHOW +
     "`link` = duong dan TUYET DOI report .html.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON):\n"
     'KET_QUA: {{"trang_thai": "XONG|DUNG|LOI", "link": "<duong dan TUYET DOI file report .html>", '

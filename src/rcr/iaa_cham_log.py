@@ -99,6 +99,11 @@ def cham_mot_tang(ev: list[dict], i: int, bat: str, tat: str, unit_bat: str, uni
         ra.append((2, "BLOCKED", f"request đúng {_duoi(unit_bat)} {b['req']} lần nhưng kho không fill "
                                  f"({b['load_fail']} fail) — chưa có ad hiện để kiểm hiển thị, cần fill (lắc máy chọn "
                                  "ad source / test mode network)"))
+    elif b["load_ok"]:
+        # Request + load ok dung unit ma khong show (app chua toi cho goi show / chan theo logic rieng): DAT - QA chot
+        # 17/11/2026 (AIP935 inter feature load san nhung khong show bi bao FAIL): "chi can co request load la dung".
+        ra.append((2, "PASS", f"request + load ok {_duoi(unit_bat)} ({b['req']} request, {b['load_ok']} load ok), "
+                              "chưa show — QA chốt: đã request + load đúng unit là đạt"))
     return ra
 
 

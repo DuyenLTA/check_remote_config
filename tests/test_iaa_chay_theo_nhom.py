@@ -279,3 +279,11 @@ def test_doan_hong_cua_bien_the_dau_dung_luot_som():
     assert cli_iaa.doan_hong({"doan": [{"ten": "home", "xong": True}, {"ten": "reward", "xong": False}]}) == ["reward"]
     assert cli_iaa.doan_hong({"doan": [{"ten": "home", "xong": True}]}) == []
     assert cli_iaa.doan_hong(None) == []
+
+
+def test_load_ok_ma_khong_show_la_dat():
+    """QA chot 17/11/2026: request + load ok dung unit ma khong show -> dong hien thi PASS, khong FAIL/BLOCKED."""
+    ev = [{"t": 1.0, "ten": "track_ad_request", "unit": "u1", "vi_tri": 0, "tang": "high", "ok": True},
+          {"t": 2.0, "ten": "ad_load", "unit": "u1", "vi_tri": 0, "tang": "high", "ok": True}]
+    ra = dict((n, (k, ly)) for n, k, ly in iaa_cham_log.cham_mot_tang(ev, 0, "high", "thuong", "u1", "u2", True))
+    assert ra[1][0] == "PASS" and ra[2][0] == "PASS" and "load ok" in ra[2][1]
