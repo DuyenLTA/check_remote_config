@@ -85,6 +85,18 @@ def test_ban_dang_hien_truoc_mat_thi_khong_cuon(monkeypatch):
     assert asyncio.run(ui.doc_cac_ban(_Client(), "S1", [], "2.2.0 (13)")) == [dich] and len(cuon) == 1
 
 
+def test_man_dau_rong_thi_cuon_tiep_khong_bao_chua_co(monkeypatch):
+    """May xoay ngang: man dau chi lo tieu de release o day man (chua doc ra release) -> cuon tiep."""
+    dich = _ban("tai", "Nov 18, 2026 at 4:40 PM", "r3")
+    cac_man = iter([[], [dich], [dich]])
+    cuon = _goi_cuon(monkeypatch, [])
+    monkeypatch.setattr(ui.s, "cac_ban", lambda n: next(cac_man))
+    assert asyncio.run(ui.doc_cac_ban(_Client(), "S1", [], dich["version"])) == [dich] and len(cuon) == 2
+    cuon.clear()
+    monkeypatch.setattr(ui.s, "cac_ban", lambda n: [])     # that su khong co release nao -> dung sau 3 man rong
+    assert asyncio.run(ui.doc_cac_ban(_Client(), "S1", [], "1.1.0 (3)")) == [] and len(cuon) == 2
+
+
 def test_app_dang_hien_tren_danh_sach_thi_bam_luon(monkeypatch):
     cuon = _goi_cuon(monkeypatch, [])
     da_bam = []

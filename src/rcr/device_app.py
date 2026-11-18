@@ -112,13 +112,27 @@ async def tap(client, serial: str, x: int, y: int) -> None:
 
 
 async def screen_size(client, serial: str) -> tuple[int, int]:
-    """Kich thuoc man hinh (px). Doc khong duoc thi lay co pho bien nhat."""
+    """Kich thuoc man hinh (px) THEO HUONG DANG XOAY. Doc khong duoc thi lay co pho bien nhat.
+
+    `wm size` luon tra kich thuoc doc; may dang xoay ngang ma dung kich thuoc do thi toa do vuot lech het
+    (AIP927 18/11/2026: App Tester xoay ngang, vuot "len" keo panel thong bao, khong cuon duoc danh sach release
+    -> bao "App Tester chua co 1.1.0 (3)"). `dumpsys window displays` ghi `cur=WxH` da tinh huong xoay."""
     out, _, _ = await client.shell(serial, "wm", "size")
+    w = h = 0
     for part in out.split():
         if "x" in part and part.replace("x", "").isdigit():
-            w, h = part.split("x")
-            return int(w), int(h)
-    return 1080, 2400
+            w, h = (int(x) for x in part.split("x"))
+            break
+    if not w:
+        return 1080, 2400
+    try:
+        man, _, _ = await client.shell(serial, "dumpsys", "window", "displays")
+    except Exception:                      # noqa: BLE001 - khong doc duoc huong xoay thi giu kich thuoc doc
+        man = ""
+    m = re.search(r"\bcur=(\d+)x(\d+)", man or "")
+    if m and (int(m.group(1)), int(m.group(2))) == (h, w):
+        return h, w                        # dang xoay ngang
+    return w, h
 
 
 # Vuot doc dai giua man, tu 80% sang 20%: du dai de he thong tinh la vuot chu

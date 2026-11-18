@@ -207,8 +207,12 @@ async def _vao_chi_tiet(client, serial, package, out_dir: Path, nodes):
 async def doc_cac_ban(client, serial, nodes, version: str) -> list[dict]:
     """Cuon danh sach release, gom moi release (khong trung). Dung khi da qua het `version`."""
     gom: dict = {}
+    rong = 0
     for _ in range(MAX_CUON_BAN):
         moi = s.cac_ban(nodes)
+        # Man rong (may xoay ngang: release dau chi lo tieu de o day man, chua du note/nut) -> cuon them chu
+        # khong dung ngay (AIP927 1.1.0 (3) 18/11/2026 bao "App Tester chua co" du ban nam ngay duoi).
+        rong = 0 if moi else rong + 1
         truoc = len(gom)
         for b in moi:
             gom.setdefault(s.khoa_ban(b), b)
@@ -221,7 +225,7 @@ async def doc_cac_ban(client, serial, nodes, version: str) -> list[dict]:
             (s.ma_build(b["version"]) or dich_build + 1) < dich_build for b in gom.values())
         # Cuon ma khong ra release moi = het danh sach -> dung, khong cuon tiep cho du MAX_CUON_BAN.
         het = truoc and len(gom) == truoc
-        if da_qua or qua_build or not moi or het:
+        if da_qua or qua_build or rong >= 3 or het:
             break
         await _cuon(client, serial, "up")
         nodes = await _nodes(client, serial)
