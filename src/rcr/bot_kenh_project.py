@@ -66,18 +66,17 @@ def dev_theo_ten(ten: str, bang: dict[str, int]) -> int | None:
 
 def dev_theo_assignee(assignee: dict[str, list[str]], keys: list[str], bang: dict[str, int],
                       mac_dinh: list[int], gui_build: int | None = None) -> list[int]:
-    """Discord id can tag cho cac bug `keys`; bug nao khong ra dev trong bang (build moi chua giao,
-    Jira tu gan nguoi mac dinh cua project) -> them dev gui build, khong biet ai gui thi them `mac_dinh`."""
-    ra, thieu = [], False
+    """Discord id can tag cho cac bug `keys`. Biet dev gui build -> CHI tag Assistant cua dev do (user chot
+    18/11/2026: tag ca 2 bot thi ca 2 cung vao fix mot bug). Khong biet ai gui (webhook / QA gui lai) -> tag dev
+    duoc giao bug; khong bug nao giao dev trong bang moi tag `mac_dinh`."""
+    if gui_build:
+        return [gui_build]
+    ra = []
     for k in keys:
         i = next((bang[_chuan(t)] for t in assignee.get(k, []) if _chuan(t) in bang), None)
-        if i is None:
-            thieu = True
-        elif i not in ra:
+        if i is not None and i not in ra:
             ra.append(i)
-    if thieu or not ra:
-        ra += [i for i in ([gui_build] if gui_build else mac_dinh) if i not in ra]
-    return ra
+    return ra or list(mac_dinh)
 
 
 def link_tin_cung_build(bot, c: dict) -> str:
@@ -120,7 +119,7 @@ async def ids_can_tag(bot, keys: list[str], c: dict | None = None) -> list[int]:
     t = await _ten_gui_build(bot, c or {}, bang)
     gui_build = bang[t] if t else None
     du_phong = [gui_build] if gui_build else mac_dinh
-    if not keys or not bang or not jira.bat(getattr(bot, "jira_url", ""), getattr(bot, "jira_token", "")):
+    if gui_build or not keys or not bang or not jira.bat(getattr(bot, "jira_url", ""), getattr(bot, "jira_token", "")):
         return du_phong
     try:
         a = await asyncio.to_thread(jira.assignee, bot.jira_url, bot.jira_token, keys)

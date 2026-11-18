@@ -95,7 +95,7 @@ def test_tag_dev_theo_assignee():
     assert kp.dev_theo_assignee(a, ["AIP927-1"], bang, [111, 222]) == [111]
     assert kp.dev_theo_assignee(a, ["AIP927-1", "AIP927-2"], bang, [111, 222]) == [111, 222]
     assert kp.dev_theo_assignee(a, ["AIP927-3"], bang, [111, 222]) == [111, 222]          # chua giao -> tag nhu cu
-    assert kp.dev_theo_assignee(a, ["AIP927-2", "AIP927-4"], bang, [111, 222]) == [222, 111]  # 1 bug la -> them mac dinh
+    assert kp.dev_theo_assignee(a, ["AIP927-2", "AIP927-4"], bang, [111, 222]) == [222]       # bug la khong keo them dev kia
 
 
 def test_bug_chua_giao_dev_thi_tag_dev_gui_build():
@@ -108,7 +108,7 @@ def test_bug_chua_giao_dev_thi_tag_dev_gui_build():
     assert kp.dev_theo_ten("Build Notification", bang) is None
     a = {"AIP882-110": ["quanbd", "Bùi Đình Quân"], "AIP882-111": ["dungnt2", "Nguyễn Tấn Dũng"]}
     assert kp.dev_theo_assignee(a, ["AIP882-110"], bang, [1, 2], gui_build=222) == [222]
-    assert kp.dev_theo_assignee(a, ["AIP882-111"], bang, [1, 2], gui_build=222) == [111]   # da giao -> theo assignee
+    assert kp.dev_theo_assignee(a, ["AIP882-111"], bang, [1, 2], gui_build=222) == [222]   # biet nguoi gui build -> chi tag nguoi do
     assert kp.dev_theo_assignee(a, ["AIP882-110"], bang, [1, 2]) == [1, 2]                  # khong biet ai gui
 
 
