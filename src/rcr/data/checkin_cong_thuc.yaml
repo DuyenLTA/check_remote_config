@@ -47,6 +47,88 @@ com.aimakeup.aifaceeditor.facemakeup.faceswap: &beauty
     - cho_man: "HistoryActivity"
   moi_tao: "^New$"
 
+# AIP927 Pictifaze 1.1.0 (3) - do 17/11/2026 tren Samsung A13 R58TB198BNN: Home "Slideshow" co hang the template
+# (content-desc "Cinematic Crossfade" | "Polaroid Memories"; "Vintage Film Reel" nam hang duoi) -> SelectPhotoActivity
+# CHINH LA man unlock template: nut "Generate with Ads" + "Free Generate (1 left)" + "1 of 1 free left" (khong co sheet).
+# Phai dien du 5 o anh moi bat nut gen (giong rating_gen.yaml). History = icon content-desc "History" tren Home.
+photoslideshow.videoslideshow.addimage.photogen:
+  home: "MainActivity"
+  home_chu: "^Slideshow$"
+  vao_unlock:
+    - ve_man: "MainActivity"
+      toi_da: 60
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap_duoi: "^Slideshow$"
+      thu: "{thu}"
+    - cho_man: "SelectPhoto"
+    - dien_o_anh: "^Change$"
+      nguon: "^Gallery$"
+      xong: "^Generate with Ads$"
+      toi_da: 240
+  sheet_xong: "^(Generate with Ads|Free Generate)"
+  lich_su:
+    - tap: "^History$"
+    - cho_man: "HistoryActivity"
+  moi_tao: "just now|\\d+\\s*(?:second|minute)s?\\s+ago|Generating|Processing|\\d+%"
+
+# AIP916 CreaPix 1.4.0 - do 18/11/2026 tren Samsung A13 R58TB198BNN: Home tab PHOTO, hang style duoi "TRENDING HAIR
+# STYLE" (the chi co content-desc) -> inter style (ad test bo dem treo, cho_man tu dong) -> SelectPhotoActivity CHINH LA
+# man unlock: "Generate with Ads" + "Free Generate (1 left)" (chi hien khi con luot checkin). Chua co anh thi nut bi
+# disable -> "Add your photo" -> sheet "Choose Photo Source" -> Gallery -> photopicker -> Done. Gen ngam tu ve Home.
+photomaker.image.editor.ai:
+  home: "MainActivity"
+  home_chu: "^TRENDING HAIR STYLE$"
+  vao_unlock:
+    - ve_man: "MainActivity"
+      toi_da: 60
+    - dong_neu_co: "^(Close|Close sheet|Not now|Maybe later)$"
+    - tap: "^PHOTO$"
+    - tap_duoi: "^TRENDING HAIR STYLE$"
+      thu: "{thu}"
+    - cho_man: "SelectPhoto"
+      toi_da: 90
+    - tap: "^Add your photo$"
+    - tap: "^Gallery$"
+      toi_da: 15
+    - chon_anh: true
+      toi_da: 30
+  sheet_xong: "^(Generate with Ads|Free Generate)"
+  lich_su:
+    - tap: "^History$"
+    - cho_man: "HistoryActivity"
+  moi_tao: "just now|\\d+\\s*(?:second|minute)s?\\s+ago|Generating|Processing|\\d+%"
+
+# AIP944 AI Photo Video Creator 1.5.0 (9) - do 18/11/2026 tren Pixel 7 29301FDH2006K7: Home Compose "AI Studio" co
+# hang the "Trending Now" (content-desc "Cobalt Sweater" | "Winter Couple" | "XMas Dance") -> bam the bat inter (ad test
+# bo dem treo o "1") -> mo thang photopicker he thong -> chon anh + "Xong" -> sheet "Just One More Step!!!" voi
+# "Watch Ads (0/5)" / "Free Generate (1 left)". History = icon content-desc "History" tren Home (cung MainActivity,
+# tieu de chu "History"; trong thi "No creations yet"). The thu 2 "Winter Couple" la template DOI: chon 1 anh + Xong
+# thi app ve Home, KHONG mo sheet -> case can template B (R06 "Gen 2 lan") tool dung o "sheet khong tai xong"; do tay
+# dung the 1 + the 3 ("XMas Dance", gen video) - do 18/11/2026.
+com.ai.aiphoto.aivideo.creator.generator:
+  home: "MainActivity"
+  home_chu: "^Trending Now$"
+  vao_unlock:
+    - ve_man: "MainActivity"
+      toi_da: 60
+    - dong_neu_co: "^(Close|Close sheet)$"
+    # Home doi khi tai loi ("Something went wrong while loading the content" + "Try again", mat hang Trending Now -
+    # gap 1 lan sau doi ngay 18/11/2026, mo lai thi tai duoc) -> bam Try again roi doi hang the hien.
+    - tap_neu_co: "^Try again$"
+    - cho_chu: "^Trending Now$"
+      toi_da: 45
+    - tap_duoi: "^Trending Now$"
+      thu: "{thu}"
+    - cho_man: "photopicker"     # cho_man tu dong inter dang che (AdActivity) roi doi trinh chon anh
+      toi_da: 60
+    - chon_anh: true
+      toi_da: 30
+  sheet_xong: "^(Watch Ads|Free Generate)"
+  lich_su:
+    - tap: "^History$"
+    - cho_chu: "^(No creations yet|Untitled creation|Generating.*)$"
+  moi_tao: "just now|\\d+\\s*(?:second|minute)s?\\s+ago|Generating|Processing|\\d+%|Untitled creation"
+
 # KHUON: app chua co muc rieng -> chon khuon co `nhan_dien` khop chu tren Home (src/rcr/cong_thuc_khuon.py).
 khuon:
   beauty:

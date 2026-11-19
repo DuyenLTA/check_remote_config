@@ -29,8 +29,14 @@ SU_KIEN_RE = re.compile(
 DAU_DOI_NGAY = "/data/local/tmp/rcr-doi-ngay"
 # vivo V2143 tieng Viet: "Tự động đặt giờ"; muc ngay "Ngày", nut thang sau desc "Tháng sau".
 TU_DONG_RE = re.compile(r"^(?:Automatic date and time|Set time automatically|Use network-provided time|Tự động đặt giờ)$", re.I)
-NGAY_RE = r"^(?:Date|Ngày)$"
+NGAY_RE = r"^(?:Date|Ngày|Set date|Đặt ngày)$"         # Samsung One UI: "Set date" (17/11/2026 A13)
 THANG_SAU_RE = r"^(?:Next month|Tháng sau)$"
+NUT_XONG_RE = r"^(?:OK|Done|Xong)$"                     # Samsung One UI: "Done"
+
+
+def mo_ta_ngay(d: datetime.date) -> str:
+    """Regex content-desc o ngay cua lich Samsung ("Wednesday, 18 November 2026")."""
+    return rf"\b{d.day} {d.strftime('%B')} {d.year}$"
 
 
 def _chu(nodes):
@@ -156,11 +162,15 @@ async def sang_ngay_mai(client, serial: str) -> dict:
             return {"ok": False, "loi": "không thấy công tắc giờ tự động"}
     if not await _bam_chu(client, serial, NGAY_RE):
         return {"ok": False, "loi": "không mở được lịch chọn ngày"}
-    ngay = str((datetime.date.fromisoformat(truoc.strip()) + datetime.timedelta(days=1)).day)
+    mai = datetime.date.fromisoformat(truoc.strip()) + datetime.timedelta(days=1)
+    ngay = str(mai.day)
     nodes = await _nodes_all(client, serial)
-    if not any((n.text or "") == ngay and n.clickable for n in nodes):
+    o_ngay = mo_ta_ngay(mai)
+    if not any(((n.text or "") == ngay and n.clickable) or re.search(o_ngay, n.content_desc or "") for n in nodes):
         await _bam_chu(client, serial, THANG_SAU_RE, desc=True)
-    if not await _bam_chu(client, serial, rf"^{re.escape(ngay)}$") or not await _bam_chu(client, serial, r"^OK$"):
+    # Lich AOSP: o ngay co chu so; lich Samsung One UI: o ngay chi co content-desc "Wednesday, 18 November 2026".
+    chon = await _bam_chu(client, serial, rf"^{re.escape(ngay)}$") or await _bam_chu(client, serial, o_ngay, desc=True)
+    if not chon or not await _bam_chu(client, serial, NUT_XONG_RE):
         return {"ok": False, "loi": f"không chọn được ngày {ngay}"}
     sau, _, _ = await client.shell(serial, "date", "+%Y-%m-%d")
     await client.shell(serial, "input", "keyevent", "KEYCODE_HOME")

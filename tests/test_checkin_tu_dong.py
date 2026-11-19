@@ -61,6 +61,18 @@ def test_tim_duoi_chon_template_thu_n():
     assert [rating_cong_thuc.tim_duoi(n, "^AI Try On Outfits$", t).bounds.left for t in (1, 2, 3)] == [48, 384, 1056]
 
 
+def test_tim_duoi_luoi_bento_dem_sang_hang_ke():
+    """AIP927: the to ben trai cao 2 hang, 2 the nho chong ben phai -> template thu 3 o hang thu 2."""
+    xml = f"""<hierarchy><node {P} text="Slideshow" bounds="[56,288][299,353]"/>
+<node {P} content-desc="Cinematic Crossfade" bounds="[56,401][686,1104]"/>
+<node {P} content-desc="Polaroid Memories" bounds="[709,401][1024,741]"/>
+<node {P} content-desc="Vintage Film Reel" bounds="[709,764][1024,1104]"/></hierarchy>"""
+    n = parse_dump(xml)
+    assert [rating_cong_thuc.tim_duoi(n, "^Slideshow$", t).content_desc for t in (1, 2, 3)] == [
+        "Cinematic Crossfade", "Polaroid Memories", "Vintage Film Reel"]
+    assert rating_cong_thuc.tim_duoi(n, "^Slideshow$", 4) is None
+
+
 def _drive(*recs):
     return {"steps": [{"checkin": r} for r in recs]}
 
