@@ -361,3 +361,18 @@ def test_ve_home_back_qua_man_prompt_sau_result(monkeypatch):
     monkeypatch.setattr(act_rating.ui_dump, "dump", dump)
     monkeypatch.setattr(act_rating.asyncio, "sleep", ngu)
     assert len(asyncio.run(act_rating._ve_home(Client(), "s", pkg))) == 2
+
+
+def test_hop_chan_store_cua_rom_oppo_bam_cancel():
+    """OPPO CPH2375 (AIP932 19/11/2026): Rate on Google Play -> ROM chan market:// bang hop cua com.daemon.shelper;
+    bam Cancel thi Google Play mo dung trang app. Chi bam nut bo qua cua dung package chan, khong bam 'Download Now'."""
+    xml = ('<hierarchy>'
+           '<node text="Download Now" resource-id="" class="android.widget.Button" package="com.daemon.shelper" '
+           'content-desc="" clickable="true" bounds="[98,797][622,885]" />'
+           '<node text="Cancel" resource-id="" class="android.widget.TextView" package="com.daemon.shelper" '
+           'content-desc="" clickable="true" bounds="[300,905][420,957]" />'
+           '<node text="Cancel" resource-id="" class="android.widget.TextView" package="com.khac" '
+           'content-desc="" clickable="true" bounds="[0,0][10,10]" /></hierarchy>')
+    nut = rating_may.nut_huy_chan_rom(parse_dump(xml), "com.daemon.shelper")
+    assert nut is not None and nut.bounds.center == (360, 931)
+    assert rating_may.nut_huy_chan_rom(parse_dump(xml), "com.android.vending") is None
