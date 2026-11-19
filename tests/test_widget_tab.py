@@ -97,6 +97,14 @@ def test_nut_xac_nhan_va_khung_widget_tren_launcher():
     assert widget_may.vung_widget(DIALOG, PKG) is None
 
 
+def test_nut_xac_nhan_launcher_oppo_bo_qua_tieu_de_khong_bam_duoc():
+    # OPPO CPH2375 (AIP932 19/11/2026): tieu de "Add to Home screen" khong bam duoc, nut that la "ADD".
+    oppo = _dump(_node("Add to Home screen", bounds="[80,520][640,570]").replace('clickable="true"', 'clickable="false"'),
+                 _node("CANCEL", bounds="[40,1000][360,1080]"), _node("ADD", bounds="[360,1000][680,1080]"))
+    chu, nut = widget_may.nut_xac_nhan(oppo, PKG)
+    assert chu == "add" and nut.bounds.center == (520, 1040)
+
+
 def test_nut_xac_nhan_launcher_vivo_tieng_viet():
     # vivo V2143 (Android 13, launcher3 tieng Viet): dialog "Màn hình chính hệ thống" co "HỦY" / "TỰ ĐỘNG THÊM".
     vivo = _dump(_node("HỦY", pkg="com.android.launcher3", bounds="[446,1473][622,1622]"),

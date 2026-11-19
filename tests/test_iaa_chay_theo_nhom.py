@@ -194,6 +194,48 @@ def test_buoc_neu_co_bo_qua_khi_khong_co_chu_va_tap_toa_do_khi_co():
         device_app.focus, rating_cong_thuc._nodes, device_app.tap = cu
 
 
+def test_nhap_tim_o_theo_class_khi_o_khong_co_chu_goi_y():
+    """AIP932 AI Tutor: o chat la EditText text="" (khong lo chu goi y) -> `o_lop` tim theo class, go chu vao do."""
+    import asyncio
+    from rcr import device_app, iaa_lai, rating_cong_thuc
+    from rcr.ui_dump import parse_dump
+
+    xml = ('<hierarchy><node text="Moss" resource-id="" class="android.widget.TextView" package="p" '
+           'content-desc="" clickable="false" bounds="[236,103][328,147]" />'
+           '<node text="" resource-id="" class="android.widget.EditText" package="p" '
+           'content-desc="" clickable="true" bounds="[64,1363][552,1442]" /></hierarchy>')
+    bam: list = []
+    lenh: list = []
+
+    class May:
+        async def shell(self, *a):
+            lenh.append(a)
+            return ("", "", 0)
+
+    async def focus(*_a):
+        return "p", "p.MainActivity"
+
+    async def nodes(*_a):
+        return parse_dump(xml)
+
+    async def tap(_c, _s, x, y):
+        bam.append((x, y))
+
+    async def ngu(*_a):
+        return None
+
+    cu = (device_app.focus, rating_cong_thuc._nodes, device_app.tap, iaa_lai.asyncio.sleep)
+    device_app.focus, rating_cong_thuc._nodes, device_app.tap = focus, nodes, tap
+    iaa_lai.asyncio.sleep = ngu
+    try:
+        assert asyncio.run(iaa_lai.buoc(May(), "S", "p", {"nhap": "hello", "o_lop": "EditText$"}, []))
+        assert bam == [(308, 1402)]
+        assert any(a[1:] == ("input", "text", "hello") for a in lenh)
+        assert not asyncio.run(iaa_lai.buoc(May(), "S", "p", {"nhap": "hello", "o_lop": "SearchView$"}, []))
+    finally:
+        device_app.focus, rating_cong_thuc._nodes, device_app.tap, iaa_lai.asyncio.sleep = cu
+
+
 def test_nhan_shortcut_lay_theo_id_cua_dung_app():
     """Shortcut 'uninstall' cua AIP893 tren may tieng Viet ten 'Go cai dat' - trung chu lenh go cua launcher."""
     import asyncio
@@ -324,3 +366,56 @@ def test_tap_toa_do_y_theo_tam_chu_khong_theo_ti_le_co_dinh():
     ]
     assert iaa_lai.y_tam_node(nodes, "^Still want to uninstall$") == 1973
     assert iaa_lai.y_tam_node(nodes, "^Why do you uninstall\\?$") is None
+
+
+def test_shortcut_ngan_keo_pixel_go_tu_dau_va_bam_dong_chu(monkeypatch):
+    """Pixel 4 AIP508 19/11/2026: go du ten 'Homova - AI Home Design' chi ra icon (khong ra dong shortcut); go tu
+    dau 'Homova' moi ra dong 'Uninstall' - nam duoi ban phim (bam la trung phim) va bam vao icon thi khong mo."""
+    import asyncio
+    from rcr import device_app, iaa_lai, ui_dump
+    from rcr.ui_dump import Bounds, DeviceNode
+    L = "com.google.android.apps.nexuslauncher"
+    ten = "Homova - AI Home Design"
+
+    def n(i, text="", desc="", b=(0, 0, 10, 10)):
+        return DeviceNode(i, "", "android.widget.TextView", text, desc, Bounds(*b), True, True, True, L, None, 0)
+    o_tim = n("s", desc="Search your phone", b=(0, 113, 1080, 302))
+    chi_icon = [o_tim, n("a", ten, ten, (41, 323, 241, 632))]
+    co_dong = chi_icon + [n("u1", "", "Uninstall", (89, 1268, 185, 1364)), n("u2", "Uninstall", "", (209, 1281, 411, 1351))]
+    st = {"go": "", "ban_phim": True, "tap": [], "back": 0}
+
+    class C:
+        async def shell(self, serial, *args):
+            if args[:2] == ("input", "text"):
+                st["go"] = args[2].strip("'")
+                st["ban_phim"] = True
+            if args[:2] == ("input", "keyevent") and args[2] == "KEYCODE_BACK":
+                st["back"] += 1
+                st["ban_phim"] = False
+            if args[:1] == ("dumpsys",):
+                return (f"mInputShown={'true' if st['ban_phim'] else 'false'}", "", 0)
+            return ("", "", 0)
+
+    async def dump(c, s, *a):
+        return "tu_dau" if st["go"] == "Homova" else "du_ten"
+
+    async def tap(c, s, x, y):
+        st["tap"].append((x, y))
+
+    async def focus(c, s):
+        return ("p.app", "p.app.SplashActivity") if (310, 1316) in st["tap"] else (L, "Launcher")
+
+    async def size(c, s):
+        return (1080, 2280)
+    monkeypatch.setattr(ui_dump, "dump", dump)
+    monkeypatch.setattr(ui_dump, "parse_dump", lambda x: co_dong if x == "tu_dau" else chi_icon)
+    monkeypatch.setattr(device_app, "tap", tap)
+    monkeypatch.setattr(device_app, "focus", focus)
+    monkeypatch.setattr(device_app, "screen_size", size)
+    import re
+    log: list[str] = []
+    kq = asyncio.run(iaa_lai._shortcut_ngan_keo(C(), "S", "p.app", f"^{re.escape(ten)}$", ["Uninstall"],
+                                                "^(Uninstall)$", log))
+    assert kq is True
+    assert st["tap"][-1] == (310, 1316)          # dong chu, khong phai icon (137,1316)
+    assert st["back"] >= 1                       # an ban phim truoc khi doc ket qua

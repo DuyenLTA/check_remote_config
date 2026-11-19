@@ -20,7 +20,8 @@ dong_neu_co / cho_chu / ve_man - chay bang `rating_cong_thuc`), them buoc rieng 
   ve_chu: <regex>          ve man goc nhan theo CHU (app Compose: moi man chung mot activity, `ve_man` bao xong ngay):
                            lai FO / mo lai app neu can, dong ad, BACK toi khi thay chu. `man: <regex activity>`,
                            `tab: <regex>` = tab duoi ve man goc (bam truoc khi BACK)
-  nhap: <chu>              go chu vao o nhap (tim theo `o: <regex chu goi y>`), ban phim dang mo thi an di
+  nhap: <chu>              go chu vao o nhap (tim theo `o: <regex chu goi y>`, hoac `o_lop: <regex class>` khi o
+                           khong co chu goi y), ban phim dang mo thi an di
   tap_neu_co: <regex>      bam neu co (nut them cua mot so app cung khuon), `thu: n` = nut thu n cung chu; man da co chu
                            `khi_thieu: <regex>` thi bo qua
 Duong lai chia DOAN; doan hong (het gio, khong thay nut) thi ghi lai va sang doan sau - mot nut doi chu khong lam
@@ -179,10 +180,25 @@ async def _shortcut_ngan_keo(client, serial, package, nhan_app, cac_nhan, muc, l
     ten = re.sub(r"^\^|\$$", "", nhan_app).replace("\\", "")
     await client.shell(serial, "input", "text", shlex.quote(ten.split(":")[0].strip().replace(" ", "%s")))
     await asyncio.sleep(2.0)
-    nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+    nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))   # Samsung: giu nguyen nhu cu (da chay on)
     thang = rating_cong_thuc.tim(nodes, muc)
+    tu_dau = ten.split(":")[0].split()[0] if ten.split() else ""
+    if thang is None and tu_dau and tu_dau != ten.split(":")[0].strip():
+        # Pixel launcher (Pixel 4 AIP508 19/11/2026): go DU ten "Homova - AI Home Design" chi ra icon, khong ra
+        # dong shortcut; go tu dau "Homova" moi ra dong "Uninstall" cua tung app trung ten -> go lai tu dau.
+        await device_app.tap(client, serial, *o_tim.bounds.center)
+        await asyncio.sleep(1.0)
+        await client.shell(serial, "input", "keyevent", "KEYCODE_MOVE_END", *(["KEYCODE_DEL"] * 40))
+        await client.shell(serial, "input", "text", shlex.quote(tu_dau))
+        await asyncio.sleep(2.0)
+        nodes = await _ket_qua_tim_khong_ban_phim(client, serial)
+        thang = rating_cong_thuc.tim(nodes, muc)
     if thang is not None:
-        # Samsung One UI: ket qua tim kiem hien thang muc shortcut cua app (khong can nhan giu icon).
+        # Samsung One UI / Pixel: ket qua tim kiem hien thang muc shortcut cua app (khong can nhan giu icon).
+        # Pixel: dong shortcut co 2 node khop (icon desc "Uninstall" + chu "Uninstall"); bam vao icon khong mo
+        # shortcut (Pixel 4 19/11/2026) -> bam vao node khop RONG nhat (dong chu).
+        thang = max((n for n in nodes if rating_cong_thuc._khop(n, muc) and not n.bounds.empty),
+                    key=lambda n: n.bounds.right - n.bounds.left, default=thang)
         await device_app.tap(client, serial, *thang.bounds.center)
         await asyncio.sleep(2.0)
         return await _kiem_sau_bam(client, serial, package, cac_nhan[0], "kết quả tìm kiếm", log)
@@ -193,6 +209,16 @@ async def _shortcut_ngan_keo(client, serial, package, nhan_app, cac_nhan, muc, l
             return kq
     log.append(f"tìm '{ten}' trong ngăn kéo ứng dụng không ra icon — tìm trên màn hình chính")
     return None
+
+
+async def _ket_qua_tim_khong_ban_phim(client, serial: str) -> list:
+    """Dump ket qua tim kiem cua ngan keo sau khi AN ban phim: dong shortcut nam duoi ban phim van co trong cay UI,
+    bam vao la bam trung phim (Pixel 4 19/11/2026 mo nham cai dat Gboard). Pixel: BACK an ban phim, giu ket qua."""
+    out, _, _ = await client.shell(serial, "dumpsys", "input_method")
+    if "mInputShown=true" in (out or ""):
+        await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+        await asyncio.sleep(1.0)
+    return ui_dump.parse_dump(await ui_dump.dump(client, serial))
 
 
 async def _thu_icon(client, serial, package, icon, cac_nhan, muc, log) -> bool | None:
@@ -229,6 +255,13 @@ async def _thu_icon(client, serial, package, icon, cac_nhan, muc, log) -> bool |
 async def _kiem_sau_bam(client, serial, package, nhan, noi, log) -> bool:
     """Sau khi bam muc shortcut: trinh go cua he thong -> huy; app khac -> thoat; dung app -> True."""
     pkg, act = await device_app.focus(client, serial)
+    for _ in range(6):
+        # Pixel 4 (19/11/2026): mo shortcut tu ket qua tim kiem, 2s sau focus van la launcher (app con dang khoi
+        # dong) -> cho them toi ~6s truoc khi ket luan "mo app khac".
+        if pkg and "launcher" not in pkg:
+            break
+        await asyncio.sleep(1.0)
+        pkg, act = await device_app.focus(client, serial)
     if CAI_DAT_RE.search(f"{pkg} {act}"):
         for _ in range(2):
             await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
@@ -403,6 +436,16 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
         await asyncio.sleep(float(b.get("cho_sau", 2.0)))
         log.append(f"bấm toạ độ {fx},{y}px")
         return True
+    if "vuot_len" in b:
+        # Cuon noi dung len (vuot tu 60% xuong 30% chieu cao), `vuot_len: n` lan: nut nam duoi native ad, ngoai man
+        # (AIP508 Homova Pixel 4 19/11/2026: "Still want to uninstall" chi hien sau khi cuon SorryUninstall).
+        rong, cao = await _co_man(client, serial)
+        for _ in range(int(b["vuot_len"])):
+            await client.shell(serial, "input", "swipe", str(rong // 2), str(int(cao * 0.6)), str(rong // 2),
+                               str(int(cao * 0.3)), "400")
+            await asyncio.sleep(1.5)
+        log.append(f"vuốt lên ×{b['vuot_len']}")
+        return True
     if "cho" in b:
         await asyncio.sleep(float(b["cho"]))
         log.append(f"chờ {b['cho']}s")
@@ -462,9 +505,14 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
         return await _ve_chu(client, serial, package, b, log)
     if "nhap" in b:
         await _dong_ad_neu_co(client, serial, log)
-        node = rating_cong_thuc.tim(await rating_cong_thuc._nodes(client, serial, package), b.get("o", "."))
+        nodes = await rating_cong_thuc._nodes(client, serial, package)
+        if b.get("o_lop"):
+            # O nhap Compose khong lo chu goi y (AIP932 AI Tutor: EditText text="" NAF) -> tim theo class.
+            node = next((n for n in nodes if re.search(b["o_lop"], n.cls) and not n.bounds.empty), None)
+        else:
+            node = rating_cong_thuc.tim(nodes, b.get("o", "."))
         if not node:
-            log.append(f"không thấy ô nhập {b.get('o')!r}")
+            log.append(f"không thấy ô nhập {b.get('o_lop') or b.get('o')!r}")
             return False
         await device_app.tap(client, serial, *node.bounds.center)
         await asyncio.sleep(1.0)

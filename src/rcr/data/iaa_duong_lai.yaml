@@ -397,6 +397,131 @@ khuon:
           - cho: 4
           - back: 3
 
+  # App AI photo + AI chat (muc 3 sheet KT: inter_upload, Generation, Result, All Screens (Navigation) banner,
+  # All screens = inter_home, Conversation history = banner_chat_character, native_reason_uninstall, inter_uninstall).
+  # Do 19/11/2026 tren Pixel 4 99261FFAZ0077C: AIP508 Homova - AI Home Design 1.0.1. Home (MainActivity, Compose):
+  # nut desc "History" / "Settings" (bam -> inter_home, cach nhau 30s), the "Chat with AI · Start", hang template duoi
+  # "Trending Now" (bam -> inter_upload -> SelectPhotoActivity), tab duoi AI CHAT / HOME / AI PHOTO, banner duoi
+  # nav bar. AI CHAT = List AI Character, icon desc "Open conversation history" -> ChatActivity "Conversation History"
+  # (native o chan). Gen: Gallery -> anh co mat -> "Generate with Ads" -> sheet "Watch Ads (0/2)" (2 reward) ->
+  # GeneratingActivity "Taking you to Home in 2s" -> Home; anh xong ~60s -> History -> the -> ResultActivity.
+  # Uninstall: shortcut -> Splash -> Question -> SorryUninstallActivity (nut "Still want to uninstall" duoi native,
+  # phai cuon) -> WhyUninstallActivity (chon ly do, nut Uninstall -> inter) -> Thank You -> Cai dat.
+  homova:
+    nhan_dien: "^Chat with AI$"
+    doan:
+      - ten: Home (preload inter upload / inter home, banner navigation reload 10s)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 180
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - cho: 35
+      - ten: Nút feature ở Home (inter home) - Settings, rồi History sau 31s
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 60
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^Settings$"
+          - dong_ad: 8
+          - cho_man: "SettingsActivity"
+            toi_da: 30
+          - cho: 4
+          - back: 1
+          - cho: 31
+          - tap: "^History$"
+          - dong_ad: 8
+          - cho_man: "HistoryActivity"
+            toi_da: 30
+          - cho: 4
+          - back: 1
+      - ten: AI CHAT (List AI Character preload native, reload 10s) → Conversation history (native)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 60
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^AI CHAT$"
+          - dong_ad: 6
+          - cho: 35
+          - tap: "^Open conversation history$"
+          - dong_ad: 6
+          - cho_man: "ChatActivity"
+            toi_da: 30
+          - cho: 25
+          - back: 1
+          - cho: 3
+          - tap: "^HOME$"
+      - ten: Chọn template (inter upload) → Generate (native generate) → Result (native result)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 60
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^HOME$"
+          - cho: 31                          # inter cach nhau 30s (vua bam History / Settings)
+          - tap_duoi: "^Trending Now$"
+          - dong_ad: 8
+          - cho_man: "SelectPhoto"
+            toi_da: 60
+          - tap: "^Gallery$"
+          - cho: 3
+          - chon_anh: true
+            thu: 8                           # anh chup man hinh nam dau trinh chon -> lay anh khuon mat
+            toi_da: 40
+          - cho: 3
+          - tap: "^Generate with Ads$"
+          - xem_ads: "^Watch Ads.*$"
+            toi: "Generating"
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached|0 of \\d+ free left)"
+            toi_da: 300
+          - cho: 10
+          - cho_man: "MainActivity"
+            toi_da: 60
+          - cho: 60                          # anh gen ngam ~60s
+          - tap: "^History$"
+          - dong_ad: 8
+          - cho_man: "HistoryActivity"
+            toi_da: 30
+          - tap_duoi: "^History$"
+          - cho_man: "ResultActivity"
+            toi_da: 60
+          - cho: 10
+          - back: 1                          # BACK o Result bat popup rating (nut X desc "Close") -> dong roi BACK tiep
+          - cho: 2
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - back: 2
+      - ten: Chọn template lần 2 (inter upload cách lần trước ≥ 30s)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 60
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^HOME$"
+          - cho: 31
+          - tap_duoi: "^Trending Now$"
+            thu: 2
+          - dong_ad: 8
+          - cho: 6
+          - back: 2
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+            nhan: "^(Uninstall|Uninstall app|Gỡ cài đặt)$"
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - dong_ad: 6
+          - vuot_len: 1
+          - cho_chu: "^Still want to uninstall$"
+          - tap: "^Still want to uninstall$"
+          - cho_chu: "^Why do you uninstall\\?$"
+          - cho: 6
+          - tap: "^Too many ads$"
+          - cho: 6
+          - tap: "^Too slow or took too long to generate$"
+          - cho: 6
+          - tap: "^Uninstall$"
+          - dong_ad: 8
+          - cho: 4
+          - back: 3
+
   # App fitness (muc 3 sheet KT: banner_home, inter_home, reward_nutrition, inter_back, native_reason_uninstall,
   # inter_uninstall). Do 16/11/2026 tren vivo V2143: AIP921 Fitatics 1.1.0. Moi man trong MainActivity (Compose);
   # nut "Continue" / tab Workout - Nutrition co chu nhung bounds rong -> `tap_toa_do`. Sau pm clear, FO xong con
@@ -658,6 +783,52 @@ khuon:
           - cho: 3
           - back: 2
 
+  # App luyen IELTS voi AI coach "Moss" (muc 3 sheet KT: chi reward_chat). Do 19/11/2026 tren OPPO CPH2375: AIP932
+  # AI Tutor IELTS 1.0.2. Moi man trong MainActivity (Compose). Vao Chat co inter feature; reward preload ngay khi vao
+  # Chat. 3 luot chat free/ngay, tin thu 4 -> popup "You've used all your free chats today" + nut "Watch Ad (0/2)"
+  # (popup co animation: dump tu tat animator). O chat la EditText khong co chu goi y -> `o_lop`. Nut Send chi co
+  # content-desc. Nut Back cua man Chat la content-desc "Back".
+  ielts_moss:
+    nhan_dien: "^Talk with Moss$"
+    doan:
+      - ten: Chat with Moss (preload reward), hết 3 lượt free -> popup Watch Ad, bấm xem ad (reward_chat), BACK
+        buoc:
+          - ve_chu: "^Talk with Moss$"
+            tab: "^Home$"
+            toi_da: 180
+          - cho: 5
+          - tap: "^Talk with Moss$"
+          - dong_ad: 8
+          - cho_chu: "^TODAY'S TOPIC$"
+          - cho: 5
+          - nhap: "hello"
+            o_lop: "EditText$"
+          - tap: "^Send$"
+          - cho: 10
+          - nhap: "hello"
+            o_lop: "EditText$"
+          - tap: "^Send$"
+          - cho: 10
+          - nhap: "hello"
+            o_lop: "EditText$"
+          - tap: "^Send$"
+          - cho: 10
+          - nhap: "hello"
+            o_lop: "EditText$"
+          - tap: "^Send$"
+          - cho: 8                         # tat remote reward: app khong hien popup, cho chat tiep -> buoc sau tu bo qua
+          - tap_neu_co: "^Watch Ad \\(\\d/\\d\\)$"
+          - dong_ad: 10
+          - cho: 5
+          - tap_neu_co: "^Watch Ad \\(\\d/\\d\\)$"
+          - dong_ad: 10
+          - cho: 5
+          - back: 1                        # dong popup (khong co popup thi BACK ve Home)
+          - tap_neu_co: "^Back$"
+            khi_thieu: "^Talk with Moss$"
+          - dong_ad: 8
+          - cho: 3
+
 # Ghim khuon (khong bat buoc - app chua khai tool tu nhan khuon tren Home).
 com.aiphotogenerator.aivideomaker.photoslideshow: {khuon: ai_photo}     # AIP893
 com.ai.aiimage.aivideogenerator: {khuon: ai_photo}                      # AIP885
@@ -665,3 +836,5 @@ fitness.workout.aitraining.abs.exercises: {khuon: fitness}              # AIP921
 learnenglish.language.learningvocabulary.practice: {khuon: english_buddy}  # AIP935 Lexi
 photoslideshow.videoslideshow.addimage.photogen: {khuon: pictifaze}     # AIP927 Pictifaze
 photomaker.image.editor.ai: {khuon: creapix}                         # AIP916 CreaPix
+aichat.photogenarator.chatbot.video: {khuon: homova}                 # AIP508 Homova (Home co ca "Trending Now" cua khuon ai_photo)
+aitutor.grammar.languagetutor.iletslesson.learninglanguage: {khuon: ielts_moss}  # AIP932 AI Tutor IELTS
