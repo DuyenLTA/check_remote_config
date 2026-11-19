@@ -54,6 +54,7 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 19/11/2026 | Bỏ bước policy khỏi workflow rc-check / bot, kể cả lượt có bộ IAA (thay luật 16/11): policy là lệnh `/policy-check` riêng, user tự gọi | `.claude/commands/rc-check.md` §7a, `src/rcr/bot_chay_claude.py` | — |
 | 17/11/2026 | Preload: ad đã load ở màn trước mà chưa dùng thì màn sau dùng lại là đúng; phiên bot không được ghi "PO/QA xác nhận" khi chưa có xác nhận thật (AIP921 IAA-04-01) | `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
 | 17/11/2026 | Reward 'thoát giữa chừng không thưởng': force-stop app lúc ad đang chạy rồi mở lại để kiểm, không BLOCKED; luồng Uninstall: màn Thank You chỉ hiện ~3s sau khi đóng inter Gỡ cài đặt — theo dõi từng giây | `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
 | 17/11/2026 | Check kĩ mọi ý của cột Ad description (màn preload, màn hiển thị, chu kỳ / sự kiện reload…): dòng gộp nhiều màn / sự kiện / key tách mỗi ý một dòng `↳`, câu nhiều vế có dòng "Đủ từng vế" | `src/rcr/tc_iaa_tach_y.py`, `docs/rc-check/iaa-chay-theo-nhom.md` | — |

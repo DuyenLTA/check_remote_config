@@ -367,13 +367,11 @@ Mở đầu bằng kết quả check ID ads (3c: khớp/tổng, vị trí lệch
 báo dev/PO, trạng thái máy (đã restore chưa, có `pm clear` không). **Không liệt kê "bạn tự kiểm tiếp"** cho dòng 5b làm
 được. **Đưa link artifact ngay trong câu trả lời.**
 
-## 7a. Check policy ads — chỉ lượt có bộ IAA
+## 7a. Không check policy
 
-Lượt **không** có bộ IAA: không tự chạy `/policy-check` (user chốt 11/11/2026, QA gọi riêng khi cần); câu báo không nhắc.
-Lượt **có** `--tc iaa` (chỉ tính năng hay SDK kèm tính năng, user chốt 16/11/2026): **bắt buộc** chạy
-`/policy-check <package> --serial <serial> --chi-ads` làm **bước cuối** (chỉ policy ads, không mua sub, bỏ tab Sub_VN)
-— sau mọi bộ, vòng chạy lại, đo tay, `--gop`, trả config (policy `pm clear` app). Rule chốt PASS/FAIL, không chặn kết quả bộ TC; câu báo thêm số
-PASS/FAIL + link report policy, rule FAIL vào danh sách bug dạng `policy#<mã rule>`.
+Mọi lượt (kể cả lượt có bộ IAA) **không** tự chạy `/policy-check`; câu báo không nhắc policy. Policy là lệnh riêng,
+user tự gọi `/policy-check <package> --serial <serial> [--chi-ads]` khi cần (user chốt 19/11/2026, bỏ luật 16/11
+"lượt IAA bắt buộc policy ADS").
 
 ## 7b. Có FAIL → user review, rồi log Jira
 

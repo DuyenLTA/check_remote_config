@@ -257,7 +257,6 @@ PROMPT_TINH_NANG = (
     "SDK do / tab trong) -> ghi ro trong tom_tat, khong phai loi. Moi may la may test AdMob, ad_click khong phai ly do "
     "dung. Gap diem can nguoi quyet (preflight LOI, man la) thi dung. Khong commit/push.\n"
     "Lenh nen bi cat (background time limit) -> chay tiep bang `rcr-check --tiep <file .luot.json>`, KHONG chay lai tu dau.\n"
-    "{policy}"
     "Nhieu tab: dung MOT report gop bang `--gop` cac file luot (khong can may); gop khong duoc thi `link` = report tab "
     "dau, duong dan report tab con lai ghi trong `tom_tat`.\n"
     + NHAC_AUDIT + NHAC_LUU_CONG_THUC + NHAC_CHAM_HET + NHAC_RATING_KHONG_GEN + NHAC_LOAD_KHONG_SHOW +
@@ -288,21 +287,8 @@ NHAC_TINH_NANG = (
 )
 
 
-# Luot co bo IAA bat buoc check them policy ADS (user chot 16/11/2026; ngoai le cua luat 11/11 "policy tach rieng").
-# Chi ads, khong sub: `--chi-ads` -> khong mua sub, bo rule tab Sub_VN. Van chay SAU CUNG vi policy pm clear app.
-NHAC_POLICY = (
-    "Luot nay co bo IAA -> BAT BUOC check policy ADS (khong check sub, khong mua sub) lam buoc CUOI: xong HET cac bo "
-    "(ke ca vong chay lai, do tay, --gop) va da tra config ve nguyen trang thi doc TOAN BO "
-    "`<repo audit>/.claude/commands/policy-check.md` va lam dung no voi `{package} --serial {serial} --chi-ads` (cung may). Moi rule phai chot PASS/FAIL (N/A chi khi app khong co thu "
-    "rule noi toi, ghi can cu); con BLOCKED thi evidence_followup roi tu lai may. Policy khong chan ket qua bo TC. "
-    "`tom_tat` them so PASS/FAIL policy + duong dan TUYET DOI report policy; moi rule FAIL them vao `bugs` voi "
-    "`case` = `policy#<ma rule>`. Policy loi / khong thay repo audit -> ghi ly do vao `tom_tat`, khong phai loi luot.\n"
-)
-
-
-def _nhac_policy(package: str, serial: str, tabs: list[str] | None) -> str:
-    """Nhac chay policy khi danh sach bo co IAA, khong thi chuoi rong."""
-    return NHAC_POLICY.format(package=package, serial=serial) if tabs and "iaa" in tabs else ""
+# Bot KHONG chay policy o bat ky luot nao (ke ca luot co IAA): policy la lenh /policy-check rieng, user tu goi
+# (user chot 19/11/2026, bo luat 16/11 "luot IAA bat buoc policy ADS").
 
 
 def _lenh_tinh_nang(tabs: list[str]) -> tuple[list[str], str]:
@@ -348,8 +334,7 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
     if tabs and not cases:                           # /check tinh_nang: chi tab SDK rieng
         co, lenh_bo = _lenh_tinh_nang(tabs)
         return cmd, PROMPT_TINH_NANG.format(package=package, serial=serial, tabs=", ".join(tabs),
-                                            tab_arg=" ".join(co), lenh_bo=lenh_bo,
-                                            policy=_nhac_policy(package, serial, tabs))
+                                            tab_arg=" ".join(co), lenh_bo=lenh_bo)
     if sub_version and not cases:                    # /check-sub: ca bo TC sub
         if not VERSION_RE.fullmatch(sub_version):
             raise ValueError(f"version không hợp lệ: {sub_version!r}")
@@ -360,7 +345,6 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
         if them_tinh_nang:
             tn = NHAC_TINH_NANG.format(package=package, tabs=", ".join(them_tinh_nang),
                                        lenh_bo=_lenh_tinh_nang(them_tinh_nang)[1])
-            tn += _nhac_policy(package, serial, them_tinh_nang)
         return cmd, PROMPT.format(package=package, serial=serial, next_gen=" --next-gen" if next_gen else "",
                                   sdk=(f" --sdk {sdk}" if sdk else "") + (" --bo-qua-plan" if bo_qua_plan else ""),
                                   nhac=NHAC_NEXT_GEN if next_gen else "", tinh_nang=tn)

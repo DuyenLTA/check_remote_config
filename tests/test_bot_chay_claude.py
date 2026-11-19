@@ -219,17 +219,12 @@ def test_ad_load_ok_khong_show_la_dat():
         assert "chon lai ly do khac khong reload nua la DUNG" in p
 
 
-def test_luot_co_iaa_bat_buoc_check_policy_buoc_cuoi():
-    # Luot chi tinh nang co IAA -> nhac policy-check dung package + serial, rule FAIL vao bugs dang policy#
-    _, p = c.lenh("pkg.a", "S1", tabs=["iaa", "widget"])
-    assert "policy-check.md" in p and "pkg.a --serial S1 --chi-ads" in p and "policy#<ma rule>" in p
-    # SDK kem tinh nang co IAA -> cung nhac
-    _, p = c.lenh("pkg.a", "S1", sdk="3.5.4", them_tinh_nang=["iaa", "rating"])
-    assert "policy-check.md" in p
-    # Khong co IAA -> khong chay policy (luat 11/11 tach rieng van giu)
-    for kw in ({"tabs": ["widget", "rating"]}, {"sdk": "3.5.4", "them_tinh_nang": ["widget"]}, {"sdk": "3.5.4"}):
+def test_bot_khong_bao_gio_chay_policy_ke_ca_luot_co_iaa():
+    # Policy la lenh rieng user tu goi: khong luot nao (co IAA hay khong) nhac policy-check
+    for kw in ({"tabs": ["iaa", "widget"]}, {"sdk": "3.5.4", "them_tinh_nang": ["iaa", "rating"]},
+               {"tabs": ["widget", "rating"]}, {"sdk": "3.5.4", "them_tinh_nang": ["widget"]}, {"sdk": "3.5.4"}):
         _, p = c.lenh("pkg.a", "S1", **kw)
-        assert "policy-check.md" not in p
+        assert "policy-check" not in p and "--chi-ads" not in p and "policy#" not in p
 
 
 def test_luot_check_khong_tinh_nang_khong_them_doan_tinh_nang():
