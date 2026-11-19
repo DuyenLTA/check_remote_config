@@ -83,12 +83,17 @@ def nut_xac_nhan(xml: str, package: str):
     """Nut xac nhan cua dialog ghim widget -> (chu, node). Khong co -> (None, None). Mot chu khop NHIEU node
     -> ("", None): khong doan (bam nham "Add" cua mot dialog khac la hong luot)."""
     nodes = [n for n in ui_dump.parse_dump(xml) if n.visible and n.package != package]
-    for chu in NUT_XAC_NHAN:
-        khop = [n for n in nodes if (n.text or n.content_desc).strip().casefold() == chu]
-        if len(khop) == 1:
-            return chu, khop[0]
-        if len(khop) > 1:
-            return "", None
+    # Luot 1 chi xet node bam duoc: launcher OPPO (CPH2375, AIP932 19/11/2026) co TIEU DE "Add to Home screen"
+    # (TextView khong bam duoc) + nut "ADD" -> khop tieu de truoc thi bam truot, widget khong duoc ghim.
+    # Luot 2 giu cach cu (launcher de chu nut trong TextView khong clickable, cha moi bam duoc).
+    for chi_bam_duoc in (True, False):
+        for chu in NUT_XAC_NHAN:
+            khop = [n for n in nodes if (n.text or n.content_desc).strip().casefold() == chu
+                    and (n.clickable or not chi_bam_duoc)]
+            if len(khop) == 1:
+                return chu, khop[0]
+            if len(khop) > 1:
+                return "", None
     return None, None
 
 
