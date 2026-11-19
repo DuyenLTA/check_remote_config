@@ -25,6 +25,18 @@ DAU_RAW = 16                     # header screencap raw Android 12+: w, h, forma
 VIEWED_RE = re.compile(r"^\s*(\d{9,}\.\d+).*name=rating_placement_viewed.*?placement_name=([a-z_]+)", re.M)
 GOOGLE_PLAY = "com.android.vending"
 GIONG = 6.0              # lech trung binh / kenh mau duoi muc nay = hai vung anh nhu nhau
+# ROM chan intent store cua app bang hop goi y cho ung dung rieng; nut bo qua -> intent di tiep toi Google Play.
+# OPPO CPH2375 (AIP932 19/11/2026): com.daemon.shelper "Tips: ... official App Market" [Download Now] [Cancel].
+CHAN_STORE_ROM = {"com.daemon.shelper": re.compile(r"^(Cancel|H[uủ]y|Huỷ|Bỏ qua)$", re.I)}
+
+
+def nut_huy_chan_rom(nodes, pkg: str):
+    """Nut bo qua cua hop chan store cua ROM (`pkg`); khong co -> None."""
+    mau = CHAN_STORE_ROM.get(pkg)
+    if mau is None:
+        return None
+    return next((n for n in nodes if n.package == pkg and not n.bounds.empty
+                 and mau.match((n.text or n.content_desc or "").strip())), None)
 
 
 def doc_popup(nodes) -> dict:

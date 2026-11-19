@@ -245,8 +245,19 @@ async def _sao(client, serial: str, package: str, action: Rating) -> dict:
         await device_app.tap(client, serial, *nut.bounds.center)
         await asyncio.sleep(3.0)
         pkg, act = await _act(client, serial)
+        chan = ""
+        if pkg in rating_may.CHAN_STORE_ROM:
+            # ROM OPPO (CPH2375, AIP932 19/11/2026) chan intent market:// bang hop "official App Market" cua
+            # com.daemon.shelper; bam Cancel thi Google Play mo dung trang app -> bam roi doc lai man.
+            chan = pkg
+            nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+            huy = rating_may.nut_huy_chan_rom(nodes, pkg)
+            if huy is not None:
+                await device_app.tap(client, serial, *huy.bounds.center)
+                await asyncio.sleep(3.0)
+                pkg, act = await _act(client, serial)
         ket.update({"da_bam": True, "truoc": truoc, "pkg_sau": pkg, "man_sau": act,
-                    "google_play": pkg == rating_may.GOOGLE_PLAY})
+                    "google_play": pkg == rating_may.GOOGLE_PLAY, "chan_rom": chan})
     return ket
 
 

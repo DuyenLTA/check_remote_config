@@ -225,7 +225,9 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
     het = time.monotonic() + float(buoc.get("toi_da", TOI_DA_MAC_DINH))
     bam_khong_mo = 0                  # xem_ads: so lan bam nut lien ma chua thay AdActivity
     if "chon_anh" in buoc:
-        return await _chon_anh(client, serial, het, log)
+        # `thu: k` = anh thu k trong trinh chon (AIP508 Homova 19/11/2026: anh dau may Pixel 4 la anh chup man hinh,
+        # app doi anh co mat nguoi -> chon anh khuon mat o hang duoi).
+        return await _chon_anh(client, serial, het, log, thu=int(buoc.get("thu", 1)))
     if "dien_o_anh" in buoc:
         return await _dien_o_anh(client, serial, package, buoc, het, log)
     if "cho_chu" in buoc:
