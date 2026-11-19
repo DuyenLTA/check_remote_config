@@ -75,6 +75,18 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
         raise RcError(f"Case {record.get('key')} chỉ có {len(lines)} dòng Expected, không có dòng "
                       + ", ".join(map(str, thua)))
     ngay = time.strftime("%d/%m/%Y %H:%M")
+    cu = record.get("cham_tay")
+    cu = cu if isinstance(cu, list) else []  # file luot cu ghi `cham_tay: true`
+    # Cham lai dong da cham tay BLOCKED (vd "cho Dev xac nhan" roi user chot spec, 19/11/2026 ADA895 C02-C14):
+    # ly do BLOCKED cu cua chinh cac dong nay khong con la dieu kien thieu -> go khoi precondition_thieu, khong thi
+    # case van bi ep BLOCKED du dong da FAIL. Ly do BLOCKED cua dong KHAC (chua cham lai) van giu.
+    con_blocked = {_chuan(c.get("ly_do")) for c in _moi_nhat_theo_dong(cu, bo=dong).values()
+                   if c.get("v") == CONFIG_BLOCKED}
+    go = {_chuan(c.get("ly_do")) for n, c in _moi_nhat_theo_dong(cu).items()
+          if n in dong and c.get("v") == CONFIG_BLOCKED} - con_blocked
+    if go:
+        record = {**record, "precondition_thieu": [p for p in record.get("precondition_thieu") or []
+                                                   if _chuan(p) not in go]}
     khac_fail = any(l["v"] == FAIL for i, l in enumerate(lines, 1) if i not in dong and l.get("scope") != "po")
     if ket == CONFIG_BLOCKED and not khac_fail:
         # Dong BLOCKED vi dong FAIL truoc no (S04-01 09/11/2026: OB5 khong hien -> khong co X de bam) la HE QUA
@@ -88,8 +100,6 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
     verdict = worst(ke) if ke else record.get("verdict", "")
     if record.get("precondition_thieu") or record.get("ad_click"):
         verdict = "BLOCKED"  # dieu kien lan chay khong dat thi cham dong nao cung khong cuu duoc case
-    cu = record.get("cham_tay")
-    cu = cu if isinstance(cu, list) else []  # file luot cu ghi `cham_tay: true`
     cu_anh = {a["ten"]: a for a in record.get("anh_tay") or []}
     cu_anh.update({a["ten"]: a for a in anh if a.get("src")})
     return {**record, "lines": lines, "verdict": verdict, "anh_tay": list(cu_anh.values()),
@@ -99,6 +109,16 @@ def cham(record: dict, dong: list[int], ket: str, ly_do: str, ai: str = "Claude"
 
 def _chuan(s) -> str:
     return " ".join(str(s or "").split())
+
+
+def _moi_nhat_theo_dong(cu: list[dict], bo: list[int] = ()) -> dict[int, dict]:
+    """{so dong: lan cham tay moi nhat cua dong do}, bo qua cac dong trong `bo`."""
+    ra: dict[int, dict] = {}
+    for c in cu:
+        n = c.get("dong")
+        if isinstance(n, int) and n not in bo:
+            ra[n] = c
+    return ra
 
 
 def dung_lai(records: list[dict], cu: list[dict]) -> tuple[list[dict], int]:

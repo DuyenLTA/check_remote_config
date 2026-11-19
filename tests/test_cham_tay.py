@@ -173,3 +173,22 @@ def test_dieu_kien_thuoc_tinh_nang_app_khong_co_thi_khong_ep_blocked():
     assert ra["verdict"] == "PASS" and ra["precondition_thieu"] == []
     na = cham_tay.cham(rec, [1, 2, 4], "KHONG_AP_DUNG", "app không gen ảnh/video")
     assert na["verdict"] == "KHONG_AP_DUNG"
+
+
+def test_cham_lai_dong_blocked_thanh_fail_thi_go_ly_do_blocked_cu_cua_dong_do():
+    cho = "Chờ Dev xác nhận spec ad_preload"
+    khac = "cần máy OPPO"
+    rec = cham_tay.cham(REC, [1], "BLOCKED", cho)
+    rec = cham_tay.cham(rec, [4], "BLOCKED", khac)
+    assert rec["verdict"] == "BLOCKED"
+    ra = cham_tay.cham(rec, [1], "FAIL", "spec chốt: không có kho riêng")
+    assert ra["precondition_thieu"] == [khac]        # dong 4 chua cham lai van giu ly do
+    assert ra["verdict"] == "BLOCKED"
+    ra = cham_tay.cham(ra, [4], "PASS", "đo trên OPPO")
+    assert ra["precondition_thieu"] == [] and ra["verdict"] == "FAIL"
+
+
+def test_hai_dong_chung_ly_do_blocked_chi_cham_lai_mot_thi_van_giu():
+    rec = cham_tay.cham(REC, [1, 4], "BLOCKED", "chờ Dev")
+    ra = cham_tay.cham(rec, [1], "FAIL", "spec chốt")
+    assert ra["precondition_thieu"] == ["chờ Dev"] and ra["verdict"] == "BLOCKED"
