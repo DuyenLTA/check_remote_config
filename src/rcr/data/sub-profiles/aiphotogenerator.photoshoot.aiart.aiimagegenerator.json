@@ -1,0 +1,14 @@
+{
+ "duong_vao_paywall": [
+  {
+   "text": "Pro"
+  }
+ ],
+ "dau_hieu_premium": {
+  "an_text": "Pro"
+ },
+ "home_activity": "MainActivity",
+ "app": "Piclux: AI Photo Studio 3.2.0 (24)",
+ "ghi_chu": "Paywall SDK VisionLab (VslBillingActivity) vào bằng nút chữ 'Pro' góc trên phải Home (đo 19/11/2026). Old user mở lạnh qua Splash → Question → Billing → Home; Home bật popup Add Widget, Back ở Home bật popup Rate us.",
+ "package": "aiphotogenerator.photoshoot.aiart.aiimagegenerator"
+}
