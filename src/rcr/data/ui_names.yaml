@@ -43,6 +43,7 @@ elements:
   - name: nút X
     aliases: ["nút X", "button X", "nút đóng", "nút close"]
     ids: [btnSkip, btnClose, ivClose, imgClose, closeButton, ivCancel]
+    descs: [Close]               # Compose: popup Add Widget (AIP944 1.5.0) nut X chi co content-desc "Close"
 
   - name: số đếm ngược
     aliases: ["số đếm ngược", "countdown", "đếm ngược"]

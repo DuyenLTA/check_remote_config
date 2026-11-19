@@ -51,3 +51,67 @@ async def diem_bam(client, serial: str, package: str, b, thu=DIEM_THU) -> tuple[
         except Exception:                  # noqa: BLE001 - doc popup hong thi bam diem cu
             che = []
     return diem_trong(b, che, thu) or diem_trong(b, [], thu)
+
+
+# Popup validator (khung cua so ~320 x 155 dp, ca bong + mui ten) che TRON nut nho nam duoi native (AIP944 Pixel 7
+# 17/11/2026: nut Generate man Image to Image nam gon trong popup -> khong ne duoc, phai Dismiss). Nut "Dismiss" o goc
+# duoi-phai: tam cach mep phai ~65dp, mep duoi ~37dp. Chi bam popup dung kich thuoc nay (cua so phu khac cua app la
+# menu / dialog thi khong dung).
+VALIDATOR_DP = ((280, 360), (120, 190))
+DISMISS_DP = (65, 37)
+
+
+def diem_dismiss(khung: list[tuple[int, int, int, int]], mat_do: float) -> list[tuple[int, int]]:
+    """Diem bam Dismiss cua moi popup validator trong `khung` (px); `mat_do` = density/160."""
+    (wmin, wmax), (hmin, hmax) = VALIDATOR_DP
+    ra = []
+    for l, t, r, b in khung:
+        w, h = (r - l) / mat_do, (b - t) / mat_do
+        if wmin <= w <= wmax and hmin <= h <= hmax:
+            ra.append((r - int(DISMISS_DP[0] * mat_do), b - int(DISMISS_DP[1] * mat_do)))
+    return ra
+
+
+def la_nut_dismiss(png: bytes, x: int, y: int, ban_kinh: int = 12) -> bool:
+    """Diem (x, y) tren anh chup nam tren nut "Dismiss" xanh cua validator (~#1A73E8): >= 1/2 diem quanh do xanh.
+
+    Co cua so khong noi duoc popup co dang hien that: Pixel 7 17/11/2026 popup DANG HIEN van bao `mViewVisibility=0x8`,
+    `isReadyForDisplay()=false`, con 5 cua so validator cua man truoc cung co y nhu vay ma KHONG hien -> bam mu vao
+    diem Dismiss trung man duoi (mo trang validator / nut cua app). Chi bam khi anh chup thay dung nut."""
+    try:
+        from io import BytesIO
+        from PIL import Image
+        im = Image.open(BytesIO(png)).convert("RGB")
+    except Exception:                      # noqa: BLE001 - khong doc duoc anh -> coi nhu khong thay nut
+        return False
+    xanh = tong = 0
+    for dx in range(-ban_kinh, ban_kinh + 1, 3):
+        for dy in range(-ban_kinh, ban_kinh + 1, 3):
+            px, py = x + dx, y + dy
+            if 0 <= px < im.width and 0 <= py < im.height:
+                r, g, b = im.getpixel((px, py))
+                tong += 1
+                xanh += r < 80 and 90 <= g <= 150 and b >= 200
+    return tong > 0 and xanh * 2 >= tong
+
+
+async def dong_validator(client, serial: str, package: str) -> int:
+    """Bam Dismiss moi popup validator DANG HIEN cua `package` (kiem bang anh chup); tra so popup da dong."""
+    from . import screencap
+    try:
+        out, _, _ = await client.shell(serial, "dumpsys", "window", "windows")
+        khung = khung_popup(out, package)
+        if not khung:
+            return 0
+        ds, _, _ = await client.shell(serial, "wm", "density")
+        so = re.findall(r"density:\s*(\d+)", ds or "")       # dong cuoi = Override density neu co
+        diem = diem_dismiss(khung, int(so[-1]) / 160 if so else 2.75)
+        if not diem:
+            return 0
+        png = await screencap.raw(client, serial)
+        bam = [d for d in dict.fromkeys(diem) if la_nut_dismiss(png, *d)]
+        for x, y in bam:
+            await client.shell(serial, "input", "tap", str(x), str(y))
+        return len(bam)
+    except Exception:                      # noqa: BLE001 - doc popup hong thi bo qua, buoc sau tu bao loi
+        return 0

@@ -65,4 +65,8 @@ def seen_in(element: dict, dumps: list[str]) -> str:
         for text in element.get("texts", []):
             if f'text="{text}"' in dump:
                 return text
+        # Nut Compose khong co id / chu, chi co content-desc (vd X popup Add Widget AIP944: desc "Close").
+        for desc in element.get("descs", []):
+            if f'content-desc="{desc}"' in dump:
+                return desc
     return ""

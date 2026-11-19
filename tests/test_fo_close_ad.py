@@ -55,3 +55,14 @@ def test_nut_dong_phai_on_dinh_hai_lan_doc_moi_bam():
 def test_cau_dem_nguoc_o_dau_cung_tinh():
     assert fo_steps.DEM_NGUOC_CAU.search("Đóng sau 3s") and fo_steps.DEM_NGUOC_CAU.search("Skip in 4")
     assert fo_steps.DEM_NGUOC_CAU.search("5 giây") and not fo_steps.DEM_NGUOC_CAU.search("Đóng")
+
+
+def test_trang_validator_trong_adactivity_dong_bang_custom_close():
+    """Pixel 7 17/11/2026: bam nham popup validator mo trang chi tiet trong AdActivity, chi co nut X `custom-close`."""
+    xml = ('<?xml version="1.0" encoding="UTF-8"?><hierarchy rotation="0">'
+           '<node index="0" text="" resource-id="custom-close" class="android.widget.ImageButton" package="p" '
+           'content-desc="" clickable="true" enabled="true" bounds="[33,165][99,236]" />'
+           '<node index="1" text="AdMob native ad validator" resource-id="" class="android.widget.TextView" package="p" '
+           'content-desc="" clickable="false" enabled="true" bounds="[134,167][720,239]" /></hierarchy>')
+    node = fo_steps.find_close_ad(ui_dump.parse_dump(xml))
+    assert node is not None and node.resource_id == "custom-close"

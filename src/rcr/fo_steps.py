@@ -44,7 +44,9 @@ CLOSE_DESCS = ("close", "dismiss", "đóng")
 # Nut dong CUA QUANG CAO toan man (AdActivity): ca man la mot WebView cua ad, bam
 # trat nut dong la click vao ad. `dismiss-button` la id cua creative web GMA (nhan
 # "Đóng"/"Close"); chu dong phai KHOP TRON (khong lay "Close your eyes..." cua creative).
-AD_CLOSE_IDS = ("dismiss-button",)
+# `custom-close`: nut X goc trai trang chi tiet "AdMob native ad validator" (mo trong AdActivity khi bam nham popup
+# validator, Pixel 7 17/11/2026) - trang khong co nut Close nao khac, khong dong thi ket toi het gio buoc.
+AD_CLOSE_IDS = ("dismiss-button", "custom-close")
 AD_CLOSE_WORDS = re.compile(r"^(close|close ad|đóng|skip|skip ad|bỏ qua|continue to app|tiếp tục.*ứng dụng|"
                             r"interstitial close button|×)$", re.I)
 # Nhan GMA in tren creative khi may la test device ("Test Ad" / "Quảng cáo thử nghiệm"). Mot so creative

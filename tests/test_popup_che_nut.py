@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 from rcr import popup_che_nut as p
 from rcr.ui_dump import Bounds
@@ -48,3 +49,22 @@ def test_nut_thuong_khong_bi_che_thi_bam_giua_nhu_cu():
     assert p.diem_trong(NUT, [], p.DIEM_GIUA_TRUOC) == NUT.center
     x, y = p.diem_trong(NUT, [(0, 1040, 880, 1467)], p.DIEM_GIUA_TRUOC)
     assert x >= 880 and 554 <= x < 951
+
+
+def test_diem_dismiss_popup_validator_che_tron_nut_generate():
+    # Do that Pixel 7 (density 440) 17/11/2026, AIP944: popup [0,1114][880,1541], nut Dismiss tam ~(702,1439).
+    x, y = p.diem_dismiss([(0, 1114, 880, 1541)], 440 / 160)[0]
+    assert 600 <= x <= 806 and 1403 <= y <= 1477
+
+
+def test_diem_dismiss_bo_qua_cua_so_khong_phai_validator():
+    assert p.diem_dismiss([(0, 0, 1080, 2400), (100, 100, 300, 200)], 2.75) == []
+
+
+
+def test_nut_dismiss_nhan_theo_mau_anh_that():
+    # Cat tu anh chup Pixel 7 17/11/2026 (vung [560,1300]-[880,1480]): nut Dismiss tam ~(701,1385) man hinh.
+    png = (Path(__file__).parent / "fixtures" / "validator_dismiss_crop.png").read_bytes()
+    assert p.la_nut_dismiss(png, 701 - 560, 1385 - 1300)
+    assert not p.la_nut_dismiss(png, 5, 5)                    # nen trang / den ngoai nut
+    assert not p.la_nut_dismiss(b"khong phai png", 10, 10)

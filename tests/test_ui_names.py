@@ -46,3 +46,12 @@ def test_khop_id_dung_dang_khong_an_nham_chuoi_bat_ky():
     el = ui_names.find_in("icon SWIPE")
     assert ui_names.seen_in(el, ['<node text="ob2Bb2SwipeLottie" />']) == ""
     assert ui_names.seen_in(el, [DUMP_CO_SWIPE]) == "ob2Bb2SwipeLottie"
+
+
+def test_nut_x_compose_chi_co_content_desc_close():
+    # Popup Add Widget (Compose) cua AIP944: nut X khong co id / text, chi co content-desc "Close".
+    from rcr import ui_names as un
+    el = next(e for e in un.elements() if e["name"] == "nút X")
+    dump = '<node text="" resource-id="" content-desc="Close" bounds="[914,646][975,707]" />'
+    assert un.seen_in(el, [dump]) == "Close"
+    assert un.seen_in(el, ['<node text="Close" content-desc="" />']) == ""
