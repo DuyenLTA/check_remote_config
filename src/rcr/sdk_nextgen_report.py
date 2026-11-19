@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 from pathlib import Path
 
+from .ma_app_theo_package import gan_ma
 from .report_tab_audit import boc
 from .sdk_nextgen_buoc_do_tay import BUOC
 from .sdk_nextgen_gop_luot import lech
@@ -94,7 +95,7 @@ def render(data: dict) -> str:
                   f'<span class="l">{l}</span></button>' for f, c, x, l in
                   (("all", "", len(chinh), "Tất cả"), ("pass", "ok", n[KHOP], "Khớp"), ("fail", "bad", n[SAI], "Sai"),
                    ("todo", "bad" if n[DO_TAY] else "", n[DO_TAY], "Còn đo tay")))
-    dau = (f'<div class="wrap"><header><h1>SDK Next-Gen · {_e(m.get("app_label") or m["package"])}</h1><div class="meta">'
+    dau = (f'<div class="wrap"><header><h1>SDK Next-Gen · {_e(gan_ma(m.get("app_label") or m["package"], m["package"]))}</h1><div class="meta">'
             f'<span>Package <b>{_e(m["package"])}</b></span><span>SDK FO <b>{_e(m.get("sdk") or "?")}</b></span>'
             f'<span>Máy <b>{_e(m.get("serial") or "?")}</b></span><span>Chấm lúc <b>{_e(m.get("cham_luc", ""))}</b></span>'
             f'<span>Mục <b>{_e(", ".join(m.get("muc") or []))}</b></span></div></header>')
@@ -116,7 +117,7 @@ def render(data: dict) -> str:
     # Tab 1 = checklist (kem khoi tom tat ID ads), tab 2 = trang audit day du -> mot file report.
     thanh = dau + boc("Checklist", "".join(body), m.get("audit")) + "</div>"
     return (f'<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f"<title>SDK Next-Gen check</title>{style}</head><body>{thanh}{script}</body></html>")
+            f"<title>SDK Next-Gen · {_e(gan_ma(m.get('app_label') or m['package'], m['package']))}</title>{style}</head><body>{thanh}{script}</body></html>")
 
 
 def ghi(data: dict, path: Path) -> Path:

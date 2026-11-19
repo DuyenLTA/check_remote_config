@@ -317,7 +317,7 @@ def test_cham_thu_muc_cham_tay_cham_lai_va_report(tmp_path):
     assert _ket(data["ket_qua"], "HV-09")["ket"] == "KHONG_AP_DUNG"
     assert sdk_nextgen_cham.dem(data)["KHONG_AP_DUNG"] >= 1
     html = sdk_nextgen_report.render(data)
-    assert "<title>SDK Next-Gen check</title>" in html and 'data-v="todo"' in html and "Mục 4" in html
+    assert "<title>SDK Next-Gen · " in html and 'data-v="todo"' in html and "Mục 4" in html
 
 
 def test_lai_fo_loi_thi_sai_thanh_do_tay(tmp_path):

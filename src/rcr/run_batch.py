@@ -42,6 +42,7 @@ from . import (
 )
 from . import bo_case_thieu_cong_thuc as thieu_ct
 from . import rating_cong_thuc
+from . import ma_app_theo_package
 from . import mang_cham_cua_so as cua_so_mod
 from .adb_parsers import AdbError, AdbTransportError
 from .models import RcError
@@ -96,7 +97,9 @@ async def _try_restore(client, baseline, log_fn) -> None:
 
 
 def ghi_report(baseline, tc_info, records, app_label, report: str, log_fn=_noop) -> None:
-    data = report_data.page_data(baseline, tc_info, records, app_label)
+    # Tieu de phai co ma app (AIP944): ten app khong du de biet la du an nao.
+    nhan = ma_app_theo_package.gan_ma(app_label or baseline.package.split(".")[-1], baseline.package)
+    data = report_data.page_data(baseline, tc_info, records, nhan)
     # Khoi "Check ID ads": audit cung ngay voi luot chay nay (khong co -> bao chua check).
     data["audit"] = audit_tom_tat.tim(baseline.package, ngay=date.today())
     page = report_html.build(data)
