@@ -21,6 +21,16 @@ def moc_chuoi(key: str, runs: list[dict], giu: bool) -> dict:
     return {"key": key, "runs": [dict(r) for r in runs], "giu": giu}
 
 
+def cung_config(truoc_runs: list[dict], runs: list[dict]) -> bool:
+    """Case noi tiep dung chung config dang giu tren may khi moi key no dat trung gia tri voi config do.
+    TC "Tiep noi" hay chi ghi lai mot phan Test Data cua case dau luot (17/11/2026 AIP927 CHECKIN-R01-02 bo
+    `widget_screen_placement=true` cua R01-01): coi la config khac thi case bi chay rieng tu dau (pm clear), popup
+    Add widget lai che man Check-in -> ca chuoi R01 dung."""
+    if len(runs) != len(truoc_runs):
+        return False
+    return all(all(t.get(k) == v for k, v in dict(r).items()) for t, r in zip(truoc_runs, runs))
+
+
 def ly_do_khong_noi(truoc: dict | None, chosen: dict, runs: list[dict], ep) -> str:
     """'' neu case nay chay noi tiep duoc tren app cua case `truoc`; khong thi ly do (ghi log)."""
     if not truoc:
@@ -34,7 +44,7 @@ def ly_do_khong_noi(truoc: dict | None, chosen: dict, runs: list[dict], ep) -> s
         return "case ép ad fail (đổi ID / chặn DNS) phải chạy riêng"
     if chosen.get("runtime") or len(runs) != 1:
         return "case nhiều lượt config"
-    if [dict(r) for r in runs] != truoc["runs"]:
+    if not cung_config(truoc["runs"], runs):
         return "config khác case trước"
     if not truoc["giu"]:
         return "case trước không giữ config / chạy hỏng"

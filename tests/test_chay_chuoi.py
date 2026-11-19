@@ -28,6 +28,12 @@ def test_ly_do_khong_noi():
         truoc, _case("1. Tiếp nối SDK361-RG01-03"), [CFG], ())                                  # noi case khac
     assert chay_chuoi.ly_do_khong_noi(truoc, noi, [{"k": "khac"}], ()) == "config khác case trước"
     assert chay_chuoi.ly_do_khong_noi(truoc, noi, [CFG], ("ép",))                               # ep ad fail
+    # TC "Tiep noi" chi ghi lai mot phan Test Data (bo bot key) -> van noi tiep; doi gia tri / them key -> khong
+    day_du = chay_chuoi.moc_chuoi("daily checkin#CHECKIN-R01-01", [{"k": "v", "widget": "true"}], True)
+    noi01 = _case("1. Tiếp nối CHECKIN-R01-01 (cùng lượt, không clear data).")
+    assert chay_chuoi.ly_do_khong_noi(day_du, noi01, [CFG], ()) == ""
+    assert chay_chuoi.ly_do_khong_noi(day_du, noi01, [{"k": "v", "widget": "false"}], ()) == "config khác case trước"
+    assert chay_chuoi.ly_do_khong_noi(day_du, noi01, [{"k": "v", "moi": "1"}], ()) == "config khác case trước"
     assert chay_chuoi.ly_do_khong_noi(chay_chuoi.moc_chuoi(truoc["key"], [CFG], False), noi, [CFG], ())
 
 

@@ -502,7 +502,8 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
         luu()
         if chuoi:
             con_giu = not (result.get("config_bi_de") or result.get("verdict") in ("KEY_NOT_USED",))
-            truoc_chuoi = chay_chuoi.moc_chuoi(key, runs, con_giu)
+            # Noi tiep thi config tren may van la config day du cua case truoc (case nay co the chi ghi mot phan).
+            truoc_chuoi = chay_chuoi.moc_chuoi(key, truoc_chuoi["runs"] if noi and truoc_chuoi else runs, con_giu)
         if result.get("ad_click"):
             # May test AdMob: ad_click khong dung luot. Case giu BLOCKED kem so click
             # tren report, cac case sau van chay.
