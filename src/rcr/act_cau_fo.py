@@ -97,7 +97,36 @@ def resolve(text: str, nodes):
         return MoLai("mở lại app bằng icon (TC ghi Recent — nhiều máy không coi Recent là ẩn app)")
     if CHON_ITEM_RE.match(text):
         return _chon_item(nodes)
-    return None
+    return _o_man_roi_dung(text)
+
+
+# "O LFO1 30 giay.", "Toi LFO1 thi dung.", "O Question 35 giay." (TC 3.7.3 viet lai 19/11/2026): lai toi man do, cho
+# (neu co) roi DUNG - khong di tiep. Truoc day ra NeedsHuman -> case NEEDS_HUMAN va bi chay lai y het lan 2.
+O_MAN_RE = re.compile(r"^\s*(?:[ởo]|t[ớo]i|đ[ếe]n|den)\s+(?:m[àa]n\s+)?(?P<man>LFO\s*\d|OB\s*\d|question|home)\b"
+                      r"(?P<rest>.*)$", re.I)
+DUNG_RE = re.compile(r"^\s*,?\s*(?:th[ìi]\s+)?d[ừu]ng\s*\.?\s*$", re.I)
+CHO_RE = re.compile(r"^\s*,?\s*(?:ch[ờo]\s+)?(\d+)\s*(gi[âa]y|s|ph[úu]t)\s*\.?\s*$", re.I)
+CHO_TOI_DA = 180.0
+
+
+def _o_man_roi_dung(text: str):
+    """"O <man> N giay" / "Toi <man> thi dung" -> GoTo(man, cho N giay). Ve sau la viec khac -> None."""
+    m = O_MAN_RE.match(text)
+    if not m:
+        return None
+    dich = fo_screens.target_for(m.group("man"))
+    if not dich:
+        return None
+    rest = m.group("rest")
+    if not rest.strip(" .") or DUNG_RE.match(rest):
+        return GoTo(dich, f"lái tới {m.group('man')} rồi dừng ở đó")
+    cho = CHO_RE.match(rest)
+    if not cho:
+        return None
+    giay = float(cho.group(1)) * (60 if cho.group(2).casefold().startswith("ph") else 1)
+    if giay > CHO_TOI_DA:
+        return NeedsHuman(f"chờ {giay:g}s ở {m.group('man')} — quá {CHO_TOI_DA:g}s")
+    return GoTo(dich, f"lái tới {m.group('man')}, chờ {giay:g}s rồi dừng", giay)
 
 
 def _bam_sau_khi_chon(text: str, nodes):

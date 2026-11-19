@@ -116,7 +116,7 @@ def dung_lai_report(args: argparse.Namespace) -> dict:
 
 
 # Co doi cach chay case - luot tiep phai giong luot dau, khong thi mot report tron hai kieu.
-CO_GIU_KHI_TIEP = ("no_walk", "full_walk", "no_actions", "khung", "fresh", "no_dex_check", "keep")
+CO_GIU_KHI_TIEP = ("no_walk", "full_walk", "no_actions", "khung", "fresh", "no_dex_check", "keep", "co_build_dev")
 
 
 def nap_tiep(args: argparse.Namespace) -> list[dict]:
@@ -362,6 +362,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="khong lai qua luong First Open de toi man cua case")
     p.add_argument("--full-walk", action="store_true",
                    help="di het luong FO nhu TC ghi, ke ca khi key cua case nam o man som hon")
+    p.add_argument("--co-build-dev", action="store_true",
+                   help="da cai build Dev / debug len may: van chay case co Precondition 'Can build Dev / debug' "
+                        "(mac dinh: BLOCKED ngay, khong reset may)")
     p.add_argument("--no-actions", action="store_true",
                    help="chi dat config, khong lai app qua cac buoc Action cua case")
     p.add_argument("--khung", action="store_true",

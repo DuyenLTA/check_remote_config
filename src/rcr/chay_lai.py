@@ -47,6 +47,11 @@ def ly_do_khong_chay_lai(result: dict, dau_truoc: tuple | None) -> str:
         return ""
     if any((r.get("verdict") == "BLOCKED") for r in result.get("runs") or []):
         return ""
+    # Buoc Action tool khong dich duoc cau chu: lan sau van dung dung buoc do (N02 3.7.3 19/11/2026 ton gap doi).
+    if any("không dịch được bước" in ((s.get("action") or {}).get("reason") or "")
+           for r in result.get("runs") or [] for s in (r.get("drive") or {}).get("steps") or []
+           if (s.get("action") or {}).get("kind") == "needs_human"):
+        return "có bước Action tool không dịch được — chạy lại vẫn dừng ở bước đó"
     con_mo = [l for l in _dong(result) if l["verdict"] not in (PASS, FAIL)]
     if con_mo and all(l.get("tinh") for l in con_mo):
         return f"{len(con_mo)} dòng chưa chấm đều suy từ câu chữ (phải nhìn mắt / không nêu kỳ vọng)"

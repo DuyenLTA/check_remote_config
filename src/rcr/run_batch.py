@@ -26,6 +26,7 @@ from . import (
     device_app,
     chay_lai,
     precond_android,
+    precond_build,
     precond_guards,
     rc_json_lech,
     fo_flow,
@@ -208,7 +209,9 @@ async def run_cases(client, baseline, args, runnable, rows, tc_info, log_fn=_noo
                 continue
             # Precondition doi phien ban Android may nay khong co (Android < 8.0 tren may Android 12): chay chi ra
             # ket qua cua nhanh khac -> BLOCKED ngay, khong chay / khong chay lai (user chot, AIP893 widget R03).
-            chan = precond_android.thieu_android(fo_ngon_ngu.tien_dk_chuoi(key, runnable), *android)
+            tien_dk = fo_ngon_ngu.tien_dk_chuoi(key, runnable)
+            chan = (precond_android.thieu_android(tien_dk, *android)
+                    + precond_build.thieu_build(tien_dk, bool(getattr(args, "co_build_dev", False))))
             if chan:
                 log_fn("    precondition không tạo được: " + "; ".join(chan) + " -> BLOCKED, không chạy")
                 records.append(precond_android.record_blocked(key, row, chosen, chan)
