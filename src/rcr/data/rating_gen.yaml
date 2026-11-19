@@ -58,11 +58,11 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
     generating_wait_image_seconds: "60"
     generating_wait_video_seconds: "300"
   anh:
-    - ve_chu: "^(Text to Image Generate|Magic With AI)$"
-      tab: "^Home$"
+    - ve_chu: "^(Text to Image Generate|Magic With AI|Trending Now)$"
+      tab: "^(Home|AI STUDIO)$"
       toi_da: 120
     - dong_neu_co: "^(Close|Close sheet)$"
-    - tap: "^Image to Image Generate$"
+    - tap: "^Image to Image( Generate)?$"
     - dong_ad: 6
     - cho_chu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
     - cho: 3
@@ -82,7 +82,7 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
       toi_da: 300
     # Cho gen dai (generating_wait_image_seconds lon) -> result mo thang tu man cho, popup Rating hien o day (do
     # 16/11/2026: placement result chi ban khi vao result tu man cho, mo tu History KHONG hien popup).
-    - cho_chu: "^(100%|Result|Text to Image Generate|Magic With AI)$"
+    - cho_chu: "^(100%|Result|Text to Image Generate|Magic With AI|Trending Now)$"
       toi_da: 90
     - cho: 25
       bo_qua_neu: "^(100%|Result)$"
@@ -95,11 +95,11 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
     - cho_chu: "^(Result|Back to Home)$"
       toi_da: 90
   video:
-    - ve_chu: "^(Text to Image Generate|Magic With AI)$"
-      tab: "^Home$"
+    - ve_chu: "^(Text to Image Generate|Magic With AI|Trending Now)$"
+      tab: "^(Home|AI STUDIO)$"
       toi_da: 120
     - dong_neu_co: "^(Close|Close sheet)$"
-    - tap: "^Image to Video Generate$"
+    - tap: "^Image to Video( Generate)?$"
     - dong_ad: 6
     - cho_chu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
     - cho: 3
@@ -117,7 +117,7 @@ com.aiphotogenerator.aivideomaker.photoslideshow: &ai_photo
       # Sheet "Just One More Step!!!" (do R58TB198BNN 17/11/2026): may khong co fill rewarded -> mua sub qua nut nay
       mua_sub_chu: "^Unlock Now$"
       toi_da: 300
-    - cho_chu: "^(100%|Result|Text to Image Generate|Magic With AI)$"
+    - cho_chu: "^(100%|Result|Text to Image Generate|Magic With AI|Trending Now)$"
       toi_da: 300
     - cho: 60
       bo_qua_neu: "^(100%|Result)$"
@@ -167,11 +167,21 @@ photoslideshow.videoslideshow.addimage.photogen:
     - cho_man: "ResultActivity"
       toi_da: 60
 
+# AIP944 AI Photo Video Creator 1.5.0 (do tren Pixel 7 29301FDH2006K7 17/11/2026): cung khuon ai_photo (Compose,
+# I2I: "Tap To Upload" -> photopicker "Xong" -> o "What do you have in mind?" -> "Generate"), Home khac chu: the
+# "Image to Image" / "Image to Video", hang "Trending Now", tab "AI STUDIO", History la icon desc. Home sau FO hay bi
+# popup Widget / Check-in che -> doc chu Home khong ra khuon -> khai thang `khuon` + ep man cho dai (gen ngam).
+com.ai.aiphoto.aivideo.creator.generator:
+  khuon: ai_photo
+  ep_cau_hinh:
+    generating_wait_image_seconds: "60"
+    generating_wait_video_seconds: "300"
+
 # KHUON: app chua co muc rieng -> tool ve Home, chon khuon co `nhan_dien` khop chu tren Home (src/rcr/cong_thuc_khuon.py).
 khuon:
   beauty:                      # AIP892 BeautyGenie: Home co hang "QUICK FIXES"
     nhan_dien: "^QUICK FIXES$"
     <<: *beauty
-  ai_photo:                    # AIP893 / AIP885: Home co "Text to Image Generate" / "Magic With AI"
-    nhan_dien: "^(Text to Image Generate|Magic With AI)$"
+  ai_photo:                    # AIP893 / AIP885: Home co "Text to Image Generate" / "Magic With AI"; AIP944: "Trending Now"
+    nhan_dien: "^(Text to Image Generate|Magic With AI|Trending Now)$"
     <<: *ai_photo

@@ -99,12 +99,20 @@ def tim_duoi(nodes, mau: str, thu: int = 1):
             and n.bounds.top >= moc.bounds.bottom]
     if not duoi:
         return None
-    hang = min(n.bounds.top for n in duoi)
-    cung_hang: list = []
-    for n in sorted((n for n in duoi if abs(n.bounds.top - hang) <= 8), key=lambda n: (n.bounds.left, not n.clickable)):
-        if not cung_hang or abs(n.bounds.left - cung_hang[-1].bounds.left) > 8:   # the + anh trong the: 1 o
-            cung_hang.append(n)
-    return cung_hang[thu - 1] if 0 < thu <= len(cung_hang) else None
+    # Dem theo hang tu tren xuong: hang dau khong du `thu` the thi dem tiep hang ke (luoi bento AIP927 17/11/2026:
+    # "Cinematic Crossfade" cao 2 hang ben trai, "Polaroid" + "Vintage" xep chong ben phai -> the C o hang thu 2).
+    o: list = []
+    con = list(duoi)
+    while con and len(o) < thu:
+        hang = min(n.bounds.top for n in con)
+        cung_hang: list = []
+        for n in sorted((n for n in con if abs(n.bounds.top - hang) <= 8),
+                        key=lambda n: (n.bounds.left, not n.clickable)):
+            if not cung_hang or abs(n.bounds.left - cung_hang[-1].bounds.left) > 8:   # the + anh trong the: 1 o
+                cung_hang.append(n)
+        o += cung_hang
+        con = [n for n in con if n.bounds.top > hang + 8]
+    return o[thu - 1] if 0 < thu <= len(o) else None
 
 
 async def _nodes(client, serial: str, package: str):
@@ -157,8 +165,10 @@ async def _dien_o_anh(client, serial: str, package: str, buoc: dict, het: float,
                   and n.bounds.bottom <= nut.bounds.top and n.bounds.right - n.bounds.left >= 150
                   and o_trong(png, n.bounds)), None)
         if o is None:
+            # Vuot NHANH (250ms) de carousel snap sang dung 1 o; vuot cham 1500ms chi keo ~66px roi bat ve
+            # (Samsung A13 AIP927 18/11/2026: dien mai o 1-2, nut Generate khong bao gio bat).
             await client.shell(serial, "input", "swipe", "900", str(moc.bounds.bottom + 800),
-                               "150", str(moc.bounds.bottom + 800), "1500")
+                               "150", str(moc.bounds.bottom + 800), "250")
             await asyncio.sleep(NHIP)
             continue
         await _bam(client, serial, o)
@@ -260,6 +270,11 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
             if re.search(buoc["cho_man"], act or ""):
                 log.append(f"tới {act.rsplit('.', 1)[-1]}")
                 return True
+            if "AdActivity" in (act or ""):
+                # Bam template bat inter truoc man dich (AIP916 CreaPix 18/11/2026: inter style truoc SelectPhoto,
+                # ad test bo dem treo o "1" khong tu dong) -> dong ad roi doi tiep, khong cho het gio.
+                log.append(await fo_flow.dong_ad_dang_che(client, serial, cho=45) or "chờ ad hết giờ")
+                continue
         elif "xem_ads" in buoc:
             if re.search(buoc.get("toi", "$^"), act or ""):
                 log.append(f"xem ads xong → {act.rsplit('.', 1)[-1]}")
@@ -268,7 +283,9 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
                 bam_khong_mo = 0
                 log.append(await fo_flow.dong_ad_dang_che(client, serial, cho=45) or "chờ ad hết giờ")
                 continue
-            if bam_khong_mo >= BAM_KHONG_MO_TOI_DA:
+            # `bam_lai: n` (khuon): reward no-fill thoang qua roi load lai sau ~10s (AIP916 CreaPix Samsung A13
+            # 18/11/2026: 1 lan "No fill." giua 5 reward lien tiep) -> cho bam them truoc khi ket luan khong fill.
+            if bam_khong_mo >= int(buoc.get("bam_lai", BAM_KHONG_MO_TOI_DA)):
                 log.append(KHONG_FILL_THUONG)
                 return False
             nodes = await _nodes(client, serial, package)
