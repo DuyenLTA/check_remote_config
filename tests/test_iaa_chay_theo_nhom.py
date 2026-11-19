@@ -296,3 +296,31 @@ def test_config_cua_case_cho_report():
     tat = iaa_nhom.config_cua_case(DS, "IAA-01-04")
     assert tat and set(tat.values()) == {"false"}
     assert iaa_nhom.config_cua_case(DS, "widget#W1") == {}
+
+
+def test_shortcut_bi_che_tren_samsung():
+    """Samsung One UI ghi id / nhan shortcut la '***' -> dung nhan khai trong khuon (`nhan:`)."""
+    from rcr import iaa_lai
+    che = ("ShortcutInfo {id=***, flags=0x85\n  packageName=p.app\n  shortLabel=***, resId=0\n"
+           "ShortcutInfo {id=***, flags=0x85\n  packageName=khac.app\n")
+    ro = "ShortcutInfo {id=uninstall, flags=0x85\n  packageName=p.app\n  shortLabel=Uninstall, resId=0\n"
+    assert iaa_lai.bi_che(che, "p.app")
+    assert not iaa_lai.bi_che(ro, "p.app")
+    assert not iaa_lai.bi_che(che, "khong.co")
+
+
+def test_tap_toa_do_y_theo_tam_chu_khong_theo_ti_le_co_dinh():
+    """Pixel 7 AIP916 19/11/2026: y 0.794 cham mep tren nut 'Still want to uninstall' [1901..2011] -> khong vao man Why."""
+    from rcr import iaa_lai
+    from rcr.ui_dump import Bounds, DeviceNode
+    P = "photomaker.image.editor.ai"
+    nodes = [
+        DeviceNode("0", "", "android.widget.TextView", "Don't uninstall yet", "", Bounds(331, 1767, 749, 1827),
+                   True, True, True, P, None, 0),
+        DeviceNode("1", "", "android.widget.TextView", "Still want to uninstall", "", Bounds(302, 1943, 778, 2003),
+                   True, True, True, P, None, 0),
+        DeviceNode("2", "", "android.widget.TextView", "Still want to uninstall", "", Bounds(0, 0, 0, 0),
+                   True, True, True, P, None, 0),
+    ]
+    assert iaa_lai.y_tam_node(nodes, "^Still want to uninstall$") == 1973
+    assert iaa_lai.y_tam_node(nodes, "^Why do you uninstall\\?$") is None

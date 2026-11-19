@@ -9,24 +9,26 @@ khuon:
   # result_img_vid, reward_img_vid, inter_feature, inter_style, native_reason_uninstall, inter_uninstall).
   # Do 13/11/2026 tren vivo V2143: AIP893 2.6.0 (Home co nut "Text to Image Generate", hang style "AI Try On Outfits"),
   # AIP885 (Home "Magic With AI", the "Image to Image" + nut "Generate", hang "Trending", tab "Image/Video Studio").
+  # AIP944 1.5.0 (Pixel 7 18/11/2026): Home "AI Studio", the chu "Text to Image" / "Image to Image" / "Image to Video"
+  # (bam the -> inter feature -> man Tap To Upload), hang style duoi "Trending Now", tab duoi "AI STUDIO".
   # Moi man trong MainActivity (Compose) -> nhan man bang chu. Ve Home hay co popup Add Widget / Rate us (Close).
   # Loading = chu "<so>%". Het luot gen free trong ngay -> doan reward/loading/result dung (KHONG mua sub).
   ai_photo:
-    nhan_dien: "^(Text to Image Generate|Magic With AI)$"
+    nhan_dien: "^(Text to Image Generate|Magic With AI|Trending Now)$"
     doan:
       - ten: Home (preload inter feature/style, banner reload 10s)
         buoc:
-          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
-            tab: "^Home$"
+          - ve_chu: "^(Text to Image Generate|Magic With AI|Trending Now)$"
+            tab: "^(Home|AI STUDIO)$"
             toi_da: 180
           - dong_neu_co: "^(Close|Close sheet)$"
           - cho: 35
       - ten: Image to Image bằng prompt (inter feature, native upload/prompt, reward, loading, result)
         buoc:
-          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
-            tab: "^Home$"
+          - ve_chu: "^(Text to Image Generate|Magic With AI|Trending Now)$"
+            tab: "^(Home|AI STUDIO)$"
           - dong_neu_co: "^(Close|Close sheet)$"
-          - tap: "^(Image to Image Generate|Image Studio)$"
+          - tap: "^(Image to Image Generate|Image Studio|Image to Image)$"
           - dong_ad: 6
           - tap_neu_co: "^Generate$"           # AIP885: tab Image Studio -> the Image to Image (nut Generate thu 1)
             khi_thieu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
@@ -42,16 +44,16 @@ khuon:
           - tap: "^Generate$"
           - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"     # khong khop tieu de "Unlock Your Creation" (AIP885)
             tap_tai: [0.5, 0.935]
-            toi_chu: "^\\d{1,3}%$"
+            toi_chu: "^(\\d{1,3}%|Taking you to Home.*)$"   # AIP944: style -> loading gen ngam "Taking you to Home in Ns"
             dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
             toi_da: 420                                        # AIP885 "Watch Ads (0/5)": 5 reward lien tiep
           - cho: 25
       - ten: Text to Image (inter feature, màn nhập prompt preload reward/native loading)
         buoc:
-          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
-            tab: "^Home$"
+          - ve_chu: "^(Text to Image Generate|Magic With AI|Trending Now)$"
+            tab: "^(Home|AI STUDIO)$"
           - dong_neu_co: "^(Close|Close sheet)$"
-          - tap: "^(Text to Image Generate|Image Studio)$"
+          - tap: "^(Text to Image Generate|Image Studio|Text to Image)$"
           - dong_ad: 6
           - tap_neu_co: "^Generate$"           # AIP885: tab Image Studio -> the Text to Image (nut Generate thu 2)
             thu: 2
@@ -61,10 +63,10 @@ khuon:
           - back: 1
       - ten: Image to Video bằng prompt
         buoc:
-          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
-            tab: "^Home$"
+          - ve_chu: "^(Text to Image Generate|Magic With AI|Trending Now)$"
+            tab: "^(Home|AI STUDIO)$"
           - dong_neu_co: "^(Close|Close sheet)$"
-          - tap: "^(Image to Video Generate|Video Studio)$"
+          - tap: "^(Image to Video Generate|Video Studio|Image to Video)$"
           - dong_ad: 6
           - tap_neu_co: "^Generate$"           # AIP885: tab Video Studio -> the Image to Video + nut Generate
             khi_thieu: "^(Tap To Upload|Upload( Image| Photo)?|Select Photo|Add Photo)$"
@@ -78,26 +80,26 @@ khuon:
           - back: 1
       - ten: Style ở Home (inter style 1 lần/session, reward sau Confirm, loading)
         buoc:
-          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
-            tab: "^Home$"
+          - ve_chu: "^(Text to Image Generate|Magic With AI|Trending Now)$"
+            tab: "^(Home|AI STUDIO)$"
           - dong_neu_co: "^(Close|Close sheet)$"
-          - tap_duoi: "^(AI Try On Outfits|Trending)$"
+          - tap_duoi: "^(AI Try On Outfits|Trending|Trending Now)$"
           - dong_ad: 6
           - chon_anh: true
             toi_da: 40
           - tap_neu_co: "^Confirm( \\(\\d+/\\d+\\))?$"   # AIP885: man "Add photo" -> Confirm (1/1)
           - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"     # khong khop tieu de "Unlock Your Creation" (AIP885)
             tap_tai: [0.5, 0.935]
-            toi_chu: "^\\d{1,3}%$"
+            toi_chu: "^(\\d{1,3}%|Taking you to Home.*)$"   # AIP944: style -> loading gen ngam "Taking you to Home in Ns"
             dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
             toi_da: 420                                        # AIP885 "Watch Ads (0/5)": 5 reward lien tiep
           - cho: 25
       - ten: Style lần 2 cùng session (không được có inter)
         buoc:
-          - ve_chu: "^(Text to Image Generate|Magic With AI)$"
-            tab: "^Home$"
+          - ve_chu: "^(Text to Image Generate|Magic With AI|Trending Now)$"
+            tab: "^(Home|AI STUDIO)$"
           - dong_neu_co: "^(Close|Close sheet)$"
-          - tap_duoi: "^(AI Try On Outfits|Trending)$"
+          - tap_duoi: "^(AI Try On Outfits|Trending|Trending Now)$"
             thu: 2
           - dong_ad: 6
           - cho: 6
@@ -105,8 +107,76 @@ khuon:
       - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
         buoc:
           - shortcut: "(?i).*uninstall.*"     # id: uninstall / UNINSTALL / shortcut_uninstall; nhan "Gỡ cài đặt" tren may VN
+            nhan: "^(Uninstall|Uninstall app|Gỡ cài đặt)$"      # Samsung A13 (AIP893 18/11/2026) che id/nhan trong dumpsys (***)
           # AIP893 (Pixel 6 16/11/2026): shortcut mo lai app qua Splash -> Question -> Billing roi moi toi
           # UninstallActivity -> lai het FO, khong chi cho 8s (truoc do doan nay BACK khi con o Question, 0 request).
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - dong_ad: 6
+          - cho: 4
+          - back: 3
+
+  # App slideshow video AI (muc 3 sheet KT: inter_upload, native_generate, native_result, banner_navigation,
+  # native_reason_uninstall, inter_uninstall). Khai 18/11/2026 tren Samsung A13 R58TB198BNN: AIP927 Pictifaze 1.1.0.
+  # Home MainActivity: hang the template duoi "Slideshow" (desc "Cinematic Crossfade" / "Polaroid Memories" / "Vintage
+  # Film Reel") -> inter_upload khi bam the -> SelectPhotoActivity (dien du 5 o anh moi bat "Generate with Ads") -> sheet
+  # "Watch Ads (0/2)" -> GeneratingActivity (native_generate) -> gen ngam ~8s tu ve Home; video xong ~4-5 phut o History
+  # -> ResultActivity (native_result). Cung duong voi rating_gen.yaml / checkin_cong_thuc.yaml cua app.
+  pictifaze:
+    nhan_dien: "^Slideshow$"
+    doan:
+      - ten: Home (preload inter upload, banner navigation reload 10s)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 180
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - cho: 35
+      - ten: Chọn template (inter upload) → Generate (native generate) → Result (native result)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 60
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap_duoi: "^Slideshow$"
+          - dong_ad: 8
+          - cho_man: "SelectPhoto"
+          - dien_o_anh: "^Change$"
+            nguon: "^Gallery$"
+            xong: "^Generate with Ads$"
+            toi_da: 240
+          - tap: "^Generate with Ads$"
+          - xem_ads: "^(Watch Ads.*|Free Generate.*)$"
+            toi: "Generating|Result"
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+            toi_da: 300
+          - cho: 15
+          - cho_man: "ResultActivity|MainActivity"
+            toi_da: 120
+          - cho: 240                         # video gen ngam ~4-5 phut truoc khi mo duoc Result tu History
+          - tap: "^History$"
+            bo_qua_neu: "^Your video is ready$"
+          - cho_man: "HistoryActivity"
+            bo_qua_neu: "^Your video is ready$"
+          - tap_duoi: "^History$"
+            bo_qua_neu: "^Your video is ready$"
+          - cho_man: "ResultActivity"
+            toi_da: 90
+          - cho: 10
+          - back: 2
+      - ten: Chọn template lần 2 (inter upload cách lần trước ≥ 30s)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 60
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap_duoi: "^Slideshow$"
+            thu: 2
+          - dong_ad: 8
+          - cho: 6
+          - back: 2
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+            nhan: "^(Uninstall|Gỡ cài đặt)$"      # Samsung che id/nhan shortcut trong dumpsys (***)
           - ve_man: "UninstallActivity"
             toi_da: 150
           - cho: 8
@@ -202,6 +272,127 @@ khuon:
           - tap_neu_co: "^Uninstall$"
           - tap_toa_do: [0.724, 0.959]
             neu_co: "^Why do you uninstall\\?$"
+          - dong_ad: 8
+          - cho: 4
+          - back: 3
+
+  # App doi kieu anh/video theo style (muc 3 sheet KT giong beauty_genie: 501_home_banner, inter_back,
+  # reward_img_vid, inter_style, native_result_img_vid, native_loading, native_reason_uninstall, inter_uninstall).
+  # Khai 18/11/2026 tren Samsung A13 R58TB198BNN: AIP916 CreaPix 1.4.0. Home MainActivity: tieu de "CreaPix", hang
+  # style duoi "TRENDING HAIR STYLE" (tab PHOTO) / "TRENDING VIDEO STYLE" (tab VIDEO), the chi co content-desc.
+  # Bam style -> inter style -> SelectPhotoActivity ("Add your photo" -> sheet "Gallery" -> photopicker -> Done)
+  # -> "Generate with Ads" -> sheet "Watch ad for +1 today (x/5)" (5 reward) -> GeneratingActivity (native loading)
+  # -> gen NGAM tu ve Home ~10s, History co badge -> HistoryActivity -> the dau -> ResultActivity (native result).
+  # Uninstall: SorryUninstallActivity ("Still want to uninstall") -> WhyUninstallActivity (chon ly do, nut
+  # Uninstall o day -> inter uninstall) -> ThankYouUninstallActivity ~3s -> Cai dat App info.
+  creapix:
+    nhan_dien: "^(CreaPix|TRENDING HAIR STYLE)$"
+    doan:
+      - ten: Home (banner reload 10s, preload inter style / inter back)
+        buoc:
+          - ve_man: "MainActivity"
+            toi_da: 180
+          - dong_neu_co: "^(Close|Not now|Maybe later)$"
+          - cho: 35
+      - ten: Style lần 1 (inter style), Select Photo (preload reward, native loading), back (không inter back liền sau inter style)
+        buoc:
+          - ve_man: "MainActivity"
+          - dong_neu_co: "^(Close|Not now|Maybe later)$"
+          - tap: "^PHOTO$"
+          - tap_duoi: "^TRENDING HAIR STYLE$"
+          - dong_ad: 6
+          - cho_man: "SelectPhoto"
+            toi_da: 40
+          - cho: 6
+          - back: 1
+          - dong_ad: 6
+          - cho: 5
+      - ten: Style lần 2 cùng session (không inter style), back ở Select Photo (inter back)
+        buoc:
+          - ve_man: "MainActivity"
+          - dong_neu_co: "^(Close|Not now|Maybe later)$"
+          - tap: "^PHOTO$"
+          - tap_duoi: "^TRENDING HAIR STYLE$"
+            thu: 2
+          - dong_ad: 6
+          - cho_man: "SelectPhoto"
+            toi_da: 40
+          - cho: 6
+          - back: 1
+          - dong_ad: 8
+          - cho: 5
+      - ten: Style video (I2V) → Select Photo → back (inter back)
+        buoc:
+          - ve_man: "MainActivity"
+          - dong_neu_co: "^(Close|Not now|Maybe later)$"
+          - tap: "^VIDEO$"
+          - cho_chu: "^TRENDING VIDEO STYLE$"
+          - tap_duoi: "^TRENDING VIDEO STYLE$"
+          - dong_ad: 6
+          - cho_man: "SelectPhoto"
+            toi_da: 40
+          - cho: 6
+          - back: 1
+          - dong_ad: 8
+          - cho: 5
+          - tap_neu_co: "^PHOTO$"
+      - ten: Gen ảnh bằng style (reward, native loading reload 5s, native result qua History)
+        buoc:
+          - ve_man: "MainActivity"
+          - dong_neu_co: "^(Close|Not now|Maybe later)$"
+          - tap: "^PHOTO$"
+          - tap_duoi: "^TRENDING HAIR STYLE$"
+          - dong_ad: 6
+          - cho_man: "SelectPhoto"
+            toi_da: 40
+          - tap: "^Add your photo$"
+          - cho: 2
+          - tap_neu_co: "^Gallery$"
+          - chon_anh: true
+          - cho: 3
+          - tap: "^(Generate with Ads|Generate portrait)$"   # tat reward qua remote: nut "Generate portrait"
+          - cho: 8                           # reward preload o Select Photo
+          - xem_ads: "^Watch ad for.*$"
+            toi: "Generating|MainActivity|Result"
+            bam_lai: 20                      # reward test thinh thoang "No fill." 1 lan roi load lai sau ~10s
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+            toi_da: 900                        # 5 reward/lan gen, kho test hay no-fill
+          - cho_man: "MainActivity|ResultActivity"
+            toi_da: 90
+          - cho: 25
+          - dong_neu_co: "^(Close|OK|Not now|Maybe later)$"
+          - tap: "^History$"
+            toi_da: 20
+          - cho_man: "HistoryActivity|ResultActivity"
+            toi_da: 20
+          - tap_duoi: "^History$"
+            bo_qua_neu: "^(Before|After)$"
+          - cho_man: "ResultActivity"
+            toi_da: 30
+          - cho: 10
+          - back: 2
+          - dong_ad: 8
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+            nhan: "^(Uninstall|Uninstall app|Gỡ cài đặt)$"      # Samsung che id/nhan shortcut trong dumpsys (***)
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - dong_ad: 6
+          - cho_chu: "^Still want to uninstall$"
+          # Samsung A13 (AIP916 18/11/2026): popup "AdMob native ad validator" che TRON chu "Still want to uninstall"
+          # (node chu hep 320..760px) -> bam nham "See issues" lap mai. Nut vien rong gan het man: bam mep phai (x 0.87)
+          # nam ngoai popup (popup toi ~866px), co popup hay khong deu trung nut.
+          # Pixel 7 (19/11/2026): y co dinh 0.794 cham mep tren nut -> khong vao man Why; y lay theo tam chu.
+          - tap_toa_do: [0.87, 0.794]
+            y_theo_chu: "^Still want to uninstall$"
+            neu_co: "^Still want to uninstall$"
+          - cho_chu: "^Why do you uninstall\\?$"
+          - cho: 6
+          - tap: "^Too many ads$"
+          - cho: 6
+          - tap: "^Uninstall$"
           - dong_ad: 8
           - cho: 4
           - back: 3
@@ -472,3 +663,5 @@ com.aiphotogenerator.aivideomaker.photoslideshow: {khuon: ai_photo}     # AIP893
 com.ai.aiimage.aivideogenerator: {khuon: ai_photo}                      # AIP885
 fitness.workout.aitraining.abs.exercises: {khuon: fitness}              # AIP921 (Home sau FO con man thiet lap ho so)
 learnenglish.language.learningvocabulary.practice: {khuon: english_buddy}  # AIP935 Lexi
+photoslideshow.videoslideshow.addimage.photogen: {khuon: pictifaze}     # AIP927 Pictifaze
+photomaker.image.editor.ai: {khuon: creapix}                         # AIP916 CreaPix
