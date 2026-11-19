@@ -10,6 +10,7 @@ Mỗi lần sửa KB: thêm một dòng vào mục "Bài học" nếu sửa vì 
 
 | Ngày | Đầu ra sai | Sửa gì | Trước → sau |
 |---|---|---|---|
+| 19/11/2026 | AIP936 (OPPO f3466cdb): hộp thoại "System Launcher isn't responding" (launcher ANR 22:00) nằm đè màn app cả lượt, ảnh các bước bị che, R01-01 BLOCKED rồi mới PASS ở lần chạy lại | `anr_he_thong`: dump UI / trước mỗi ảnh chụp thấy ANR của tiến trình hệ thống (launcher, systemui…) thì bấm Wait; ANR của chính app giữ nguyên | Hộp thoại đè cả lượt → tự đóng |
 | 16/11/2026 | Khoá máy theo CẢ job: bot / rcr-iaa / rcr-gen-ngam giữ khoá suốt lệnh, lệnh con biết cha giữ qua env `RCR_GIU_MAY`; máy bận thì báo bận, không chạy chồng | `bot_hang_doi.giu_may_ca_job`, `bot_chay_claude._khoa_job` | — |
 | 16/11/2026 | Bộ case có "Tiếp nối" → tự bật `--chuoi` (quên cờ là pm clear giữa chuỗi, kết quả sai) | `run_batch.tu_bat_chuoi` | — |
 | 16/11/2026 | Máy không chụp được màn Result (could not get idle state, Android 12) → bỏ các case sau cần gen, báo chạy máy Android 13+ | `bo_case_thieu_cong_thuc.KHONG_DUMP` | — |

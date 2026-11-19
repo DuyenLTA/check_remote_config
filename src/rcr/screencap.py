@@ -82,6 +82,18 @@ async def frames(client, serial: str, so_khung: int = 10, nhip: float = 0.30) ->
     return ra
 
 
+async def _dong_anr_he_thong(client, serial: str) -> None:
+    """Truoc khi chup: hop thoai ANR cua launcher / systemui dang focus thi dong (qua ui_dump.dump) de anh thay man
+    app, khong phai hop thoai cua may. ANR cua app khong dong (xem anr_he_thong)."""
+    from . import anr_he_thong, ui_dump
+    try:
+        out, _, _ = await client.shell(serial, "dumpsys", "window", "windows")
+        if anr_he_thong.la_he_thong(anr_he_thong.tien_trinh_anr(out)):
+            await ui_dump.dump(client, serial)
+    except Exception:                      # noqa: BLE001 - kiem hop thoai hong thi van chup nhu cu
+        return
+
+
 async def capture(client, serial: str, giu_png: bool = False) -> dict:
     """-> {thumb: data URI, warning: str}. Khong raise: thieu anh thi bao chu
     khong lam do ca case dang chay. `giu_png`: kem PNG goc (`png`) de do mau chu -
@@ -90,6 +102,7 @@ async def capture(client, serial: str, giu_png: bool = False) -> dict:
     runner = getattr(client, "run_binary", None)
     if runner is None:
         return {"thumb": "", "warning": "tang adb nay khong chup anh duoc"}
+    await _dong_anr_he_thong(client, serial)
     try:
         out, err, code = await runner(
             "-s", serial, "exec-out", "screencap", "-p", timeout=CAPTURE_TIMEOUT

@@ -170,8 +170,9 @@ async def _dump_tat_animator(client, serial: str) -> str:
             await client.shell(serial, "settings", "delete", "global", "animator_duration_scale")
 
 
-async def dump(client, serial: str) -> str:
-    """Chup man hinh dang hien. Tra nguyen van XML."""
+async def dump(client, serial: str, _da_dong_anr: bool = False) -> str:
+    """Chup man hinh dang hien. Tra nguyen van XML.
+    Hop thoai ANR cua launcher / systemui dang che man -> bam Wait roi dump lai (xem anr_he_thong)."""
     guard(serial)
     for lan in range(NULL_ROOT_RETRIES + 1):
         out, err, _ = await client.shell(serial, "uiautomator", "dump", DUMP_PATH, timeout=DUMP_TIMEOUT)
@@ -196,4 +197,9 @@ async def dump(client, serial: str) -> str:
     await client.shell(serial, "rm", "-f", DUMP_PATH)
     if "<hierarchy" not in xml:
         raise AdbError(f"Khong doc duoc dump UI: {(err or xml).strip()[:200]}")
+    if not _da_dong_anr:
+        from . import anr_he_thong
+        if await anr_he_thong.dong_neu_he_thong(client, serial, xml):
+            await asyncio.sleep(1.0)
+            return await dump(client, serial, _da_dong_anr=True)
     return xml
