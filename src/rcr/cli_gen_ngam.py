@@ -119,6 +119,11 @@ def chay(a) -> dict:
         raise RcError(f"máy {a.serial} là API {sdk.strip()} (< {ANDROID_TOI_THIEU}, Android 13): bộ gen ngầm cần hộp "
                       "thoại xin quyền thông báo POST_NOTIFICATIONS — chạy trên máy Android 13+ (vd Pixel 6)")
     gen_ngam_may.MAU_TOAST[:] = [ct["toast_xong"]]
+    # App Compose (moi man chung mot activity): nhan man cho / ket qua / History theo chu, khong theo activity.
+    gen_ngam_may.MAN_THEO_CHU.clear()
+    gen_ngam_may.MAN_THEO_CHU.update(ct.get("man_theo_chu") or {})
+    gen_ngam_may.THANH_TAB[:] = ["|".join(ct[k] for k in ("tab_home", "tab_anh", "tab_video"))] \
+        if ct.get("man_theo_chu") else []
     asyncio.run(client.shell(a.serial, "logcat", "-G", "16M"))
     ctx = dau.Ctx(client, a.serial, a.package, ct, so, Path(a.out_dir) / "gen-ngam-video", _log)
     chay_nhom = {"r01": dau.nhom_r01, "chung": dau.nhom_chung, "r06": sau.nhom_r06, "r07": sau.nhom_r07,

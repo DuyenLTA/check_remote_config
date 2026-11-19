@@ -102,6 +102,7 @@ async def dam_bao_premium(client, serial, package, premium) -> dict:
 
 async def ve_main(client, serial, package, ct) -> may.Man:
     """BACK (dong rate truoc) toi MainActivity; app khong o truoc thi mo lai."""
+    da_lai_fo = False
     for _ in range(6):
         m = await may.nhin(client, serial, package)
         if m.pkg != package:
@@ -113,6 +114,12 @@ async def ve_main(client, serial, package, ct) -> may.Man:
         if re.search(r"Splash|Question|Billing|Language|Onboarding", m.act or ""):
             # App vua mo lanh lai (bam push sau khi bi tat, kill...) dang o FO -> lai qua FO, BACK o day la thoat app.
             await fo_flow.walk_to(client, serial, package, ct["man_home"])
+            continue
+        if m.act == "ManKhac" and not da_lai_fo and not m.tim(ct["rate"]):
+            # App Compose: FO (Question / Billing...) cung nam trong MainActivity (AIP893 18/11/2026) - BACK o day la
+            # thoat app -> cho bo lai FO theo chu ve Home mot lan truoc.
+            da_lai_fo = True
+            await sub_thao_tac.ve_home(client, serial, package)
             continue
         if not await dong_rate(client, serial, package, ct, m):
             await back(client, serial)
@@ -189,12 +196,23 @@ def phan_tich_video(kq: dict) -> dict:
 
 
 async def tao(client, serial, package, ct, loai: str, che_do: str = "doi", style: int = 1, ok_luc: float = 0.0,
-              hop_ok=None, popup_luc: float | None = None) -> dict:
+              hop_ok=None, popup_luc: float | None = None, kieu: str | None = None) -> dict:
     """Tab anh / video -> style thu `style` -> anh mau dau tien -> Confirm, roi theo doi man cho.
 
     che_do: "doi" = khong bam gi toi khi roi man cho; "ok" = bam OK ngay khi popup hien; "nhanh" = chi cho vao man cho
     roi tra (de tao lien tiep). So do: {t_confirm, t_cho (vao man cho), ad, het_luot, popup [(t, so)], t_ok, t_roi,
-    roi_toi (Main/Result...), push_luc_cho, style}."""
+    roi_toi (Main/Result...), push_luc_cho, style}. App khai `t2i` (TC "tao anh T2I") -> tao anh bang T2I, tru
+    khi `kieu="style"` (anh I2I tu style + anh)."""
+    from . import gen_ngam_t2i as t2i
+    if t2i.dung_t2i(ct, loai, kieu):
+        bd = await t2i.bat_dau(client, serial, package, ct, vao_tab, co_prompt=kieu != "t2i_trong")
+        if bd.get("loi"):
+            return bd
+        kq = {"style": bd["style"], "loai": loai, "kieu": "t2i", "t_confirm": bd["t_confirm"], "popup": [],
+              "ad": False, "het_luot": "", "push_luc_cho": [], "t_ok": 0.0, "t_roi": 0.0, "roi_toi": ""}
+        if popup_luc is None:
+            popup_luc = float(ct.get("popup_anh_giay") or 0)
+        return kq | await theo_doi_cho(client, serial, package, ct, che_do, bd["t_confirm"], ok_luc, hop_ok, popup_luc)
     m = await vao_tab(client, serial, package, ct, "tab_anh" if loai == "anh" else "tab_video")
     if not dang_o_tab(m, ct, "tab_anh" if loai == "anh" else "tab_video"):
         return {"loi": f"không vào được tab {'tạo ảnh' if loai == 'anh' else 'tạo video'} ({m.act})"}
@@ -208,13 +226,20 @@ async def tao(client, serial, package, ct, loai: str, che_do: str = "doi", style
     m = await may.cho(client, serial, package, lambda x: x.o(ct["man_chon_anh"]) or x.o("AdActivity"), CHO_MAN)
     if m is None or not m.o(ct["man_chon_anh"]):
         return {"loi": f"bấm style '{ten}' không vào màn chọn ảnh ({m.act if m else '?'})", "style": ten}
-    anh = rating_cong_thuc.tim_duoi(m.nodes, ct["mau"])
-    ok = m.tim(ct["xac_nhan"])
-    if anh is None or ok is None:
-        return {"loi": "màn chọn ảnh không có ảnh mẫu / nút Confirm", "style": ten}
-    await bam(client, serial, anh, 0.8)
-    t_confirm = await may.gio(client, serial)
-    await bam(client, serial, ok, 0.3)
+    if m.act == "PhotoPicker":
+        # App Compose AIP893: bam style mo thang trinh chon anh he thong; bam Done = "Confirm" (Premium vao thang
+        # man cho ngay khi trinh chon dong).
+        t_confirm = await _chon_anh_he_thong(client, serial)
+        if not t_confirm:
+            return {"loi": "trình chọn ảnh hệ thống không có ảnh / nút Done", "style": ten}
+    else:
+        anh = rating_cong_thuc.tim_duoi(m.nodes, ct["mau"])
+        ok = m.tim(ct["xac_nhan"])
+        if anh is None or ok is None:
+            return {"loi": "màn chọn ảnh không có ảnh mẫu / nút Confirm", "style": ten}
+        await bam(client, serial, anh, 0.8)
+        t_confirm = await may.gio(client, serial)
+        await bam(client, serial, ok, 0.3)
     kq = {"style": ten, "loai": loai, "t_confirm": t_confirm, "popup": [], "ad": False, "het_luot": "",
           "push_luc_cho": [], "t_ok": 0.0, "t_roi": 0.0, "roi_toi": ""}
     if popup_luc is None:
@@ -222,38 +247,76 @@ async def tao(client, serial, package, ct, loai: str, che_do: str = "doi", style
     return kq | await theo_doi_cho(client, serial, package, ct, che_do, t_confirm, ok_luc, hop_ok, popup_luc)
 
 
+async def _chon_anh_he_thong(client, serial) -> float:
+    """Trinh chon anh he thong: bam anh dau tien, roi bam Done (gio may luc bam Done). Khong co -> 0."""
+    for _ in range(3):
+        nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+        anh = next((n for n in nodes if rating_cong_thuc.ANH_RE.search(n.content_desc or "") and not n.bounds.empty), None)
+        if anh is not None:
+            break
+        await asyncio.sleep(1.0)
+    else:
+        return 0.0
+    await bam(client, serial, anh, 1.0)
+    for _ in range(4):
+        nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+        nut = next((n for n in nodes if rating_cong_thuc.XAC_NHAN_ANH_RE.match(n.text or "") and not n.bounds.empty), None)
+        if nut is not None:
+            t = await may.gio(client, serial)
+            await bam(client, serial, nut, 0.2)
+            return t
+        await asyncio.sleep(0.5)
+    return 0.0
+
+
+async def _vao_man_cho_nhanh(client, serial, package, ct, giay: float = 6.0) -> tuple[float, str]:
+    """(gio may luc man cho len truoc, ma cua so chinh) bang `dumpsys window` (~0,05s/lan). App nhieu activity: activity
+    khop man_cho. App Compose (MAN_THEO_CHU): trinh chon anh vua dong, focus ve cua so app."""
+    het = await may.gio(client, serial) + giay
+    while await may.gio(client, serial) < het:
+        if may.MAN_THEO_CHU:
+            ma, pkg = await may.cua_so(client, serial)
+            if pkg == package:
+                t = await may.gio(client, serial)
+                # Trinh chon anh dong ca khi app CHAN (het luot: toast "Daily limit reached" ~1,5s roi o lai tab) ->
+                # chi tinh da vao man cho khi nhin thay man cho (luot 18/11 dem R01-06 ra 18 anh voi limit 10).
+                m = await may.cho(client, serial, package, lambda x: x.o(ct["man_cho"]) or x.tim(ct["het_luot"]), 8.0)
+                return (t, ma) if m is not None and m.o(ct["man_cho"]) else (0.0, "")
+        else:
+            _p, act = await device_app.focus(client, serial)
+            if re.search(ct["man_cho"], act or ""):
+                return await may.gio(client, serial), ""
+        await asyncio.sleep(0.05)
+    return 0.0, ""
+
+
 async def _bam_ok_dung_giay(client, serial, package, ct, ok_luc: float, hop_ok) -> dict:
     """Nhin UI mat ~2,1s / lan nen "bam OK ngay khi popup hien" thanh bam o giay ~14,5. Popup hien dung giay 12,0
     (do bang khung video cung luot) -> canh vao man cho bang dumpsys (0,02s), toi `ok_luc` giay thi bam toa do nut OK
     da doc o lan popup truoc CUNG luot. Man cho Premium khong co ad nen bam truot cung khong trung gi."""
-    t_vao = 0.0
-    for _ in range(100):
-        _p, act = await device_app.focus(client, serial)
-        if re.search(ct["man_cho"], act or ""):
-            t_vao = await may.gio(client, serial)
-            break
-        await asyncio.sleep(0.05)
+    t_vao, chinh = await _vao_man_cho_nhanh(client, serial, package, ct)
     if not t_vao:
         return {}
     while await may.gio(client, serial) < t_vao + ok_luc:
         await asyncio.sleep(0.05)
-    pkg, act = await device_app.focus(client, serial)
-    if act and not re.search(ct["man_cho"], act):          # act rong = dialog popup dang giu focus -> van bam
-        return {"t_vao_nhanh": t_vao}
+    if may.MAN_THEO_CHU:
+        # App Compose: chi bam khi cua so dialog popup (khac cua so chinh) dang giu focus - da ve Home thi toa do nut
+        # OK roi vao the style.
+        ma, pkg = await may.cua_so(client, serial)
+        if pkg != package or ma == chinh:
+            return {"t_vao_nhanh": t_vao}
+    else:
+        pkg, act = await device_app.focus(client, serial)
+        if act and not re.search(ct["man_cho"], act):          # act rong = dialog popup dang giu focus -> van bam
+            return {"t_vao_nhanh": t_vao}
     t = await may.gio(client, serial)
     await device_app.tap(client, serial, (hop_ok[0] + hop_ok[2]) // 2, (hop_ok[1] + hop_ok[3]) // 2)
     return {"t_vao_nhanh": t_vao, "t_ok": t}
 
 
-async def _cho_vao(client, serial, ct, giay: float = 6.0) -> float:
-    """Gio may luc ProcessingActivity len truoc (dumpsys window 0,02s/lan). Khong vao trong `giay` -> 0."""
-    het = await may.gio(client, serial) + giay
-    while await may.gio(client, serial) < het:
-        _p, act = await device_app.focus(client, serial)
-        if re.search(ct["man_cho"], act or ""):
-            return await may.gio(client, serial)
-        await asyncio.sleep(0.05)
-    return 0.0
+async def _cho_vao(client, serial, ct, giay: float = 6.0, package: str = "") -> float:
+    """Gio may luc man cho len truoc (dumpsys window). Khong vao trong `giay` -> 0."""
+    return (await _vao_man_cho_nhanh(client, serial, package, ct, giay))[0]
 
 
 async def theo_doi_cho(client, serial, package, ct, che_do: str, t0: float, ok_luc: float = 0.0,
@@ -268,7 +331,7 @@ async def theo_doi_cho(client, serial, package, ct, che_do: str, t0: float, ok_l
     elif popup_luc and che_do == "doi":
         # Popup chi dung ~3s ma moi lan nhin ~2,1s -> co luc truot qua (luot 16/11 R02-01/R07-02 khong co khung popup
         # de tach video). Canh vao man cho bang dumpsys, doc push "Creating", roi nhin DUNG giay `popup_luc`.
-        t_vao = await _cho_vao(client, serial, ct)
+        t_vao = await _cho_vao(client, serial, ct, package=package)
         if t_vao:
             kq["t_cho"] = t_vao
             for _ in range(20):
@@ -328,6 +391,15 @@ async def theo_doi_cho(client, serial, package, ct, che_do: str, t0: float, ok_l
 async def gio_vao_ra_man_cho(client, serial, package, ct, kq: dict) -> dict:
     """Moc START ProcessingActivity / START man ke tiep tu logcat (chinh xac hon lan nhin UI ~1s)."""
     dong = await may.log(client, serial, kq["t_confirm"] - 1)
+    if may.MAN_THEO_CHU:
+        # App Compose: khong co START activity. Vao = focus tu trinh chon anh ve app; ra = dialog popup bi Remove (ve
+        # Home). Khong co popup (anh xong truoc -> app tu sang Ket qua) thi ra = lan nhin dau tien da roi man cho.
+        # T2I khong qua trinh chon anh: vao man cho = luc bam Generate (worker bat dau ngay, do 18/11/2026).
+        w = may.moc_cua_so(dong, package, kq["t_confirm"] - 0.5,
+                           vao_san=kq["t_confirm"] if kq.get("kieu") == "t2i" else 0.0)
+        ra = w["ra"] or (kq.get("t_roi") or 0.0)
+        return {"log_vao": w["vao"], "log_ra": ra if w["vao"] else 0.0, "log_popup": w["popup"],
+                "ra_man": kq.get("roi_toi", "")}
     mo = may.mo_man(dong, package)
     vao = next((t for t, a in mo if re.search(ct["man_cho"], a) and t >= kq["t_confirm"] - 0.5), 0.0)
     ra = next((t for t, a in mo if t > vao and not re.search(ct["man_cho"], a)), 0.0) if vao else 0.0

@@ -57,7 +57,12 @@ async def luu(client, serial, package, ct) -> dict:
     xong = await may.cho(client, serial, package, lambda x: x.tim(ct["da_luu"]) is not None, 15.0)
     await asyncio.sleep(1.5)
     tep = await may.tep_moi(client, serial, ct["thu_muc_luu"], int(t) - 2)
-    return {"t_bam": t, "t_xong": xong.t if xong else 0.0, "tep": tep}
+    t_xong, cach = (xong.t, "chữ đã lưu") if xong else (0.0, "")
+    if not xong and tep and may.MAN_THEO_CHU:
+        # App Compose AIP893: banner "Saved to your device" chi dung ~1-2s, lan nhin UI (~3s tren A13) hay truot ->
+        # bang chung luu = file moi trong MediaStore sau khi bam.
+        t_xong, cach = await may.gio(client, serial), "file mới trong MediaStore (banner đã lưu ẩn trước lần nhìn)"
+    return {"t_bam": t, "t_xong": t_xong, "tep": tep, "cach": cach}
 
 
 async def xoa_hai(client, serial, package, ct) -> dict:

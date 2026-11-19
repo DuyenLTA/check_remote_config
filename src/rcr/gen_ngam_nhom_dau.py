@@ -109,7 +109,10 @@ async def nhom_r01(c: Ctx) -> None:
            f"Home: nút History {'ở ' + str(ls.bounds) if ls else 'không có'}")
     so.ghi("GEN-R01-01", "không có badge", may.badge(m, ct) == 0, f"số trên nút History = {may.badge(m, ct)}")
 
-    kq = _can(await tao.tao_quay(c.client, c.serial, c.package, ct, "anh", "doi", c.out, "r01"), "R01-02 tạo ảnh")
+    # TC R01: "chon 1 style (T2I, khong go mo ta)". App co man T2I: AIP893 (18/11/2026) bam Generate khi o mo ta trong
+    # khong phan hoi -> go prompt (ghi ro trong report). App chi co style: style + anh nhu cu.
+    kq = _can(await tao.tao_quay(c.client, c.serial, c.package, ct, "anh", "doi", c.out, "r01", kieu="t2i"),
+              "R01-02 tạo ảnh")
     vao_s = kq["log_vao"] - kq["t_confirm"] if kq.get("log_vao") else -1
     so.ghi("GEN-R01-02", "Không có ads thưởng", not kq["ad"] and 0 <= vao_s < 2.5,
            f"Confirm → ProcessingActivity sau {_s(vao_s)}, AdActivity: {'có' if kq['ad'] else 'không'}")
@@ -136,7 +139,8 @@ async def nhom_r01(c: Ctx) -> None:
     if sv.get("loi"):
         raise LaiHut(f"R01-04: {sv['loi']}")
     so.ghi("GEN-R01-04", "Lưu thành công", bool(sv["t_xong"]),
-           f"bấm lưu → chữ đã lưu sau {_s(sv['t_xong'] - sv['t_bam'])}" if sv["t_xong"] else "không đổi sang 'Saved'")
+           f"bấm lưu → {sv.get('cach') or 'chữ đã lưu'} sau {_s(sv['t_xong'] - sv['t_bam'])}" if sv["t_xong"]
+           else "không đổi sang 'Saved'")
     anh = [t for t in sv["tep"] if t["bang"] == "images" and t["mime"].startswith("image/")]
     so.ghi("GEN-R01-04", "Ảnh có trong Thư viện", bool(anh), f"MediaStore {ct['thu_muc_luu']}: {sv['tep']}")
 
@@ -209,10 +213,20 @@ async def dem_het_luot_anh(c: Ctx, case: str, mau: str, ghi_chu: str, toi_da: in
 
 
 async def xem_het_moi(c: Ctx) -> None:
-    """Mo tung o 'New' trong History cho het badge (anh cua case truoc chua xem)."""
-    for _ in range(4):
+    """Mo tung o 'New' trong History cho het badge (anh cua case truoc chua xem). App khong co nhan New (AIP893
+    Compose 18/11/2026): badge Home > 0 thi mo lan luot o tu tren xuong toi khi badge ve 0."""
+    for i in range(4):
         m = await tao.mo_lich_su(c.client, c.serial, c.package, c.ct)
-        moi = [o for o in may.o_lich_su(m, c.ct) if o["moi"]] if m else []
+        cac_o = may.o_lich_su(m, c.ct) if m else []
+        moi = [o for o in cac_o if o["moi"]]
+        if not moi and cac_o and not any(o["moi"] for o in cac_o):
+            home = await tao.ve_main(c.client, c.serial, c.package, c.ct)
+            c.log(f"  xem kết quả chưa xem: badge Home = {may.badge(home, c.ct)}, History {len(cac_o)} ô, lần {i + 1}")
+            if may.badge(home, c.ct) == 0 or i >= len(cac_o):
+                break
+            m = await tao.mo_lich_su(c.client, c.serial, c.package, c.ct)
+            cac_o = may.o_lich_su(m, c.ct) if m else []
+            moi = [o for o in cac_o if not o["dang_tao"]][i:i + 1]
         if not moi:
             break
         await device_app.tap(c.client, c.serial, *moi[0]["xy"])

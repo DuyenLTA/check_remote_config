@@ -46,6 +46,10 @@ async def _bat_toast(c: Ctx, mau: str, dump: bool = True) -> tuple[list[str], st
     if dump and not thay:
         m = await c.nhin()
         thay += [s for s in m.chu() if re.search(mau, s, re.I)]
+    if may.MAN_THEO_CHU:          # app Compose: ten man theo chu (activity that luon la MainActivity)
+        m = await c.nhin()
+        thay += [s for s in m.chu() if dump is False and re.search(mau, s, re.I) and s not in thay]
+        return thay, m.act
     _p, act = await device_app.focus(c.client, c.serial)
     return thay, (act or "").rsplit(".", 1)[-1]
 
@@ -91,7 +95,7 @@ async def r02_r03(c: Ctx) -> None:
            f"bấm ô đang tạo ({_s(t_bam - kq['log_vao'])} sau vào màn chờ): toast {toast or 'không thấy'}; vẫn ở {act}")
     await tao.back(c.client, c.serial, 0.6)
     m = await c.nhin()
-    if not m.tim(r"^Image Studio$") or m.tim(r"^Image Studio$").bounds.top > 400:
+    if not tao.dang_o_tab(m, ct, "tab_anh"):
         m = await tao.vao_tab(c.client, c.serial, c.package, ct, "tab_anh")
     thay += [s for s in m.chu() if re.search(POPUP_HOME, s, re.I)]
     so.ghi("GEN-R02-02", "Không hiện popup widget", not thay,
@@ -123,8 +127,7 @@ async def r02_r03(c: Ctx) -> None:
     await tao.dong_rate(c.client, c.serial, c.package, ct)
     await tao.back(c.client, c.serial)
     m = await c.nhin()
-    so.ghi("GEN-R02-05", "Back", m.o(ct["man_home"]) and m.tim(ct["tab_anh"]) is not None and
-           bool(m.tim(r"^Image Studio$")) and m.tim(r"^Image Studio$").bounds.top < 400,
+    so.ghi("GEN-R02-05", "Back", m.o(ct["man_home"]) and tao.dang_o_tab(m, ct, "tab_anh"),
            f"Back từ Kết quả → {m.act}, tiêu đề: {[s for s in m.chu() if re.search(ct['tab_anh'], s)][:1]}")
     m = await tao.vao_tab(c.client, c.serial, c.package, ct, "tab_home")
     so.ghi("GEN-R02-05", "không còn badge", may.badge(m, ct) == 0, f"Home: số trên nút History = {may.badge(m, ct)}")
@@ -335,7 +338,7 @@ async def r05(c: Ctx) -> None:
     truoc khi mo duoc History (bot 13/11 thu 3 lan hut). Tao VIDEO truoc (video >= 45s) roi anh ngay sau."""
     so, ct = c.so, c.ct
     v = _can(await tao.tao(c.client, c.serial, c.package, ct, "video", "doi"), "R05 video")
-    a = await tao_anh(c, "doi")
+    a = await tao_anh(c, "doi", kieu="style")          # TC R05: anh I2I (anh tu anh) -> style + anh, khong T2I
     m = await c.nhin()
     bd = may.badge(m, ct)
     so.ghi("GEN-R05-01", "Cả 2 lần", bool(v["t_cho"] and a["t_cho"]) and not (v["ad"] or a["ad"]),

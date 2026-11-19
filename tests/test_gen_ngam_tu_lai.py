@@ -157,8 +157,8 @@ def test_vao_tab_nut_bounds_rong_thi_bam_theo_toa_do(monkeypatch):
 
 
 def test_cong_thuc_app_moi_dung_khuon_chung_app_cu_de_len():
-    """User chot 16/11/2026: cong thuc gen ngam doc dung chung - app moi (AIP893) khong can muc rieng moi chay duoc."""
-    moi = may.cong_thuc("com.aiphotogenerator.aivideomaker.photoslideshow")
+    """User chot 16/11/2026: cong thuc gen ngam doc dung chung - app moi chua khai khong can muc rieng moi chay duoc."""
+    moi = may.cong_thuc("com.example.app.chua.khai")
     assert moi["_khuon_chung"] and moi["popup_dem"] and moi["xac_nhan"] and "bo_dong" not in moi
     assert CT["thu_muc_luu"] == "Pictures/BeautyGenie" and CT["bo_dong"] and "_khuon_chung" not in CT
     assert CT["popup_dem"] == moi["popup_dem"]
