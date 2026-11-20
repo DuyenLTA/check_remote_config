@@ -186,3 +186,20 @@ def test_plan_hong_van_tao_theo_version_build(monkeypatch):
         raise RcError("không tải được plan tuần")
     monkeypatch.setattr(plan_tuan, "tai", hong)
     assert bot_testvsl.versions_can_tao("AIP508", "1.0.1 (3)") == ["1.0.1"]
+
+
+def test_condition_co_tu_truoc_lich_su_lay_nguoi_dat_bieu_thuc_hien_tai(fb):
+    # AIP944 20/11/2026: Firebase chi giu 300 version (~3 ngay rc-check), testvsl tao truoc do; nguoi doi version
+    # gan nhat (bieu thuc dang dung) la chu -> nhan ra, xoa duoc
+    t = copy.deepcopy(fb.versions[1][0])
+    t["conditions"].insert(0, {"name": "testvsl", "expression": "app.version.contains(['1.4.0'])"})
+    fb.versions = {1: (t, KHAC)}                      # version cu nhat con giu da co testvsl (khong ro ai tao)
+    t2 = copy.deepcopy(t)
+    t2["conditions"][0]["expression"] = "app.version.contains(['1.5.0'])"
+    fb.them(t2, TOI)                                  # minh doi sang 1.5.0
+    fb.them(rc.gan(copy.deepcopy(t2), {"enable_resume": "false"}), KHAC)   # nguoi khac publish sau, khong doi bieu thuc
+    assert tv.nguoi_tao("p") == TOI
+    t3 = copy.deepcopy(t2)
+    t3["conditions"][0]["expression"] = "app.version.contains(['1.6.0'])"
+    fb.them(t3, KHAC)                                 # nguoi khac doi bieu thuc -> cua ho
+    assert tv.nguoi_tao("p") == KHAC

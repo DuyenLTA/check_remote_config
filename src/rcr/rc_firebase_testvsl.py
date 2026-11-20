@@ -117,23 +117,35 @@ def _cac_version(project: str, tok: str) -> list[dict]:
 
 
 def nguoi_tao(project: str, dk: str = DIEU_KIEN) -> str:
-    """Email nguoi tao condition `dk` dang co (lan them gan nhat). "" khi khong xac dinh duoc (condition co tu
-    truoc moc lich su Firebase con giu, hoac hien khong co condition)."""
+    """Email nguoi tao condition `dk` dang co (lan them gan nhat). Condition co tu truoc moc lich su Firebase con
+    giu (300 version) -> nguoi dat bieu thuc hien tai trong lich su do. "" khi van khong xac dinh duoc (bieu thuc
+    khong doi trong ca lich su con giu, hoac hien khong co condition)."""
     tok = rc.token()
     vs = _cac_version(project, tok)
 
-    def co(v: dict) -> bool:
+    def bieu_thuc_luc(v: dict) -> str | None:
         t = _get(RC_API.format(project=project) + f"?versionNumber={v['versionNumber']}", tok)
-        return _dk(t, dk) is not None
+        c = _dk(t, dk)
+        return None if c is None else c.get("expression", "")
 
+    def email(n: int) -> str:
+        return (vs[n].get("updateUser") or {}).get("email") or ""
+
+    hien, dat_bt = None, None          # bieu thuc hien tai / vi tri version DAT bieu thuc do (lui toi khi doi)
     with ThreadPoolExecutor(LUONG) as ex:
         for dau in range(0, len(vs), LUONG):
-            lo = vs[dau:dau + LUONG]
-            for i, c in enumerate(ex.map(co, lo)):
-                if not c:
-                    n = dau + i
-                    return ((vs[n - 1].get("updateUser") or {}).get("email") or "") if n else ""
-    return ""
+            for i, bt in enumerate(ex.map(bieu_thuc_luc, vs[dau:dau + LUONG])):
+                n = dau + i
+                if bt is None:
+                    return email(n - 1) if n else ""
+                if hien is None:
+                    hien = bt
+                elif dat_bt is None and bt != hien:
+                    dat_bt = n - 1
+    # Firebase chi giu 300 version gan nhat; rc-check publish 2 version moi case nen lich su chi con vai ngay
+    # (AIP944 20/11/2026: 300 version tu 17/11, testvsl tao truoc do -> "khong xac dinh duoc nguoi tao").
+    # Khong thay luc tao thi lay nguoi DAT bieu thuc hien tai (doi version gan nhat) trong lich su con giu.
+    return email(dat_bt) if dat_bt is not None else ""
 
 
 def trang_thai(project: str, dk: str = DIEU_KIEN) -> dict:
