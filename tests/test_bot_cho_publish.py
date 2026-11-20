@@ -80,8 +80,12 @@ def test_vong_thay_link_vao_tin_va_canh_bao_mot_lan(tmp_path, monkeypatch):
     async def gui(chu):
         bao.append(chu)
 
-    asyncio.run(cp.mot_vong(_Bot(tin), tmp_path, gui))
-    asyncio.run(cp.mot_vong(_Bot(tin), tmp_path, gui))
+    monkeypatch.setattr(cp, "_mo_lai_luc", 0.0)
+    mo = []
+    asyncio.run(cp.mot_vong(_Bot(tin), tmp_path, gui, mo_lai=lambda: mo.append(1) or True))
+    asyncio.run(cp.mot_vong(_Bot(tin), tmp_path, gui, mo_lai=lambda: mo.append(1) or True))
+    assert mo == [1]                                                     # mo lai phien publish mot lan (con cach)
+    assert "tự mở lại" in bao[0]
     assert "Report: https://claude.ai/artifact/abc" in tin.sua["embeds"][0].description
     assert cp.CHO not in tin.sua["embeds"][0].description
     assert len(bao) == 1 and "cu.html" in bao[0]                         # canh bao dung mot lan
@@ -96,3 +100,24 @@ def test_cli_ds_va_xong(tmp_path, capsys):
     assert json.loads(capsys.readouterr().out)[0]["id"] == a
     assert cp.main(["--out-dir", str(tmp_path), "xong", a, "https://claude.ai/artifact/abc"]) == 0
     assert cp.main(["--out-dir", str(tmp_path), "xong", a, "khong-phai-link"]) == 1
+
+
+def test_khong_co_report_ket_thi_khong_mo_lai_phien(tmp_path, monkeypatch):
+    monkeypatch.setattr(cp, "_mo_lai_luc", 0.0)
+    cp.them(tmp_path, tmp_path / "moi.html", 1, 2, "AIP924")            # vua vao hang cho, chua qua han
+    mo = []
+
+    async def gui(_chu):
+        raise AssertionError("khong duoc canh bao")
+
+    asyncio.run(cp.mot_vong(None, tmp_path, gui, mo_lai=lambda: mo.append(1) or True))
+    assert mo == []
+
+
+def test_mo_lai_phien_bo_qua_khi_may_khong_cai_service(monkeypatch):
+    class _Kq:
+        returncode = 1
+    goi = []
+    monkeypatch.setattr(cp.subprocess, "run", lambda args, **_k: goi.append(args) or _Kq())
+    assert cp.mo_lai_phien_publish() is False
+    assert goi == [["systemctl", "--user", "cat", cp.SERVICE]]          # khong goi restart

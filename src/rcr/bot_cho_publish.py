@@ -8,6 +8,8 @@
      publish tung file, roi `rcr-publish xong <id> <url>` ghi link vao hang cho.
   3. Vong lap cua bot (`vong_lap`) thay link vao dung tin ket qua tren Discord; report cho qua `CANH_BAO_SAU`
      ma chua co link thi bao mot lan len kenh QA (phien publish chet / het dang nhap).
+  4. Cung luc do bot tu mo lai service `rcr-publish` (toi da moi `MO_LAI_CACH` mot lan): phien Claude cham han muc
+     thi dung han ma tien trinh van song, `Restart=always` cua systemd khong biet de mo lai (19/11/2026 dung 03:15-16:14).
 
 File hang cho la JSON nho, ghi ca file moi lan (bot va CLI chay khac tien trinh, it ghi) qua file tam + rename.
 """
@@ -19,6 +21,7 @@ import asyncio
 import json
 import logging
 import os
+import subprocess
 import sys
 import time
 import uuid
@@ -30,6 +33,9 @@ TEN_FILE = "cho-publish.json"
 CHO = "⏳ Report đang publish artifact…"
 CANH_BAO_SAU = 15 * 60          # giay
 CHU_KY = 30                     # giay giua hai lan bot quet hang cho
+MO_LAI_CACH = 30 * 60           # giay toi thieu giua hai lan tu mo lai phien publish
+SERVICE = "rcr-publish"
+_mo_lai_luc = 0.0               # lan cuoi bot mo lai phien publish (trong tien trinh bot)
 
 
 def _duong(out_dir: Path) -> Path:
@@ -98,9 +104,38 @@ async def _sua_tin(bot, m: dict) -> None:
     await tin.edit(content=thay_link(tin.content, m["url"]), embeds=embeds)
 
 
-async def mot_vong(bot, out_dir: Path, bao_kenh) -> None:
-    """Mot lan quet: sua tin da co link; canh bao report cho qua lau. `bao_kenh(chu)` gui len kenh QA."""
+def mo_lai_phien_publish() -> bool:
+    """`systemctl --user restart rcr-publish`. May khong cai service (Windows / may phu) -> False, khong loi."""
+    try:
+        if subprocess.run(["systemctl", "--user", "cat", SERVICE], capture_output=True, timeout=20).returncode:
+            return False
+        kq = subprocess.run(["systemctl", "--user", "restart", SERVICE], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError) as exc:
+        log.warning("khong mo lai duoc phien publish: %s", exc)
+        return False
+    if kq.returncode:
+        log.warning("restart %s loi: %s", SERVICE, kq.stderr.strip())
+        return False
+    log.info("da mo lai phien publish (%s) vi report cho qua lau", SERVICE)
+    return True
+
+
+async def _mo_lai_neu_ket(ds: list[dict], mo_lai) -> bool:
+    """Co report cho qua `CANH_BAO_SAU` -> mo lai phien publish, cach nhau it nhat `MO_LAI_CACH`."""
+    global _mo_lai_luc
+    bay_gio = time.time()
+    ket = any(not m["url"] and bay_gio - m["luc"] > CANH_BAO_SAU for m in ds)
+    if not ket or bay_gio - _mo_lai_luc < MO_LAI_CACH:
+        return False
+    _mo_lai_luc = bay_gio
+    return bool(await asyncio.to_thread(mo_lai))
+
+
+async def mot_vong(bot, out_dir: Path, bao_kenh, mo_lai=mo_lai_phien_publish) -> None:
+    """Mot lan quet: sua tin da co link; report cho qua lau thi tu mo lai phien publish va canh bao mot lan.
+    `bao_kenh(chu)` gui len kenh QA."""
     ds, doi = doc(out_dir), False
+    da_mo_lai = await _mo_lai_neu_ket(ds, mo_lai)
     for m in ds:
         if m["url"] and not m["da_sua"]:
             try:
@@ -109,8 +144,10 @@ async def mot_vong(bot, out_dir: Path, bao_kenh) -> None:
             except Exception as exc:          # noqa: BLE001 - tin bi xoa / mat mang: thu lai vong sau
                 log.warning("chua sua duoc tin %s: %s", m["msg_id"], exc)
         elif not m["url"] and not m["da_canh_bao"] and time.time() - m["luc"] > CANH_BAO_SAU:
+            viec = ("Bot đã tự mở lại phiên publish; nếu 10 phút nữa vẫn chưa có link thì kiểm"
+                    if da_mo_lai else "Kiểm")
             await bao_kenh(f"⚠️ Report `{Path(m['file']).name}` ({m.get('ten') or '?'}) chờ publish artifact quá "
-                           f"{CANH_BAO_SAU // 60} phút. Kiểm phiên Claude Code publish trên máy bot "
+                           f"{CANH_BAO_SAU // 60} phút. {viec} phiên Claude Code publish trên máy bot "
                            "(`tmux attach -t rcr-publish`).")
             m["da_canh_bao"] = doi = True
     # Giu 7 ngay gan nhat cho de tra cuu, bo muc da xong cu hon.
