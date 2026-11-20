@@ -68,7 +68,8 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
         return True
     # /check tinh_nang hoac tin build chi ghi tinh nang: chi bo tinh nang, van doi RC qua testvsl.
     # Tin build ghi ca SDK lan tinh nang: chay SDK roi lan luot tung tinh nang, gop mot report (user chot 14/11/2026).
-    if job.get("loai_job") != "tinh_nang":
+    # Luot QA goi bang /check (`chi_lenh`): chi chay dung thu QA go, khong them tinh nang plan (user chot 20/11/2026).
+    if job.get("loai_job") != "tinh_nang" and not job.get("chi_lenh"):
         # Tinh nang plan tuan ghi ma tin build bo sot -> chay them (user chot 17/11/2026: "so trong plan").
         plan = await asyncio.to_thread(plan_tuan.tinh_nang, str(job.get("ma") or ""), out)
         them = [t for t in plan if t not in (job.get("tinh_nang") or [])]

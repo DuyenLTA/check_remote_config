@@ -258,13 +258,15 @@ async def lenh_check(bot, it: discord.Interaction, ma_app: str, version: str, sd
 async def _check(bot, tin: dict) -> str:
     kenh = await bot._kenh_qa()
     da_hoi = [t for t in bot_nhan_build.tin_da_hoi(bot, tin) if t.get("loai_job") in (None, "check")]
+    # /check chi chay dung thu QA go: KHONG keo tinh nang tu tin build / plan tuan (user chot 20/11/2026).
+    chi_lenh = {"tinh_nang": [], "chi_lenh": True}
     if da_hoi:                             # build bot da thay: tin hoi moi, giu thong tin build (doi SDK neu go)
         doi = {k: tin[k] for k in ("next_gen", "tutorial", "sdk") if k in tin}
-        return await bot_nhan_build.hoi_lai_build(bot, tin, "", kenh.send, doi)
+        return await bot_nhan_build.hoi_lai_build(bot, tin, "", kenh.send, {**doi, **chi_lenh})
     if "sdk" not in tin:
         return (f"Bot chưa thấy tin build **{tin['ma']}** `{tin['version']}` — gõ thêm `sdk` (vd `3.6.1`, `3.7.0`, "
                 "`next-gen`) để bot chọn đúng nhánh chấm. Build không apply SDK thì dùng /check-bug để verify bug.")
-    return await bot_nhan_build.hoi_build_moi(bot, tin, "", kenh, bot.out)
+    return await bot_nhan_build.hoi_build_moi(bot, {**tin, **chi_lenh}, "", kenh, bot.out)
 
 
 # --- /check-sub -----------------------------------------------------------------------------

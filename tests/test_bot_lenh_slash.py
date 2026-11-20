@@ -75,6 +75,18 @@ def test_check_build_da_thay_tao_tin_hoi_moi_giu_thong_tin_cu(tmp_path):
     assert moi["package"] == "p.x" and moi["tutorial"] == "3.7.0" and "next-gen" in kenh.sent[-1]
 
 
+def test_check_chi_chay_dung_thu_go_khong_keo_tinh_nang_tin_build(tmp_path):
+    # Tin build ghi ca tinh nang; QA go /check (khong kem tinh_nang) -> luot chi SDK, danh dau khong them theo plan
+    cu = {"ma": "AIP944", "ten": "", "version": "1.5.0 (9)", "package": "p.x", "tutorial": "3.7.2", "sdk": True,
+          "next_gen": None, "loai_ban": "release", "msg_id": 5, "tinh_nang": ["iaa", "widget", "rating"]}
+    bot = _bot(tmp_path, {"5": cu})
+    kenh = _Kenh()
+    bot._kenh_qa = lambda: asyncio.sleep(0, kenh)
+    asyncio.run(s._check(bot, {"ma": "AIP944", "version": "1.5.0 (9)"}))
+    moi = bot.q.tin["900"]
+    assert moi["tinh_nang"] == [] and moi["chi_lenh"] is True and moi["tutorial"] == "3.7.2"
+
+
 def test_check_build_dang_cho_thi_khong_tao_trung(tmp_path):
     cu = {"ma": "AIP922", "ten": "", "version": "3.7.0 (30)", "package": "p.x", "msg_id": 5}
     bot = _bot(tmp_path, {"5": cu}, [dict(cu)])
