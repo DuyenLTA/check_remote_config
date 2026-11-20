@@ -55,6 +55,8 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 20/11/2026 | Verify bug dòng checklist Next-Gen chỉ chạy `rcr-sdk-check --muc <mục chứa dòng>`, không /rc-check cả checklist, không preflight / ID ads (AIP885 verify MED-01 chạy cả mục 1–4) | `src/rcr/bot_chay_claude.py` PROMPT_VERIFY_CHECKLIST, `muc_checklist` | — |
+| 20/11/2026 | QA gõ `/check` thì chỉ chạy đúng thứ được gõ: không kéo tính năng từ tin build, không thêm tính năng theo plan tuần (AIP944 1.5.0 bị kéo thêm IAA/widget/rating/checkin/gen ngầm) | `src/rcr/bot_lenh_slash.py` `_check`, `src/rcr/bot_job_check.py` (`chi_lenh`) | — |
 | 19/11/2026 | Bỏ bước policy khỏi workflow rc-check / bot, kể cả lượt có bộ IAA (thay luật 16/11): policy là lệnh `/policy-check` riêng, user tự gọi | `.claude/commands/rc-check.md` §7a, `src/rcr/bot_chay_claude.py` | — |
 | 17/11/2026 | Preload: ad đã load ở màn trước mà chưa dùng thì màn sau dùng lại là đúng; phiên bot không được ghi "PO/QA xác nhận" khi chưa có xác nhận thật (AIP921 IAA-04-01) | `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
 | 17/11/2026 | Reward 'thoát giữa chừng không thưởng': force-stop app lúc ad đang chạy rồi mở lại để kiểm, không BLOCKED; luồng Uninstall: màn Thank You chỉ hiện ~3s sau khi đóng inter Gỡ cài đặt — theo dõi từng giây | `src/rcr/bot_chay_claude.py` NHAC_LOAD_KHONG_SHOW | — |
