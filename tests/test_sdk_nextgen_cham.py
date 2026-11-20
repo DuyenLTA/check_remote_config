@@ -476,3 +476,11 @@ def test_ev06_banner_native_error_cua_lib_khong_tinh_sai():
     assert A.ev06(_evs([lib, inter_du]))["ket"] == "KHOP"
     inter_thieu = _ev("ad_show", 9.0, "111", "interstitial", show_status="failed")
     assert A.ev06(_evs([lib, inter_thieu]))["ket"] == "SAI"
+
+
+def test_rg01_ban_co_bo_tc_phai_do_tay_khong_ngoai_pham_vi():
+    # Sorapix 2.3.0 SDK 3.7.2 (19/11/2026): sheet TC co tab 3.7.2 ma RG-01 ra ngoai pham vi "khong co bo TC".
+    assert M.rg01("3.7.2")["ket"] == "DO_TAY"
+    assert M.rg01("3.7.2-alpha03")["ket"] == "DO_TAY"
+    assert M.rg01("3.7.1")["ket"] == "KHONG_AP_DUNG"
+    assert M.rg01(None)["ket"] == "KHONG_AP_DUNG"

@@ -262,8 +262,21 @@ def tat_ca(bc: dict, ev, logs: dict, package: str) -> list[dict]:
     collapsible = co_collapsible(logs.get("fo", ""), package)
     ra.append(kq("HV-09", "Collapsible banner", DO_TAY, "Có collapsible banner — đo tay") if collapsible
               else kq("HV-09", "Collapsible banner", KHONG_AP_DUNG, "Không có collapsible banner trong luồng"))
-    ra.append(kq("RG-01", "Chạy lại bộ test case luồng FO", KHONG_AP_DUNG, "Bản SDK này không có bộ TC"))
+    ra.append(rg01(bc.get("sdk")))
     return ra
+
+
+# Ban SDK Next-Gen co tab rieng trong sheet TC chung (QA tao tab 3.7.2, 13/11/2026); 3.7.0 / 3.7.1 khong co.
+BAN_CO_BO_TC = ("3.7.2",)
+
+
+def rg01(sdk) -> dict:
+    """RG-01 lay PASS/FAIL report bo TC rc-check cua cung build -> phai do tay khi ban co bo TC, khong ngoai pham vi."""
+    ten = "Chạy lại bộ test case luồng FO"
+    ban = str(sdk or "").split("-")[0].strip()
+    if ban in BAN_CO_BO_TC:
+        return kq("RG-01", ten, DO_TAY, f"Bản {ban} có bộ TC tab {ban} — lấy PASS/FAIL report rc-check bộ TC cùng build")
+    return kq("RG-01", ten, KHONG_AP_DUNG, "Bản SDK này không có bộ TC")
 
 
 def muc2(ev, text_fo: str) -> list[dict]:
