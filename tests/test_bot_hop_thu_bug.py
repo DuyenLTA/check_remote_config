@@ -78,6 +78,19 @@ def test_cli_tu_choi_file_khong_co_bug_va_link_khong_https(tmp_path, capsys):
     assert len(list((tmp_path / h.THU_MUC).glob("*.json"))) == 1
 
 
+def test_cli_tu_choi_ma_case_sai_mau_de_khong_mat_marker_verify(tmp_path, capsys):
+    # AIP885-43: "Checklist Next-Gen MED-01" -> bot bo marker AUTOQA -> verify bao "thieu marker"
+    sai = tmp_path / "s.json"
+    sai.write_text(json.dumps([{**BUG, "case": "Checklist Next-Gen MED-01"}]), encoding="utf-8")
+    assert h.main(["--bugs", str(sai), "--package", "pkg.a", "--out", str(tmp_path)]) == 1
+    assert "Checklist Next-Gen MED-01" in capsys.readouterr().err
+    assert not list((tmp_path / h.THU_MUC).glob("*.json"))
+    dung = tmp_path / "d.json"
+    dung.write_text(json.dumps([{**BUG, "case": c} for c in ("MED-01", "IAA-01-01", "3.7.2#SDK361-RG10-01")]),
+                    encoding="utf-8")
+    assert h.main(["--bugs", str(dung), "--package", "pkg.a", "--out", str(tmp_path)]) == 0
+
+
 class _KenhDieuPhoi:
     def __init__(self, loi=None):
         self.gui, self.loi = [], loi

@@ -143,6 +143,12 @@ def tha_vao_hop(out: Path, bugs: list[dict], link: str, msg_id: int | None = Non
     return f
 
 
+def case_sai_mau(bugs: list[dict]) -> list[str]:
+    """Ma case khong chay lai duoc khi verify (bot_verify_jira.loai_case tra None)."""
+    from . import bot_verify_jira
+    return [str(b.get("case") or "") for b in bugs if bot_verify_jira.loai_case(str(b.get("case") or "")) is None]
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="rcr-bao-bug",
                                 description="Dua bug cua luot chay tay len kenh QA (menu tick + Log Jira) qua bot dang chay.")
@@ -162,6 +168,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     if a.link and not a.link.startswith("https://"):
         print("LOI: --link phai la link https (QA mo report tu Discord)", file=sys.stderr)
+        return 1
+    # Ma case sai mau thi luc log Jira bot bo dong marker AUTOQA -> verify sau nay bao "thieu marker, verify tay"
+    # (AIP885-43 19/11/2026: case "Checklist Next-Gen MED-01" thay vi "MED-01"). Chan ngay luc gui menu.
+    sai = case_sai_mau(bugs)
+    if sai:
+        print("LOI: ma case khong dung mau nen bot khong verify lai duoc: " + ", ".join(repr(c) for c in sai)
+              + " — dung dang <tab>#<TC ID> / SDKnnn-... (bo TC), MED-01 / 1.3 (checklist Next-Gen), IAA-01-01, sub#3",
+              file=sys.stderr)
         return 1
     f = tha_vao_hop(Path(a.out), bugs, a.link, a.msg_id, a.package, a.version)
     print(json.dumps({"file": str(f), "bugs": len(bugs)}, ensure_ascii=False))
