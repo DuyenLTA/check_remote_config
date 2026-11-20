@@ -64,6 +64,31 @@ def ma_case(i: int, bien_the: str) -> str:
     return f"IAA-{i:02d}-{so_case(bien_the):02d}"
 
 
+def ap_unit_that(ds: list[ViTri], unit_that: dict[str, str]) -> tuple[list[ViTri], list[str]]:
+    """Thay ID sheet bang unit THAT cua build (`{ten ad tren sheet: ID}`, vd `inter_feature_high`).
+
+    Sheet "Check thong so KT" ghi ID khong co trong build (audit 3c bao lech): cham theo ID sheet thi moi vi tri ra
+    "0 request" -> FAIL gia (AIP933 Hypix 20/11/2026: 16/16 ID muc 3 vang trong APK). Luat rc-check 3c: dong ads cua
+    vi tri lech cham theo unit that trong log. Tra (ds moi, ["ten: ID sheet -> ID that"]); ten khong co tren sheet
+    -> RcError (go sai ten la cham nham vi tri)."""
+    from dataclasses import replace
+    con = dict(unit_that)
+    ra, doi = [], []
+    for v in ds:
+        moi = {}
+        for tang_ten in ("high", "thuong"):
+            t = getattr(v, tang_ten)
+            if t is not None and t.ten in con:
+                id_moi = con.pop(t.ten)
+                doi.append(f"{t.ten}: {t.id} -> {id_moi}")
+                moi[tang_ten] = replace(t, id=id_moi)
+        ra.append(replace(v, **moi) if moi else v)
+    if con:
+        co = sorted(t.ten for v in ds for t in (v.high, v.thuong) if t)
+        raise RcError(f"--unit-that: không có ad {', '.join(sorted(con))} trên sheet (có: {', '.join(co)})")
+    return ra, doi
+
+
 def ban_do_unit(ds: list[ViTri]) -> dict[str, tuple[int, str]]:
     """ID day du `ca-app-pub-.../...` -> (so vi tri, 'high'|'thuong')."""
     ra = {}

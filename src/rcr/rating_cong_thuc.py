@@ -224,6 +224,7 @@ async def _chon_anh(client, serial: str, het: float, log: list[str], thu: int = 
 async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str]) -> bool:
     het = time.monotonic() + float(buoc.get("toi_da", TOI_DA_MAC_DINH))
     bam_khong_mo = 0                  # xem_ads: so lan bam nut lien ma chua thay AdActivity
+    vang_truoc = False                # tap `vua_hien`: lan dump truoc chua thay the
     if "chon_anh" in buoc:
         # `thu: k` = anh thu k trong trinh chon (AIP508 Homova 19/11/2026: anh dau may Pixel 4 la anh chup man hinh,
         # app doi anh co mat nguoi -> chon anh khuon mat o hang duoi).
@@ -309,6 +310,13 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
             nodes = await _nodes(client, serial, package)
             node = tim(nodes, buoc["tap"]) if "tap" in buoc else tim_duoi(nodes, buoc["tap_duoi"],
                                                                          int(buoc.get("thu", 1)))
+            # `vua_hien: true` = the trong carousel TU XOAY (Hypix AIP933: ~4s/the): chi bam khi the vua xoay toi (lan
+            # dump truoc chua thay) -> con gan tron mot nhip xoay; bam the da hien tu truoc thi dump + tap (~1-2s) de
+            # trung luc chuyen the, vao nham tinh nang ben canh (20/11/2026 vao T2I thanh I2I).
+            thay = node is not None
+            if thay and buoc.get("vua_hien") and not vang_truoc:
+                node = None
+            vang_truoc = not thay
             if node:
                 log.append(f"bấm {node.text or node.content_desc or node.label}")
                 await _bam(client, serial, node)

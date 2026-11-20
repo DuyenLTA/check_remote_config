@@ -5,6 +5,274 @@
 # Lai CUNG duong cho ca 4 bien the. App lech chu: THEM chu cua app vao regex (A|B), dung tach muc rieng.
 
 khuon:
+  # App gen anh/video "Kreivo AI" (muc 3 sheet KT kieu beauty_genie: 501_home_banner, inter_back, reward_img_vid,
+  # inter_style, native_result_img_vid, native_loading, native_reason_uninstall, inter_uninstall). Do 20/11/2026 tren
+  # Pixel 4 99261FFAZ0077C: AIP894 AI Photo Video 1.7.0. Moi man trong AiPhotoVideoMainActivity (Compose) -> nhan man
+  # bang chu. Home: tieu de "Kreivo AI", carousel the "IMAGE TO IMAGE\nGENERATE" / "IMAGE TO VIDEO\nGENERATE" (bam the
+  # KHONG co inter), hang style duoi "Trending Now" (bam -> inter style -> mo thang trinh chon anh -> sheet
+  # "Watch Ads (0/2)"), History / Settings (desc). Nut Back (desc) o man I2I / I2V -> inter back.
+  # Gen NGAM: sau 2 reward tu ve Home, anh xong -> History -> the "New" -> man "Result". Free 1 luot gen/ngay
+  # ("Daily limit reached") -> doan gen dat SAU cac doan back.
+  # Truoc khuon ai_photo: Home app nay cung co "Trending Now" (khop nham ai_photo, khong co the Text to Image).
+  kreivo:
+    nhan_dien: "^Kreivo AI$"
+    doan:
+      - ten: Home (banner reload 10s, preload inter back / inter style)
+        buoc:
+          - ve_chu: "^Kreivo AI$"
+            tab: "^Home$"
+            toi_da: 180
+          - dong_neu_co: "^(Close|Close sheet|Not now|Maybe later)$"
+          - cho: 35
+      - ten: Màn Image to Image → Back (inter back preload ở Home)
+        buoc:
+          - ve_chu: "^Kreivo AI$"
+            tab: "^Home$"
+          - dong_neu_co: "^(Close|Close sheet|Not now|Maybe later)$"
+          - tap: "^Image to Image\\sGenerate$"
+          - dong_ad: 4
+          - cho_chu: "^Tap to Upload$"
+          - cho: 6
+          - tap: "^Back$"
+          - dong_ad: 8
+          - cho: 5
+      - ten: Màn Image to Video → Upload ảnh → Back (inter back reload ở màn I2V / Upload)
+        buoc:
+          - ve_chu: "^Kreivo AI$"
+            tab: "^Home$"
+          - dong_neu_co: "^(Close|Close sheet|Not now|Maybe later)$"
+          - tap: "^Image to Video\\sGenerate$"
+          - dong_ad: 4
+          - cho_chu: "^Tap to Upload$"
+          - cho: 3
+          - tap: "^Tap to Upload$"
+          - chon_anh: true
+          - cho: 6
+          - tap: "^Back$"
+          - dong_ad: 8
+          - cho: 5
+      - ten: Style lần 1 (inter style), trình chọn ảnh → back (không inter back liền sau inter style)
+        buoc:
+          - ve_chu: "^Kreivo AI$"
+            tab: "^Home$"
+          - dong_neu_co: "^(Close|Close sheet|Not now|Maybe later)$"
+          - tap_duoi: "^Trending Now$"
+          - dong_ad: 8
+          - cho: 6
+          - back: 1
+          - dong_ad: 6
+          - cho: 5
+      - ten: Style lần 2 cùng session (không inter style), trình chọn ảnh → back (inter back)
+        buoc:
+          - ve_chu: "^Kreivo AI$"
+            tab: "^Home$"
+          - dong_neu_co: "^(Close|Close sheet|Not now|Maybe later)$"
+          - tap_duoi: "^Trending Now$"
+            thu: 2
+          - dong_ad: 8
+          - cho: 6
+          - back: 1
+          - dong_ad: 8
+          - cho: 5
+      - ten: Image to Image upload + prompt (reward preload ở Upload, native loading, native result qua History)
+        buoc:
+          - ve_chu: "^Kreivo AI$"
+            tab: "^Home$"
+          - dong_neu_co: "^(Close|Close sheet|Not now|Maybe later)$"
+          - tap: "^Image to Image\\sGenerate$"
+          - dong_ad: 4
+          - cho_chu: "^Tap to Upload$"
+          - cho: 3
+          - tap: "^Tap to Upload$"
+          - chon_anh: true
+          - cho: 4
+          - nhap: "a cat in space"
+            o: "What do you have in mind"
+          - tap: "^Generate$"
+          - xem_ads_chu: "^Watch Ads.*$"
+            tap_tai: [0.5, 0.935]
+            toi_chu: "^(\\d{1,3}%|Taking you to Home.*|Kreivo AI)$"
+            dung_neu: "(?i)daily (free )?limit reached"
+            toi_da: 300
+          - cho: 40
+          - tap: "^History$"
+          - dong_ad: 6
+          - tap: "^New$"
+            toi_da: 60
+          - cho_chu: "^Result$"
+          - cho: 10
+          - back: 2
+          - dong_ad: 6
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+            nhan: "^(Uninstall|Uninstall app|Gỡ cài đặt)$"
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - dong_ad: 6
+          - tap_neu_co: "^Still want to uninstall$"
+          - cho_chu: "(?i)^Why (do you uninstall|are you uninstalling)"   # AIP894: "Why are you uninstalling?"
+          - cho: 6
+          - tap: "^Too many ads$"
+          - cho: 6
+          - tap: "^Uninstall$"
+          - dong_ad: 8
+          - cho: 4
+          - back: 3
+
+  # App gen anh/video "Hypix" (AIP933 2.3.0, do 20/11/2026 tren Pixel 7 29301FDH2006K7). Muc 3 sheet KT: native_loading,
+  # native_i2i_i2v_prompt, result_img_vid, inter_feature, inter_style, native_reason_uninstall, inter_uninstall,
+  # 501_home_banner. Moi man trong AIP933MainActivity (Compose). Home: "Hi dear" / "Hypix", carousel TU XOAY ~4s cac
+  # the "Text to Image\nGenerate" / "Image to Image\nGenerate" / "Image to Video\nGenerate" (chu co xuong dong ->
+  # regex dung \s), hang style "AI Film Filter" / "Trendy Haircuts", tab duoi AI Generate / AI Photos / AI Videos,
+  # nut desc "History" goc tren phai. Ve Home hien popup "Add Widget" roi "Today's Check-In" (desc Close) -> dong 2 lan.
+  # Man nhap prompt: o goi y "A pretty girl...", "Tap To Upload" -> photopicker he thong (Xong) -> Generate -> sheet
+  # "Watch Ads (0/2)" (2 reward) -> gen ngam, tu ve Home; xong ~60s -> History -> the (▶ / Video) -> man "Result".
+  # Style Home: bam the duoi "AI Film Filter" -> photopicker ngay -> sheet Watch Ads.
+  # Uninstall: shortcut CHI dang khi `enabled_flow_uninstall=true` (server khai nham ten `flow_uninstall`) -> rc_them.
+  # Shortcut mo Splash -> Question -> UninstallActivity ("We're sorry..." / "Chung toi rat tiec..."), nut "Still want
+  # to uninstall" / "Van muon go cai dat" -> "Why do you uninstall?" / "Tai sao ban go cai dat?" (chon ly do, nut
+  # Uninstall / "Go cai dat" -> inter) -> Thank You -> Cai dat. Chu theo ngon ngu app (FO chua chon -> tieng may).
+  hypix:
+    nhan_dien: "^Hypix$"
+    rc_them:
+      enabled_flow_uninstall: "true"
+    doan:
+      - ten: Home (preload inter feature/style, banner reload 10s)
+        buoc:
+          - ve_chu: "^Hypix$"
+            tab: "^AI Generate$"
+            toi_da: 180
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - cho: 35
+      - ten: Image to Image bằng prompt (inter feature, native prompt reload sau upload, reward, native loading)
+        buoc:
+          - ve_chu: "^Hypix$"
+            tab: "^AI Generate$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^AI Photos$"
+          - tap: '^Image to Image\sGenerate$'
+            vua_hien: true                         # carousel tu xoay ~4s
+          - dong_ad: 6
+          - cho_chu: "^Image to Image$"            # carousel xoay giua luc bam -> vao nham T2I thi doan HONG (bao ro)
+          - cho_chu: "^Tap To Upload$"
+          - cho: 8
+          - tap: "^Tap To Upload$"
+          - chon_anh: true
+          - cho: 8
+          - nhap: "a cat in space"
+            o: "(A pretty girl|What do you have in mind)"
+          - tap: "^Generate$"
+          - dong_ad: 6
+          - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+            tap_tai: [0.5, 0.935]
+            toi_chu: '^(\d{1,3}%|Taking you to Home.*|Hypix)$'
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+            toi_da: 420
+          - cho: 25
+      - ten: Text to Image (inter feature, màn nhập prompt)
+        buoc:
+          - ve_chu: "^Hypix$"
+            tab: "^AI Generate$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^AI Photos$"
+          - tap: '^Text to Image\sGenerate$'
+            vua_hien: true                         # carousel tu xoay ~4s
+          - dong_ad: 6
+          - cho_chu: "^Text to Image$"
+          - cho: 8
+          - back: 1
+      - ten: Image to Video bằng prompt (inter feature, native prompt, reward, native loading)
+        buoc:
+          - ve_chu: "^Hypix$"
+            tab: "^AI Generate$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^AI Videos$"
+          - tap: '^Image to Video\sGenerate$'
+          - dong_ad: 6
+          - cho_chu: "^Tap To Upload$"
+          - cho: 8
+          - tap: "^Tap To Upload$"
+          - chon_anh: true
+          - cho: 8
+          - nhap: "a cat in space"
+            o: "(A pretty girl|What do you have in mind)"
+          - tap: "^Generate$"
+          - dong_ad: 6
+          - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+            tap_tai: [0.5, 0.935]
+            toi_chu: '^(\d{1,3}%|Taking you to Home.*|Hypix)$'
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+            toi_da: 420
+          - cho: 25
+      - ten: Result qua History (native result)
+        buoc:
+          - ve_chu: "^Hypix$"
+            tab: "^AI Generate$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - cho: 60                                  # video gen ~60-90s
+          - tap: "^History$"
+          - cho_chu: "^(▶|Image|Video)$"
+            toi_da: 120
+          - tap: "^(▶|Image)$"
+          - cho_chu: "^Result$"
+            toi_da: 30
+          - cho: 10
+          - back: 2
+          - dong_ad: 6
+      - ten: Style ở Home (inter style 1 lần/session, reward sau chọn ảnh, loading)
+        buoc:
+          - ve_chu: "^Hypix$"
+            tab: "^AI Generate$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap_duoi: "^AI Film Filter$"
+          - dong_ad: 6
+          - chon_anh: true
+            toi_da: 40
+          - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+            tap_tai: [0.5, 0.935]
+            toi_chu: '^(\d{1,3}%|Taking you to Home.*|Hypix)$'
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached)"
+            toi_da: 420
+          - cho: 25
+      - ten: Style lần 2 cùng session (không được có inter)
+        buoc:
+          - ve_chu: "^Hypix$"
+            tab: "^AI Generate$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap_duoi: "^AI Film Filter$"
+            thu: 2
+          - dong_ad: 6
+          - cho: 6
+          - back: 2
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+            nhan: "^(Uninstall|Uninstall app|Gỡ cài đặt)$"
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - dong_ad: 6
+          - tap: "^(Still want to uninstall|Vẫn muốn gỡ cài đặt)$"
+          - cho_chu: '^(Why do you uninstall\?|Tại sao bạn gỡ cài đặt\?)$'
+          - cho: 6
+          - tap: "^(Too many ads|Quá nhiều quảng cáo)$"
+          - cho: 6
+          - tap: "^(Too slow.*|Quá chậm.*)$"        # chon ly do lan 2: khong duoc reload native nua
+          - cho: 6
+          - tap: "^(Uninstall|Gỡ cài đặt)$"
+          - dong_ad: 8
+          - cho: 4
+          - back: 3
+
   # App gen anh/video cung template (muc 3 sheet KT: native_loading, native_upload, native_i2i_i2v_prompt,
   # result_img_vid, reward_img_vid, inter_feature, inter_style, native_reason_uninstall, inter_uninstall).
   # Do 13/11/2026 tren vivo V2143: AIP893 2.6.0 (Home co nut "Text to Image Generate", hang style "AI Try On Outfits"),
@@ -440,6 +708,7 @@ khuon:
             toi_da: 60
           - dong_neu_co: "^(Close|Close sheet)$"
           - tap: "^AI CHAT$"
+            khi_rong: [0.205, 0.93]          # tat banner: nav tut xuong, chu co bounds rong
           - dong_ad: 6
           - cho: 35
           - tap: "^Open conversation history$"
@@ -450,21 +719,25 @@ khuon:
           - back: 1
           - cho: 3
           - tap: "^HOME$"
+            khi_rong: [0.5, 0.93]
       - ten: Chọn template (inter upload) → Generate (native generate) → Result (native result)
         buoc:
           - ve_man: "MainActivity"
             toi_da: 60
           - dong_neu_co: "^(Close|Close sheet)$"
           - tap: "^HOME$"
+            khi_rong: [0.5, 0.93]
           - cho: 31                          # inter cach nhau 30s (vua bam History / Settings)
           - tap_duoi: "^Trending Now$"
           - dong_ad: 8
           - cho_man: "SelectPhoto"
             toi_da: 60
+          - dong_ad: 6                       # inter upload co luc hien tre sau khi SelectPhoto da mo -> bam Gallery hut
+          - cho_chu: "^Gallery$"
           - tap: "^Gallery$"
-          - cho: 3
+          - cho: 4
           - chon_anh: true
-            thu: 8                           # anh chup man hinh nam dau trinh chon -> lay anh khuon mat
+            thu: 8                          # anh chup man hinh nam dau trinh chon -> lay anh khuon mat
             toi_da: 40
           - cho: 3
           - tap: "^Generate with Ads$"
@@ -474,7 +747,7 @@ khuon:
             toi_da: 300
           - cho: 10
           - cho_man: "MainActivity"
-            toi_da: 60
+            toi_da: 180                      # reward thu 2 co luc dong cham (X khong co node) -> cho du lau
           - cho: 60                          # anh gen ngam ~60s
           - tap: "^History$"
           - dong_ad: 8
@@ -494,6 +767,7 @@ khuon:
             toi_da: 60
           - dong_neu_co: "^(Close|Close sheet)$"
           - tap: "^HOME$"
+            khi_rong: [0.5, 0.93]
           - cho: 31
           - tap_duoi: "^Trending Now$"
             thu: 2
@@ -783,51 +1057,111 @@ khuon:
           - cho: 3
           - back: 2
 
-  # App luyen IELTS voi AI coach "Moss" (muc 3 sheet KT: chi reward_chat). Do 19/11/2026 tren OPPO CPH2375: AIP932
-  # AI Tutor IELTS 1.0.2. Moi man trong MainActivity (Compose). Vao Chat co inter feature; reward preload ngay khi vao
-  # Chat. 3 luot chat free/ngay, tin thu 4 -> popup "You've used all your free chats today" + nut "Watch Ad (0/2)"
-  # (popup co animation: dump tu tat animator). O chat la EditText khong co chu goi y -> `o_lop`. Nut Send chi co
-  # content-desc. Nut Back cua man Chat la content-desc "Back".
+  # App luyen IELTS voi AI coach "Moss" - AIP932 AI Tutor IELTS 1.0.2. Moi man trong MainActivity (Compose).
+  # Nut Back cua man Chat / History / Setting la content-desc "Back".
+  # 19/11/2026 (Pixel 4) muc 3 sheet doi sang 6 vi tri cung template Lexi: banner all screens, inter home (bam the
+  # Speaking/Reading/Listening/Writing o Home), native chat character (hien o Conversation History / Character
+  # Setting, preload khi vao Chat), inter back (nut Back cua man Chat / History), native + inter Uninstall.
+  # Tab duoi: Home / Learn / Coach (= man Chat) / Profile (= Settings); tab chua chon chi co content-desc.
+  # Ve Home sau FO co 3 popup chong nhau: Today's Check-In, Rate us, Add Widget - deu dong bang content-desc "Close".
   ielts_moss:
     nhan_dien: "^Talk with Moss$"
     doan:
-      - ten: Chat with Moss (preload reward), hết 3 lượt free -> popup Watch Ad, bấm xem ad (reward_chat), BACK
+      - ten: Home (banner reload 10s, preload inter home)
         buoc:
           - ve_chu: "^Talk with Moss$"
             tab: "^Home$"
             toi_da: 180
-          - cho: 5
+          - dong_neu_co: "^Close$"
+          - dong_neu_co: "^Close$"
+          - dong_neu_co: "^Close$"
+          - cho: 35
+      - ten: Tab Learn / Profile (banner từng tab)
+        buoc:
+          - ve_chu: "^Talk with Moss$"
+            tab: "^Home$"
+          - dong_neu_co: "^Close$"
+          - tap: "^Learn$"
+          - dong_ad: 6
+          - cho: 25
+          - tap: "^Profile$"
+          - dong_ad: 6
+          - cho: 25
+          - tap: "^Home$"
+          - dong_ad: 6
+      - ten: Thẻ Speaking / Reading / Listening / Writing ở Home (inter home, cách 30s)
+        buoc:
+          - ve_chu: "^Talk with Moss$"
+            tab: "^Home$"
+          - dong_neu_co: "^Close$"
+          - cho: 31
+          - tap: "^Speaking$"
+          - dong_ad: 8
+          - cho: 4
+          - tap: "^Back$"
+          - dong_ad: 6
+          - cho: 4
+          - tap: "^Reading$"               # < 30s sau inter truoc -> khong duoc show
+          - dong_ad: 8
+          - cho: 4
+          - back: 1
+          - dong_ad: 6
+          - cho: 31
+          - tap: "^Listening$"
+          - dong_ad: 8
+          - cho: 4
+          - back: 1
+          - dong_ad: 6
+          - cho: 31
+          - tap: "^Writing$"
+          - dong_ad: 8
+          - cho: 4
+          - back: 1
+          - dong_ad: 6
+      - ten: Chat với Moss (preload native chat + inter back), Conversation History / Character Setting (native), BACK (inter back)
+        buoc:
+          - ve_chu: "^Talk with Moss$"
+            tab: "^Home$"
+          - dong_neu_co: "^Close$"
+          - cho: 31
           - tap: "^Talk with Moss$"
           - dong_ad: 8
           - cho_chu: "^TODAY'S TOPIC$"
-          - cho: 5
-          - nhap: "hello"
-            o_lop: "EditText$"
-          - tap: "^Send$"
-          - cho: 10
-          - nhap: "hello"
-            o_lop: "EditText$"
-          - tap: "^Send$"
-          - cho: 10
-          - nhap: "hello"
-            o_lop: "EditText$"
-          - tap: "^Send$"
-          - cho: 10
-          - nhap: "hello"
-            o_lop: "EditText$"
-          - tap: "^Send$"
-          - cho: 8                         # tat remote reward: app khong hien popup, cho chat tiep -> buoc sau tu bo qua
-          - tap_neu_co: "^Watch Ad \\(\\d/\\d\\)$"
-          - dong_ad: 10
-          - cho: 5
-          - tap_neu_co: "^Watch Ad \\(\\d/\\d\\)$"
-          - dong_ad: 10
-          - cho: 5
-          - back: 1                        # dong popup (khong co popup thi BACK ve Home)
-          - tap_neu_co: "^Back$"
-            khi_thieu: "^Talk with Moss$"
+          - cho: 12
+          - tap: "^Open conversation history$"
+          - cho_chu: "^Conversation History$"
+          - cho: 25
+          - tap: "^Back$"
+          - dong_ad: 8
+          - cho_chu: "^TODAY'S TOPIC$"
+          - cho: 3
+          - tap: "^Open character setting$"
+          - cho_chu: "^Character Setting$"
+          - cho: 25
+          - tap: "^Back$"
+          - dong_ad: 8
+          - cho_chu: "^TODAY'S TOPIC$"
+          - cho: 31
+          - tap: "^Back$"
           - dong_ad: 8
           - cho: 3
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - tap: "^(Vẫn muốn gỡ cài đặt|Still want to uninstall)$"
+          - cho_chu: "^(Vì sao bạn gỡ cài đặt\\?|Why .*uninstall.*\\?)$"
+          - cho: 6
+          - tap: "^(Quá nhiều quảng cáo|Too many ads)$"
+          - cho: 8
+          - tap: "^(Gỡ cài đặt|Uninstall)$"
+          - cho: 15
+          - back: 1
+          - dong_ad: 20
+          - cho: 3
+          - back: 2
 
 # Ghim khuon (khong bat buoc - app chua khai tool tu nhan khuon tren Home).
 com.aiphotogenerator.aivideomaker.photoslideshow: {khuon: ai_photo}     # AIP893
@@ -838,3 +1172,4 @@ photoslideshow.videoslideshow.addimage.photogen: {khuon: pictifaze}     # AIP927
 photomaker.image.editor.ai: {khuon: creapix}                         # AIP916 CreaPix
 aichat.photogenarator.chatbot.video: {khuon: homova}                 # AIP508 Homova (Home co ca "Trending Now" cua khuon ai_photo)
 aitutor.grammar.languagetutor.iletslesson.learninglanguage: {khuon: ielts_moss}  # AIP932 AI Tutor IELTS
+com.ai.videogenerator.photocreator.aiart: {khuon: hypix}                  # AIP933 Hypix (Home co "Text to Image Generate" cua khuon ai_photo, chu xuong dong)

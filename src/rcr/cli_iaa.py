@@ -30,15 +30,34 @@ def _rcr_check() -> str:
     return str(Path(sys.executable).with_name("rcr-check"))
 
 
-def doc_vi_tri(package: str, out_dir: Path):
-    """Tai lai sheet Check thong so KT (ban moi nhat moi lenh) -> vi tri muc 3 cua app."""
+def doc_vi_tri(package: str, out_dir: Path, unit_that: list[str] | None = None):
+    """Tai lai sheet Check thong so KT (ban moi nhat moi lenh) -> vi tri muc 3 cua app.
+
+    `unit_that` = ["<ten ad>=<ID that>", ...] (`--unit-that`): ID sheet lech build thi cham theo unit that."""
     goc = tc_source.tai_ve(tc_tinh_nang_rieng.link_goc("iaa"), out_dir)
-    return tc_iaa_tu_sheet_kt.vi_tri_tu_workbook(goc, package)
+    ds = tc_iaa_tu_sheet_kt.vi_tri_tu_workbook(goc, package)
+    if not unit_that:
+        return ds
+    ds, doi = iaa_nhom.ap_unit_that(ds, _cap_unit(unit_that))
+    print("Chấm theo unit thật (sheet lệch build): " + "; ".join(doi), file=sys.stderr)
+    return ds
+
+
+def _cap_unit(cap: list[str]) -> dict[str, str]:
+    ra = {}
+    for c in cap:
+        ten, sep, uid = c.partition("=")
+        if not sep or not re.fullmatch(r"ca-app-pub-\d+/\d+", uid.strip()):
+            raise RcError(f"--unit-that phải dạng <tên ad>=ca-app-pub-…/…, nhận được {c!r}")
+        ra[ten.strip()] = uid.strip()
+    return ra
 
 
 def dat(args, ds=None) -> dict:
+    from . import iaa_khuon
     ds = ds if ds is not None else doc_vi_tri(args.package, args.out_dir)
-    gt = iaa_nhom.gia_tri(ds, args.bien_the)
+    # Key dieu kien cua khuon (vd bat luong Uninstall) dat truoc, key show_* cua bien the thang neu trung.
+    gt = {**iaa_khuon.rc_them(args.package), **iaa_nhom.gia_tri(ds, args.bien_the)}
     lenh = [_rcr_check(), "--package", args.package, "--keep", "--no-actions"]
     if args.serial:
         lenh += ["--serial", args.serial]
@@ -98,7 +117,7 @@ def ket_qua(ds, logs: dict[str, str]) -> list[tuple[str, int, str, str]]:
 
 
 def cham(args, ds=None) -> dict:
-    ds = ds if ds is not None else doc_vi_tri(args.package, args.out_dir)
+    ds = ds if ds is not None else doc_vi_tri(args.package, args.out_dir, getattr(args, "unit_that", None))
     kq = ket_qua(ds, _logs(args.log))
     data = luot_file.doc(args.luot, args.package)
     records = data["records"]
@@ -161,7 +180,7 @@ def chay(args) -> dict:
         t = int(time.monotonic() - bat_dau)
         print(f"[+{t // 60:02d}:{t % 60:02d}] {m}", file=sys.stderr, flush=True)
 
-    ds = doc_vi_tri(args.package, args.out_dir)      # tai sheet KT MOT lan cho ca luot (4 bien the + cham)
+    ds = doc_vi_tri(args.package, args.out_dir, getattr(args, "unit_that", None))      # tai sheet KT MOT lan cho ca luot (4 bien the + cham)
     logs, lai, nguon = [], {}, ""
     for b in [x.strip() for x in args.bien_the_ds.split(",") if x.strip()]:
         iaa_nhom.so_case(b)
@@ -222,6 +241,9 @@ def main(argv=None) -> int:
     p.add_argument("--bien-the-ds", default="bat,thuong,high,tat", help="chay: các biến thể lái lần lượt")
     p.add_argument("--chay-du", action="store_true",
                    help="chay: biến thể đầu hỏng đoạn vẫn chạy tiếp các biến thể sau (đoạn hỏng do app, không do khuôn)")
+    p.add_argument("--unit-that", action="append", metavar="TEN_AD=ID",
+                   help="chay/cham: ID sheet lệch build (audit 3c) -> chấm theo unit thật, vd "
+                        "inter_feature_high=ca-app-pub-…/3567256906 (lặp cờ cho từng ad)")
     p.add_argument("--out-dir", type=Path, default=OUT_MAC_DINH)
     a = p.parse_args(argv)
     try:

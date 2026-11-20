@@ -48,6 +48,21 @@ def doan_khai_san(package: str) -> tuple[str, list[dict] | None]:
     return "", None
 
 
+def rc_them(package: str) -> dict[str, str]:
+    """Key RC dieu kien dat CUNG moi bien the (`rc_them:` cua khuon ghim / muc rieng cua package; package thang khuon).
+
+    Vd Hypix AIP933: shortcut Uninstall chi dang khi `enabled_flow_uninstall=true` (server chi khai `flow_uninstall`,
+    app dung default tat) -> khong co luong Uninstall de cham 2 vi tri uninstall. Day la precondition cua TC, khong
+    phai key cua vi tri: bien the nao cung dat giong nhau."""
+    muc = _doc().get(package)
+    ra: dict[str, str] = {}
+    if isinstance(muc, dict):
+        k = cac_khuon().get(muc.get("khuon") or "") or {}
+        ra.update(k.get("rc_them") or {})
+        ra.update(muc.get("rc_them") or {})
+    return {str(k): (str(v).lower() if isinstance(v, bool) else str(v)) for k, v in ra.items()}
+
+
 def khuon_khop(nodes) -> tuple[str, list[dict] | None]:
     """Khuon dau tien co chu `nhan_dien` tren man Home dang hien."""
     for ten, k in cac_khuon().items():

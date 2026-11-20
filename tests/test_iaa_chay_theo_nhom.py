@@ -419,3 +419,160 @@ def test_shortcut_ngan_keo_pixel_go_tu_dau_va_bam_dong_chu(monkeypatch):
     assert kq is True
     assert st["tap"][-1] == (310, 1316)          # dong chu, khong phai icon (137,1316)
     assert st["back"] >= 1                       # an ban phim truoc khi doc ket qua
+
+
+def test_lai_khong_crash_khi_logcat_da_tu_thoat(monkeypatch, tmp_path):
+    """Pixel 4 19/11/2026: adb logcat tu thoat truoc -> terminate() nem ProcessLookupError, rcr-iaa crash sau khi
+    lai xong bien the (config khong duoc tra). Phai bo qua, tra ket qua doan binh thuong; logcat chet giua luot thi
+    ghi tiep tu moc cuoi (-T), khong dump lai ca buffer."""
+    import asyncio
+    from rcr import iaa_lai
+    goi: list = []
+    that = asyncio.sleep
+
+    class P:
+        returncode = 1                      # da chet ngay tu dau
+
+        def terminate(self):
+            raise ProcessLookupError()
+
+        async def wait(self):
+            return 0
+
+    async def tao(*a, **k):
+        goi.append(a)
+        k["stdout"].write("         1795081059.478 14729  4775 V FA-SVC  : x\n")
+        return P()
+
+    async def ngu(giay, *a):
+        await that(0)
+
+    class C:
+        adb = "adb"
+
+        async def shell(self, *a):
+            return ("", "", 0)
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", tao)
+    monkeypatch.setattr(asyncio, "sleep", ngu)
+    kq = asyncio.run(iaa_lai.lai(C(), "S", "p.app", [{"ten": "cho", "buoc": [{"cho": 0}] * 10}],
+                                tmp_path / "x.log"))
+    assert kq["doan"][0]["xong"] is True
+    assert "-T" not in goi[0]
+    assert any("-T" in g and "1795081059.479" in g for g in goi[1:])
+    assert iaa_lai.moc_cuoi_log(tmp_path / "khong_co.log") is None
+
+
+def test_tap_khi_rong_bam_theo_ti_le_khi_chu_co_bounds_rong(monkeypatch):
+    """AIP508 Homova Pixel 4 19/11/2026: tat banner -> nav bar tut xuong, chu "AI CHAT" co bounds rong -> bam theo
+    `khi_rong`; co bounds thi bam dung node; khong co chu thi KHONG bam mu (vung do luc co banner la banner ad)."""
+    import asyncio
+    from rcr import device_app, iaa_lai, rating_cong_thuc
+    from rcr.ui_dump import Bounds, DeviceNode
+    P = "p.app"
+    st = {"nodes": [], "tap": []}
+
+    def n(b):
+        return DeviceNode("0", "", "android.widget.TextView", "AI CHAT", "", Bounds(*b), True, True, True, P, None, 0)
+
+    async def nodes(c, s, p):
+        return st["nodes"]
+
+    async def tap(c, s, x, y):
+        st["tap"].append((x, y))
+
+    class C:
+        async def shell(self, serial, *a):
+            return ("Physical size: 1080x2280", "", 0)
+
+    async def ngu(*_a):
+        return None
+    monkeypatch.setattr(rating_cong_thuc, "_nodes", nodes)
+    monkeypatch.setattr(device_app, "tap", tap)
+    b = {"tap": "^AI CHAT$", "khi_rong": [0.205, 0.93], "toi_da": 0.01}
+    st["nodes"] = [n((0, 0, 0, 0))]
+    assert asyncio.run(iaa_lai.buoc(C(), "S", P, b, []))
+    assert st["tap"][-1] == (221, 2120)
+    st["nodes"] = [n((160, 1991, 288, 2030))]
+    assert asyncio.run(iaa_lai.buoc(C(), "S", P, b, []))
+    assert st["tap"][-1] == (224, 2010)
+    st["nodes"], st["tap"] = [], []
+    monkeypatch.setattr(asyncio, "sleep", ngu)
+    assert not asyncio.run(iaa_lai.buoc(C(), "S", P, b, []))
+    assert st["tap"] == []
+
+
+def test_unit_that_thay_id_sheet_lech_build_va_cham_theo_unit_that():
+    """AIP933 Hypix 20/11/2026: ID muc 3 sheet KT vang trong APK -> cham theo ID sheet thi moi vi tri 0 request."""
+    import pytest
+    from rcr.models import RcError
+    that_h, that_t = f"{PUB}/1704598632", f"{PUB}/7239996344"
+    ds, doi = iaa_nhom.ap_unit_that(DS, {"native_loading_high": that_h, "native_loading": that_t})
+    assert ds[0].high.id == that_h and ds[0].thuong.id == that_t and ds[0].high.key == "show_native_loading_high"
+    assert ds[1] is STYLE and len(doi) == 2 and DS[0].high.id != that_h     # khong sua ds goc
+    log = _log(_dong(100.0, "track_ad_request", that_h), _dong(100.4, "ad_load", that_h, "failed"),
+               _dong(100.5, "track_ad_request", that_t), _dong(101.0, "ad_load", that_t))
+    assert {e["vi_tri"] for e in iaa_cham_log.su_kien(log, iaa_nhom.ban_do_unit(ds))} == {1}
+    assert iaa_cham_log.su_kien(log, iaa_nhom.ban_do_unit(DS)) == []
+    with pytest.raises(RcError):
+        iaa_nhom.ap_unit_that(DS, {"native_loadin_high": that_h})       # go sai ten ad -> dung, khong cham nham
+    assert cli_iaa._cap_unit([f"inter_style={PUB}/1"]) == {"inter_style": f"{PUB}/1"}
+    with pytest.raises(RcError):
+        cli_iaa._cap_unit(["inter_style=1542026074"])
+
+
+def test_rc_them_cua_khuon_dat_cung_moi_bien_the(monkeypatch):
+    """Hypix: shortcut Uninstall chi co khi enabled_flow_uninstall=true -> khuon khai rc_them, dat ca 4 bien the."""
+    from rcr import iaa_khuon
+    data = {"khuon": {"k1": {"nhan_dien": "^X$", "rc_them": {"enabled_flow_uninstall": True}, "doan": []}},
+            "p.a": {"khuon": "k1"}, "p.b": {"khuon": "k1", "rc_them": {"x": 1}}, "p.c": []}
+    monkeypatch.setattr(iaa_khuon, "_doc", lambda: data)
+    assert iaa_khuon.rc_them("p.a") == {"enabled_flow_uninstall": "true"}
+    assert iaa_khuon.rc_them("p.b") == {"enabled_flow_uninstall": "true", "x": "1"}
+    assert iaa_khuon.rc_them("p.c") == {} and iaa_khuon.rc_them("p.khong") == {}
+
+
+def test_khuon_hypix_ghim_package_va_bat_luong_uninstall():
+    from rcr import iaa_khuon
+    pkg = "com.ai.videogenerator.photocreator.aiart"
+    nguon, doan = iaa_khuon.doan_khai_san(pkg)
+    assert nguon == "khuôn hypix" and any("Uninstall" in d["ten"] for d in doan)
+    assert iaa_khuon.rc_them(pkg) == {"enabled_flow_uninstall": "true"}
+    import re
+    tap = [b["tap"] for d in doan for b in d["buoc"] if "tap" in b]
+    assert any(re.search(t, "Image to Image\nGenerate") for t in tap)        # chu the carousel co xuong dong
+
+
+def test_tap_vua_hien_chi_bam_khi_the_carousel_vua_xoay_toi(monkeypatch):
+    """Hypix AIP933 20/11/2026: carousel tu xoay ~4s, bam the da hien tu truoc thi trung luc chuyen the -> vao nham
+    T2I thanh I2I. `vua_hien`: bo qua lan thay dau neu the da hien san, chi bam o lan dump ngay sau lan vang."""
+    import asyncio
+    from rcr import device_app, rating_cong_thuc
+    from rcr.ui_dump import Bounds, DeviceNode
+    P = "p.app"
+    the = DeviceNode("0", "", "android.widget.TextView", "Text to Image\nGenerate", "", Bounds(110, 663, 527, 822),
+                     True, True, True, P, None, 0)
+    chuoi = [[the], [the], [], [the], [the]]          # dang hien -> xoay di -> vua xoay toi
+    st = {"i": 0, "tap": []}
+
+    async def nodes(c, s, p):
+        st["i"] += 1
+        return chuoi[min(st["i"] - 1, len(chuoi) - 1)]
+
+    async def tap(c, s, x, y):
+        st["tap"].append(st["i"])
+
+    async def ngu(*_a):
+        return None
+
+    class C:
+        async def shell(self, serial, *a):
+            return ("Physical size: 1080x2400", "", 0)
+    monkeypatch.setattr(rating_cong_thuc, "_nodes", nodes)
+    monkeypatch.setattr(device_app, "tap", tap)
+    monkeypatch.setattr(asyncio, "sleep", ngu)
+    b = {"tap": r"^Text to Image\sGenerate$", "vua_hien": True}
+    assert asyncio.run(rating_cong_thuc._mot_buoc(C(), "S", P, b, []))
+    assert st["tap"] == [4]                           # bam o lan dump thu 4 (vua hien lai), khong o lan 1
+    st["i"], st["tap"] = 0, []
+    assert asyncio.run(rating_cong_thuc._mot_buoc(C(), "S", P, {"tap": b["tap"]}, []))
+    assert st["tap"] == [1]                           # khong co vua_hien: bam ngay nhu cu

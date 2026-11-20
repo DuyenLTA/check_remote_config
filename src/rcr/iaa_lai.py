@@ -193,6 +193,13 @@ async def _shortcut_ngan_keo(client, serial, package, nhan_app, cac_nhan, muc, l
         await asyncio.sleep(2.0)
         nodes = await _ket_qua_tim_khong_ban_phim(client, serial)
         thang = rating_cong_thuc.tim(nodes, muc)
+        for _ in range(3):
+            # Dong shortcut ra cham hon icon (Pixel 4 19/11/2026: lan dump dau chi co icon) -> doc lai vai nhip.
+            if thang is not None:
+                break
+            await asyncio.sleep(1.5)
+            nodes = ui_dump.parse_dump(await ui_dump.dump(client, serial))
+            thang = rating_cong_thuc.tim(nodes, muc)
     if thang is not None:
         # Samsung One UI / Pixel: ket qua tim kiem hien thang muc shortcut cua app (khong can nhan giu icon).
         # Pixel: dong shortcut co 2 node khop (icon desc "Uninstall" + chu "Uninstall"); bam vao icon khong mo
@@ -436,6 +443,28 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
         await asyncio.sleep(float(b.get("cho_sau", 2.0)))
         log.append(f"bấm toạ độ {fx},{y}px")
         return True
+    if "tap" in b and "khi_rong" in b:
+        # Tab nav bar Compose: co banner thi chu co bounds; tat banner (bien the `tat`) nav tut xuong mep duoi, uiautomator
+        # tra bounds RONG (AIP508 Homova Pixel 4 19/11/2026) -> bam theo ti le `khi_rong: [x, y]` (chi khi node rong,
+        # khong bam mu khi khong co chu: vi tri do luc co banner la vung banner ad).
+        het = time.monotonic() + float(b.get("toi_da", 5.0))
+        while time.monotonic() < het:
+            nodes = await rating_cong_thuc._nodes(client, serial, package)
+            khop = [n for n in nodes if rating_cong_thuc._khop(n, b["tap"])]
+            co = next((n for n in khop if not n.bounds.empty), None)
+            if co is not None:
+                await device_app.tap(client, serial, *co.bounds.center)
+                log.append(f"bấm {co.text or co.content_desc}")
+                return True
+            if khop:
+                rong, cao = await _co_man(client, serial)
+                fx, fy = b["khi_rong"]
+                await device_app.tap(client, serial, int(rong * float(fx)), int(cao * float(fy)))
+                log.append(f"bấm {b['tap']} theo toạ độ {fx},{fy} (bounds rỗng)")
+                return True
+            await asyncio.sleep(1.0)
+        log.append(f"hết giờ ở bước {b}")
+        return False
     if "vuot_len" in b:
         # Cuon noi dung len (vuot tu 60% xuong 30% chieu cao), `vuot_len: n` lan: nut nam duoi native ad, ngoai man
         # (AIP508 Homova Pixel 4 19/11/2026: "Still want to uninstall" chi hien sau khi cuon SorryUninstall).
@@ -530,6 +559,19 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
     return await rating_cong_thuc._mot_buoc(client, serial, package, b, log)
 
 
+def moc_cuoi_log(file_log: Path) -> float | None:
+    """Moc epoch cua dong cuoi co moc trong log `logcat -v epoch` (doc ~64KB cuoi file)."""
+    try:
+        with open(file_log, "rb") as f:
+            f.seek(0, 2)
+            f.seek(max(0, f.tell() - 65536))
+            duoi = f.read().decode("utf-8", "ignore")
+    except OSError:
+        return None
+    moc = re.findall(r"^\s*(\d{9,}\.\d+)\s", duoi, re.M)
+    return float(moc[-1]) if moc else None
+
+
 async def lai(client, serial: str, package: str, doan: list[dict], file_log: Path, log_fn=lambda _m: None) -> dict:
     """Chay moi doan cua duong lai, ghi `logcat -v epoch -s FA-SVC:V` vao `file_log` suot luot.
     -> {"doan": [{ten, xong, log}], "giay": ...}."""
@@ -540,6 +582,23 @@ async def lai(client, serial: str, package: str, doan: list[dict], file_log: Pat
         ghi = await asyncio.create_subprocess_exec(adb, "-s", serial, "logcat", "-v", "epoch", "-s", "FA-SVC:V",
                                                    stdout=f, stderr=asyncio.subprocess.DEVNULL)
         bat_dau, kq = time.monotonic(), []
+
+        async def canh_logcat() -> None:
+            # adb logcat co the chet giua luot (Pixel 4 19/11/2026: adb server bi luot khac khoi dong lai -> log dung o
+            # giay ~211, mat het event cac doan sau). Chet thi ghi tiep tu dong cuoi da ghi (-T <epoch>), khong
+            # dump lai ca buffer (trung event -> dem request sai).
+            nonlocal ghi
+            while True:
+                await asyncio.sleep(3.0)
+                if ghi.returncode is None:
+                    continue
+                f.flush()
+                tu = moc_cuoi_log(file_log)
+                lenh = [adb, "-s", serial, "logcat", "-v", "epoch"] + (["-T", f"{tu + 0.001:.3f}"] if tu else []) \
+                    + ["-s", "FA-SVC:V"]
+                ghi = await asyncio.create_subprocess_exec(*lenh, stdout=f, stderr=asyncio.subprocess.DEVNULL)
+                log_fn(f"  (logcat tự thoát — ghi tiếp từ {tu or 'bây giờ'})")
+        canh = asyncio.create_task(canh_logcat())
         try:
             for d in doan:
                 nhat_ky: list[str] = []
@@ -561,6 +620,12 @@ async def lai(client, serial: str, package: str, doan: list[dict], file_log: Pat
                 log_fn(f"  đoạn '{d.get('ten', '')}': {'xong' if xong else 'HỎNG'} — {'; '.join(nhat_ky[-3:])}")
         finally:
             await asyncio.sleep(2.0)            # FA-SVC ghi event tre ~1s
-            ghi.terminate()
+            canh.cancel()
+            try:
+                ghi.terminate()
+            except ProcessLookupError:
+                # adb logcat da tu thoat truoc (Pixel 4 19/11/2026: lai xong ca bien the roi crash o day -> config
+                # khong duoc tra, mat ket qua bien the) -> bo qua, log da ghi toi luc no thoat.
+                log_fn("  (logcat đã tự thoát trước khi dừng ghi)")
             await ghi.wait()
     return {"doan": kq, "giay": round(time.monotonic() - bat_dau)}
