@@ -561,6 +561,9 @@ async def lai(client, serial: str, package: str, doan: list[dict], file_log: Pat
                 log_fn(f"  đoạn '{d.get('ten', '')}': {'xong' if xong else 'HỎNG'} — {'; '.join(nhat_ky[-3:])}")
         finally:
             await asyncio.sleep(2.0)            # FA-SVC ghi event tre ~1s
-            ghi.terminate()
+            try:
+                ghi.terminate()
+            except ProcessLookupError:          # adb logcat da tu thoat (USB rot / adb restart) - log da ghi xong
+                pass
             await ghi.wait()
     return {"doan": kq, "giay": round(time.monotonic() - bat_dau)}

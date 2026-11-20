@@ -419,3 +419,34 @@ def test_shortcut_ngan_keo_pixel_go_tu_dau_va_bam_dong_chu(monkeypatch):
     assert kq is True
     assert st["tap"][-1] == (310, 1316)          # dong chu, khong phai icon (137,1316)
     assert st["back"] >= 1                       # an ban phim truoc khi doc ket qua
+
+
+def test_lai_khong_crash_khi_logcat_da_tu_thoat(tmp_path, monkeypatch):
+    """adb logcat chet truoc khi ket thuc luot (USB / adb restart) -> terminate() nem ProcessLookupError, khong duoc
+    lam rcr-iaa chay vo ngang truoc buoc tra config + cham."""
+    import asyncio
+    from rcr import iaa_lai
+
+    class Ghi:
+        async def wait(self):
+            return 0
+
+        def terminate(self):
+            raise ProcessLookupError()
+
+    async def gia_exec(*_a, **_k):
+        return Ghi()
+
+    async def gia_sleep(_s):
+        return None
+
+    class May:
+        adb = "adb"
+
+        async def shell(self, *_a):
+            return ""
+
+    monkeypatch.setattr(iaa_lai.asyncio, "create_subprocess_exec", gia_exec)
+    monkeypatch.setattr(iaa_lai.asyncio, "sleep", gia_sleep)
+    kq = asyncio.run(iaa_lai.lai(May(), "S", "p", [{"ten": "rong", "buoc": []}], tmp_path / "a.log"))
+    assert kq["doan"] == [{"ten": "rong", "xong": True, "log": []}]
