@@ -25,7 +25,11 @@ CUA_SO_PAID_VALUE = 1.0
 _CLASS_ERR = re.compile(r"NoClassDefFoundError|ClassNotFoundException|NoSuchMethodError")
 # FeatureFlagsImplExport (aconfig) do lop android.os.flagging.AconfigPackage - chi co tu Android 16 - roi tu catch,
 # in muc W tren may cu (vivo Android 13, AI Song 2.3.0, 09/11/2026). Khong phai thieu lop SDK quang cao.
-_PARCEL_ERR = re.compile(r"\s[EW] Parcel\s*:|BadParcelableException|\sW FeatureFlagsImplExport\s*:")
+_PARCEL_ERR = re.compile(r"\s[EW] Parcel\s*:|BadParcelableException|\sW FeatureFlagsImplExport\s*:"
+                         # SDK bao mat Pangle (com.pgl.ssdk) do API an cua framework qua JNI (LoadedApk.
+                         # createOrUpdateClassLoaderLocked...), khong co thi tu catch va in System.err muc W.
+                         # Lop thieu la cua Android, khong phai SDK quang cao cu (LingoSpeak 2.2.0, 19/11/2026).
+                         r'|\sW System\.err:\s*java\.lang\.NoSuchMethodError: no (?:non-)?static method "Landroid/')
 # Lib chan request khi offline, khong goi SDK -> khong co ad_load failed (skill nextgen, LingoSpeak 10/2026).
 _FAST_FAIL = re.compile(r"no internet|failing ad request fast|MobileAds ready but no internet", re.I)
 
