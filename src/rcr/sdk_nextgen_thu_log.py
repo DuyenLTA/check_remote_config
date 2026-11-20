@@ -83,7 +83,10 @@ class GhiLog:
         # Xoa CA 4 buffer: buffer events con dong am_anr cua phien truoc -> cham ANR oan.
         await self.client._run("-s", self.serial, "logcat", "-b", BUFFERS, "-c")
         self.f = open(self.path, "wb")
-        self.proc = subprocess.Popen([self.client.adb, "-s", self.serial, "logcat", "-v", "threadtime", "-b", BUFFERS],
+        # `-T 1`: chi theo dong moi. May co dong ghi luc dong ho chay truoc (OPPO f3466cdb 19/11/2026) thi `-c`
+        # khong xoa duoc, `logcat` tron se phat lai ca chuc nghin dong cua app khac vao file log cua lan do.
+        self.proc = subprocess.Popen([self.client.adb, "-s", self.serial, "logcat", "-v", "threadtime", "-b", BUFFERS,
+                                      "-T", "1"],
                                      stdout=self.f, stderr=subprocess.DEVNULL)
         await asyncio.sleep(0.5)
         return self

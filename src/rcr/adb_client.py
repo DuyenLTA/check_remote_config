@@ -15,6 +15,7 @@ import logging
 import re
 import time
 
+from . import log_tuong_lai
 from .adb_parsers import (
     PACKAGE_RE,
     SERIAL_RE,
@@ -85,6 +86,9 @@ class AdbClient:
         so = out.decode("utf-8", "replace").replace("\r", "")
         se = err.decode("utf-8", "replace").replace("\r", "")
         self._raise_if_transport(se)
+        if log_tuong_lai.la_lenh_doc_log(args):
+            # dong ghi luc dong ho may chay truoc khong xoa duoc bang `logcat -c` -> bo khoi moi lan doc
+            so = log_tuong_lai.loc(so)
         return so, se, proc.returncode or 0
 
     async def run_binary(self, *args: str, timeout: float | None = None) -> tuple[bytes, str, int]:
