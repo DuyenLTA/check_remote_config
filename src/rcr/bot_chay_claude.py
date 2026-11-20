@@ -190,12 +190,14 @@ PROMPT_VERIFY_IAA = (
     '"thuc_te": "<so do that, tieng Viet co dau>"}}]}}\n'
     "`verdict` FAIL chi khi da ra lai theo 5d va chac la bug that; FAIL gia / loi tool / chua chac thi NEEDS_HUMAN."
 )
-# Verify dong checklist Next-Gen: chay ca checklist (rcr-sdk-check) roi do tay rieng cac ma can verify.
+# Verify dong checklist Next-Gen: CHI chay muc checklist chua dong can verify, khong chay ca checklist / preflight /
+# ID ads (user chot 20/11/2026: verify 1 bug MED-01 AIP885 ma chay ca checklist muc 1-4 -> ton token, cham).
 PROMPT_VERIFY_CHECKLIST = (
-    "/rc-check {package} --serial {serial} --next-gen\n\n"
     "Tra loi hoan toan bang tieng Viet. Luot nay do bot Discord goi de VERIFY bug dev bao da fix, bug thuoc NHANH CHECKLIST "
-    "Next-Gen. Chay checklist (rcr-sdk-check) cho app nhu thuong; dong nao ra DO_TAY thi CHI do tay (theo sdk-check/WORKFLOW.md) "
-    "cac ma dong sau, khong do tay dong khac, bo muc 3c (check ID ads): {cases}\n"
+    "Next-Gen, CHI cac ma dong: {cases}. KHONG chay /rc-check, KHONG preflight, KHONG check ID ads, KHONG chay ca checklist: "
+    "chi chay MOT lenh `rcr-sdk-check --package {package} --serial {serial} --muc {muc}` (cwd repo nay), doc ket cua dung "
+    "cac ma dong tren trong output / report; dong nao ra DO_TAY thi CHI do tay dong do (theo sdk-check/WORKFLOW.md), "
+    "khong do tay dong khac.\n"
     "Khong co nguoi ngoi truoc may: gap diem can nguoi quyet thi dung. Khong commit/push. KHONG doc/sua/log Jira - bot tu lam "
     "theo verdict.\n"
     "Dong CUOI cung cua cau tra loi phai dung mau (mot dong JSON), moi ma dong mot phan tu trong `cases`:\n"
@@ -360,8 +362,19 @@ def lenh(package: str, serial: str, cases: list[str] | None = None,
     if set(loai.values()) == {"iaa"}:
         return cmd, PROMPT_VERIFY_IAA.format(package=package, serial=serial, cases=",".join(cases))
     if set(loai.values()) == {"checklist"}:
-        return cmd, PROMPT_VERIFY_CHECKLIST.format(package=package, serial=serial, cases=", ".join(cases))
+        return cmd, PROMPT_VERIFY_CHECKLIST.format(package=package, serial=serial, cases=", ".join(cases),
+                                                   muc=muc_checklist(cases))
     return cmd, PROMPT_VERIFY.format(package=package, serial=serial, cases=",".join(cases))
+
+
+def muc_checklist(cases: list[str]) -> str:
+    """Muc rcr-sdk-check chua cac ma dong (1 build "1.x", 2 HT, 3 EV, 4 KT/MED/CMP/HV/RG) -> `--muc` toi thieu."""
+    muc = set()
+    for c in cases:
+        ma = c.split("#", 1)[-1].strip().upper()
+        muc.add("1" if re.match(r"^\d+\.\d+", ma) else "2" if ma.startswith("HT-") else
+                "3" if ma.startswith("EV-") else "4")
+    return ",".join(sorted(muc)) or "1,2,3,4"
 
 
 def doc_ket_qua(stdout: str) -> dict:

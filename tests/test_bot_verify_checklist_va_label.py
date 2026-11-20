@@ -105,8 +105,10 @@ def test_tim_auto_qa_loi_khong_lo_token(fake):
 
 def test_luot_verify_checklist_prompt_va_khong_lan_tc():
     cmd, prompt = c.lenh("pkg.a", "S1", ["EV-07", "HT-03", "1.7"])
-    assert prompt.startswith("/rc-check pkg.a --serial S1 --next-gen\n\n") and "--case" not in prompt.split("\n")[0]
-    assert "rcr-sdk-check" in prompt and "EV-07, HT-03, 1.7" in prompt and "KHOP -> PASS" in prompt
+    # Chi chay dung muc chua cac dong (1.7 -> 1, HT -> 2, EV -> 3), khong /rc-check ca checklist
+    assert not prompt.startswith("/rc-check") and "KHONG chay ca checklist" in prompt
+    assert "rcr-sdk-check --package pkg.a --serial S1 --muc 1,2,3`" in prompt
+    assert "EV-07, HT-03, 1.7" in prompt and "KHOP -> PASS" in prompt
     assert "KHONG doc/sua/log Jira" in prompt and '"cases"' in prompt
     assert not any("\n" in a for a in cmd)                 # prompt di qua stdin
     assert c.TIMEOUT_VERIFY == c.TIMEOUT_VERIFY_CHECKLIST == c.TIMEOUT_VERIFY_SUB == c.KHONG_GIOI_HAN
@@ -158,3 +160,9 @@ def test_verify_checklist_chay_prompt_checklist_timeout_dai_va_map_verdict(tmp_p
     assert da_chay == [(c.TIMEOUT_VERIFY_CHECKLIST, ["EV-07", "HT-03"])]
     assert [g for g in goi if g[0] == "chuyen"] == [("chuyen", "AIP920-30", jira.DICH_PASS)]   # KHOP -> Done; DO_TAY giu Reviewing
     assert "Giữ Reviewing" in bot.msg.edits[-1]["content"]
+
+
+def test_verify_mot_dong_med_chi_chay_muc_4():
+    # AIP885 20/11/2026: verify MED-01 chay ca checklist muc 1-4 -> chi can muc 4
+    assert c.muc_checklist(["MED-01"]) == "4" and c.muc_checklist(["checklist#KT-02", "RG-01"]) == "4"
+    assert "--muc 4`" in c.lenh("pkg.a", "S1", ["MED-01"])[1]
