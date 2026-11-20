@@ -1,16 +1,18 @@
 """Kiem dieu kien `testvsl` tren Firebase TRUOC khi chay Claude cho ban release - thieu / sai thi nhac QA tao.
 
-Luat (user chot 30-31/10/2026, nhac lai 02/11/2026): tool chi gan / go GIA TRI cua dieu kien `testvsl`; dieu kien do
-do QA tu tao (app.id + version dang test, keo len thu 1). Chua co / sai thi bot KHONG tu tao hay sua condition,
-default, tham so cua nguoi khac - chi tag nguoi bam Check nho tao roi bam Chay lai. Kiem o day chi DOC (GET
-template), khong publish; truoc day phai cho Claude chay toi preflight moi biet, va loi nhac lan trong tom tat.
+Luat (user chot 30-31/10/2026, nhac lai 02/11/2026): tool chi gan / go GIA TRI cua dieu kien `testvsl`, khong dung
+default, tham so, condition cua nguoi khac. Tu 20/11/2026 (user chot): QA bam Check / go /check -> luot Check tu tao
+condition theo version tin build, lech plan tuan thi them version plan (`tu_tao`, chi khi chua co hoac condition do tai khoan bot tao). Sau do
+`loi_testvsl` chi DOC lai: van thieu / sai (condition nguoi khac) thi tag nguoi bam Check nho tao roi bam Chay lai.
 """
 
 from __future__ import annotations
 
 import asyncio
 
-from . import rc_firebase, rc_firebase_app
+import logging
+
+from . import rc_firebase, rc_firebase_app, rc_firebase_testvsl
 from .adb_client import AdbClient
 from .adb_parsers import AdbError
 from .models import RcError
@@ -20,6 +22,26 @@ def doi_rc_firebase(job: dict, checklist: bool) -> bool:
     """Luot nay doi RC tren Firebase qua `testvsl`: ban release cai tu App Tester, nhanh bo TC (khong phai checklist
     Next-Gen)."""
     return job.get("loai_ban") == "release" and not checklist
+
+
+log = logging.getLogger("rcr-bot")
+
+
+async def tu_tao(serial: str, package: str, version: str, ma: str = "") -> str:
+    """Luot Check (QA bam Check / /check): tao condition `testvsl` theo version tin build tren Firebase project cua
+    APK vua cai. Tra dong ghi len tin goc ("" khi condition da dung, khong lam gi). Loi -> chi ghi canh bao,
+    `loi_testvsl` ngay sau se nhac QA nhu cu."""
+    if not rc_firebase.da_dang_nhap():
+        return ""
+    try:
+        info = await rc_firebase_app.thong_tin_tren_may(AdbClient(), serial, package)
+        from .bot_testvsl import versions_can_tao   # tin build lech plan tuan -> chua ca version plan
+        cac = await asyncio.to_thread(versions_can_tao, ma, version) if ma else [version]
+        kq = await asyncio.to_thread(rc_firebase_testvsl.tao, info["project"], info["app_id"], cac)
+    except (RcError, AdbError, OSError) as exc:
+        log.warning("tu tao testvsl %s %s: %s", package, version, exc)
+        return f"⚠️ Không tự tạo được `{rc_firebase.DIEU_KIEN}`: {exc}"
+    return "" if "không cần sửa" in kq else f"🧪 {kq}"
 
 
 async def loi_testvsl(serial: str, package: str) -> str | None:
@@ -55,9 +77,15 @@ def tin_nhac(job: dict, loi: str, duyet) -> str:
                 f"Người quản máy bot chạy `firebase login` (hết hạn: `firebase login --reauth`) trên máy chạy lượt, xong bấm **Chạy lại** "
                 f"(lượt verify: **Verify lại**) ở tin của lượt.")
     return (f"⛔ {tag} **{job.get('ma', '')}** `{job.get('version', '')}` — chưa chạy được bản release: {loi}\n"
-            f"Nhờ tạo / sửa điều kiện `{rc_firebase.DIEU_KIEN}` trên Firebase (app.id + version đang test), kéo lên "
-            f"**thứ 1**. Bot không tự tạo hay sửa condition, default hay tham số của người khác. Xong thì bấm "
+            f"Bấm **Tạo testvsl** để bot tạo điều kiện `{rc_firebase.DIEU_KIEN}` theo đúng app.id + version này "
+            f"(đứng thứ 1; condition người khác tạo thì bot không sửa), hoặc tự tạo trên Firebase rồi kéo lên **thứ 1**. Xong thì bấm "
             f"**Chạy lại** (lượt verify: **Verify lại**) ở tin của lượt.")
 
 
+def thieu_condition(loi: str) -> bool:
+    """Loi do thieu / sai condition (khong phai may bot, khong phai dang nhap) -> co nut Tao testvsl."""
+    return not loi.startswith(rc_firebase_app.MAY_BOT) and not any(x in loi for x in rc_firebase.LOI_DANG_NHAP)
+
+
 THAT = loi_testvsl     # ban goc (test thay `loi_testvsl` bang ban gia mac dinh)
+THAT_TAO = tu_tao     # ban goc cua `tu_tao` (conftest thay bang ban khong publish)

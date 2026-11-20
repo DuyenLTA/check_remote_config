@@ -16,7 +16,7 @@ from . import bot_cong_viec, bot_dung_luot, bot_hop_thu_bug, bot_job_verify, bot
 from . import bot_jira_rest as jira_rest
 from . import bot_tin_goc as tin_goc
 from . import bot_jira_dinh_kem, bot_verify_jira
-from . import build_ma_app
+from . import bot_testvsl, build_ma_app
 from .bot_giao_dien import NUT_HOI, NUT_HUY, XAM, nut
 
 log = logging.getLogger("rcr-bot")
@@ -33,6 +33,12 @@ async def xu_ly(bot, it: discord.Interaction) -> None:
     c = bot.q.tin_cua(int(msg_id))
     if c is None:
         await it.response.send_message("Bot không còn nhớ build này.", ephemeral=True)
+        return
+    if c.get("loai") == bot_testvsl.LOAI:       # tin nhac xoa condition testvsl (QA bao test pass)
+        await bot_testvsl.xu_ly_nut(bot, it, hanh_dong, c)
+        return
+    if hanh_dong == bot_testvsl.TAO:            # tin nhac thieu / sai testvsl cua luot: tao theo build
+        await bot_testvsl.bam_tao(bot, it, c)
         return
     if hanh_dong == "bo":
         await it.response.edit_message(content=f"{bot_cong_viec.dau_tin(c)}\nBỏ qua — {it.user.mention}", view=None)

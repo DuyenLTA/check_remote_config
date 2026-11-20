@@ -314,7 +314,11 @@ def _testvsl_san_sang(monkeypatch):
 
     async def san_sang(serial, package):
         return None
+
+    async def khong_tao(serial, package, version, ma=""):
+        return ""
     monkeypatch.setattr(bot_kiem_testvsl, "loi_testvsl", san_sang)
+    monkeypatch.setattr(bot_kiem_testvsl, "tu_tao", khong_tao)    # test khong publish Firebase that
 
 
 @pytest.fixture(autouse=True)

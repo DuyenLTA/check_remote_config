@@ -204,7 +204,8 @@ async def _cai_va_chay(bot, job: dict, vm, serial: str, ten: str, repo: Path, ou
         if loi:                              # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Jira / Firebase
             await vm.edit(content=tin_goc.noi(f"{dau}\n📲 Đã cài.",
                                               bot_kiem_testvsl.tin_nhac(job, loi, getattr(bot, "duyet", ()))),
-                          view=nut(vm.id, ("verify", "Verify lại")))
+                          view=nut(vm.id, ("verify", "Verify lại"),
+                                   *([("taotestvsl", "Tạo testvsl")] if bot_kiem_testvsl.thieu_condition(loi) else [])))
             return False
     het_gio = (bot_chay_claude.TIMEOUT_VERIFY_SUB if sub else
                bot_chay_claude.TIMEOUT_VERIFY_CHECKLIST if ck else bot_chay_claude.TIMEOUT_VERIFY)

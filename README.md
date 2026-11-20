@@ -491,6 +491,21 @@ nhận link Google Drive nữa.
   **Tự dọn mỗi Chủ nhật** từ 23h (giờ máy bot, `bot_don_forum_chu_nhat`): xoá bài bot tạo **không có tin mới quá 7 ngày** (build test trong
   tuần giữ lại để xem report / log bug), trừ bài đang dùng; mỗi
   Chủ nhật một lần (ghi `out/bot-don-forum.json`). Bot cần quyền **Manage Threads** trong kênh Forum.
+- `/testvsl <mã app> <version> [tạo|xoá]` — chỉ QA được duyệt (`bot_testvsl`, `rc_firebase_testvsl`). **Tạo**: điều
+  kiện `testvsl` = `app.id == '<app id>' && app.version.contains(['<versionName>'])`, đứng thứ 1 (app id tìm theo
+  package, không cần máy). Version theo tin build; tin build **khác version plan tuần** thì condition chứa **cả version
+  build lẫn version plan** (vd `contains(['1.0.1', '1.1.0'])`) để dev build lại đúng version khỏi tạo lại. Đã có thì đổi sang version này, chỉ khi condition do tài khoản bot tạo và không còn key nào
+  đang gán. **Xoá**: xoá condition + mọi giá trị gán theo nó. Bot chỉ đụng condition do **tài khoản `firebase login`
+  trên máy bot** tạo: người tạo đọc từ lịch sử version Remote Config (người publish version đầu tiên có condition). Condition
+  người khác tạo, hoặc có từ trước 300 version gần nhất, thì không sửa, không xoá. Mọi lần publish đều chặn nếu template
+  đổi ngoài `testvsl`.
+  **Tự nhắc xoá**: QA được duyệt nhắn "test pass" ở kênh project (vd `test pass v1.4.0(14) rls`; "chưa pass" / "fail"
+  không tính) → bot gửi vào kênh `#condition_fb` (không thấy kênh / thiếu quyền thì qa-auto) tin nhắc kèm biểu thức
+  condition, đồng thời xoá mọi bài Forum `qa-builds` của app đó (mọi version, trừ bài build còn trong hàng đợi / đang chạy). Condition của tài khoản bot thì có nút **Xoá
+  testvsl** / **Để sau**. Đang có lượt chạy app đó thì không xoá. Không còn condition thì không nhắc.
+  **Tự tạo khi Check**: QA bấm Check / gõ `/check` → lượt Check (bản release, có đổi RC) cài build xong thì tạo `testvsl`
+  theo version tin build trên Firebase project của APK vừa cài, rồi mới kiểm (`bot_kiem_testvsl.tu_tao`). Không tạo được
+  (condition người khác, còn key gán) thì nhắc như cũ; tin nhắc có thêm nút **Tạo testvsl**.
 Bot thiếu scope `applications.commands` ở server nào thì lệnh không hiện ở server đó (log bot ghi rõ), bot vẫn chạy.
 
 **Forum `qa-builds` — mỗi build một bài** (`DISCORD_FORUM_CHANNEL_ID`, để trống thì như cũ): build mới có SDK →

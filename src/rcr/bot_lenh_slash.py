@@ -14,6 +14,7 @@ that (tin hoi Check, luot verify) van di qua dung duong cua tin build -> chi co 
   release tu App Tester nhu Check (chi QA duoc duyet).
 - /rollout <ma app>: link trang Rollout + link Checklist cua app tren Confluence (`bot_lenh_rollout`).
 - /xoa-bai [ma app] [version] [cu_hon_ngay]: xoa bai build cu trong Forum qa-builds, co nut xac nhan (`bot_lenh_xoa_bai`).
+- /testvsl <ma app> <version> [tao|xoa]: tao condition testvsl dung version / xoa condition tai khoan bot tao (`bot_testvsl`).
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ import discord
 from discord import app_commands
 
 from . import (bot_cong_viec, bot_forum, bot_hang_doi, bot_lenh_rollout, bot_lenh_xoa_bai, bot_nhan_build,
-               build_ma_app)
+               bot_testvsl, build_ma_app)
 from .bot_giao_dien import NUT_HUY, nut as nut_tin
 from . import bot_jira_rest as jira
 from . import bot_verify_jira as v
@@ -90,6 +91,7 @@ def dang_ky(bot) -> None:
 
     bot_lenh_rollout.dang_ky(tree, goi_y_ma)
     bot_lenh_xoa_bai.dang_ky(bot, goi_y_ma)
+    bot_testvsl.dang_ky(bot, goi_y_ma)
 
 
 async def dong_bo(bot) -> None:

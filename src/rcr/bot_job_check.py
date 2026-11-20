@@ -80,15 +80,21 @@ async def cai_va_chay(bot, job: dict, qa, serial: str, ten: str, repo: Path, out
     next_gen = False if tinh_nang else build_ma_app.la_next_gen(job)
     # Checklist Next-Gen khong doi RC, nhung bo tinh nang chay sau no thi co -> van can testvsl.
     chi_checklist = next_gen and not them_tn
+    tao = ""
     if bot_kiem_testvsl.doi_rc_firebase(job, chi_checklist):
+        # QA bam Check / go /check -> tu tao condition theo version tin build (user chot 20/11/2026).
+        tao = await bot_kiem_testvsl.tu_tao(serial, job["package"], job["version"], str(job.get("ma") or ""))
+        tao = f"\n{tao}" if tao else ""
         loi = await bot_kiem_testvsl.loi_testvsl(serial, job["package"])
-        if loi:                          # chua co / sai testvsl: nhac QA tao, khong chay, khong dung Firebase
+        if loi:                          # van thieu / sai testvsl (condition nguoi khac): nhac QA, khong chay
             await bot_forum.dat_nhan(bot, job, bot_forum.CAN_XEM)
-            await qa.edit(content=tin_goc.noi(f"{dau}\n📲 Đã cài{ghi}.", bot_kiem_testvsl.tin_nhac(job, loi, bot.duyet)),
-                          view=nut(("check", "Chạy lại", XANH), ("bo", "Bỏ qua", XAM), msg_id=qa.id))
+            await qa.edit(content=tin_goc.noi(f"{dau}\n📲 Đã cài{ghi}.{tao}", bot_kiem_testvsl.tin_nhac(job, loi, bot.duyet)),
+                          view=nut(("check", "Chạy lại", XANH), ("bo", "Bỏ qua", XAM),
+                                   *([("taotestvsl", "Tạo testvsl", XAM)] if bot_kiem_testvsl.thieu_condition(loi) else []),
+                                   msg_id=qa.id))
             return False
     theo_plan = f"\n🗓️ Chạy thêm theo plan tuần: {', '.join(job['tinh_nang_plan'])}" if job.get("tinh_nang_plan") else ""
-    await qa.edit(content=f"{dau}\n📲 Đã cài{ghi}. Đang chạy /rc-check…{theo_plan}")
+    await qa.edit(content=f"{dau}\n📲 Đã cài{ghi}. Đang chạy /rc-check…{tao}{theo_plan}")
     timeout = bot_chay_claude.TIMEOUT_NEXT_GEN if next_gen else bot_chay_claude.TIMEOUT_BO_TC
     bat_dau = time.time()
     bot_dung_luot.danh_dau_pha_rc(job, chi_checklist)  # Dung tu day -> phai don RC testvsl
