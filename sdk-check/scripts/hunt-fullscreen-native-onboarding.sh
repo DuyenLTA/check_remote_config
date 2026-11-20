@@ -3,8 +3,9 @@ export MSYS_NO_PATHCONV=1  # Git Bash: keep /sdcard/... paths for adb as-is
 # HT-09 / HV-06(native): repeat new-user runs until the onboarding full-screen native actually fills,
 # then screenshot it, dump its views and test Back. Fill is low on test devices, so try up to N runs.
 # usage: hunt-fullscreen-native-onboarding.sh <package> <out-dir> [max-runs=4]
-P=$1; O=${2:-.}; N=${3:-4}; cd "$O" || exit 1
+# Resolve the script dir BEFORE cd: with a relative $0 (bash sdk-check/scripts/...) it breaks after cd.
 D=$(cd "$(dirname "$0")" && pwd)
+P=$1; O=${2:-.}; N=${3:-4}; cd "$O" || exit 1
 top() { adb shell dumpsys activity activities | grep -m1 -E "topResumedActivity|mResumedActivity" | grep -oE '/[a-zA-Z.0-9_$]+' | tail -1; }
 for run in $(seq 1 $N); do
   :

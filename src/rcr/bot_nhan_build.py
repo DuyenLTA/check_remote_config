@@ -14,7 +14,7 @@ from pathlib import Path
 import discord
 
 from . import (bot_cong_viec, bot_dev_day_lai, bot_forum, bot_jira_rest, bot_job_verify, bot_kenh_project,
-               build_ma_app)
+               bot_testvsl, build_ma_app)
 from . import bot_tin_goc as tin_goc
 from .bot_giao_dien import GIU_KHI_HOI_LAI, NUT_HOI, noi_dung, nut
 
@@ -39,7 +39,9 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
         return
     # QA nhan o kenh project ("test pass v1.4.0(14)... rls") khong phai tin bao build: khong hoi
     # (user chot 30/10/2026 - tin bao rls AIP805 bi nhan nham la build). QA gui lai build thi gui o qa-auto.
+    # Tin do bao "test pass" thi nhac xoa condition testvsl o qa-auto (user chot 20/11/2026, `bot_testvsl`).
     if m.channel.id != bot.kenh_qa and not m.webhook_id and bot._duoc_duyet(m.author):
+        await bot_testvsl.nhan_tin_pass(bot, m, ma_kenh, out)
         return
     chu = noi_dung(m)
     tin = build_ma_app.tach(chu, ma_kenh)

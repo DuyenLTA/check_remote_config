@@ -1,7 +1,7 @@
 """Report HTML tu chua cho checklist SDK Next-Gen (khung + style cua skill goc).
 
 Bo cuc theo `sdk-check/WORKFLOW.md`: header -> the loc -> khoi "Can bao dev"
-(chi dong Sai) -> danh sach dong gap theo muc -> "Ngoai pham vi / khong ap dung"
+(chi dong Sai) -> danh sach dong gap theo muc -> "Tool khong lam duoc" + "Khong ap dung" (tach rieng)
 -> footer luot chay + trang thai may. Dong con DO_TAY hien rieng "Con do tay" de
 nguoi doc thay ngay report chua xong.
 """
@@ -15,7 +15,7 @@ from .ma_app_theo_package import gan_ma
 from .report_tab_audit import boc
 from .sdk_nextgen_buoc_do_tay import BUOC
 from .sdk_nextgen_gop_luot import lech
-from .sdk_nextgen_ket import DO_TAY, KHONG_AP_DUNG, KHOP, SAI
+from .sdk_nextgen_ket import DO_TAY, KHONG_AP_DUNG, KHOP, SAI, khong_lam_duoc
 
 TEMPLATE = Path(__file__).resolve().parents[2] / "sdk-check" / "assets" / "report-style-and-filter-script.html"
 NHAN = {KHOP: ("pass", "Khớp"), SAI: ("fail", "Sai"), DO_TAY: ("todo", "Đo tay")}
@@ -99,17 +99,24 @@ def render(data: dict) -> str:
             f'<span>Package <b>{_e(m["package"])}</b></span><span>SDK FO <b>{_e(m.get("sdk") or "?")}</b></span>'
             f'<span>Máy <b>{_e(m.get("serial") or "?")}</b></span><span>Chấm lúc <b>{_e(m.get("cham_luc", ""))}</b></span>'
             f'<span>Mục <b>{_e(", ".join(m.get("muc") or []))}</b></span></div></header>')
+    ngoai = [r for r in rs if r["ket"] == KHONG_AP_DUNG]
+    ko_lam = [r for r in ngoai if khong_lam_duoc(r)]
+    na = [r for r in ngoai if not khong_lam_duoc(r)]
     body = [f'<div class="cards">{the}</div>']
+    if ngoai:
+        body.append(f'<p class="k">Ngoài các dòng trên: <b>{len(na)}</b> không áp dụng (app không có) · '
+                    f'<b>{len(ko_lam)}</b> tool không làm được (QA còn phải tự làm).</p>')
     if sai:
         body.append('<section class="todo"><h2>Cần báo dev</h2><ol>' + "".join(
             f'<li><b>{_e(r["ma"])}</b> {_e(r["ten"])}: {_e(r["ly_do"])}</li>' for r in sai) + "</ol></section>")
     body.append(_muc_lech(data))
     for ten, ds in nhom.items():
         body.append(f'<section class="sec"><h2>{_e(ten)}</h2>' + "".join(map(_dong, ds)) + "</section>")
-    ngoai = [r for r in rs if r["ket"] == KHONG_AP_DUNG]
-    if ngoai:
-        body.append('<section class="sec"><h2>Ngoài phạm vi / không áp dụng</h2><ul>' + "".join(
-            f'<li><b>{_e(r["ma"])}</b> {_e(r["ten"])}: {_e(r["ly_do"])}</li>' for r in ngoai) + "</ul></section>")
+    for tieu_de, ds in ((f"Tool không làm được — QA còn phải tự làm ({len(ko_lam)})", ko_lam),
+                        (f"Không áp dụng — app không có ({len(na)})", na)):
+        if ds:
+            body.append(f'<section class="sec"><h2>{_e(tieu_de)}</h2><ul>' + "".join(
+                f'<li><b>{_e(r["ma"])}</b> {_e(r["ten"])}: {_e(r["ly_do"])}</li>' for r in ds) + "</ul></section>")
     truoc = data.get("luot_truoc") or []
     body.append('<footer class="foot">' + (f'<p>Gộp với lượt cũ cùng build: {_e(", ".join(_ten_luot(t["thu_muc"]) for t in truoc))}</p>'
                                          if truoc else "") + '<p>Lượt chạy: '+ _e(", ".join(f"{k} (ad_click {v})" for k, v in clicks.items()))

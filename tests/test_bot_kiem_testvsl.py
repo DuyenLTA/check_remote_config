@@ -59,7 +59,7 @@ def test_chi_kiem_ban_release_nhanh_bo_tc():
 
 def test_tin_nhac_tag_nguoi_bam_va_noi_ro_khong_tu_sua():
     t = k.tin_nhac({"ma": "AIP920", "version": "1.6.0 (7)", "nguoi_duyet": 42}, "chưa có điều kiện", {1, 2})
-    assert t.count("<@") == 1 and "<@42>" in t and "thứ 1" in t and "không tự tạo hay sửa" in t
+    assert t.count("<@") == 1 and "<@42>" in t and "thứ 1" in t and "Tạo testvsl" in t and "người khác tạo thì bot không sửa" in t
     assert "<@1>" in k.tin_nhac({"ma": "A", "version": "1"}, "x", {1})       # luot verify tu xep: tag QA duyet
 
 
@@ -87,7 +87,7 @@ def test_thieu_testvsl_thi_khong_chay_claude_va_nhac_qa(tmp_path, monkeypatch):
     assert asyncio.run(bot._cai_va_chay(job, msg, "S1", "Pixel")) is False
     assert msg.replies == []                                  # nhac QA ghi tren tin goc, khong tra loi tin moi
     assert "<@42>" in msg.edits[-1]["content"] and "testvsl" in msg.edits[-1]["content"] and "kq" not in job
-    assert [b.custom_id for b in msg.edits[-1]["view"].children] == ["rcr:check:5", "rcr:bo:5"]
+    assert [b.custom_id for b in msg.edits[-1]["view"].children] == ["rcr:check:5", "rcr:bo:5", "rcr:taotestvsl:5"]
 
 
 def test_dang_nhap_het_han_thi_khong_nho_tao_testvsl():

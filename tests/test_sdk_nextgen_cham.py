@@ -439,6 +439,21 @@ def test_aconfig_feature_flags_do_lop_android16_khong_tinh_la_thieu_lop():
     assert len(ra) == 1 and "AdView" in ra[0]
 
 
+def test_pangle_do_api_an_android_khong_tinh_la_thieu_lop():
+    """LingoSpeak 2.2.0 (19/11/2026): com.pgl.ssdk do LoadedApk qua JNI, tu catch, in System.err muc W."""
+    from rcr.sdk_nextgen_events import loi_thieu_lop
+    log = "\n".join([
+        "11-19 15:12:44.957  1693  1756 I ActivityManager: Start proc 3037:com.abc.app/u0a3142 for activity",
+        '11-19 15:12:58.929  3037  3502 W System.err: java.lang.NoSuchMethodError: no non-static method '
+        '"Landroid/app/LoadedApk;.createOrUpdateClassLoaderLocked(Ljava/util/List;)V"',
+        "11-19 15:12:58.929  3037  3502 W System.err: \tat com.pgl.ssdk.ces.a.meta(Native Method)",
+        "11-19 15:13:00.000  3037  3037 W System.err: java.lang.NoSuchMethodError: No virtual method "
+        "loadAd(Lcom/google/android/gms/ads/AdRequest;)V",
+    ])
+    ra = loi_thieu_lop(log, "com.abc.app")
+    assert len(ra) == 1 and "loadAd" in ra[0]
+
+
 def test_preload_native_no_fill_roi_man_xin_lai_khong_tinh_la_preload_cham():
     # Linguza 2.5.0 (13/11/2026): OB4 xin native Question no fill, Question xin lai, ad ve +4.4s -> khong phai preload cham
     ds = [_ev("track_ad_request", 1.0, "222", "native"),
