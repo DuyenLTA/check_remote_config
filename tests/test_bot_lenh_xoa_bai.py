@@ -70,6 +70,8 @@ def test_don_chu_nhat_chi_xoa_bai_cu_hon_7_ngay_tru_bai_dang_chay():
     assert not d.toi_luot(datetime(2026, 11, 14, 23, 30), "")       # thu bay
     a, b = _bai("AIP893 · 2.6.0 (23)", 10), _bai("AIP916 · 1.3.0 (5)", 9)
     moi = _bai("AIP900 · 1.0.0 (1)", 2)                              # build trong tuan: giu
+    # `don` do tuoi bai theo gio that, khong theo BAY_GIO: tin cuoi phai tinh tu hom nay, khong thi test hong sau 18/11
+    moi.last_message_id = discord.utils.time_snowflake(datetime.now(timezone.utc) - timedelta(days=2))
     forum = SimpleNamespace(threads=[a, b, moi], archived_threads=lambda limit=None: _rong())
     bot = SimpleNamespace(kenh_forum=99, get_channel=lambda i: forum, user=SimpleNamespace(id=BOT),
                           q=SimpleNamespace(jobs=[{"msg_id": a.id}], tin_cua=lambda m: None))

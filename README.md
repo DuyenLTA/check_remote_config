@@ -491,6 +491,9 @@ nhận link Google Drive nữa.
   **Tự dọn mỗi Chủ nhật** từ 23h (giờ máy bot, `bot_don_forum_chu_nhat`): xoá bài bot tạo **không có tin mới quá 7 ngày** (build test trong
   tuần giữ lại để xem report / log bug), trừ bài đang dùng; mỗi
   Chủ nhật một lần (ghi `out/bot-don-forum.json`). Bot cần quyền **Manage Threads** trong kênh Forum.
+  **Tự dọn theo plan tuần** mỗi giờ (`bot_don_forum_theo_plan`): tab tuần mới nhất đã bắt đầu, dòng app có cột
+  "Trạng thái" = `Released` → xoá bài bot tạo của app đó có version **không mới hơn** version đã release (bài version
+  mới hơn và bài đang dùng giữ lại). Plan chưa cấu hình / tải hỏng thì không xoá gì.
 - `/testvsl <mã app> <version> [tạo|xoá]` — chỉ QA được duyệt (`bot_testvsl`, `rc_firebase_testvsl`). **Tạo**: điều
   kiện `testvsl` = `app.id == '<app id>' && app.version.contains(['<versionName>'])`, đứng thứ 1 (app id tìm theo
   package, không cần máy). Version theo tin build; tin build **khác version plan tuần** thì condition chứa **cả version
