@@ -102,6 +102,29 @@ com.aiphotogenerator.aivideomaker.photoslideshow:
   # Push khi xong (app o nen): "Your creation is ready" / "Tap to view your result." (khuon chung). App con ban them
   # push "✨ Your photo is almost here" / "Tap to continue your track." - KHONG phai push xong, khong khop.
 
+com.aiart.aivideogenerator.aiphotocreator.phototovideo:
+  # AIP919 GeniAI / AI Photo Video Maker 2.1.0 (18) do tren Pixel 7 Android 15 21/11/2026: app Compose - moi man chung
+  # AIP919AIPhotoVideoMakerMainActivity -> nhan man theo CHU. Thanh duoi chi co 2 tab "Image Studio" / "Video Studio"
+  # (khong co tab Home: Home = tab Image Studio). Home mo ra da cuon qua the "Text to Image" / "Image to Image".
+  # Icon History goc tren phai la View NAF (khong chu, khong desc) -> `nut_ao`. Man cho: "<n>%" + chu buoc
+  # ("Masking & Layout…"). History: o co nhan "Image"/"Video" + "New". Ket qua: "Result", "Back to Home", "Download".
+  tab_home: "^Image Studio$"
+  tab_anh: "^Image Studio$"
+  tab_video: "^Video Studio$"
+  nut_ao:
+    - desc: "History"
+      khung: [807, 139, 923, 271]
+      khi_chu: "^Explore styles$"
+  man_theo_chu:
+    ProcessingScreen: "^\\d{1,3}%$|^Taking you to Home in"
+    ResultScreen: "^Result$"
+    HistoryScreen: "^History$"
+  t2i:
+    mo: "^Text to Image$"
+    o: "^A fox astronaut"
+    style_duoi: "^Choose a style$"
+    nut: "^Generate$"
+  het_luot: "Today.s Free limit Reached|Daily [Ll]imit [Rr]eached"
 photoslideshow.videoslideshow.addimage.photogen:
   # AIP927 Pictifaze 1.1.0 do tay tren Pixel 7 Android 15 18/11/2026: app KHONG ban goi (paywall_placement=off) va CHI
   # tao VIDEO (Home 'Slideshow' 5 template deu VIDEO, khong co T2I/I2I/prompt; tab SLIDESHOW la trinh dung offline).

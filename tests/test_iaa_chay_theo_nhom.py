@@ -576,3 +576,72 @@ def test_tap_vua_hien_chi_bam_khi_the_carousel_vua_xoay_toi(monkeypatch):
     st["i"], st["tap"] = 0, []
     assert asyncio.run(rating_cong_thuc._mot_buoc(C(), "S", P, {"tap": b["tap"]}, []))
     assert st["tap"] == [1]                           # khong co vua_hien: bam ngay nhu cu
+
+
+def test_tap_sau_chu_vao_nham_the_thi_back_bam_lai(monkeypatch):
+    """Hypix AIP933 Samsung A13 20/11/2026: `vua_hien` van trung luc carousel doi the -> vao I2I thay T2I.
+    `sau_chu`: bam xong chua thay chu man dich thi BACK, cho the hien lai roi bam lai."""
+    import asyncio
+    from rcr import device_app, rating_cong_thuc
+    from rcr.ui_dump import Bounds, DeviceNode
+    P = "p.app"
+
+    def nut(chu):
+        return DeviceNode("0", "", "android.widget.TextView", chu, "", Bounds(110, 663, 527, 822),
+                          True, True, True, P, None, 0)
+    the, i2i, t2i = nut("Text to Image\nGenerate"), nut("Image to Image"), nut("Text to Image")
+    # bam lan 1 -> vao I2I (3 dump), BACK -> the hien lai -> bam lan 2 -> vao T2I
+    chuoi = [[the], [i2i], [i2i], [i2i], [the], [t2i]]
+    st = {"i": 0, "tap": [], "back": 0}
+
+    async def nodes(c, s, p):
+        st["i"] += 1
+        return chuoi[min(st["i"] - 1, len(chuoi) - 1)]
+
+    async def tap(c, s, x, y):
+        st["tap"].append(st["i"])
+
+    async def focus(c, s):
+        return P, "MainActivity"
+
+    async def ngu(*_a):
+        return None
+
+    class C:
+        async def shell(self, serial, *a):
+            if "KEYCODE_BACK" in a:
+                st["back"] += 1
+            return ("Physical size: 1080x2400", "", 0)
+    monkeypatch.setattr(rating_cong_thuc, "_nodes", nodes)
+    monkeypatch.setattr(device_app, "tap", tap)
+    monkeypatch.setattr(device_app, "focus", focus)
+    monkeypatch.setattr(asyncio, "sleep", ngu)
+    b = {"tap": r"^Text to Image\sGenerate$", "sau_chu": "^Text to Image$"}
+    assert asyncio.run(rating_cong_thuc._mot_buoc(C(), "S", P, b, []))
+    assert st["tap"] == [1, 5] and st["back"] == 1
+
+
+def test_vuot_xuong_keo_ve_dau_trang_vuot_len_cuon_len(monkeypatch):
+    """Home AIP919 mo ra da cuon qua the I2I/I2V: `vuot_xuong` keo 30% -> 80% chieu cao; `vuot_len` giu 60% -> 30%."""
+    import asyncio
+    from rcr import iaa_lai
+
+    lenh: list = []
+
+    class May:
+        async def shell(self, _s, *a, **_k):
+            lenh.append(a)
+            return ("Physical size: 1000x2000\n" if "wm" in a else "", "", 0)
+
+    async def ngu(_s):
+        return None
+
+    monkeypatch.setattr(iaa_lai.asyncio, "sleep", ngu)
+    log: list = []
+    assert asyncio.run(iaa_lai.buoc(May(), "S", "p", {"vuot_xuong": 2}, log))
+    vuot = [a for a in lenh if "swipe" in a]
+    assert vuot == [("input", "swipe", "500", "600", "500", "1600", "400")] * 2
+    assert log[-1] == "vuốt xuống ×2"
+    lenh.clear()
+    assert asyncio.run(iaa_lai.buoc(May(), "S", "p", {"vuot_len": 1}, log))
+    assert [a for a in lenh if "swipe" in a] == [("input", "swipe", "500", "1200", "500", "600", "400")]

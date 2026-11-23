@@ -195,6 +195,8 @@ def _shortcut(text, recs):
     if not r:
         return None
     if SHORTCUT_KHONG_RE.search(text):
+        if r["co_rating"] is None:          # dumpsys shortcut bi che (Samsung) -> khong ket luan, de do tay
+            return None
         return out(FAIL if r["co_rating"] else PASS, f"shortcut của app: {', '.join(r['shortcuts']) or 'không có'}",
                    r["shortcuts"])
     if MAN_RATING_RE.search(text) and r.get("mo"):

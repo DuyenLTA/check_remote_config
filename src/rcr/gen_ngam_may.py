@@ -28,6 +28,10 @@ NHAT_KY_TOAST: list[tuple[float, bool]] = []
 # `nhin` dat ten man AO (vd "ProcessingScreen") theo chu tren man, de cac regex man_cho / man_ket_qua / man_lich_su
 # van dung nhu app nhieu activity. Rong = app nhieu activity, giu ten activity that.
 MAN_THEO_CHU: dict[str, str] = {}
+# Nut khong chu / khong desc (uiautomator NAF): CLI nap `nut_ao` cua cong thuc vao day -> `nhin` them node ao co
+# content-desc = `desc` tai `khung` [l, t, r, b] khi man co chu `khi_chu`. AIP919 (21/11/2026): icon History o goc tren
+# phai Home la View NAF khong chu, cac buoc mo History tim theo desc "History".
+NUT_AO: list[dict] = []
 # Regex chu nut thanh tab duoi (tab_home|tab_anh|tab_video): man Compose khong khop man nao ma cung khong co thanh tab
 # (Text to Image, Image to Image...) -> "ManKhac", de ve_main BACK thay vi coi la Home.
 THANH_TAB: list[str] = []
@@ -146,10 +150,23 @@ async def nhin(client, serial: str, package: str) -> Man:
             await asyncio.sleep(0.5 + lan)
     pkg, act = await device_app.focus(client, serial)
     m = Man(t, pkg, (act or "").rsplit(".", 1)[-1], ui_dump.app_nodes(ui_dump.parse_dump(xml), package))
+    them_nut_ao(m, package)
     m.act = ten_man_ao(m, package)
     if MAU_TOAST:
         NHAT_KY_TOAST.append((t, m.tim(MAU_TOAST[0]) is not None))
     return m
+
+
+def them_nut_ao(m: Man, package: str) -> None:
+    """Them node ao cho nut NAF da khai trong `NUT_AO` (chi khi man dang co chu `khi_chu` va chua co node desc do)."""
+    for nut in NUT_AO:
+        if m.tim(f"^{re.escape(nut['desc'])}$") is not None:
+            continue
+        if not any(re.search(nut["khi_chu"], n.text or "") for n in m.nodes if not n.bounds.empty):
+            continue
+        l, t, r, b = (int(v) for v in nut["khung"])
+        m.nodes.append(ui_dump.DeviceNode(f"ao.{nut['desc']}", "", "android.view.View", "", nut["desc"],
+                                          ui_dump.Bounds(l, t, r, b), True, True, True, package, None, 0))
 
 
 def cum_toast(tu: float) -> list[tuple[float, float, float, float]]:

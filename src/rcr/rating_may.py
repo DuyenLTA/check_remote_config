@@ -98,6 +98,14 @@ def parse_shortcut(text: str, package: str) -> list[dict]:
     return ra
 
 
+def shortcut_rating_sdk(package: str) -> dict:
+    """Shortcut "Rate" ma SDK rating (com.apero.rating) tu dang ky: id `vsl_rating_shortcut`, intent = VslRatingActivity
+    (exported) + action `com.apero.rating.action.RATING`, khong extra - doc tu dex AIP933 (20/11/2026)."""
+    return {"id": "vsl_rating_shortcut", "nhan": "",
+            "intent": f"act=com.apero.rating.action.RATING cmp={package}/"
+                      "com.apero.rating.internal.features.activity.rating.VslRatingActivity }"}
+
+
 def la_shortcut_rating(s: dict) -> bool:
     return "rating" in s["id"].lower() or "RATING" in s["intent"] or s["nhan"].lower() in ("rate", "rating")
 
@@ -105,6 +113,22 @@ def la_shortcut_rating(s: dict) -> bool:
 async def shortcuts(client, serial: str, package: str) -> list[dict]:
     out, _, _ = await client.shell(serial, "dumpsys", "shortcut")
     return parse_shortcut(out, package)
+
+
+def parse_icon_shortcut(text: str) -> list[str]:
+    """Ten drawable icon tung shortcut trong `cmd shortcut get-shortcuts` (`iconRes=…[drawable/ten]`)."""
+    return re.findall(r"iconRes=\d+\[(?:drawable|mipmap)/([^\]]+)\]", text or "")
+
+
+async def icon_shortcuts(client, serial: str, package: str) -> list[str]:
+    """Samsung One UI che id / nhan / intent thanh '***' ca o `dumpsys shortcut` lan `cmd shortcut`, nhung van de lo
+    ten icon -> shortcut Rate cua SDK rating nhan duoc qua icon `vsl_rating_ic_shortcut_star` (A13 Hypix 23/11/2026)."""
+    out, _, _ = await client.shell(serial, "cmd", "shortcut", "get-shortcuts", "--flags", "31", package)
+    return parse_icon_shortcut(out)
+
+
+def la_icon_rating(ten: str) -> bool:
+    return "rating" in ten.lower()
 
 
 # ---- do nut X bang khung chup lien tuc ----

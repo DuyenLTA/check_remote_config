@@ -122,6 +122,7 @@ def chay(a) -> dict:
     # App Compose (moi man chung mot activity): nhan man cho / ket qua / History theo chu, khong theo activity.
     gen_ngam_may.MAN_THEO_CHU.clear()
     gen_ngam_may.MAN_THEO_CHU.update(ct.get("man_theo_chu") or {})
+    gen_ngam_may.NUT_AO[:] = list(ct.get("nut_ao") or [])
     gen_ngam_may.THANH_TAB[:] = ["|".join(ct[k] for k in ("tab_home", "tab_anh", "tab_video"))] \
         if ct.get("man_theo_chu") else []
     asyncio.run(client.shell(a.serial, "logcat", "-G", "16M"))

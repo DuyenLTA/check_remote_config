@@ -411,6 +411,17 @@ async def _shortcut(client, serial: str, package: str, mo: bool) -> dict:
     ds = await rating_may.shortcuts(client, serial, package)
     rating = [s for s in ds if rating_may.la_shortcut_rating(s)]
     ket = {"shortcuts": [s["nhan"] or s["id"] for s in ds], "co_rating": bool(rating)}
+    from . import iaa_lai
+    if not rating and await iaa_lai.shortcut_bi_che(client, serial, package):
+        # Samsung One UI (A13 Hypix AIP933 20/11/2026): dumpsys shortcut che id / nhan / intent thanh "***" va popup
+        # launcher khong hien shortcut dong -> khong biet con option Rating khong (co_rating=None: cham tay). Mo bang
+        # dung intent ma SDK rating dang ky cho shortcut (VslRatingActivity + action RATING, khong extra).
+        ket.update({"co_rating": None, "che": True})
+        # Ten icon van lo qua `cmd shortcut`: co icon rating -> con option Rating, khong co -> het (doc duoc ket luan).
+        icon = await rating_may.icon_shortcuts(client, serial, package)
+        if icon:
+            ket.update({"shortcuts": icon, "co_rating": any(rating_may.la_icon_rating(i) for i in icon)})
+        rating = [rating_may.shortcut_rating_sdk(package)] if ket["co_rating"] is not False else []
     if mo and rating:
         m = re.search(r"act=(\S+).*?cmp=(\S+)", rating[0]["intent"])
         if m:

@@ -376,3 +376,74 @@ def test_hop_chan_store_cua_rom_oppo_bam_cancel():
     nut = rating_may.nut_huy_chan_rom(parse_dump(xml), "com.daemon.shelper")
     assert nut is not None and nut.bounds.center == (360, 931)
     assert rating_may.nut_huy_chan_rom(parse_dump(xml), "com.android.vending") is None
+
+
+def test_shortcut_bi_che_samsung_mo_bang_intent_sdk(monkeypatch):
+    """Samsung A13 Hypix AIP933 20/11/2026: dumpsys shortcut che id / nhan / intent thanh '***' -> tool mo shortcut
+    Rate bang dung intent SDK rating dang ky (VslRatingActivity + action RATING); dong 'khong con option Rating'
+    khong ket luan duoc (de do tay)."""
+    import asyncio
+    dump = """  Package: com.x
+      ShortcutInfo {id=***, flags=0x85 [DynIc-rStr]
+        packageName=com.x
+        shortLabel=***, resId=0[null]
+        intents=size:1
+  Package: com.y
+"""
+    goi = []
+
+    class C:
+        async def shell(self, serial, *a):
+            goi.append(a)
+            return (dump if a[:1] == ("dumpsys",) else "", "", 0)
+
+    async def act(c, s):
+        return "com.x", "com.apero.rating.internal.features.activity.rating.VslRatingActivity"
+
+    async def ngu(*_a):
+        return None
+    monkeypatch.setattr(act_rating, "_act", act)
+    monkeypatch.setattr(asyncio, "sleep", ngu)
+    ket = asyncio.run(act_rating._shortcut(C(), "S", "com.x", True))
+    am = next(a for a in goi if a[:2] == ("am", "start"))
+    assert "com.apero.rating.action.RATING" in am
+    assert "com.x/com.apero.rating.internal.features.activity.rating.VslRatingActivity" in am
+    assert ket["co_rating"] is None and ket["mo"]
+    d = _drive({"viec": "shortcut", **ket, "su_kien": []})
+    assert assert_rating.cham("Shortcut không còn option Rating.", d) is None or \
+        assert_rating.cham("Shortcut không còn option Rating.", d)["verdict"] not in ("PASS", "FAIL")
+
+
+def test_shortcut_bi_che_samsung_doc_icon_cmd_shortcut(monkeypatch):
+    """Samsung A13 Hypix AIP933 23/11/2026: id / nhan bi che nhung `cmd shortcut get-shortcuts` con ten icon ->
+    con icon vsl_rating_ic_shortcut_star = con option Rating; het icon do = shortcut khong con option Rating (PASS)."""
+    import asyncio
+    dump = """  Package: com.x
+      ShortcutInfo {id=***, flags=0x85 [DynIc-rStr]
+        packageName=com.x
+        shortLabel=***, resId=0[null]
+"""
+
+    def cmd(icon):
+        return "".join(f"ShortcutInfo {{id=***, flags=0x85\n  iconRes=213123{i}[drawable/{t}], bitmapPath=null}}\n"
+                       for i, t in enumerate(icon))
+
+    class C:
+        def __init__(self, icon):
+            self.icon = icon
+
+        async def shell(self, serial, *a):
+            if a[:1] == ("dumpsys",):
+                return dump, "", 0
+            if a[:2] == ("cmd", "shortcut"):
+                return cmd(self.icon), "", 0
+            return "", "", 0
+
+    co = asyncio.run(act_rating._shortcut(C(["ic_shortcut_create_image", "vsl_rating_ic_shortcut_star"]), "S",
+                                          "com.x", False))
+    assert co["co_rating"] is True
+    het = asyncio.run(act_rating._shortcut(C(["ic_shortcut_create_image", "ic_shortcut_uninstall"]), "S", "com.x",
+                                           False))
+    assert het["co_rating"] is False and het["shortcuts"] == ["ic_shortcut_create_image", "ic_shortcut_uninstall"]
+    d = _drive({"viec": "shortcut", **het, "su_kien": []})
+    assert assert_rating.cham("Shortcut không còn option Rating.", d)["verdict"] == "PASS"

@@ -182,6 +182,7 @@ khuon:
           - tap: "^AI Photos$"
           - tap: '^Text to Image\sGenerate$'
             vua_hien: true                         # carousel tu xoay ~4s
+            sau_chu: "^Text to Image$"             # van trung luc doi the (Samsung A13) -> vao I2I thi BACK bam lai
           - dong_ad: 6
           - cho_chu: "^Text to Image$"
           - cho: 8
@@ -1163,6 +1164,121 @@ khuon:
           - cho: 3
           - back: 2
 
+  # App gen anh/video "GeniAI" (muc 3 sheet KT: 501_home_banner, inter_back, reward_img_vid, inter_style,
+  # native_result_img_vid, native_loading, native_reason_uninstall, inter_uninstall). Do 20-21/11/2026 tren Pixel 7
+  # 29301FDH2006K7: AIP919 AI Photo Video Maker 2.1.0. Compose, moi man la AIP919AIPhotoVideoMakerMainActivity.
+  # Home = tab duoi "Image Studio" (the "Text to Image" / "Image to Image") va "Video Studio" (the "Image to Video"),
+  # moi tab co "Explore styles" + chip "All" + luoi the style (bam -> inter style -> photopicker; BACK o photopicker
+  # ve thang Home). Man I2I / I2V: "Tap to upload a photo" -> photopicker -> o "e.g. Turn me into..." -> "Generate"
+  # -> sheet "Watch Ads (0/2)" -> loading "<so>%" -> gen NGAM. History = icon goc tren phai khong chu.
+  # Free 1 luot gen anh + 1 video/ngay ("Today's Free limit Reached") -> rc_them noi han muc; man cho anh dai 60s de
+  # result mo thang tu man cho (native result).
+  studio_style:
+    nhan_dien: "^Explore styles$"
+    rc_them:
+      free_image_generation_limit_per_day: "50"
+      free_video_generation_limit_per_day: "50"
+      generating_wait_image_seconds: "60"
+    doan:
+      - ten: Home (banner reload 10s, preload inter back/style)
+        buoc:
+          - ve_chu: "^Explore styles$"
+            tab: "^Image Studio$"
+            toi_da: 180
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - cho: 35
+      - ten: Image to Image vào rồi back (inter back)
+        buoc:
+          - ve_chu: "^Explore styles$"
+            tab: "^Image Studio$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - vuot_xuong: 2               # Home mo ra da cuon qua the I2I / I2V
+          - tap: "^Image to Image$"
+          - cho_chu: "^Tap to upload a photo$"
+          - cho: 4
+          - back: 1
+          - dong_ad: 8
+          - cho: 4
+      - ten: Image to Image gen (upload, reward, loading, result)
+        buoc:
+          - ve_chu: "^Explore styles$"
+            tab: "^Image Studio$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - vuot_xuong: 2               # Home mo ra da cuon qua the I2I / I2V
+          - tap: "^Image to Image$"
+          - dong_ad: 6
+          - cho_chu: "^Tap to upload a photo$"
+          - cho: 3
+          - tap: "^Tap to upload a photo$"
+          - chon_anh: true
+          - tap_neu_co: "^Confirm( \\(\\d+/\\d+\\))?$"
+          - cho: 4
+          - nhap: "a cat in space"
+            o: "^e\\.g\\. Turn me into"   # KHONG khop nhan "Describe the change" (bam nhan -> BACK roi man I2I)
+          - tap: "^Generate$"
+          - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+            tap_tai: [0.5, 0.932]
+            toi_chu: "^\\d{1,3}%$"
+            dung_neu: "(Daily Free limit Reached|Daily Limit Reached|Today.s Free limit Reached)"
+            toi_da: 300
+          - cho_chu: "^(Result|Back to Home|Explore styles)$"
+            toi_da: 120
+          - cho: 10
+      - ten: Image to Video vào upload ảnh rồi back (inter back)
+        buoc:
+          - ve_chu: "^Explore styles$"
+            tab: "^Image Studio$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap: "^Video Studio$"
+          - cho: 2
+          - vuot_xuong: 2
+          - tap: "^Image to Video$"
+          - dong_ad: 6
+          - cho_chu: "^Tap to upload a photo$"
+          - tap: "^Tap to upload a photo$"
+          - chon_anh: true
+          - tap_neu_co: "^Confirm( \\(\\d+/\\d+\\))?$"
+          - cho: 5
+          - back: 1
+          - dong_ad: 8
+          - cho: 4
+      - ten: Style ở Home (inter style 1 lần/session, back từ upload không inter back)
+        buoc:
+          - mo_lai: "MainActivity"      # session moi: inter style 1 lan/session
+          - ve_chu: "^Explore styles$"
+            tab: "^Image Studio$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap_duoi: "^All$"
+          - dong_ad: 8
+          - cho_man: "photopicker"
+            toi_da: 40
+          - cho: 3
+          - back: 1
+          - dong_ad: 8
+          - cho: 4
+      - ten: Style lần 2 cùng session (không inter style, back có inter back)
+        buoc:
+          - ve_chu: "^Explore styles$"
+            tab: "^Image Studio$"
+          - dong_neu_co: "^(Close|Close sheet)$"
+          - tap_duoi: "^All$"
+            thu: 2
+          - dong_ad: 8
+          - cho: 4
+          - back: 1
+          - dong_ad: 8
+          - cho: 4
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+            nhan: "^(Uninstall|Uninstall app|Gỡ cài đặt)$"
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - dong_ad: 6
+          - cho: 4
+          - back: 3
+
 # Ghim khuon (khong bat buoc - app chua khai tool tu nhan khuon tren Home).
 com.aiphotogenerator.aivideomaker.photoslideshow: {khuon: ai_photo}     # AIP893
 com.ai.aiimage.aivideogenerator: {khuon: ai_photo}                      # AIP885
@@ -1173,3 +1289,4 @@ photomaker.image.editor.ai: {khuon: creapix}                         # AIP916 Cr
 aichat.photogenarator.chatbot.video: {khuon: homova}                 # AIP508 Homova (Home co ca "Trending Now" cua khuon ai_photo)
 aitutor.grammar.languagetutor.iletslesson.learninglanguage: {khuon: ielts_moss}  # AIP932 AI Tutor IELTS
 com.ai.videogenerator.photocreator.aiart: {khuon: hypix}                  # AIP933 Hypix (Home co "Text to Image Generate" cua khuon ai_photo, chu xuong dong)
+com.aiart.aivideogenerator.aiphotocreator.phototovideo: {khuon: studio_style}   # AIP919 GeniAI (Home tab Image/Video Studio, "Explore styles")

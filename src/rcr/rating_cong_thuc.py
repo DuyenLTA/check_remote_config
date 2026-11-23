@@ -320,9 +320,30 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
             if node:
                 log.append(f"bấm {node.text or node.content_desc or node.label}")
                 await _bam(client, serial, node)
-                return True
+                if not buoc.get("sau_chu") or await _da_toi_chu(client, serial, package, buoc["sau_chu"]):
+                    return True
+                # `sau_chu: <regex>`: carousel tu xoay van co the doi the dung luc bam (Samsung A13 dump ~2s, 20/11/2026
+                # Hypix: `vua_hien` van vao I2I thay T2I) -> chua thay chu cua man dich thi BACK ra, bam lai.
+                log.append(f"không vào {buoc['sau_chu']!r} → BACK bấm lại")
+                await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
+                vang_truoc = False
+                await asyncio.sleep(NHIP)
+                continue
         await asyncio.sleep(NHIP)
     log.append(f"hết giờ ở bước {buoc}")
+    return False
+
+
+async def _da_toi_chu(client, serial: str, package: str, mau: str, lan: int = 3) -> bool:
+    """Sau khi bam: man dich co chu `mau` chua (toi da `lan` lan dump). Ad che man (AdActivity) = da roi Home, coi nhu
+    toi - khong BACK khi ad that dang hien; buoc `dong_ad` sau do lo dong ad."""
+    for _ in range(lan):
+        await asyncio.sleep(NHIP)
+        _pkg, act = await device_app.focus(client, serial)
+        if "AdActivity" in (act or ""):
+            return True
+        if tim(await _nodes(client, serial, package), mau):
+            return True
     return False
 
 

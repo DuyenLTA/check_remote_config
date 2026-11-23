@@ -129,6 +129,65 @@ com.ai.aiphoto.aivideo.creator.generator:
     - cho_chu: "^(No creations yet|Untitled creation|Generating.*)$"
   moi_tao: "just now|\\d+\\s*(?:second|minute)s?\\s+ago|Generating|Processing|\\d+%|Untitled creation"
 
+# AIP919 AI Photo Video Maker 2.1.0 (18) - do 20/11/2026 tren Pixel 7 29301FDH2006K7: app Compose (moi man la
+# AIP919AIPhotoVideoMakerMainActivity). Home tab "Image Studio" co "Explore styles" + chip "All" / "Dance Trends" + luoi
+# the style (khong chu) -> bam the bat inter -> photopicker he thong ("Xong") -> man "Your photos" + "Confirm (1/1)" ->
+# sheet "Unlock your Masterpiece" voi "Watch Ads (0/2)" (con luot checkin thi co "Free Generate"). History = icon goc
+# tren phai KHONG co chu / content-desc -> bam toa do; the moi tao co nhan "New".
+com.aiart.aivideogenerator.aiphotocreator.phototovideo: &studio_style
+  home: "MainActivity"
+  home_chu: "^Explore styles$"
+  vao_unlock:
+    - ve_man: "MainActivity"
+      toi_da: 60
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^Image Studio$"
+    - cho_chu: "^Explore styles$"
+      toi_da: 45
+    - tap_duoi: "^All$"
+      thu: "{thu}"
+    - cho_man: "photopicker"     # cho_man tu dong inter dang che (AdActivity) roi doi trinh chon anh
+      toi_da: 60
+    - chon_anh: true
+      toi_da: 30
+    - tap: "^Confirm( \\(\\d+/\\d+\\))?$"
+      toi_da: 20
+  sheet_xong: "^(Watch Ads|Free Generate)"
+  lich_su:
+    # Gen NGAM: man loading tu ve Home truoc khi anh xong (~30s) -> mo History ngay thi chua co the moi (R06-01 do
+    # 20/11/2026: tool ket luan "gen 1/2" trong khi badge History = 2). Cho anh ve roi moi mo.
+    - cho: 35
+    - tap_toa_do: [0.80, 0.0854]
+    - cho_chu: "^History$"
+  moi_tao: "^New$"
+
+# AIP933 Hypix 2.3.0 (15) - do 23/11/2026 tren Samsung A13 R58TB198BNN: app Compose (moi man la AIP933MainActivity).
+# Home chu "Hypix" + carousel tu xoay + hang the template duoi "AI Film Filter" (the khong chu, chi nhan HOT/TRENDING)
+# -> bam the mo thang photopicker he thong ("Done") -> sheet "Unleash Your Masterpiece" voi "Watch Ads (0/2)" /
+# "Free Generate (1 left)". Gen NGAM ("Taking you to Home...") ve Home; History = icon content-desc "History" goc tren
+# phai (trong thi "No creations yet").
+com.ai.videogenerator.photocreator.aiart:
+  home: "MainActivity"
+  home_chu: "^Hypix$"
+  vao_unlock:
+    - ve_man: "MainActivity"
+      toi_da: 60
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - cho_chu: "^AI Film Filter$"
+      toi_da: 45
+    - tap_duoi: "^AI Film Filter$"
+      thu: "{thu}"
+    - cho_man: "photopicker"     # cho_man tu dong inter dang che (AdActivity) roi doi trinh chon anh
+      toi_da: 60
+    - chon_anh: true
+      toi_da: 30
+  sheet_xong: "^(Watch Ads|Free Generate)"
+  lich_su:
+    - cho: 35                    # gen ngam: man loading ve Home truoc khi anh xong
+    - tap: "^History$"
+    - cho_chu: "^History$"
+  moi_tao: "just now|\\d+\\s*(?:second|minute)s?\\s+ago|Generating|Processing|\\d+%|^(Image|Video|▶)$"
+
 # KHUON: app chua co muc rieng -> chon khuon co `nhan_dien` khop chu tren Home (src/rcr/cong_thuc_khuon.py).
 khuon:
   beauty:
@@ -137,3 +196,6 @@ khuon:
   ai_photo:
     nhan_dien: "^(Text to Image Generate|Magic With AI)$"
     <<: *ai_photo
+  studio_style:                # AIP919: tab "Image Studio" / "Video Studio", luoi the duoi "Explore styles"
+    nhan_dien: "^Explore styles$"
+    <<: *studio_style

@@ -24,6 +24,7 @@ Test tay (TB): **3 giờ** cho một bộ testcase Remote Config của một app
 | 19/11/2026 | Sola AI Song Generator | 2.4.0 (15) | 54 | 49 PASS · 2 FAIL · 3 BLOCKED | R01-03 nền text OB1; RG01-01 version SDK/Lib Ads | https://claude.ai/artifact/WvZFzFMJQ1twYGBRj9Krig | ? | 3 giờ | ? |
 | 20/11/2026 | AI Photo Video | 1.7.0 (10) | 34 (8 vị trí IAA) | 32 PASS · 2 BLOCKED · 0 FAIL | không | https://claude.ai/artifact/3rLgdWnnPSQYWNyu9y6XNv | ? | 3 giờ | ? |
 | 20/11/2026 | AIP944 | 1.5.0 (9) | 54 (tab 3.7.2) | 46 PASS · 8 BLOCKED · 0 FAIL | không | https://claude.ai/artifact/E6NHCVcT1DaUi3n7b9SXi1 | 78 phút | 3 giờ | 102 phút |
+| 23/11/2026 | AI Photo Video Maker | 2.1.0 (18) | 117 (5 tab) | 77 PASS · 1 FAIL · 39 BLOCKED | IAA-05-01 native result load lại ở Result sau khi preload lỗi | https://claude.ai/artifact/E987JaERTEA71vqKWmm2nm | 26 phút | 3 giờ | 154 phút |
 
 Lượt Sorapix có 20/23 case bị kẹt vì hộp thoại xin quyền thông báo che app sau `pm clear`, mỗi
 case hết giờ chờ rồi chạy lại. Đã sửa ở commit `66ca8ec`; lượt sau sẽ bớt thời gian chờ này, chưa đo lại.

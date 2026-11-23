@@ -1,0 +1,14 @@
+{
+ "duong_vao_paywall": [
+  {
+   "text": "PRO"
+  }
+ ],
+ "dau_hieu_premium": {
+  "an_text": "PRO"
+ },
+ "home_activity": "AIP933MainActivity",
+ "app": "Hypix 2.3.0 (15)",
+ "ghi_chu": "RC paywall_placement mặc định off -> không có nút PRO / màn Billing. Đặt paywall_placement=home qua testvsl thì Home có nút chữ PRO góc trên. Đo 23/11/2026 Samsung A13.",
+ "package": "com.ai.videogenerator.photocreator.aiart"
+}

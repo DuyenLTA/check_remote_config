@@ -177,6 +177,145 @@ com.ai.aiphoto.aivideo.creator.generator:
     generating_wait_image_seconds: "60"
     generating_wait_video_seconds: "300"
 
+# AIP919 AI Photo Video Maker 2.1.0 (do tren Pixel 7 29301FDH2006K7 20/11/2026): app Compose (moi man la
+# AIP919AIPhotoVideoMakerMainActivity). Home = 2 tab duoi "Image Studio" / "Video Studio", moi tab co "Explore styles"
+# + chip "All" / "Dance Trends" + luoi the style (the khong chu, chu ten nam trong the). Bam the -> inter -> thang
+# photopicker he thong ("Xong") -> "Your photos" + "Confirm (1/1)" -> sheet "Unlock your Masterpiece" "Watch Ads (0/2)"
+# (Unlock Now = paywall, KHONG bam: app Pro mat ads cho tab IAA) -> loading "<so>%" ~10s roi gen NGAM ve Home (badge 1 tren icon History khong chu) -> History
+# ("Image"/"New") -> man "Result" ("Back to Home", "Download"). Ep man cho dai de result mo thang tu man cho.
+com.aiart.aivideogenerator.aiphotocreator.phototovideo: &studio_style
+  # Free 1-2 luot gen/ngay -> sheet "Today's Free limit Reached" sau 2 lan gen (do 20/11/2026): noi han muc free de
+  # du luot cho ca tab rating (key khong nam trong Test Data cua TC rating).
+  ep_cau_hinh:
+    generating_wait_image_seconds: "60"
+    generating_wait_video_seconds: "300"
+    free_image_generation_limit_per_day: "50"
+    free_video_generation_limit_per_day: "50"
+  anh:
+    - ve_chu: "^Explore styles$"
+      tab: "^Image Studio$"
+      toi_da: 120
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^Image Studio$"
+    - cho: 2
+    - tap_duoi: "^All$"
+    - dong_ad: 8
+    - chon_anh: true
+    - tap: "^Confirm( \\(\\d+/\\d+\\))?$"
+    - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+      tap_tai: [0.5, 0.932]
+      toi_chu: "^\\d{1,3}%$"
+      dung_neu: "(Daily Free limit Reached|Daily Limit Reached|Today.s Free limit Reached)"
+      toi_da: 300
+    - cho_chu: "^(Result|Back to Home)$"
+      toi_da: 120
+  video:
+    - ve_chu: "^Explore styles$"
+      tab: "^Image Studio$"
+      toi_da: 120
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^Video Studio$"
+    - cho: 2
+    - tap_duoi: "^All$"
+    - dong_ad: 8
+    - chon_anh: true
+    - tap: "^Confirm( \\(\\d+/\\d+\\))?$"
+    - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+      tap_tai: [0.5, 0.932]
+      toi_chu: "^\\d{1,3}%$"
+      dung_neu: "(Daily Free limit Reached|Daily Limit Reached|Today.s Free limit Reached)"
+      toi_da: 300
+    - cho_chu: "^(Result|Back to Home|Download)$"
+      toi_da: 330
+
+# AIP933 Hypix 2.3.0 (do tren Samsung A13 R58TB198BNN 20/11/2026): app Compose (moi man la AIP933MainActivity). Home
+# chu "Hypix" + tab duoi "AI Generate" / "AI Photos" / "AI Videos"; the carousel TU XOAY ~4s, chu the xuong dong
+# ("Image to Image\nGenerate") -> khong khop nhan_dien ai_photo. I2I: tab AI Photos -> the I2I -> "Tap To Upload" ->
+# photopicker -> o prompt "A pretty girl..." -> "Generate" -> sheet "Watch Ads (0/2)" -> loading "<so>%" -> gen NGAM
+# ("Taking you to Home...") ve Home, ket qua o History. Ep man cho dai de result mo thang tu man cho (popup result).
+com.ai.videogenerator.photocreator.aiart: &hypix
+  ep_cau_hinh:
+    generating_wait_image_seconds: "60"
+    generating_wait_video_seconds: "300"
+    free_image_generation_limit_per_day: "50"
+    free_video_generation_limit_per_day: "50"
+  anh:
+    - ve_chu: "^Hypix$"
+      tab: "^AI Generate$"
+      toi_da: 180
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^AI Photos$"
+    - tap: '^Image to Image\sGenerate$'
+      vua_hien: true                         # carousel tu xoay ~4s
+      sau_chu: "^Image to Image$"            # trung luc doi the -> vao T2I thi BACK bam lai
+    - dong_ad: 6
+    - cho_chu: "^Tap To Upload$"
+    - cho: 3
+    - tap: "^Tap To Upload$"
+    - chon_anh: true
+    - cho: 6
+    - nhap: "a cat in space"
+      o: "(A pretty girl|What do you have in mind)"
+    - tap: "^Generate$"
+    - dong_ad: 6
+    - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+      tap_tai: [0.5, 0.935]
+      toi_chu: '^(\d{1,3}%|Taking you to Home.*|Result)$'
+      dung_neu: "(Daily Free limit Reached|Daily Limit Reached|Today.s Free limit Reached)"
+      mua_sub_chu: "^Unlock Now$"
+      toi_da: 300
+    - cho_chu: "^(Result|Hypix)$"
+      toi_da: 120
+    - cho: 25
+      bo_qua_neu: "^Result$"
+    - dong_neu_co: "^(Close|Close sheet)$"
+      bo_qua_neu: "^Result$"
+    - tap: "^History$"
+      bo_qua_neu: "^Result$"
+    - tap: "^(▶|Image)$"
+      bo_qua_neu: "^Result$"
+      toi_da: 60
+    - cho_chu: "^Result$"
+      toi_da: 60
+  video:
+    - ve_chu: "^Hypix$"
+      tab: "^AI Generate$"
+      toi_da: 180
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - dong_neu_co: "^(Close|Close sheet)$"
+    - tap: "^AI Videos$"
+    - tap: '^Image to Video\sGenerate$'
+    - dong_ad: 6
+    - cho_chu: "^Tap To Upload$"
+    - cho: 3
+    - tap: "^Tap To Upload$"
+    - chon_anh: true
+    - cho: 6
+    - nhap: "a cat walking"
+      o: "(A pretty girl|What do you have in mind)"
+    - tap: "^Generate$"
+    - dong_ad: 6
+    - xem_ads_chu: "^(Watch Ads.*|Free Generate)$"
+      tap_tai: [0.5, 0.935]
+      toi_chu: '^(\d{1,3}%|Taking you to Home.*|Result)$'
+      dung_neu: "(Daily Free limit Reached|Daily Limit Reached|Today.s Free limit Reached)"
+      mua_sub_chu: "^Unlock Now$"
+      toi_da: 300
+    - cho_chu: "^(Result|Hypix)$"
+      toi_da: 330
+    - cho: 60
+      bo_qua_neu: "^Result$"
+    - dong_neu_co: "^(Close|Close sheet)$"
+      bo_qua_neu: "^Result$"
+    - tap: "^History$"
+      bo_qua_neu: "^Result$"
+    - tap: "^(▶|Video)$"
+      bo_qua_neu: "^Result$"
+      toi_da: 90
+    - cho_chu: "^Result$"
+      toi_da: 60
+
 # KHUON: app chua co muc rieng -> tool ve Home, chon khuon co `nhan_dien` khop chu tren Home (src/rcr/cong_thuc_khuon.py).
 khuon:
   beauty:                      # AIP892 BeautyGenie: Home co hang "QUICK FIXES"
@@ -185,3 +324,9 @@ khuon:
   ai_photo:                    # AIP893 / AIP885: Home co "Text to Image Generate" / "Magic With AI"; AIP944: "Trending Now"
     nhan_dien: "^(Text to Image Generate|Magic With AI|Trending Now)$"
     <<: *ai_photo
+  studio_style:                # AIP919: tab "Image Studio" / "Video Studio", luoi the duoi "Explore styles"
+    nhan_dien: "^Explore styles$"
+    <<: *studio_style
+  hypix:                       # AIP933 Hypix: Home "Hi dear" + "Hypix", tab duoi "AI Generate" / "AI Photos" / "AI Videos"
+    nhan_dien: "^Hypix$"
+    <<: *hypix

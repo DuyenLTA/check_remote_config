@@ -465,15 +465,20 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
             await asyncio.sleep(1.0)
         log.append(f"hết giờ ở bước {b}")
         return False
-    if "vuot_len" in b:
-        # Cuon noi dung len (vuot tu 60% xuong 30% chieu cao), `vuot_len: n` lan: nut nam duoi native ad, ngoai man
-        # (AIP508 Homova Pixel 4 19/11/2026: "Still want to uninstall" chi hien sau khi cuon SorryUninstall).
+    if "vuot_len" in b or "vuot_xuong" in b:
+        # `vuot_len: n`: cuon noi dung len (vuot 60% -> 30% chieu cao) - nut nam duoi native ad, ngoai man (AIP508
+        # Homova Pixel 4 19/11/2026: "Still want to uninstall" chi hien sau khi cuon SorryUninstall).
+        # `vuot_xuong: n`: cuon ve dau trang (vuot 30% -> 80%) - Home AIP919 mo ra da cuon qua the "Image to Image" /
+        # "Image to Video" (chi thay "Explore styles"), phai keo xuong moi lo the (do 21/11/2026 Pixel 7).
+        len_tren = "vuot_len" in b
+        n = int(b["vuot_len"] if len_tren else b["vuot_xuong"])
         rong, cao = await _co_man(client, serial)
-        for _ in range(int(b["vuot_len"])):
-            await client.shell(serial, "input", "swipe", str(rong // 2), str(int(cao * 0.6)), str(rong // 2),
-                               str(int(cao * 0.3)), "400")
+        tu, den = (0.6, 0.3) if len_tren else (0.3, 0.8)
+        for _ in range(n):
+            await client.shell(serial, "input", "swipe", str(rong // 2), str(int(cao * tu)), str(rong // 2),
+                               str(int(cao * den)), "400")
             await asyncio.sleep(1.5)
-        log.append(f"vuốt lên ×{b['vuot_len']}")
+        log.append(f"vuốt {'lên' if len_tren else 'xuống'} ×{n}")
         return True
     if "cho" in b:
         await asyncio.sleep(float(b["cho"]))
