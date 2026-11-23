@@ -645,3 +645,37 @@ def test_vuot_xuong_keo_ve_dau_trang_vuot_len_cuon_len(monkeypatch):
     lenh.clear()
     assert asyncio.run(iaa_lai.buoc(May(), "S", "p", {"vuot_len": 1}, log))
     assert [a for a in lenh if "swipe" in a] == [("input", "swipe", "500", "1200", "500", "600", "400")]
+
+
+def test_tap_vua_hien_bam_khi_carousel_dung_yen(monkeypatch):
+    """Pixel 7 23/11/2026: carousel Hypix co luc dung xoay, the I2I o yen 12s+ khong bao gio "vang" -> `vua_hien`
+    khong bao gio bam. The o yen mot cho lau hon DUNG_YEN_S thi bam."""
+    import asyncio
+    from rcr import device_app, rating_cong_thuc
+    from rcr.ui_dump import Bounds, DeviceNode
+    P = "p.app"
+    the = DeviceNode("0", "", "android.widget.TextView", "Image to Image\nGenerate", "", Bounds(110, 663, 592, 822),
+                     True, True, True, P, None, 0)
+    st = {"i": 0, "tap": [], "t": 0.0}
+
+    async def nodes(c, s, p):
+        st["i"] += 1
+        st["t"] += 2.5                                # moi lan dump ~2.5s tren Pixel 7
+        return [the]
+
+    async def tap(c, s, x, y):
+        st["tap"].append(st["i"])
+
+    async def ngu(*_a):
+        return None
+
+    class C:
+        async def shell(self, serial, *a):
+            return ("Physical size: 1080x2400", "", 0)
+    monkeypatch.setattr(rating_cong_thuc, "_nodes", nodes)
+    monkeypatch.setattr(device_app, "tap", tap)
+    monkeypatch.setattr(asyncio, "sleep", ngu)
+    monkeypatch.setattr(rating_cong_thuc.time, "monotonic", lambda: st["t"])
+    b = {"tap": r"^Image to Image\sGenerate$", "vua_hien": True, "toi_da": 60}
+    assert asyncio.run(rating_cong_thuc._mot_buoc(C(), "S", P, b, []))
+    assert st["tap"] == [4]                           # dump 1 t=2.5 ... dump 4 t=10 (o yen 7.5s >= 6s) -> bam

@@ -21,6 +21,7 @@ TOI_DA_MAC_DINH = 30.0
 BAM_KHONG_MO_TOI_DA = 2
 KHONG_FILL_THUONG = "bấm Watch Ads 2 lần không mở quảng cáo thưởng — ad thưởng không load (kho không fill)"
 NHIP = 1.0
+DUNG_YEN_S = 6.0               # the carousel `vua_hien` o yen lau hon mot nhip xoay (~4s) = carousel da dung
 DONG_TOI_DA = 4
 LUONG_FO_RE = re.compile(r"Splash|AdActivity|Language|Onboarding|Question|Billing", re.I)
 GOI_SUB = "weekly"      # goi test ngan nhat (chu ky test 5 phut)
@@ -225,6 +226,8 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
     het = time.monotonic() + float(buoc.get("toi_da", TOI_DA_MAC_DINH))
     bam_khong_mo = 0                  # xem_ads: so lan bam nut lien ma chua thay AdActivity
     vang_truoc = False                # tap `vua_hien`: lan dump truoc chua thay the
+    bounds_truoc = None               # tap `vua_hien`: vi tri the o lan dump truoc
+    tu_luc = time.monotonic()         # tap `vua_hien`: the o yen vi tri hien tai tu luc nao
     if "chon_anh" in buoc:
         # `thu: k` = anh thu k trong trinh chon (AIP508 Homova 19/11/2026: anh dau may Pixel 4 la anh chup man hinh,
         # app doi anh co mat nguoi -> chon anh khuon mat o hang duoi).
@@ -313,10 +316,27 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
             # `vua_hien: true` = the trong carousel TU XOAY (Hypix AIP933: ~4s/the): chi bam khi the vua xoay toi (lan
             # dump truoc chua thay) -> con gan tron mot nhip xoay; bam the da hien tu truoc thi dump + tap (~1-2s) de
             # trung luc chuyen the, vao nham tinh nang ben canh (20/11/2026 vao T2I thanh I2I).
+            # Carousel cung co luc DUNG xoay (Pixel 7 23/11/2026: the I2I dung yen 12s+, the khong bao gio "vang" ->
+            # khong bao gio bam): the o yen mot cho lau hon mot nhip xoay (DUNG_YEN_S) thi coi la carousel da dung, bam.
             thay = node is not None
-            if thay and buoc.get("vua_hien") and not vang_truoc:
+            vi_tri = node.bounds if thay else None
+            if vi_tri != bounds_truoc:
+                tu_luc = time.monotonic()
+            dung_yen = thay and time.monotonic() - tu_luc >= DUNG_YEN_S
+            if thay and buoc.get("vua_hien") and not vang_truoc and not dung_yen:
                 node = None
             vang_truoc = not thay
+            bounds_truoc = vi_tri
+            if not thay and buoc.get("vuot_neu_vang") and time.monotonic() - tu_luc >= DUNG_YEN_S:
+                # `vuot_neu_vang: <regex the cung carousel>`: carousel dung o the KHAC (Pixel 7 23/11/2026: dung o I2I
+                # nen buoc T2I het gio) -> vuot ngang hang carousel cho the dich xoay toi.
+                mau = tim(nodes, buoc["vuot_neu_vang"])
+                if mau:
+                    w, _h = await device_app.screen_size(client, serial)
+                    y = str(mau.bounds.center[1])
+                    await client.shell(serial, "input", "swipe", str(int(w * 0.85)), y, str(int(w * 0.15)), y, "300")
+                    log.append(f"carousel đứng ở {mau.text!r} → vuốt")
+                    tu_luc = time.monotonic()
             if node:
                 log.append(f"bấm {node.text or node.content_desc or node.label}")
                 await _bam(client, serial, node)
@@ -328,6 +348,14 @@ async def _mot_buoc(client, serial: str, package: str, buoc: dict, log: list[str
                 await client.shell(serial, "input", "keyevent", "KEYCODE_BACK")
                 vang_truoc = False
                 await asyncio.sleep(NHIP)
+                if buoc.get("dong_sau_back"):
+                    # `dong_sau_back: <regex>`: BACK tu man vao nham bat popup (Hypix Pixel 7 23/11/2026: popup rate che
+                    # carousel, moi lan bam lai deu trung popup) -> dong popup truoc khi bam lai.
+                    dong = tim(await _nodes(client, serial, package), buoc["dong_sau_back"])
+                    if dong:
+                        log.append(f"đóng {dong.text or dong.content_desc}")
+                        await _bam(client, serial, dong)
+                        await asyncio.sleep(NHIP)
                 continue
         await asyncio.sleep(NHIP)
     log.append(f"hết giờ ở bước {buoc}")

@@ -156,6 +156,10 @@ khuon:
           - tap: "^AI Photos$"
           - tap: '^Image to Image\sGenerate$'
             vua_hien: true                         # carousel tu xoay ~4s
+            sau_chu: "^Image to Image$"            # Pixel 7 23/11/2026 van vao nham the ben canh -> BACK bam lai
+            dong_sau_back: "^Close$"               # BACK tu T2I bat popup rate (nut Close) che carousel
+            vuot_neu_vang: '\sGenerate$'          # carousel dung o the khac -> vuot (Pixel 7 23/11/2026)
+            toi_da: 60                             # dump Pixel 7 ~2.5s/lan -> can nhieu luot bam lai
           - dong_ad: 6
           - cho_chu: "^Image to Image$"            # carousel xoay giua luc bam -> vao nham T2I thi doan HONG (bao ro)
           - cho_chu: "^Tap To Upload$"
@@ -183,6 +187,9 @@ khuon:
           - tap: '^Text to Image\sGenerate$'
             vua_hien: true                         # carousel tu xoay ~4s
             sau_chu: "^Text to Image$"             # van trung luc doi the (Samsung A13) -> vao I2I thi BACK bam lai
+            dong_sau_back: "^Close$"               # BACK bat popup rate che carousel (Pixel 7 23/11/2026)
+            vuot_neu_vang: '\sGenerate$'          # carousel dung o the khac -> vuot (Pixel 7 23/11/2026)
+            toi_da: 60                             # dump Pixel 7 ~2.5s/lan -> 30s mac dinh chi du 1-2 luot bam lai
           - dong_ad: 6
           - cho_chu: "^Text to Image$"
           - cho: 8

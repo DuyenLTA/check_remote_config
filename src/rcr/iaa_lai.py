@@ -521,7 +521,10 @@ async def buoc(client, serial: str, package: str, b: dict, log: list[str]) -> bo
             await _dong_ad_neu_co(client, serial, log)
             con = het - time.monotonic()
             tam: list[str] = []
-            if await rating_cong_thuc._mot_buoc(client, serial, package, {**b, "toi_da": max(1.0, min(5.0, con))}, tam):
+            # `vua_hien` (carousel tu xoay) can thay the VANG roi HIEN trong cung mot lan goi: khuc 5s qua ngan tren may
+            # dump cham (Pixel 7 23/11/2026 ~1-2s/lan, het 60s khong bam duoc lan nao) -> khuc 15s cho the xoay du vong.
+            khuc = 15.0 if b.get("vua_hien") else 5.0
+            if await rating_cong_thuc._mot_buoc(client, serial, package, {**b, "toi_da": max(1.0, min(khuc, con))}, tam):
                 log.extend(tam)
                 return True
             if time.monotonic() >= het:
