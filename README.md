@@ -420,7 +420,7 @@ Cắm nhiều máy thì mỗi máy chạy một build, song song.
    - file `~/.config/rcr/bot.env` (dùng được cả hai hệ điều hành; Ubuntu bắt buộc dùng file này):
      ```
      DISCORD_BOT_TOKEN=...
-     DISCORD_BUILD_CHANNEL_ID=<id kênh qa-auto> (ngoài kênh này bot chỉ nhận build ở kênh project `aipNNN-…`)
+     DISCORD_BUILD_CHANNEL_ID=<id kênh qa-auto> (ngoài kênh này bot chỉ nhận build ở kênh project `aipNNN-…`, và ở kênh project chỉ tin đúng mẫu dev báo build `Bản build <mã app> v<version> (<code>) đã được hoàn thiện` mới tính — chat nhắc mã app + version thì bỏ qua)
      DISCORD_QA_CHANNEL_ID=...
      DISCORD_FORUM_CHANNEL_ID=<tuỳ chọn: id kênh Forum qa-builds — mỗi build một bài>
      DISCORD_DUYET_USER_IDS=<id người được bấm, phẩy ngăn cách>

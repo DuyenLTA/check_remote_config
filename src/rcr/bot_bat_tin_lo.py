@@ -39,7 +39,9 @@ async def quet(bot) -> int:
                 log.warning("khong doc duoc lich su kenh %s: %s", k.name, exc)
                 continue
             for m in tin:
-                tin_build = build_ma_app.tach(m.content or "", ma)
+                # kenh project chi nhan tin dung mau dev bao build, giong `bot_nhan_build`
+                dung_mau = o_qa or build_ma_app.la_tin_bao_build(m.content or "")
+                tin_build = build_ma_app.tach(m.content or "", ma) if dung_mau else None
                 if m.author.id == bot.user.id or tin_build is None:
                     continue
                 # Tin o qa-auto ma build da hoi roi thi bo: phat lai se lam bot tro ve tin Check cu moi lan reconnect.

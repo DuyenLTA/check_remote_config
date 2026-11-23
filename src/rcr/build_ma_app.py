@@ -8,6 +8,11 @@ bot im lang bo qua). Chi tim hai thu o BAT KY DAU trong tin:
 Thieu mot trong hai -> None; discord_bot hoi o kenh QA chu khong im lang.
 Link (Drive, Firebase) bo truoc khi tim: trong link co so giong version.
 
+Rieng kenh project (user chot 23/11/2026): chat trong kenh hay nhac ma app + version ("AIP872 v1.9.0 (14) con loi...")
+va bot nhan nham la build moi. O do chi tin dung mau dev bao build moi tinh (`la_tin_bao_build`):
+"Ban build AIP872-ai-photo-beauty-gallery v1.9.0 (14) da duoc hoan thien. Please check". qa-auto (QA tu gui build de
+chay lai) va lenh /check van doc theo ma app + version nhu cu.
+
 Luat chon nhanh (user chot 28/10/2026):
   - tin co so SDK tutorial 3.7.0 / 3.7.1 (KHONG phai versionName) hoac chu next-gen -> checklist Next-Gen,
     cai ban release (release khong debuggable, chi cham duoc Next-Gen)
@@ -22,6 +27,7 @@ Khong doan theo ten app trong tin.
 from __future__ import annotations
 
 import re
+import unicodedata
 
 MA_RE = re.compile(r"(?<![A-Za-z0-9])([A-Za-z]{3}\d{3})(?!\d)")
 VERSION_RE = re.compile(r"v?\s?(\d+(?:\.\d+)+)\s*[(\[]\s*(\d+)\s*[)\]]", re.I)
@@ -32,6 +38,7 @@ SDK_RE = re.compile(r"(?:tutorial|sdk|apply)(?:[\s/_-]*(?:tutorial|sdk))*[\s/_:-
 REVERT_RE = re.compile(r"revert\s+next[\s-]?gen", re.I)
 NEXT_GEN_RE = re.compile(r"next[\s-]?gen", re.I)
 DAU_HIEU_BUILD_RE = re.compile(r"build|bản|\bqa\b|apk|release|debug|\d+\.\d+", re.I)
+MAU_BAO_BUILD_RE = re.compile(r"b[ảa]n\s+build\b[^\n]*?(?:đã\s+được|da\s+duoc)\s+ho[àa]n\s+thi[ệe]n", re.I)
 LINK_RE = re.compile(r"https?://\S+")
 MENTION_RE = re.compile(r"<[@#][!&]?\d+>")
 # Dau dinh dang markdown Discord: dev go "Ban build **AIP920** v1.6.0 (7)" (do 2026-10-27).
@@ -79,6 +86,12 @@ def co_ma_app(text: str) -> bool:
     trong kenh, khong hoi (user phan nan 30/10/2026)."""
     t = _sach(text)
     return bool(MA_RE.search(t)) and bool(DAU_HIEU_BUILD_RE.search(t))
+
+
+def la_tin_bao_build(text: str) -> bool:
+    """Tin dung mau dev bao build: "Bản build <ma app...> v<version> (<code>) đã được hoàn thiện" tren mot dong
+    (co dau hoac khong dau). Nhac ma app + version ma khong dung mau -> chat thuong, khong phai bao build."""
+    return bool(MAU_BAO_BUILD_RE.search(unicodedata.normalize("NFC", _sach(text))))
 
 
 def tach(text: str, ma_kenh: str = "") -> dict | None:

@@ -223,12 +223,14 @@ def test_webhook_thong_bao_o_kenh_qa_khong_hoi_lai_ma_app(monkeypatch):
     bot.kenh_qa, bot.kenh_build = 1, {1, 2}
     bot.get_channel = lambda cid: SimpleNamespace(send=send)
 
-    def tin(kenh):
+    def tin(kenh, chu="Bản build AIP918 đã được hoàn thiện"):
         return SimpleNamespace(author=SimpleNamespace(bot=True), webhook_id=99, channel=SimpleNamespace(id=kenh),
-                               guild=None, content="Audit xong: 51/51 khớp", jump_url="u")
+                               guild=None, content=chu, jump_url="u")
     asyncio.run(bot.on_message(tin(1)))
     assert gui == []
-    asyncio.run(bot.on_message(tin(2)))                 # kenh build that van hoi QA nhu cu
+    asyncio.run(bot.on_message(tin(2, "Audit xong: 51/51 khớp")))   # sai mau bao build: im lang, khong lam on qa-auto
+    assert gui == []
+    asyncio.run(bot.on_message(tin(2)))                 # kenh build that, dung mau ma thieu version: hoi QA
     assert len(gui) == 1 and "không đọc được" in gui[0]
 
 
@@ -314,7 +316,7 @@ def test_tin_build_cua_bot_assistant_dev_van_doc(monkeypatch):
 
     def tin(tac_gia):
         return SimpleNamespace(author=SimpleNamespace(bot=True, id=tac_gia), webhook_id=None,
-                               channel=SimpleNamespace(id=2), guild=None, content="AIP927 ban build moi", jump_url="u")
+                               channel=SimpleNamespace(id=2), guild=None, content="Ban build AIP927 da duoc hoan thien", jump_url="u")
     asyncio.run(bot.on_message(tin(333)))
     assert gui == []
     asyncio.run(bot.on_message(tin(111)))               # Assistant cua dev -> doc tin (khong ra version -> hoi QA)
@@ -375,11 +377,12 @@ def test_chi_nhan_build_o_kenh_project_va_qa_auto_bo_kenh_chung(monkeypatch):
     bot.kenh_qa, bot.kenh_build = 1, {1}
     bot.get_channel = lambda cid: SimpleNamespace(send=send)
 
-    def tin(kenh_id, ten):
+    def tin(kenh_id, ten, chu="Bản build AIP918 đã được hoàn thiện"):
         return SimpleNamespace(author=SimpleNamespace(bot=True, id=5), webhook_id=4, guild=SimpleNamespace(id=9),
-                               channel=SimpleNamespace(id=kenh_id, name=ten), content="Bản build AIP918 nhé",
-                               jump_url="u")
+                               channel=SimpleNamespace(id=kenh_id, name=ten), content=chu, jump_url="u")
     asyncio.run(bot.on_message(tin(7, "build-notification")))     # kenh chung: bo qua
+    assert gui == []
+    asyncio.run(bot.on_message(tin(8, "aip918-abc-official-group", "Bản build AIP918 nhé")))   # sai mau: im lang
     assert gui == []
     asyncio.run(bot.on_message(tin(8, "aip918-abc-official-group")))   # kenh project, server nao cung nhan
     assert len(gui) == 1 and "không đọc được" in gui[0]
@@ -451,3 +454,30 @@ def test_moi_phien_ket_noi_moi_deu_bao_may_phu_xin_lai(monkeypatch):
     asyncio.run(bot.on_ready())
     asyncio.run(bot.on_ready())
     assert gui == ["chinh_khoi_dong", "chinh_khoi_dong"]
+
+
+def test_kenh_project_chi_nhan_tin_dung_mau_bao_build(monkeypatch):
+    # User chot 23/11/2026: chat trong kenh project nhac ma app + version khong phai build moi.
+    monkeypatch.setattr(d.bot_hoi_dap, "la_cau_hoi", lambda bot, m: False)
+    bot = object.__new__(d.BuildBot)
+    bot.kenh_qa, bot.kenh_build, bot.duyet, bot.role = 1, {1}, set(), 0
+    bot.q = SimpleNamespace(tin={}, bao_lan_dau=lambda khoa: True)
+    gui, hoi = [], []
+
+    async def send(chu, **k):
+        gui.append(chu)
+
+    async def hoi_build_moi(*a):
+        hoi.append(a[1]["version"])
+    bot.get_channel = lambda cid: SimpleNamespace(send=send)
+    monkeypatch.setattr(d.bot_nhan_build, "hoi_build_moi", hoi_build_moi)
+
+    def tin(chu, kenh_id=8, ten="aip872-beauty-official-group"):
+        return SimpleNamespace(id=(60 * 60 * 1000) << 22, author=SimpleNamespace(bot=False, id=77), webhook_id=None,
+                               guild=SimpleNamespace(id=9), message_snapshots=[], jump_url="u", content=chu,
+                               channel=SimpleNamespace(id=kenh_id, name=ten))
+    asyncio.run(bot.on_message(tin("AIP872 v1.9.0 (14) còn lỗi reward, apply tutorial SDK 3.5.4 chưa?")))
+    assert hoi == [] and gui == []                                   # chat: khong hoi Check, khong bao "khong doc duoc"
+    asyncio.run(bot.on_message(tin("Bản build AIP872-ai-photo-beauty-gallery v1.9.0 (14) đã được hoàn thiện. "
+                                   "Please check\napply tutorial SDK 3.5.4")))
+    assert hoi == ["1.9.0 (14)"]

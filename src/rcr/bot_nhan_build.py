@@ -44,16 +44,17 @@ async def nhan_tin_build(bot, m: discord.Message, out: Path) -> None:
         await bot_testvsl.nhan_tin_pass(bot, m, ma_kenh, out)
         return
     chu = noi_dung(m)
-    tin = build_ma_app.tach(chu, ma_kenh)
+    # Kenh project: chi tin dung mau dev bao build ("Bản build ... đã được hoàn thiện") moi la build - chat nhac
+    # ma app + version khong tinh (user chot 23/11/2026). qa-auto: QA tu gui build, doc theo ma app + version nhu cu.
+    tin = build_ma_app.tach(chu, ma_kenh) if o_kenh_build or build_ma_app.la_tin_bao_build(chu) else None
     kenh = bot.get_channel(bot.kenh_qa)
     if tin is None:
-        # Khong bam mau cau: tin webhook (bao build tu dong) hoac tin co ma app ma khong doc ra
-        # version -> hoi QA. Kenh project con chat thuong nen chi hoi voi tin webhook.
-        # Kenh QA cung la kenh build (QA gui lai tin build de chay lai), nhung webhook o day la
-        # thong bao cua chinh cac tool (audit, rc-check) chu khong phai tin bao build -> bo qua.
+        # Tin sai mau (chat nhac ma app, webhook khac) -> im lang: bao "khong doc duoc" cho moi tin nhu vay lam on
+        # qa-auto (user chot 23/11/2026). Chi bao khi tin DUNG mau dev bao build ma khong doc ra ma app + version.
+        # Webhook o kenh QA la thong bao cua chinh cac tool (audit, rc-check), khong phai tin bao build -> bo qua.
         if m.webhook_id and m.channel.id == bot.kenh_qa:
             return
-        if m.webhook_id or (o_kenh_build and build_ma_app.co_ma_app(chu)):
+        if build_ma_app.la_tin_bao_build(chu):
             await kenh.send(f"Bot không đọc được mã app + version (dạng `AIP922 v3.7.0 (30)`) "
                             f"trong tin báo build — QA xem giúp: {m.jump_url}")
         return

@@ -200,3 +200,17 @@ def test_tinh_nang_app_khong_phai_sdk_tinh_nang(ghi_chu):
 def test_luot_tinh_nang_qa_chon_lay_tabs():
     job = {"loai_job": "tinh_nang", "tabs": ["widget"], "sdk": True, "tinh_nang": ["iaa"]}
     assert b.chi_tinh_nang(job) and b.tabs_tinh_nang(job) == ["widget"]
+
+
+@pytest.mark.parametrize("chu,dung", [
+    ("<@1> <@2>\nBản build AIP872-ai-photo-beauty-gallery v1.9.0 (14) đã được hoàn thiện. Please check\n"
+     "fix reward, apply tutorial SDK 3.5.4\nhttps://drive.google.com/drive/folders/abc", True),
+    ("Bản build **AIP882---AI-Video** v4.4.0 (41) đã được hoàn thiện.", True),
+    ("ban build AIP872 v1.9.0 (14) da duoc hoan thien", True),                 # go khong dau
+    ("AIP872 v1.9.0 (14) còn lỗi reward, dev xem giúp", False),               # chat nhac ma app + version
+    ("AIP922 v3.7.0 (30) đã lên QA", False),
+    ("bản build AIP872 v1.9.0 (14) bị crash ở splash", False),                # nhac ban build, khong bao hoan thien
+    ("Bản build AIP872 v1.9.0 (14)\nhôm qua đã được hoàn thiện chưa?", False),  # khac dong
+])
+def test_mau_tin_dev_bao_build(chu, dung):
+    assert b.la_tin_bao_build(chu) is dung
