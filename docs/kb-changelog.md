@@ -58,6 +58,8 @@ Quyết định nghiệp vụ (không phải do đầu ra sai). Mỗi ngày "ch�
 
 | Ngày | Luật | File luật | Commit |
 |---|---|---|---|
+| 26/11/2026 | SDK 3.7.2 chỉ chạy bộ TC tab 3.7.2, không chấm checklist Next-Gen nữa, kể cả khi tin build ghi next-gen (11/11–25/11 chạy cả hai) | `src/rcr/tc_catalog.py` `tab_ghim`, `src/rcr/preflight.py` `muc_sdk`, `rc-check.md` mục 0b, `sdk-check/WORKFLOW.md` | — |
+| 26/11/2026 | QA báo test pass: condition `testvsl` do tài khoản bot tạo thì bot tự xoá, chỉ báo "đã xoá" ở `#condition_fb`; nút Xoá chỉ còn khi không tự xoá được (đang có lượt chạy app, Firebase lỗi) | `src/rcr/bot_testvsl.py` `nhan_tin_pass` | — |
 | 20/11/2026 | Verify bug dòng checklist Next-Gen chỉ chạy `rcr-sdk-check --muc <mục chứa dòng>`, không /rc-check cả checklist, không preflight / ID ads (AIP885 verify MED-01 chạy cả mục 1–4) | `src/rcr/bot_chay_claude.py` PROMPT_VERIFY_CHECKLIST, `muc_checklist` | — |
 | 20/11/2026 | QA gõ `/check` thì chỉ chạy đúng thứ được gõ: không kéo tính năng từ tin build, không thêm tính năng theo plan tuần (AIP944 1.5.0 bị kéo thêm IAA/widget/rating/checkin/gen ngầm) | `src/rcr/bot_lenh_slash.py` `_check`, `src/rcr/bot_job_check.py` (`chi_lenh`) | — |
 | 19/11/2026 | Bỏ bước policy khỏi workflow rc-check / bot, kể cả lượt có bộ IAA (thay luật 16/11): policy là lệnh `/policy-check` riêng, user tự gọi | `.claude/commands/rc-check.md` §7a, `src/rcr/bot_chay_claude.py` | — |

@@ -50,15 +50,15 @@ def parse_version(text: str) -> tuple[int, int, int] | None:
     return tuple(int(x) for x in m.groups()) if m else None
 
 
-# Ban SDK cham CA HAI: bo TC o dung tab ghi ben canh, ROI checklist Next-Gen (user chot 11/11/2026 cho 3.7.2).
-# 13/11/2026 QA tao tab rieng "TC SDK 3.7.2" (cung 54 case SDK361-*, R01-01 ghi ban 3.7.2-alpha01) -> cham tab 3.7.2,
-# khong con muon tab 3.6.1. Van ghim tab o day thay vi de tab_for_version tu chon.
-CA_HAI_SDK = {(3, 7, 2): "3.7.2"}
+# Ban SDK ghim tab TC rieng, thang ca co --next-gen cua tin build. 13/11/2026 QA tao tab "TC SDK 3.7.2" (54 case
+# SDK361-*, R01-01 ghi ban 3.7.2-alpha01) -> app 3.7.2 cham tab 3.7.2, khong muon tab 3.6.1.
+# User chot 26/11/2026: 3.7.2 CHI chay tab 3.7.2, KHONG cham checklist Next-Gen nua (11/11 - 25/11 cham ca hai).
+TAB_GHIM_SDK = {(3, 7, 2): "3.7.2"}
 
 
-def tab_ca_hai(sdk: str) -> str:
-    """'3.7.2' -> '3.7.2' (ban phai cham ca bo TC tab nay lan checklist Next-Gen); ban khac -> ''."""
-    return CA_HAI_SDK.get(parse_version(sdk) or (), "")
+def tab_ghim(sdk: str) -> str:
+    """'3.7.2' -> '3.7.2' (chi chay bo TC tab nay, khong checklist Next-Gen); ban khac -> ''."""
+    return TAB_GHIM_SDK.get(parse_version(sdk) or (), "")
 
 
 def read_tabs(path: str | Path) -> list[Tab]:

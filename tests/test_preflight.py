@@ -205,7 +205,7 @@ def test_tham_so_sdk_thang_doc_tu_log(monkeypatch):
 
 def test_tin_build_ghi_next_gen_thi_ep_nhanh_checklist(monkeypatch):
     """AIP918 2.4.0 29/10/2026: tutorial 3.7.1-alpha01 + GMA Next-Gen, ban release -> khong duoc roi vao bo TC."""
-    # 3.7.2 gio la ban cham ca hai (luat 11/11/2026) -> lay mot so SDK thuong khac de kiem co --next-gen.
+    # 3.7.2 ghim tab rieng, thang --next-gen -> lay mot so SDK thuong khac de kiem co --next-gen.
     _gia(monkeypatch, sdk="3.6.3")
     assert _chay(FakeClient())["nhanh"] == "tc"                      # khong ep: so SDK ngoai 3.7.0/3.7.1
     kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", ep_nextgen=True))
@@ -269,12 +269,22 @@ def test_snapshot_cua_may_khac_khong_tinh(monkeypatch, tmp_path):
     assert kq["ok"] and _trang_thai(kq, "Config đã trả về") == "ok"
 
 
-def test_preflight_372_bao_ca_hai_ke_ca_tin_build_ghi_next_gen():
-    """3.7.2: bo TC tab 3.7.2 roi checklist Next-Gen, ke ca khi bot truyen --next-gen theo tin build."""
+def test_preflight_372_chi_bo_tc_tab_372_ke_ca_tin_build_ghi_next_gen():
+    """User chot 26/11/2026: 3.7.2 CHI chay bo TC tab 3.7.2, khong cham checklist Next-Gen - ke ca khi bot truyen
+    --next-gen theo tin build (11/11 - 25/11 cham ca hai)."""
     for ep in (False, True):
         m = preflight.muc_sdk("3.7.2", ep_nextgen=ep)
-        assert "tab 3.7.2" in m["chi_tiet"] and "checklist Next-Gen" in m["chi_tiet"]
+        assert "tab 3.7.2" in m["chi_tiet"] and "không chấm checklist" in m["chi_tiet"]
+        assert "RỒI" not in m["chi_tiet"]
     assert "Next-Gen" in preflight.muc_sdk("3.7.1")["chi_tiet"]
     dong = []
     preflight.in_bang({"muc": [], "ok": True, "sdk": "3.7.2", "nhanh": "tc"}, dong.append)
-    assert any("CA HAI" in d and "--tab 3.7.2" in d for d in dong)
+    assert any("--tab 3.7.2" in d and "KHONG cham checklist" in d for d in dong)
+    assert not any("CA HAI" in d for d in dong)
+
+
+def test_372_preflight_chon_nhanh_bo_tc_khong_nextgen(monkeypatch):
+    _gia(monkeypatch, sdk="3.7.2")
+    assert _chay(FakeClient())["nhanh"] == "tc"
+    kq = asyncio.run(preflight.chay(FakeClient(), "S1", PKG, cli_check.TC_MAC_DINH, ".", ep_nextgen=True))
+    assert kq["nhanh"] == "tc"

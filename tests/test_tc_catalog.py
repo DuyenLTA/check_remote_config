@@ -147,13 +147,13 @@ def test_file_mot_sheet_van_doc_thang(tmp_path):
 
 
 def test_sdk_372_cham_tab_372():
-    """User chot 13/11/2026: QA da tao tab "TC SDK 3.7.2" -> app SDK 3.7.2 = bo TC tab 3.7.2 + checklist Next-Gen
-    (truoc do 11/11 muon tab 3.6.1). Khong lay tab 3.6.1 / 3.6.2."""
+    """User chot 13/11/2026: QA da tao tab "TC SDK 3.7.2" -> app SDK 3.7.2 chay bo TC tab 3.7.2 (truoc do 11/11 muon
+    tab 3.6.1). Khong lay tab 3.6.1 / 3.6.2. Tu 26/11/2026 chi tab nay, khong cham them checklist Next-Gen."""
     from rcr import tc_select
     tabs = [tc_catalog.Tab("TC SDK 3.6.1", "delta", (3, 6, 1)), tc_catalog.Tab("TC SDK 3.6.2", "delta", (3, 6, 2)),
             tc_catalog.Tab("TC SDK 3.7.2", "delta", (3, 7, 2))]
-    assert tc_catalog.tab_ca_hai("3.7.2") == "3.7.2"
-    assert tc_catalog.tab_ca_hai("3.7.2-alpha01") == "3.7.2"
-    assert tc_catalog.tab_ca_hai("3.7.1") == "" and tc_catalog.tab_ca_hai("") == ""
+    assert tc_catalog.tab_ghim("3.7.2") == "3.7.2"
+    assert tc_catalog.tab_ghim("3.7.2-alpha01") == "3.7.2"
+    assert tc_catalog.tab_ghim("3.7.1") == "" and tc_catalog.tab_ghim("") == ""
     assert tc_select.tab_for_version(tabs, "3.7.2").name == "TC SDK 3.7.2"
     assert tc_select.tab_for_version(tabs, "3.6.5").name == "TC SDK 3.6.2"

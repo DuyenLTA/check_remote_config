@@ -131,7 +131,7 @@ PROMPT = (
     "checkin, iaa, gen ngam): case da chay du so lan bang cung code thi tool tu bo qua trong vong `--gop` (log 'khong "
     "chay lai nua') - KHONG goi lai case do, cham tu log / do tay; chi chay lai sau khi da SUA TOOL cho dung case do. Sua tool giua luot: KHONG dung luot dang "
     "chay (tru khi tool dang kep lap cung mot buoc > 5 phut); de luot chay het roi chay lai DUNG cac case bi loi tool "
-    "do trong vong `--gop` ke tiep. Cham xong bo TC thi sang checklist Next-Gen ngay (SDK 3.7.x).\n"
+    "do trong vong `--gop` ke tiep. SDK 3.7.2 chi chay bo TC tab 3.7.2, KHONG cham checklist Next-Gen.\n"
     "Workflow audit chay nen: CHO thong bao no xong roi lam tiep trong CUNG luot nay; KHONG ScheduleWakeup, KHONG "
     "ket thuc cau tra loi khi con viec nen hay chua chay checklist/case. KHONG tu viet vong lap sleep doc "
     "journal.jsonl / file output de cho: thong bao xong chi toi khi lenh Bash dang chay ket thuc, vong lap do giu may "

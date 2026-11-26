@@ -54,7 +54,7 @@ def tab_for_version(tabs, sdk: str):
     version = tc_catalog.parse_version(sdk)
     if not version:
         raise RcError(f"Khong doc duoc ban SDK: {sdk!r}")
-    ep = tc_catalog.tab_ca_hai(sdk)
+    ep = tc_catalog.tab_ghim(sdk)
     if ep:                       # 3.7.2: luat chot tab rieng 3.7.2 (ghim, khong tu do tab)
         return pick_tab(tabs, ep)[0]
     deltas = sorted((t for t in tabs if t.kind == "delta" and t.version), key=lambda t: t.version)
@@ -91,8 +91,8 @@ def read_cases(path: Path, whitelist, sdk: str, tab: str = "") -> tuple[list[tup
     if sdk:
         one = tab_for_version(tabs, sdk)
         note = f"Bản SDK của app là {sdk} → chạy tab {one.name}"
-        if tc_catalog.tab_ca_hai(sdk):
-            note += " (luật 3.7.2: bộ TC tab này rồi chấm thêm checklist Next-Gen)"
+        if tc_catalog.tab_ghim(sdk):
+            note += " (luật 3.7.2: chỉ chạy tab này, không chấm checklist Next-Gen)"
         if one.kind == "base":
             note += " (bộ base, vì không có tab số nào ≤ bản app)"
         return [(one.name, c) for c in one.cases], [note]

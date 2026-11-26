@@ -305,11 +305,11 @@ async def _mo_app_mot_lan(client, serial: str, package: str) -> tuple[dict, str]
 def muc_sdk(sdk: str, ep_nextgen: bool = False) -> dict:
     """Ban SDK FO quyet dinh nhanh chay: Next-Gen -> checklist, con lai -> bo TC.
     `ep_nextgen`: tin build cua dev ghi next-gen (bot da cai ban release theo do) -> checklist bat ke so SDK.
-    Ban cham ca hai (3.7.2) thang ca `ep_nextgen`: bo TC dung tab chot, roi checklist."""
-    tab = tc_catalog.tab_ca_hai(sdk)
+    Ban ghim tab (3.7.2) thang ca `ep_nextgen`: chi bo TC dung tab chot, khong checklist (user chot 26/11/2026)."""
+    tab = tc_catalog.tab_ghim(sdk)
     if tab:
-        return _muc("Bản SDK FO", OK, f"{sdk} → chạy bộ TC tab {tab} (--tab {tab}), RỒI chấm checklist Next-Gen "
-                                      "sdk-check/ (luật 3.7.2: chấm cả hai)")
+        return _muc("Bản SDK FO", OK, f"{sdk} → chạy bộ TC tab {tab} (--tab {tab}), không chấm checklist Next-Gen "
+                                      "(luật 3.7.2)")
     if ep_nextgen:
         return _muc("Bản SDK FO", OK, f"{sdk or '?'} → Next-Gen theo tin build (--next-gen): chấm checklist "
                                       "sdk-check/ (không chạy bộ TC)")
@@ -375,8 +375,8 @@ async def chay(client, serial: str, package: str, tc: str, out_dir, sdk: str = "
         except (AdbError, RcError) as exc:
             muc.append(_muc("Ads dùng ID thật", CANH_BAO, f"không mở được app để kiểm: {exc}"))
     muc.append(muc_sdk(sdk, ep_nextgen))
-    # 3.7.2: nhanh bo TC (kiem sheet TC), checklist Next-Gen lam tiep sau - xem muc_sdk / in_bang.
-    nhanh = "tc" if tc_catalog.tab_ca_hai(sdk) else (
+    # 3.7.2: chi nhanh bo TC tab 3.7.2 (kiem sheet TC), khong checklist Next-Gen - xem muc_sdk / in_bang.
+    nhanh = "tc" if tc_catalog.tab_ghim(sdk) else (
         "nextgen" if ep_nextgen or sdk_probe.la_nextgen(sdk) else "tc")
     if nhanh == "nextgen":
         muc = noi_long_nextgen(muc) + [_sheet_id_ads(package, out_dir)]
@@ -399,8 +399,7 @@ def in_bang(kq: dict, log_fn) -> None:
             log_fn(f"         -> {m['viec_can_lam']}")
     if kq.get("nhanh") == "nextgen":
         log_fn(f"Nhanh: checklist Next-Gen (SDK {kq['sdk']}) - lam theo sdk-check/WORKFLOW.md")
-    elif tc_catalog.tab_ca_hai(kq.get("sdk") or ""):
-        tab = tc_catalog.tab_ca_hai(kq["sdk"])
-        log_fn(f"Nhanh: CA HAI (SDK {kq['sdk']}) - bo TC --tab {tab}, xong roi checklist Next-Gen theo "
-               "sdk-check/WORKFLOW.md")
+    elif tc_catalog.tab_ghim(kq.get("sdk") or ""):
+        tab = tc_catalog.tab_ghim(kq["sdk"])
+        log_fn(f"Nhanh: bo TC --tab {tab} (SDK {kq['sdk']}) - KHONG cham checklist Next-Gen")
     log_fn("San sang chay." if kq["ok"] else "CHUA chay duoc - xu cac dong LOI truoc.")
