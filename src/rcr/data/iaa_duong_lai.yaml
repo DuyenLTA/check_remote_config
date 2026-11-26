@@ -1171,6 +1171,133 @@ khuon:
           - cho: 3
           - back: 2
 
+  # App hoc tu vung "LingoVision" (vi tri that trong RC: banner_home, inter_home, native_chat, native_vocab_topic,
+  # native_detail_topic, native_reason_uninstall, inter_uninstall, inter_back, reward_chat). Do 23/11/2026 tren Samsung
+  # A13 R58TB198BNN: AIP972 AI Tutor Vocab 1.1.0. Moi man trong MainActivity (Compose). Sau pm clear FO xong con man
+  # "What should we call you?" (o "Enter your name" + "Continue"), Home co popup Add Widget (Close) va popup
+  # "Today's Check-In" (Close). Inter_back: vao "Chat with AI" (preload inter back) roi bam Back (desc) ve Home.
+  # Inter home hien khi bam See all / Continue learning / Chat with AI (cach nhau ~30s) -> cho 31 truoc moi lan bam.
+  # Muc 3 sheet KT doi lan 2 (23/11/2026 18:00) them native_vocab_topic (man Vocabulary Topics, mo tu "See all"),
+  # native_detail_topic (man topic, vd "Travel": preload o Vocabulary Topics), native_chat (man Conversation History,
+  # icon "Open conversation history" o man Chat), reward_chat (man Chat "Aria": 3 luot free dem 3/3 -> 0/3, lan 4 hien
+  # sheet "UNLOCK MORE CHATS" nut "Watch Ad (0/2)" -> xem 2 ad = +3). Man Chat sau pm clear o che do noi ("Hold to
+  # talk"); nut "Switch input mode" thu 2 (desc, khong chu) doi sang o nhap EditText + nut "Send" (desc).
+  # Phim ESC / BACK khi ban phim da dong thi roi man Chat -> chi dung `nhap` (tu an ban phim).
+  lingovision:
+    nhan_dien: "^Your vocabulary$"
+    doan:
+      - ten: Thiết lập tên lần đầu (sau pm clear)
+        buoc:
+          - cho: 3
+          - nhap: "Test"
+            o: "^Enter your name$"
+            neu_co: "^What should we call you\\?$"
+          - tap_neu_co: "^Continue$"
+            khi_thieu: "^Your vocabulary$"
+          - cho: 5
+          - dong_neu_co: "^Close$"
+          - dong_neu_co: "^Close$"
+      - ten: Home (banner reload 10s, preload inter home)
+        buoc:
+          - ve_chu: "^Your vocabulary$"
+            toi_da: 180
+          - dong_neu_co: "^Close$"
+          - dong_neu_co: "^Close$"
+          - cho: 35
+      - ten: See all (inter home) -> Vocabulary Topics (native) -> Travel (native detail topic), Back về Home
+        buoc:
+          - ve_chu: "^Your vocabulary$"
+          - dong_neu_co: "^Close$"
+          - cho: 31
+          - tap: "^See all$"
+          - dong_ad: 8
+          - cho_chu: "^\\d+ of \\d+ words learned · \\d+ topics$"
+          - cho: 25
+          - tap: "^Travel$"
+          - cho_chu: "^Words$"
+          - cho: 25
+          - tap: "^Back$"
+          - cho: 3
+          - tap: "^Back$"
+          - dong_ad: 6
+          - cho: 3
+      - ten: Continue learning (inter home), Back
+        buoc:
+          - ve_chu: "^Your vocabulary$"
+          - dong_neu_co: "^Close$"
+          - cho: 31
+          - tap: "^Continue learning$"
+          - dong_ad: 8
+          - cho: 8
+          - back: 1
+          - dong_ad: 6
+          - cho: 3
+      - ten: Chat with AI (inter home, preload native chat / reward / inter back), Conversation History (native), hết 3 lượt free -> reward, Back (inter back)
+        buoc:
+          - ve_chu: "^Your vocabulary$"
+            toi_da: 180
+          - dong_neu_co: "^Close$"
+          - dong_neu_co: "^Close$"
+          - cho: 31
+          - vuot_len: 2                     # nut "Chat with AI" (the AI TUTOR) nam duoi man Home
+          - tap: "^Chat with AI$"
+          - dong_ad: 8
+          - cho_chu: "^Change character$"
+          - cho: 12
+          - tap: "^Open conversation history$"
+          - cho_chu: "^Conversation History$"
+          - cho: 25
+          - tap: "^Back$"
+          - dong_ad: 8
+          - cho_chu: "^Change character$"
+          - tap_neu_co: "^Switch input mode$"
+            thu: 2
+            khi_thieu: "^Send$"
+          - cho: 2
+          - nhap: "hello"
+            o_lop: "EditText"
+          - tap: "^Send$"
+          - cho: 10
+          - nhap: "hello"
+            o_lop: "EditText"
+          - tap: "^Send$"
+          - cho: 10
+          - nhap: "hello"
+            o_lop: "EditText"
+          - tap: "^Send$"
+          - cho: 10
+          - nhap: "hello"
+            o_lop: "EditText"
+          - tap: "^Send$"                   # lan 4: het luot free -> sheet "UNLOCK MORE CHATS"
+          - cho: 4
+          - xem_ads_chu: "^Watch Ad \\(\\d/\\d\\)$"
+            toi_chu: "^3/3$"
+            toi_da: 240
+          - cho: 31
+          - tap: "^Back$"
+          - dong_ad: 10
+          - cho: 5
+      - ten: Luồng Uninstall (shortcut launcher theo id - không gỡ thật)
+        buoc:
+          - shortcut: "(?i).*uninstall.*"
+            nhan: "^(Uninstall|Uninstall app|Gỡ cài đặt)$"      # Samsung che id/nhan shortcut trong dumpsys (***)
+          # Man "We're sorry to see you go": native che nut -> cuon len moi thay "Still want to uninstall".
+          - ve_man: "UninstallActivity"
+            toi_da: 150
+          - cho: 8
+          - vuot_len: 1
+          - tap: "^Still want to uninstall$"
+          - cho_chu: "^Why are you uninstalling\\?$"
+          - cho: 6
+          - tap: "^Too many ads$"                 # lan chon 1: reload + show native 1 lan
+          - cho: 8
+          - tap: "^AI replies were too slow$"     # lan chon 2: khong reload
+          - cho: 8
+          - tap: "^Uninstall$"                    # inter uninstall -> "Thank you for your feedback" ~3s -> Cai dat
+          - dong_ad: 25
+          - cho: 6
+          - back: 2
+
   # App gen anh/video "GeniAI" (muc 3 sheet KT: 501_home_banner, inter_back, reward_img_vid, inter_style,
   # native_result_img_vid, native_loading, native_reason_uninstall, inter_uninstall). Do 20-21/11/2026 tren Pixel 7
   # 29301FDH2006K7: AIP919 AI Photo Video Maker 2.1.0. Compose, moi man la AIP919AIPhotoVideoMakerMainActivity.
@@ -1296,4 +1423,5 @@ photomaker.image.editor.ai: {khuon: creapix}                         # AIP916 Cr
 aichat.photogenarator.chatbot.video: {khuon: homova}                 # AIP508 Homova (Home co ca "Trending Now" cua khuon ai_photo)
 aitutor.grammar.languagetutor.iletslesson.learninglanguage: {khuon: ielts_moss}  # AIP932 AI Tutor IELTS
 com.ai.videogenerator.photocreator.aiart: {khuon: hypix}                  # AIP933 Hypix (Home co "Text to Image Generate" cua khuon ai_photo, chu xuong dong)
+aitutor.grammar.vocab.languagetutor.learninglanguage: {khuon: lingovision}   # AIP972 LingoVision (AI Tutor Vocab)
 com.aiart.aivideogenerator.aiphotocreator.phototovideo: {khuon: studio_style}   # AIP919 GeniAI (Home tab Image/Video Studio, "Explore styles")
