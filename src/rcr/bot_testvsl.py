@@ -15,6 +15,7 @@ Moi thao tac Firebase o `rc_firebase_testvsl` (chot chan chi dong vao `testvsl`)
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import logging
 import re
 from pathlib import Path
@@ -22,7 +23,7 @@ from pathlib import Path
 import discord
 from discord import app_commands
 
-from . import bot_cong_viec, bot_lenh_xoa_bai, build_ma_app
+from . import bot_cong_viec, bot_lenh_xoa_bai, build_ma_app, plan_tuan_ghi
 from . import rc_firebase_testvsl as tv
 from .bot_giao_dien import XAM, noi_dung, nut
 from .models import RcError
@@ -70,7 +71,8 @@ async def nhan_tin_pass(bot, m: discord.Message, ma_kenh: str, out: Path) -> boo
     """Tin QA o kenh project bao test pass -> tu xoa testvsl bot tao, bao o #condition_fb. True khi la tin pass.
 
     User chot 26/11/2026: test pass thi bot tu xoa condition minh tao, chi nhan "da xoa", khong bat QA bam nut.
-    Nut Xoa chi con khi bot khong tu xoa duoc (dang co luot chay app, Firebase loi) de QA thu lai."""
+    Nut Xoa chi con khi bot khong tu xoa duoc (dang co luot chay app, Firebase loi) de QA thu lai.
+    Cung luc ghi plan tuan: Trang thai = Released, Release thuc te = hom nay (`plan_tuan_ghi`, chot 26/11/2026)."""
     chu = noi_dung(m)
     if not ma_kenh or not la_tin_pass(chu):
         return False
@@ -79,18 +81,26 @@ async def nhan_tin_pass(bot, m: discord.Message, ma_kenh: str, out: Path) -> boo
     await don_bai_forum(bot, ma_kenh)
     ver = build_ma_app.VERSION_RE.search(chu)
     version = f"{ver.group(1)} ({ver.group(2)})" if ver else ""
+    dong_plan = await _ghi_plan(ma_kenh, chu, out)
+    them = f"\n{dong_plan}" if dong_plan else ""
+
+    async def chi_bao_plan() -> bool:
+        if dong_plan:
+            await _gui_kenh_condition(bot, _dau_tin(ma_kenh, version, m.jump_url) + them)
+        return True
+
     try:
         pkg = await asyncio.to_thread(bot_cong_viec.package_cua, ma_kenh, out)
         if not pkg:
-            return True
+            return await chi_bao_plan()
         app = await asyncio.to_thread(tv.tim_app, pkg)
         tt = await asyncio.to_thread(tv.trang_thai, app["project"])
     except (RcError, OSError) as exc:
         log.warning("nhac xoa testvsl %s: %s", ma_kenh, exc)
-        return True
+        return await chi_bao_plan()
     if not tt["co"]:
         log.info("test pass %s %s: khong con testvsl", ma_kenh, version)
-        return True
+        return await chi_bao_plan()
     ly_do = ""
     if tt["cua_toi"]:
         if _job_dang_test(bot, pkg):
@@ -98,18 +108,31 @@ async def nhan_tin_pass(bot, m: discord.Message, ma_kenh: str, out: Path) -> boo
         else:
             try:
                 kq = await asyncio.to_thread(tv.xoa, app["project"])
-                await _gui_kenh_condition(bot, tin_da_xoa(ma_kenh, version, m.jump_url, kq))
+                await _gui_kenh_condition(bot, tin_da_xoa(ma_kenh, version, m.jump_url, kq) + them)
                 log.info("test pass %s %s: tu xoa testvsl", ma_kenh, version)
                 return True
             except (RcError, OSError) as exc:
                 log.warning("tu xoa testvsl %s: %s", ma_kenh, exc)
                 ly_do = str(exc)
-    qa = await _gui_kenh_condition(bot, tin_nhac_xoa(ma_kenh, version, m.jump_url, tt, ly_do))
+    qa = await _gui_kenh_condition(bot, tin_nhac_xoa(ma_kenh, version, m.jump_url, tt, ly_do) + them)
     bot.q.nho_tin({"msg_id": qa.id, "loai": LOAI, "app": {"ma": ma_kenh, "version": version, "package": pkg,
                                                              "project": app["project"]}})
     if tt["cua_toi"]:
         await qa.edit(view=nut((XOA, "Xoá testvsl", discord.ButtonStyle.danger), ("bo", "Để sau", XAM), msg_id=qa.id))
     return True
+
+
+async def _ghi_plan(ma: str, chu: str, out: Path = OUT) -> str:
+    """Cap nhat dong app trong plan tuan -> mot dong bao; chua cau hinh plan / tat thi "" (bo qua)."""
+    if not plan_tuan_ghi.bat():
+        return ""
+    ver, ngay = plan_tuan_ghi.version_trong(chu), dt.date.today()
+    try:
+        kq = await asyncio.to_thread(plan_tuan_ghi.ghi_test_pass, ma, ver, ngay, out)
+    except RcError as exc:
+        log.warning("plan tuan %s %s: %s", ma, ver, exc)
+        return f"⚠️ {exc} — nhờ QA cập nhật plan tuần tay."
+    return plan_tuan_ghi.cau_bao(ma, ver, ngay, kq)
 
 
 async def don_bai_forum(bot, ma: str) -> int:

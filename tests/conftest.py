@@ -12,6 +12,12 @@ import pathlib
 
 import pytest
 
+@pytest.fixture(autouse=True)
+def _khong_ghi_plan_tuan_that(monkeypatch):
+    """May dev co RC_PLAN_TUAN_SHEET: test luong test pass khong duoc tai / ghi sheet plan that (plan_tuan_ghi)."""
+    monkeypatch.setenv("RC_PLAN_TUAN_GHI", "0")
+
+
 PKG = "com.ai.videogenerator.photocreator.aiart"
 SERIAL = "29301FDH2006K7"
 APP_ID = "1:310944273102:android:c1649cae37e57475f4b69f"

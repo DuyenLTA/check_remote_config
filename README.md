@@ -508,6 +508,11 @@ nhận link Google Drive nữa.
   `qa-builds` của app đó (mọi version, trừ bài build còn trong hàng đợi / đang chạy). Không tự xoá được (đang có lượt chạy
   app đó, Firebase lỗi) thì tin ghi lý do kèm nút **Xoá testvsl** / **Để sau** để thử lại. Condition người khác tạo thì
   chỉ báo, không xoá. Không còn condition thì không báo.
+  **Cập nhật plan tuần khi test pass** (từ 26/11/2026): cùng lúc đó bot ghi dòng app trong tab tuần hiện tại của sheet
+  plan: «Trạng thái» = Released, «Release thực tế» = ngày báo pass, rồi báo một dòng 📋 vào `#condition_fb`. Code tìm tab,
+  dòng (mã app + version) và ô cần ghi; `claude -p` chỉ được 3 tool Google Sheets của kết nối claude.ai để ghi đúng 2 ô
+  (`src/rcr/plan_tuan_ghi.py`). Cần tài khoản Claude trên máy bot có kết nối Google Sheets và quyền sửa sheet plan.
+  Tắt bằng `RC_PLAN_TUAN_GHI=0`. Không thấy dòng app / nhiều dòng khớp / ghi lỗi thì báo ⚠️ để QA sửa tay.
   **Tự tạo khi Check**: QA bấm Check / gõ `/check` → lượt Check (bản release, có đổi RC) cài build xong thì tạo `testvsl`
   theo version tin build trên Firebase project của APK vừa cài, rồi mới kiểm (`bot_kiem_testvsl.tu_tao`). Không tạo được
   (condition người khác, còn key gán) thì nhắc như cũ; tin nhắc có thêm nút **Tạo testvsl**.
