@@ -1,9 +1,10 @@
 """Bot va condition `testvsl` tren Firebase: nhac xoa khi QA bao test pass, tao theo dung version.
 
 User chot 20/11/2026:
-- QA bao "test pass" o kenh project (tin build cua nhom) -> bot gui vao kenh `condition_fb` (khong thay thi qa-auto)
-  1 tin nhac xoa condition `testvsl` cua app, kem nut Xoa (QA hay quen xoa). Chi co nut khi condition do tai khoan
-  bot (QA chu bot) tao; condition nguoi khac tao thi chi bao, khong xoa.
+- QA bao "test pass" o kenh project (tin build cua nhom) -> condition `testvsl` do tai khoan bot (QA chu bot) tao
+  thi bot TU XOA roi bao "da xoa" vao kenh `condition_fb` (khong thay thi qa-auto) - doi 26/11/2026, truoc la tin
+  nhac kem nut. Khong tu xoa duoc (dang co luot chay app, Firebase loi) thi tin kem nut Xoa de thu lai.
+  Condition nguoi khac tao thi chi bao, khong xoa.
 - Cung luc do xoa moi bai Forum `qa-builds` cua app (moi version), tru bai cua build con trong hang doi / dang chay:
   app pass roi thi bai cu chi lam roi Forum (user chot 20/11/2026).
 - Tao condition theo version tin build (lech plan tuan thi chua ca version plan): lenh `/testvsl`, nut tren tin nhac
@@ -45,19 +46,31 @@ def _job_dang_test(bot, package: str) -> bool:
     return any(j.get("package") == package and bot.q._dang_test(j) for j in bot.q.jobs)
 
 
-def tin_nhac_xoa(ma: str, version: str, link: str, tt: dict) -> str:
-    dau = f"✅ **{ma}** `{version or '?'}` — QA báo test pass ({link})."
+def _dau_tin(ma: str, version: str, link: str) -> str:
+    return f"✅ **{ma}** `{version or '?'}` — QA báo test pass ({link})."
+
+
+def tin_da_xoa(ma: str, version: str, link: str, kq: str) -> str:
+    return f"{_dau_tin(ma, version, link)}\n🗑️ Bot đã tự xoá condition: {kq}"
+
+
+def tin_nhac_xoa(ma: str, version: str, link: str, tt: dict, ly_do: str = "") -> str:
+    """Tin khi bot KHONG tu xoa duoc: condition nguoi khac tao, hoac xoa hong (`ly_do`) -> kem nut thu lai."""
     dong = f"Condition `{tv.DIEU_KIEN}` còn trên Firebase: `{tt['bieu_thuc']}`"
     if tt["so_key"]:
         dong += f" · đang gán {tt['so_key']} key"
     if tt["cua_toi"]:
-        return f"{dau}\n{dong}\nNhớ xoá condition — bấm **Xoá testvsl** để bot xoá (kèm mọi giá trị gán theo nó)."
+        return (f"{_dau_tin(ma, version, link)}\n{dong}\nBot chưa tự xoá được: {ly_do or 'không rõ lý do'}."
+                f" Bấm **Xoá testvsl** để thử lại.")
     ai = "người khác tạo" if tt["nguoi_tao"] else "không xác định được người tạo"
-    return f"{dau}\n{dong}\nCondition này {ai} — bot không xoá, nhờ người tạo xoá."
+    return f"{_dau_tin(ma, version, link)}\n{dong}\nCondition này {ai} — bot không xoá, nhờ người tạo xoá."
 
 
 async def nhan_tin_pass(bot, m: discord.Message, ma_kenh: str, out: Path) -> bool:
-    """Tin QA o kenh project bao test pass -> nhac xoa testvsl o qa-auto. True khi la tin pass (da xu ly)."""
+    """Tin QA o kenh project bao test pass -> tu xoa testvsl bot tao, bao o #condition_fb. True khi la tin pass.
+
+    User chot 26/11/2026: test pass thi bot tu xoa condition minh tao, chi nhan "da xoa", khong bat QA bam nut.
+    Nut Xoa chi con khi bot khong tu xoa duoc (dang co luot chay app, Firebase loi) de QA thu lai."""
     chu = noi_dung(m)
     if not ma_kenh or not la_tin_pass(chu):
         return False
@@ -78,7 +91,20 @@ async def nhan_tin_pass(bot, m: discord.Message, ma_kenh: str, out: Path) -> boo
     if not tt["co"]:
         log.info("test pass %s %s: khong con testvsl", ma_kenh, version)
         return True
-    qa = await _gui_kenh_condition(bot, tin_nhac_xoa(ma_kenh, version, m.jump_url, tt))
+    ly_do = ""
+    if tt["cua_toi"]:
+        if _job_dang_test(bot, pkg):
+            ly_do = "đang có lượt chạy app này (đang dùng testvsl)"
+        else:
+            try:
+                kq = await asyncio.to_thread(tv.xoa, app["project"])
+                await _gui_kenh_condition(bot, tin_da_xoa(ma_kenh, version, m.jump_url, kq))
+                log.info("test pass %s %s: tu xoa testvsl", ma_kenh, version)
+                return True
+            except (RcError, OSError) as exc:
+                log.warning("tu xoa testvsl %s: %s", ma_kenh, exc)
+                ly_do = str(exc)
+    qa = await _gui_kenh_condition(bot, tin_nhac_xoa(ma_kenh, version, m.jump_url, tt, ly_do))
     bot.q.nho_tin({"msg_id": qa.id, "loai": LOAI, "app": {"ma": ma_kenh, "version": version, "package": pkg,
                                                              "project": app["project"]}})
     if tt["cua_toi"]:

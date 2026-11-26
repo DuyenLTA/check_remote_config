@@ -502,10 +502,12 @@ nhận link Google Drive nữa.
   trên máy bot** tạo: người tạo đọc từ lịch sử version Remote Config (người publish version đầu tiên có condition). Condition
   người khác tạo, hoặc có từ trước 300 version gần nhất, thì không sửa, không xoá. Mọi lần publish đều chặn nếu template
   đổi ngoài `testvsl`.
-  **Tự nhắc xoá**: QA được duyệt nhắn "test pass" ở kênh project (vd `test pass v1.4.0(14) rls`; "chưa pass" / "fail"
-  không tính) → bot gửi vào kênh `#condition_fb` (không thấy kênh / thiếu quyền thì qa-auto) tin nhắc kèm biểu thức
-  condition, đồng thời xoá mọi bài Forum `qa-builds` của app đó (mọi version, trừ bài build còn trong hàng đợi / đang chạy). Condition của tài khoản bot thì có nút **Xoá
-  testvsl** / **Để sau**. Đang có lượt chạy app đó thì không xoá. Không còn condition thì không nhắc.
+  **Tự xoá khi test pass** (từ 26/11/2026): QA được duyệt nhắn "test pass" ở kênh project (vd `test pass v1.4.0(14) rls`;
+  "chưa pass" / "fail" không tính) → condition do tài khoản bot tạo thì bot **tự xoá** (kèm mọi giá trị gán theo nó) rồi
+  chỉ báo "đã xoá" vào kênh `#condition_fb` (không thấy kênh / thiếu quyền thì qa-auto); đồng thời xoá mọi bài Forum
+  `qa-builds` của app đó (mọi version, trừ bài build còn trong hàng đợi / đang chạy). Không tự xoá được (đang có lượt chạy
+  app đó, Firebase lỗi) thì tin ghi lý do kèm nút **Xoá testvsl** / **Để sau** để thử lại. Condition người khác tạo thì
+  chỉ báo, không xoá. Không còn condition thì không báo.
   **Tự tạo khi Check**: QA bấm Check / gõ `/check` → lượt Check (bản release, có đổi RC) cài build xong thì tạo `testvsl`
   theo version tin build trên Firebase project của APK vừa cài, rồi mới kiểm (`bot_kiem_testvsl.tu_tao`). Không tạo được
   (condition người khác, còn key gán) thì nhắc như cũ; tin nhắc có thêm nút **Tạo testvsl**.
