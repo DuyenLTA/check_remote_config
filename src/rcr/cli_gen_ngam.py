@@ -45,12 +45,14 @@ def _rcr_check() -> str:
     return str(Path(sys.executable).with_name("rcr-check"))
 
 
-def config_nhom(records: list[dict], nhom: str) -> dict[str, str]:
+def config_nhom(records: list[dict], nhom: str, rc_them: dict | None = None) -> dict[str, str]:
+    """Config cua nhom = Test Data cua case dai dien + `rc_them` cua app (key app can de lai duoc, vd AIP933 Hypix
+    mac dinh tat Paywall: `paywall_placement=home` moi co nut PRO de mua goi test) + key ep rieng cua nhom."""
     key, them = NHOM[nhom]
     r = next((x for x in records if x.get("key") == key), None)
     if r is None:
         raise RcError(f"file lượt không có case {key} (nhóm {nhom})")
-    return {**(r.get("overrides") or {}), **them}
+    return {**(r.get("overrides") or {}), **{k: str(v) for k, v in (rc_them or {}).items()}, **them}
 
 
 def dat(package: str, serial: str, gt: dict[str, str], log) -> None:
@@ -146,7 +148,7 @@ def _chay_cac_nhom(a, records, so, f_so, ctx, chay_nhom, hut, LaiHut, _log) -> N
         _log(f"Nhóm {nhom}")
         so.dong = {k: [x for x in v if a.giu_video and k == "GEN-R06-03" and x[0] == "còn 4/5"]
                    if re.search(CASE_NHOM[nhom], k) else v for k, v in so.dong.items()}
-        ctx.nho["config"] = config_nhom(records, nhom)
+        ctx.nho["config"] = config_nhom(records, nhom, ctx.ct.get("rc_them"))
         dat(a.package, a.serial, ctx.nho["config"], _log)
         try:
             asyncio.run(chay_nhom[nhom](ctx))

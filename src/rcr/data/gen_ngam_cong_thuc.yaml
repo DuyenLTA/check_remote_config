@@ -151,3 +151,9 @@ photoslideshow.videoslideshow.addimage.photogen:
   # (FAIL R02-04 18/11/2026). Xoa nhieu o khong co toast 'N items deleted' (FAIL R05-05).
   toast_xong: "^Your creation is ready!$"
   push_xong: "creation is ready|almost here"
+com.ai.videogenerator.photocreator.aiart:
+  # AIP933 Hypix 2.3.0 (do 23/11/2026 Samsung A13): RC paywall_placement mac dinh off -> Home khong co nut PRO, FO
+  # khong co man Billing, khong mua duoc goi test. Dat paywall_placement=home moi nhom thi Home co nut chu PRO.
+  # Chu tren man dung khuon chung.
+  rc_them:
+    paywall_placement: home
